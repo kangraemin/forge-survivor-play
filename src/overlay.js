@@ -19,6 +19,7 @@ export class Overlay {
     // 이동 안내가 창 뒤로 비치지 않게 바로 지운다
     s.hint?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.hint = null;
     s.joy.o = null; s.joy.v.reset(); s.joy.base.setVisible(false); s.joy.knob.setVisible(false);
+    s.showUlt?.(false);   // 창 아래 안내 글과 겹치지 않게 궁극기 버튼을 숨긴다
     const c = fixedContainer(s).setDepth(DEPTH);
     const dim = s.add.rectangle(0, 0, W, H, 0x05030a, 0.72).setOrigin(0).setInteractive();
     c.add(dim); c.setAlpha(0);
@@ -37,6 +38,7 @@ export class Overlay {
     const next = this.queue.shift();
     if (next) { this.open = 'next'; s.time.delayedCall(10, () => { if (this.open !== 'next') return; this.open = null; next(); }); return; }
     s.paused = false; s.physics.resume(); s.anims.resumeAll();
+    s.showUlt?.(true);
   }
 
   // ── 레벨업: 3장 중 하나 ──
@@ -53,7 +55,9 @@ export class Overlay {
       // 처음 하는 사람의 첫 레벨업은 바로 눈에 보이는 공격 스킬만 보여 준다
       if (first && def.type !== 'active') continue;
       // 이미 가진 걸 키우는 쪽을 조금 더 자주 보여 준다(빌드가 완성되는 맛)
-      pool.push({ k, w: lv ? 3 : def.type === 'active' ? 2.2 : 1.6 });
+      // 액티브가 Lv3을 넘었는데 진화 짝 패시브가 없으면 그 패시브를 크게 밀어 준다(한 판 안에 진화가 닿게)
+      const pair = !lv && def.type === 'passive' && Object.entries(D.EVOS).some(([b, e]) => e.need === k && (sk[b] || 0) >= 3);
+      pool.push({ k, w: pair ? 8 : lv ? 3 : def.type === 'active' ? 2.2 : 1.6 });
     }
     const out = [];
     // 진화할 수 있으면 첫 칸에 반드시 띄운다

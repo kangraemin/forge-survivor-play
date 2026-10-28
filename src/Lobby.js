@@ -41,8 +41,8 @@ export class Lobby extends Phaser.Scene {
     this.show(this.tab);
     this.cameras.main.fadeIn(200);
     if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e'));
-    // 처음 판을 하고 난 뒤부터: 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
-    else if (!sv.loginGot && sv.stats.runs > 0 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin()); }
+    // 세 판을 하고 난 뒤부터(처음엔 창이 연달아 뜨지 않게): 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
+    else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin()); }
     else if (sv.cleared >= 3 && !sv.bought.starter && !sv.starterShown) this.time.delayedCall(250, () => this.starterWin());
   }
 
@@ -227,7 +227,7 @@ export class Lobby extends Phaser.Scene {
     const bs = this.add.sprite(W - 58, 108, null).play(ch.boss);
     bs.setScale((fb[ch.boss] ? 40 : 52) / bs.height); if (fb[ch.boss]) bs.setTint(D.BOSSES[ch.boss].color);
     pv.add(bs);
-    pv.add(this.add.text(W - 58, 136, D.BOSSES[ch.boss].name, font(8, '#ff9090')).setOrigin(0.5, 1));
+    pv.add(this.add.text(W - 58, 136, D.BOSSES[ch.boss].name, font(9, '#ff9090')).setOrigin(0.5, 1));
     // 스테이지 6칸
     for (let s = 0; s < 6; s++) {
       const idx = c * 6 + s, x = 50 + (s % 3) * 85, y = 172 + Math.floor(s / 3) * 54;
@@ -457,9 +457,9 @@ export class Lobby extends Phaser.Scene {
         const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));
         this.cameras.main.flash(220, 255, 220, 120);
         this.sparks(W / 2, 168, 30, 0xffffff);
-        const t = this.add.text(W / 2, 240, `공격력 ${a0} → ${a1}`, font(18, '#ffe08a', 4)).setOrigin(0.5).setDepth(60).setScale(0.3);
+        const t = this.add.text(W / 2, 222, `공격력 ${a0} → ${a1}`, font(18, '#ffe08a', 4)).setOrigin(0.5).setDepth(60).setScale(0.3);
         this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.Out' });
-        this.tweens.add({ targets: t, y: 224, alpha: 0, delay: 900, duration: 400, onComplete: () => t.destroy() });
+        this.tweens.add({ targets: t, y: 210, alpha: 0, delay: 900, duration: 400, onComplete: () => t.destroy() });
       }
     } else if (outcome === 'fail') {
       sfx('fail');
@@ -649,7 +649,7 @@ export class Lobby extends Phaser.Scene {
       b.add(this.add.text(46, y + 8, it.name, font(11, hot ? '#ffd75e' : '#ffffff')));
       b.add(this.add.text(46, y + 24, it.desc || giveText(it.give) + (it.passDays ? ` (+매일 ${D.PASS_DAILY.gem})` : '') + (it.noAds ? ' · 광고 없음' : ''), font9(it.desc ? 8 : 9, '#e8e2f8')));
       const tag = it.id === 'pass' && sv.passLeft > 0 ? `남은 ${sv.passLeft}일 · 사면 연장` : [it.tag, firstX2(sv, it) && '첫 구매 보석 2배'].filter(Boolean).join(' · ');
-      if (tag) b.add(this.add.text(46, y + 37, tag, font9(8, firstX2(sv, it) ? '#ffd75e' : '#ff9ad0')));
+      if (tag) b.add(this.add.text(46, y + 37, tag, font9(9, firstX2(sv, it) ? '#ffd75e' : '#ff9ad0')));
       const bt = button(this, W - 46, y + 25, 60, 26, sold ? '구매함' : won(it.price), async () => {
         if (this.busy || sold) return;
         this.busy = true;

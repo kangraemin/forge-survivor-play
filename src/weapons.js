@@ -64,6 +64,9 @@ export class Weapons {
     const dir = Math.cos(ang) >= 0 ? 1 : -1;
     s.face = dir;
     h.setFlipX(dir < 0).play('slash', true);
+    // 휘두를 때 몸이 앞으로 늘어났다 돌아온다
+    const hs = h.bs ||= h.scaleX;
+    s.tweens.add({ targets: h, scaleX: hs * 1.18, scaleY: hs * 0.86, duration: 60, yoyo: true, ease: 'Quad.Out', onComplete: () => h.setScale(hs) });
     h.once('animationcomplete-slash', () => h.play('idle'));
     s.lunge = { x: Math.cos(ang) * 110, y: Math.sin(ang) * 110, t: 80 };
     const evo = this.evo('sword');

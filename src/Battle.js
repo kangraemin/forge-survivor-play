@@ -44,6 +44,9 @@ export class Battle extends Phaser.Scene {
     this.waveCount = this.endless ? Infinity : this.isBoss ? D.WAVES - 1 : D.WAVES;
     this.waveT = 0;
     this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (1 - this.tv('def'));
+    // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
+    this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless;
+    if (this.easy) this.mobDmgMul *= 0.7;
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s);
 
     this.makeMap();
@@ -74,12 +77,15 @@ export class Battle extends Phaser.Scene {
       this.tweens.timeScale = this.speed; this.anims.globalTimeScale = this.speed;
     }
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
-    for (let i = 0; i < 40; i++) this.spawn(true);
+    for (let i = 0; i < (this.easy ? 18 : 40); i++) this.spawn(true);
     if (!this.bot) playBgm('battle', this.c);
     this.events.once('shutdown', stopBgm);
     if (sv.stats.runs < 2 && !this.bot) this.dragHint();
     if (this.endless) this.banner('무한의 탑', `1층  ·  최고 ${sv.endBest}층`);
     else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}`);
+    // 이번 스테이지에 처음 나오는 변종을 알려 준다
+    const nv = !this.endless && D.STAGE_VARIANT[this.s];
+    if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(`새 몬스터: ${D.VARIANTS[nv[1]].pre} ${D.MOB_NAMES[this.ch.mobs[nv[0]]]}`, D.VARIANTS[nv[1]].desc));
     sv.stats.runs++; save();
   }
 
@@ -165,6 +171,7 @@ export class Battle extends Phaser.Scene {
     this.hpBar = sf(this.add.rectangle(26, 13, 76, 8, 0xe8343a).setOrigin(0));
     this.hpTxt = sf(this.add.text(64, 17, '', font(10)).setOrigin(0.5));
     this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#6fd3ff')));
+    this.comboTxt = sf(this.add.text(W / 2, 46, '', font(12, '#ffb347')).setOrigin(0.5).setAlpha(0));
     this.timeTxt = sf(this.add.text(W / 2, 16, '', font(14)).setOrigin(0.5));
     this.waveTxt = sf(this.add.text(W / 2, 31, '', font(9, '#c8bfe0')).setOrigin(0.5));
     this.killTxt = sf(this.add.text(W - 34, 12, '0', font(10, '#ffffff')).setOrigin(1, 0));
@@ -181,9 +188,10 @@ export class Battle extends Phaser.Scene {
     this.ultBase = sf(this.add.circle(ux, uy, 22, 0x15121f, 0.9).setStrokeStyle(2, 0x5b4f7a));
     this.ultFill = sf(this.add.graphics());
     this.ultIcon = sf(icon(this, ux, uy, 4, 22));
-    this.ultTxt = sf(this.add.text(ux, uy + 28, '궁극기', font(8, '#c8bfe0')).setOrigin(0.5));
+    this.ultTxt = sf(this.add.text(ux, uy + 28, '궁극기', font(9, '#c8bfe0')).setOrigin(0.5));
     this.ultBase.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.ult());
     this.ultPos = { x: ux, y: uy };
+    this.showUlt = v => [this.ultBase, this.ultFill, this.ultIcon, this.ultTxt].forEach(o => o.setVisible(v));
     this.bossBar = null;
     this.refreshSkillRow();
   }
@@ -272,9 +280,23 @@ export class Battle extends Phaser.Scene {
     if (this.endless) return Math.min(D.ENDLESS.maxF, (this.wave * this.waveLen + this.waveT) / (3 * this.waveLen));
     return Math.min(1, (this.wave * this.waveLen + this.waveT) / (this.waveCount * this.waveLen)); }
 
-  spawn(near = false, kind = this.pickKind(), opt = {}) {
+  // 이번 스테이지 변종(과 앞 스테이지 변종)을 일정 비율로 섞는다. 거대 변종은 드물게
+  rollVariant() {
+    if (this.endless || !this.s) return null;
+    let r = Math.random();
+    for (const [st, rate] of [[this.s, D.VARIANT_RATE], [this.s - 1, D.VARIANT_OLD_RATE]]) {
+      const sv = D.STAGE_VARIANT[st];
+      if (sv && r < rate) return r < rate * (sv[1] === 'giant' ? 0.35 : 1) ? { kind: this.ch.mobs[sv[0]], v: sv[1] } : null;
+      r -= rate;
+    }
+    return null;
+  }
+
+  spawn(near = false, kind = null, opt = {}) {
     if (this.mobs.countActive() >= 120 + this.c * 10 && !opt.force) return null;
-    const m0 = D.MOBS[kind];
+    let vk = opt.variant;
+    if (!kind) { const rv = this.rollVariant(); if (rv) { kind = rv.kind; vk = rv.v; } else kind = this.pickKind(); }
+    const m0 = D.MOBS[kind], v = vk ? D.VARIANTS[vk] : null;
     const p = opt.at || (near ? this.spawnPoint(110, 230) : this.spawnPoint());
     const m = this.mobs.create(p.x, p.y, null);
     m.play({ key: kind, startFrame: R(0, 3) });
@@ -283,21 +305,26 @@ export class Battle extends Phaser.Scene {
     m.elite = elite;
     // 무한의 탑은 층마다 몹이 곱으로 세져 언젠가는 반드시 쓰러진다
     const tower = this.endless ? [Math.pow(D.ENDLESS.hpGrow, this.wave), Math.pow(D.ENDLESS.dmgGrow, this.wave)] : [1, 1];
-    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1) * tower[0];
+    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1) * tower[0] * (v?.hp || 1) * (opt.mini ? 0.35 : 1);
     m.dmg = m0.dmg * this.mobDmgMul * (elite ? 1.2 : 1) * tower[1];
-    m.spd = m0.spd * (1 + 0.04 * this.c) * RF(0.9, 1.1);
-    m.kbRes = m.ai === 'tank' ? 0.45 : elite ? 0.3 : 1;
+    m.spd = m0.spd * (1 + 0.04 * this.c) * RF(0.9, 1.1) * (v?.spd || 1) * (opt.mini ? 1.2 : 1);
+    if (v?.ai) m.ai = v.ai;
+    m.kbRes = v?.kb ?? (m.ai === 'tank' ? 0.45 : elite ? 0.3 : 1);
+    m.variant = opt.mini ? null : vk; m.bs = (elite ? 1.5 : 1) * (v?.scale || 1) * (opt.mini ? 0.65 : 1);
     m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.phase = RF(0, 6); m.t = 0;
     m.hitBy = {};
     if (this.registry.get('fallback')[kind] && this.c > 0) m.setTint(m0.color);
+    if (v) m.setTint(v.tint);
     m.baseTint = m.tintTopLeft;
+    m.setScale(m.bs);
     if (elite) {
-      m.setScale(1.5);
       m.preFX?.addGlow(0xffd75e, 3, 0, false, 0.1, 8);
     }
     m.body.setSize(m.width * 0.6, m.height * 0.5).setOffset(m.width * 0.2, m.height * 0.45);
     m.setAlpha(m.float ? 0.85 : 1);
-    if (!near) { m.setScale(0.2 * m.scaleX); this.tweens.add({ targets: m, scale: elite ? 1.5 : 1, duration: 200, ease: 'Back.Out' }); }
+    if (!near) { m.setScale(0.2 * m.scaleX); this.tweens.add({ targets: m, scale: m.bs, duration: 200, ease: 'Back.Out' }); }
+    // 폭탄 변종은 부풀었다 줄었다 해서 멀리서도 알아본다
+    if (vk === 'burst' && !opt.mini) this.tweens.add({ targets: m, scaleX: m.bs * 1.15, scaleY: m.bs * 0.9, duration: 260, yoyo: true, repeat: -1, delay: 220 });
     return m;
   }
 
@@ -331,7 +358,7 @@ export class Battle extends Phaser.Scene {
       const ox = from ? from.x : this.hero.x, oy = from ? from.y : this.hero.y;
       const ang = Phaser.Math.Angle.Between(ox, oy, m.x, m.y), k = kb * (crit ? 1.5 : 1) * m.kbRes;
       if (k > 0) { m.setVelocity(Math.cos(ang) * k, Math.sin(ang) * k); m.kb = 120; }
-      const sc = m.elite ? 1.5 : 1;
+      const sc = m.bs || 1;
       this.tweens.add({ targets: m, scaleX: 1.3 * sc, scaleY: 0.75 * sc, duration: 50, yoyo: true, ease: 'Quad.Out', onComplete: () => m.active && m.setScale(sc) });
       if (m.hp > 0 && this.anims.exists(m.kind + 'Hurt') && fx === 'big') {
         m.play(m.kind + 'Hurt');
@@ -356,7 +383,7 @@ export class Battle extends Phaser.Scene {
 
   popup(x, y, n, crit, big) {
     // 화면이 숫자로 덮이지 않게: 치명타와 큰 숫자(100 이상)만 띄우고, 8개를 넘으면 오래된 것부터 지운다
-    if (!crit && n < 100) return;
+    if (!crit && n < 100 && Math.random() > 0.25) return;   // 일반 타격도 네 번에 한 번은 보여 강화 차이가 숫자로 보인다
     if (this.popups.length >= 8) this.popups.shift().destroy();
     const t = this.add.text(x + R(-6, 6), y, fmt(n), font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2))
       .setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
@@ -375,29 +402,53 @@ export class Battle extends Phaser.Scene {
     r.mana = Math.min(D.MANA_MAX, r.mana + (m.elite ? D.MANA_ELITE : D.MANA_KILL));
     sfx('kill', 50);
     if (m.isBoss) { m.bossAI.die(); return; }
+    // 연속 처치: 1.2초 안에 이어 잡으면 콤보가 쌓인다
+    this.combo = this.bt - (this.lastKillT || -1e9) < 1200 ? (this.combo || 0) + 1 : 1; this.lastKillT = this.bt;
+    if (this.combo >= 10) { this.comboTxt.setText(`${this.combo} 콤보`).setAlpha(1).setScale(1.35); this.tweens.add({ targets: this.comboTxt, scale: 1, duration: 120 }); }
+    // 정예를 잡으면 잠깐 멈추고 번쩍인다
+    if (m.elite) { this.hitstop = 110; this.cameras.main.shake(140, 0.008); this.cameras.main.flash(90, 255, 230, 160); }
     // +10부터는 쓰러뜨린 자리에도 불티가 튄다(+15는 더 자주)
     const g = this.weapons.enhGlow();
     if (g.ember && Math.random() < (this.sv.enh >= 15 ? 0.6 : 0.35)) this.weapons.embers(m.x, m.y, g.tint);
     // 쓰러지는 그림(전용 시트가 있으면 무너짐, 없으면 흰빛으로 부풀었다 사라짐)
+    // 시체가 칼 맞은 반대쪽으로 튕겨 나간다
+    const ka = Phaser.Math.Angle.Between(this.hero.x, this.hero.y, m.x, m.y), kd = m.elite ? 10 : 18;
     if (this.anims.exists(m.kind + 'Die')) {
       const c = this.add.sprite(m.x, m.y, m.texture.key).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff).play(m.kind + 'Die');
+      this.tweens.add({ targets: c, x: m.x + Math.cos(ka) * kd, y: m.y + Math.sin(ka) * kd, angle: Math.cos(ka) > 0 ? 25 : -25, duration: 180, ease: 'Quad.Out' });
       this.time.delayedCall(60, () => c.clearTint());
       c.once('animationcomplete', () => this.tweens.add({ targets: c, alpha: 0, delay: 250, duration: 400, onComplete: () => c.destroy() }));
     } else {
       const c = this.add.sprite(m.x, m.y, m.texture.key, m.frame.name).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff);
-      this.tweens.add({ targets: c, scaleX: c.scaleX * 1.4, scaleY: c.scaleY * 0.2, alpha: 0, duration: 220, ease: 'Quad.In', onComplete: () => c.destroy() });
+      this.tweens.add({ targets: c, x: m.x + Math.cos(ka) * kd, y: m.y + Math.sin(ka) * kd, angle: Math.cos(ka) > 0 ? 40 : -40, scaleX: c.scaleX * 1.4, scaleY: c.scaleY * 0.2, alpha: 0, duration: 220, ease: 'Quad.In', onComplete: () => c.destroy() });
     }
     this.goo.setParticleTint(m.color); this.goo.explode(m.elite ? 24 : 8, m.x, m.y);
+    if (m.variant === 'split') for (const d of [-7, 7]) this.spawn(true, m.kind, { force: true, mini: true, at: { x: m.x + d, y: m.y + R(-4, 4) } })?.setTint(D.VARIANTS.split.tint);
+    if (m.variant === 'burst') this.burst(m.x, m.y, m.dmg);
     const sm = this.add.sprite(m.x, m.y - 2, 'fx1_r2s').setBlendMode(Phaser.BlendModes.ADD).setDepth(30).setAlpha(0.35).setScale(m.elite ? 1 : 0.5).setTint(m.color).play('fxSmoke');
     sm.once('animationcomplete', () => sm.destroy());
     this.drop(m);
+    this.tweens.killTweensOf(m);   // 폭탄 변종의 반복 맥박이 지운 몹을 붙잡지 않게
     m.destroy();
+  }
+
+  // 폭탄 변종: 붉은 원이 차오른 뒤 터진다. 그 안에 있으면 맞는다
+  burst(x, y, dmg) {
+    const R0 = 30, warn = this.add.circle(x, y, R0, 0xff4020, 0.18).setStrokeStyle(1, 0xff6040).setDepth(6).setScale(0.2);
+    this.tweens.add({ targets: warn, scale: 1, duration: 550, ease: 'Quad.In', onComplete: () => {
+      warn.destroy();
+      if (this.over) return;
+      const s = this.add.sprite(x, y, 'fx2_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31).setTint(0xffa040).setScale(1.3).play('fxCrit');
+      s.once('animationcomplete', () => s.destroy());
+      this.spark.explode(14, x, y); sfx('boom', 80); this.cameras.main.shake(90, 0.004);
+      if (Phaser.Math.Distance.Between(x, y, this.hero.x, this.hero.y) < R0 + 4) this.hurt(dmg, 'burst');
+    } });
   }
 
   // ── 드롭 ──
   drop(m) {
     const r = this.run, P = D.DROP;
-    this.addGem(m.x, m.y, m.elite ? 10 : m.ai === 'tank' ? 2 : 1);
+    this.addGem(m.x, m.y, m.elite ? 10 : m.variant === 'giant' ? 5 : m.ai === 'tank' || m.variant === 'armor' ? 2 : 1);
     if (m.elite) {
       const n = R(...P.eliteSilver);
       for (let i = 0; i < 6; i++) this.addItem(m.x + R(-10, 10), m.y + R(-10, 10), 'silver', Math.ceil(n / 6));
@@ -712,6 +763,7 @@ export class Battle extends Phaser.Scene {
   }
 
   updateHud(time) {
+    if (this.comboTxt.alpha > 0 && this.bt - (this.lastKillT || 0) > 1200) this.comboTxt.setAlpha(Math.max(0, this.comboTxt.alpha - 0.05));
     const r = this.run, cam = this.cameras.main;
     this.xpBar.width = W * Math.min(1, r.xp / D.xpNeed(r.lv));
     const f = Math.max(0, this.hp / this.maxHp);

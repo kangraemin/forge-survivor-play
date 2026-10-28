@@ -31,6 +31,22 @@ export const MOBS = {
   gargoyle: { sheet: 'z5', row: 2, hp: 14, spd: 52, dmg: 4.5, ai: 'swarm', color: 0x9a9aa8 },
 };
 
+export const MOB_NAMES = {
+  slime: '슬라임', skel: '해골', bat: '박쥐', zombie: '좀비', ghost: '유령', spider: '거미', imp: '임프', golem: '골렘', fskull: '불해골',
+  wolf: '늑대', yeti: '설인', icesp: '얼음 정령', dknight: '암흑 기사', cultist: '사교도', gargoyle: '가고일',
+};
+// 변종: 스테이지마다 하나씩 새로 나와 판마다 몬스터가 달라 보이게 한다(같은 그림에 색·크기·행동을 바꾼다)
+export const VARIANTS = {
+  split: { pre: '분열', desc: '쓰러지면 둘로 갈라진다', tint: 0xc070ff },
+  swift: { pre: '광폭', desc: '붉게 달아오르면 돌진한다', tint: 0xff5050, spd: 1.35, ai: 'charge' },
+  armor: { pre: '철갑', desc: '단단하고 잘 밀리지 않는다', tint: 0x8fa8d0, hp: 1.5, scale: 1.2, kb: 0.25 },
+  burst: { pre: '폭탄', desc: '쓰러지면 잠시 뒤 터진다 — 떨어져라', tint: 0xffa030 },
+  giant: { pre: '거대', desc: '크고 질기다', tint: 0xffe070, hp: 3, scale: 1.7, spd: 0.8, kb: 0.2 },
+};
+// 스테이지 s(1~5)에 새로 나오는 변종: [챕터 몹 번호, 변종]. 0번 스테이지는 기본 몹만
+export const STAGE_VARIANT = [null, [0, 'split'], [2, 'swift'], [1, 'armor'], [0, 'burst'], [2, 'giant']];
+export const VARIANT_RATE = 0.22, VARIANT_OLD_RATE = 0.1;   // 이번 변종 / 앞 스테이지 변종이 섞이는 비율
+
 // 보스: sheet/row는 2프레임 시트. hp는 1챕터 배율 기준 값(챕터 배율이 곱해진다)
 export const BOSSES = {
   kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1500, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'summon', 'jump', 'ring'] },
@@ -94,8 +110,8 @@ export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) 
 
 // ── 판 안 성장 ──
 export const PLAYER = { hp: 100, spd: 72, iframe: 600, pickup: 34 };
-// 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 20% 줄여 한 판 안에 진화까지 닿게 한다
-export const xpNeed = lv => lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.8)) : 8 + (lv - 1) * 11;
+// 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 30% 줄여 한 판 안에 진화까지 닿게 한다
+export const xpNeed = lv => lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.7)) : 8 + (lv - 1) * 11;
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 
