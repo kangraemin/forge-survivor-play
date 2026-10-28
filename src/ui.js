@@ -7,7 +7,7 @@ export const font9 = (size, color = '#d8d2e8') => ({ fontFamily: 'G9', fontSize:
 
 export const COLOR = { panel: 0x15121f, panel2: 0x221c33, line: 0x5b4f7a, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
 
-export const fmt = n => n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : String(Math.floor(n));
+export const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : String(Math.floor(n));
 
 export function panel(scene, x, y, w, h, { fill = COLOR.panel, line = COLOR.line, alpha = 0.94 } = {}) {
   const g = scene.add.graphics();
@@ -58,11 +58,14 @@ export function icon(scene, x, y, idx, size = 22) {
   return scene.add.text(x, y, FALLBACK[idx] || '?', { fontSize: Math.round(size * 0.8) + 'px' }).setOrigin(0.5);
 }
 
-// 화면 아래에서 떠오르는 알림 한 줄
+// 화면 위쪽에서 잠깐 떴다 사라지는 알림 한 줄
 export function toast(scene, msg, color = '#ffffff') {
-  const t = scene.add.text(135, 380, msg, font(12, color)).setOrigin(0.5).setDepth(200).setScrollFactor(0).setAlpha(0);
-  scene.tweens.add({ targets: t, alpha: 1, y: 360, duration: 160, ease: 'Back.Out' });
-  scene.tweens.add({ targets: t, alpha: 0, y: 340, delay: 1100, duration: 300, onComplete: () => t.destroy() });
+  // 화면 위쪽(상단 바 바로 아래)에 어두운 띠를 깔아 아래 정보·버튼을 가리지 않는다
+  const t = scene.add.container(135, 104).setDepth(200).setScrollFactor(0).setAlpha(0);
+  const tx = scene.add.text(0, 0, msg, font(12, color)).setOrigin(0.5);
+  t.add([scene.add.rectangle(0, 0, Math.min(262, tx.width + 24), 24, 0x0a0710, 0.85).setStrokeStyle(1, 0x5b4f7a), tx]);
+  scene.tweens.add({ targets: t, alpha: 1, y: 88, duration: 160, ease: 'Back.Out' });
+  scene.tweens.add({ targets: t, alpha: 0, y: 76, delay: 1300, duration: 300, onComplete: () => t.destroy() });
 }
 
 // 보석(유료 재화) 아이콘: 아이콘 시트에 없어 직접 그린 분홍 다이아

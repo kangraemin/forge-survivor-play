@@ -1,6 +1,6 @@
 // 액티브 스킬 8종. 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
 import { sfx } from './sfx.js';
-import { SKILLS } from './data.js';
+import { SKILLS, PASSIVE_LV3 } from './data.js';
 
 const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
 
@@ -9,8 +9,8 @@ export class Weapons {
 
   get sk() { return this.s.run.skills; }
   evo(k) { return this.s.run.evo?.[k]; }
-  area() { return 1 + 0.1 * (this.sk.area || 0); }
-  cdMul() { return 1 - 0.08 * (this.sk.focus || 0); }
+  area() { return 1 + 0.1 * (this.sk.area || 0) + ((this.sk.area || 0) >= PASSIVE_LV3 ? 0.1 : 0); }
+  cdMul() { return 1 - 0.08 * (this.sk.focus || 0) - ((this.sk.focus || 0) >= PASSIVE_LV3 ? 0.06 : 0); }
 
   nearest(maxD = 1e9, from = this.s.hero) {
     let best = null, bd = maxD * maxD;
@@ -37,6 +37,20 @@ export class Weapons {
     this.updateBullets(dt);
   }
 
+  enhGlow() {
+    const e = this.s.sv.enh;
+    return e >= 15 ? { tint: 0xd06bff, scale: 1.2, ember: true } : e >= 10 ? { tint: 0xff9a3a, scale: 1.12, ember: true } : e >= 5 ? { tint: 0x7fd8ff, scale: 1.06 } : { tint: 0, scale: 1 };
+  }
+  // +10부터 맞힌 자리에 불티가 튄다
+  embers(x, y, color) {
+    const s = this.s;
+    for (let i = 0; i < 4; i++) {
+      const p = s.add.circle(x, y, Phaser.Math.Between(1, 2), color).setBlendMode(Phaser.BlendModes.ADD).setDepth(29);
+      const a = Math.random() * Math.PI * 2, d = 10 + Math.random() * 14;
+      s.tweens.add({ targets: p, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 6, alpha: 0, duration: 320, onComplete: () => p.destroy() });
+    }
+  }
+
   // ── 검 휘두르기: 가장 가까운 적 쪽으로 내딛으며 벤다. 판정은 궤적이 가장 꽉 찬 순간 ──
   sword(lv) {
     const s = this.s, h = s.hero;
@@ -51,8 +65,11 @@ export class Weapons {
     const area = this.area() * (lv >= 4 ? 1.2 : 1) * (evo ? 1.35 : 1);
     const mult = evo ? 4 : [1.6, 2, 2, 2, 2.8][lv - 1];
     const slash = (a, delay) => s.time.delayedCall(delay, () => {
+      // 강화 단계가 판 안에서도 보이게: +5 파랑, +10 불꽃, +15 보라로 궤적이 커지고 물든다
+      const g = this.enhGlow();
       const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.85)
-        .setScale(0.85 * area).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
+        .setScale(0.85 * area * g.scale).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
+      if (g.tint) fx.setTint(g.tint);
       const place = () => fx.setPosition(h.x + Math.cos(a) * 22 * area, h.y - 4 + Math.sin(a) * 18 * area);
       place(); fx.on('animationupdate', place);
       fx.once('animationcomplete', () => fx.destroy());
@@ -64,7 +81,7 @@ export class Weapons {
           const dx = m.x - h.x, dy = m.y - h.y, d = Math.hypot(dx, dy);
           const off = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - a));
           const reach = 56 * area + (m.isBoss ? m.displayWidth * 0.3 : 0);
-          if (d < reach && (off < 1.9 || d < 18)) { if (s.hitMob(m, mult, { kb: 170, fx: 'big' })) hit++; }
+          if (d < reach && (off < 1.9 || d < 18)) { if (s.hitMob(m, mult, { kb: 170, fx: 'big' })) { hit++; if (g.ember && hit <= 3) this.embers(m.x, m.y, g.tint); } }
         });
         // 히트스톱: 맞힌 순간 아주 잠깐 멈춰 손맛을 준다(너무 잦으면 끊겨 보여 간격 제한)
         if (hit && s.bt - (this.lastStop || 0) > 140) { this.lastStop = s.bt; s.hitstop = 50; s.cameras.main.shake(60, 0.003); }

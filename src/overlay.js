@@ -16,6 +16,8 @@ export class Overlay {
     const s = this.s;
     this.open = name;
     s.paused = true; s.physics.pause(); s.anims.pauseAll();
+    // 이동 안내가 창 뒤로 비치지 않게 바로 지운다
+    s.hint?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.hint = null;
     s.joy.o = null; s.joy.v.reset(); s.joy.base.setVisible(false); s.joy.knob.setVisible(false);
     const c = fixedContainer(s).setDepth(DEPTH);
     const dim = s.add.rectangle(0, 0, W, H, 0x05030a, 0.72).setOrigin(0).setInteractive();
@@ -73,18 +75,19 @@ export class Overlay {
     const pil = s.add.sprite(s.hero.x, s.hero.y + 20, 'fx2_r2s').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH - 1).setTint(0x9ad8ff).play('fxPillar');
     pil.once('animationcomplete', () => pil.destroy());
     c.add(s.add.text(W / 2, 100, 'LEVEL UP!', font(20, '#6fd3ff')).setOrigin(0.5));
-    c.add(s.add.text(W / 2, 122, `Lv ${s.run.lv}  ·  스킬을 하나 고르세요`, font9(10)).setOrigin(0.5));
+    // 처음 하는 사람에게는 같은 자리에서 고르는 법을 알려 준다(카드와 겹치지 않게)
+    const firstLv = s.sv.stats.runs <= 1 && s.run.lv === 2;
+    c.add(s.add.text(W / 2, 122, firstLv ? '▼ 아래 카드 하나를 눌러 고르세요' : `Lv ${s.run.lv}  ·  스킬을 하나 고르세요`, font9(11, firstLv ? '#ffffff' : '#d8d2e8')).setOrigin(0.5));
     const cards = s.add.container(0, 0); c.add(cards);
     const draw = () => {
       cards.removeAll(true);
-      this.choices().forEach((k, i) => cards.add(this.card(k, W / 2, 168 + i * 74, i)));
+      this.choices().forEach((k, i) => cards.add(this.card(k, W / 2, 172 + i * 78, i)));
     };
     draw();
     // 처음 하는 사람: 첫 레벨업 카드를 반짝여 고르는 곳을 알려 준다
-    if (s.sv.stats.runs <= 1 && s.run.lv === 2) {
-      const glow = s.add.rectangle(W / 2, 168, 236, 70).setStrokeStyle(2, 0xffffff).setAlpha(0); c.add(glow);
+    if (firstLv) {
+      const glow = s.add.rectangle(W / 2, 172, 236, 76).setStrokeStyle(2, 0xffffff).setAlpha(0); c.add(glow);
       s.tweens.add({ targets: glow, alpha: 1, duration: 350, yoyo: true, repeat: -1, delay: 300 });
-      c.add(s.add.text(W / 2, 140, '▼ 하나를 눌러 고르세요', font9(10, '#ffffff')).setOrigin(0.5));
     }
     const r = s.run;
     const label = () => r.freeReroll > 0 ? '다시 뽑기 (무료)' : `다시 뽑기  은화 ${this.lvReroll()}`;
@@ -96,7 +99,7 @@ export class Overlay {
     }, { size: 10, color: 0x3b2f5c });
     rb.setEnabled(r.freeReroll > 0 || r.silver >= this.lvReroll());
     c.add(rb);
-    c.add(s.add.text(W / 2, 424, `은화 ${r.silver}`, font9(9, '#d8e0f0')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 424, `은화 ${r.silver}`, font9(11, '#d8e0f0')).setOrigin(0.5));
     if (s.bot) s.time.delayedCall(150, () => this.pick(cards.list[0]?.key));
   }
   lvReroll() { return 8 + 6 * (this.s.run.lvRerolls || 0); }
@@ -108,17 +111,21 @@ export class Overlay {
     const special = k[0] === '_';
     const def = special ? null : D.SKILLS[k], lv = sk[k] || 0;
     const isAct = def?.type === 'active';
-    c.add(panel(s, -115, -32, 230, 64, { fill: lv ? 0x241d38 : 0x1c1830, line: isAct ? 0x6fd3ff : 0xffd75e }));
+    c.add(panel(s, -115, -35, 230, 70, { fill: lv ? 0x241d38 : 0x1c1830, line: isAct ? 0x6fd3ff : 0xffd75e }));
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(1, isAct ? 0x6fd3ff : 0xffd75e, 0.6));
     c.add(icon(s, -88, 0, special ? (k === '_heal' ? 14 : 12) : def.icon, 32));
     const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : def.name;
-    c.add(s.add.text(-60, -21, name, font(12, isAct ? '#9ae0ff' : '#ffe08a')));
-    c.add(s.add.text(108, -21, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(9, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
-    const desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
-    c.add(s.add.text(-60, -2, desc, { ...font9(10, '#e8e2f8'), wordWrap: { width: 165 } }));
+    c.add(s.add.text(-60, -24, name, font(12, isAct ? '#9ae0ff' : '#ffe08a')));
+    c.add(s.add.text(108, -24, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(11, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
+    let desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
+    if (def?.bonus && lv + 1 === D.PASSIVE_LV3) desc += `\n+ Lv3 보너스: ${def.bonus}`;
+    c.add(s.add.text(-60, -6, desc, { ...font9(11, '#e8e2f8'), wordWrap: { width: 165 } }).setLineSpacing(1));
     // 레벨 칸
-    if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 22, 7, 4, j < lv ? 0xffd75e : j === lv ? 0x5fdc6a : 0x3a3450).setOrigin(0, 0.5));
-    c.setSize(230, 64).setInteractive({ useHandCursor: true });
+    if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 26, 7, 4, j < lv ? 0xffd75e : j === lv ? 0x5fdc6a : 0x3a3450).setOrigin(0, 0.5));
+    // 진화 재료 표시: 이 스킬이 다른 스킬의 진화에 쓰이면 짝을 알려 준다
+    const evoOf = special ? null : def.type === 'active' ? D.EVOS[k] && D.SKILLS[D.EVOS[k].need].name : Object.keys(D.EVOS).find(b => D.EVOS[b].need === k);
+    if (evoOf && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${D.SKILLS[evoOf].name} 진화 재료`, font9(11, '#e0b060')).setOrigin(1, 0.5));
+    c.setSize(230, 70).setInteractive({ useHandCursor: true });
     c.on('pointerup', () => this.pick(k, c));
     c.setScale(0.6).setAlpha(0);
     s.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 200, delay: i * 70, ease: 'Back.Out' });
@@ -129,16 +136,16 @@ export class Overlay {
   evoCard(k, x, y, i) {
     const s = this.s, base = k.slice(5), e = D.EVOS[base];
     const c = s.add.container(x, y); c.key = k;
-    c.add(panel(s, -115, -32, 230, 64, { fill: 0x3a2a10, line: 0xffd75e }));
-    const shine = s.add.rectangle(0, 0, 230, 64, 0xffd75e, 0.18); c.add(shine);
+    c.add(panel(s, -115, -35, 230, 70, { fill: 0x3a2a10, line: 0xffd75e }));
+    const shine = s.add.rectangle(0, 0, 230, 70, 0xffd75e, 0.18); c.add(shine);
     s.tweens.add({ targets: shine, alpha: 0.02, duration: 500, yoyo: true, repeat: -1 });
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(2, 0xffd75e));
     c.add(icon(s, -88, 0, D.SKILLS[base].icon, 32));
-    c.add(s.add.text(-60, -21, e.name, font(12, '#ffd75e')));
-    c.add(s.add.text(108, -21, '진화!', font(11, '#ff9a3a')).setOrigin(1, 0));
-    c.add(s.add.text(-60, -2, e.desc, { ...font9(10, '#fff2c8'), wordWrap: { width: 165 } }));
-    c.add(s.add.text(-60, 18, `${D.SKILLS[base].name} + ${D.SKILLS[e.need].name}`, font9(9, '#c8a060')));
-    c.setSize(230, 64).setInteractive({ useHandCursor: true });
+    c.add(s.add.text(-60, -24, e.name, font(12, '#ffd75e')));
+    c.add(s.add.text(108, -24, '진화!', font(11, '#ff9a3a')).setOrigin(1, 0));
+    c.add(s.add.text(-60, -6, e.desc, { ...font9(11, '#fff2c8'), wordWrap: { width: 165 } }));
+    c.add(s.add.text(-60, 20, `${D.SKILLS[base].name} + ${D.SKILLS[e.need].name}`, font9(11, '#c8a060')));
+    c.setSize(230, 70).setInteractive({ useHandCursor: true });
     c.on('pointerup', () => this.pick(k, c));
     c.setScale(0.6).setAlpha(0);
     s.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 200, delay: i * 70, ease: 'Back.Out' });
@@ -204,9 +211,9 @@ export class Overlay {
     let rerolls = 0;
     c.add(panel(s, 10, 60, W - 20, 380, { fill: 0x1a1426 }));
     c.add(s.add.text(W / 2, 78, '떠돌이 상인', font(15, '#ffd75e')).setOrigin(0.5));
-    c.add(s.add.text(W / 2, 96, '은화는 판이 끝나면 사라진다', font9(9, '#a89cc8')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 96, '은화는 판이 끝나면 사라진다', font9(10, '#a89cc8')).setOrigin(0.5));
     const silverTxt = s.add.text(W / 2, 116, '', font(12, '#e8eef8')).setOrigin(0.5); c.add(silverTxt);
-    const hpTxt = s.add.text(W / 2, 132, '', font9(9, '#ff9090')).setOrigin(0.5); c.add(hpTxt);
+    const hpTxt = s.add.text(W / 2, 132, '', font9(10, '#ff9090')).setOrigin(0.5); c.add(hpTxt);
     const grid = s.add.container(0, 0); c.add(grid);
     let stock = [];
     const roll = () => { stock = Phaser.Utils.Array.Shuffle(D.SHOP_ITEMS.slice()).slice(0, D.SHOP_SLOTS).map(it => ({ ...it, price: D.shopPrice(it.price, round), sold: false })); };
@@ -221,7 +228,7 @@ export class Overlay {
         g.add(panel(s, -56, -46, 112, 92, { fill: it.sold ? 0x141018 : 0x261f3a, line: can ? 0xffd75e : 0x4a4060 }));
         g.add(icon(s, 0, -26, it.icon, 26).setAlpha(it.sold ? 0.3 : 1));
         g.add(s.add.text(0, -4, it.name, font(10, it.sold ? '#666' : '#ffffff')).setOrigin(0.5));
-        g.add(s.add.text(0, 12, it.desc, { ...font9(9, '#c8bfe0'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0));
+        g.add(s.add.text(0, 12, it.desc, { ...font9(10, '#c8bfe0'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0));
         g.add(s.add.text(0, 34, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
         g.setSize(112, 92).setInteractive({ useHandCursor: true });
         g.on('pointerup', () => {
@@ -276,7 +283,7 @@ export class Overlay {
     c.add(panel(s, 45, 150, 180, 170));
     c.add(s.add.text(W / 2, 172, '일시정지', font(14)).setOrigin(0.5));
     const sk = Object.entries(s.run.skills).map(([k, lv]) => `${D.SKILLS[k].name} ${lv}`).join('\n');
-    c.add(s.add.text(W / 2, 192, sk, { ...font9(9), align: 'center' }).setOrigin(0.5, 0).setLineSpacing(1));
+    c.add(s.add.text(W / 2, 192, sk, { ...font9(10), align: 'center' }).setOrigin(0.5, 0).setLineSpacing(1));
     c.add(button(s, W / 2, 268, 130, 26, '계속하기', () => this.end(c), { color: 0x2f6b3a }));
     c.add(button(s, W / 2, 300, 130, 24, '포기하기', () => { if (c !== this.c) return; this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x6b2f3a }));
   }
@@ -302,7 +309,7 @@ export class Overlay {
     }, { size: 11, color: 0x8a2f6a });
     gm.setEnabled(sv.gem >= D.REVIVE_GEM);
     c.add([ad, gm, gemIcon(s, W / 2 - 62, 268, 12)]);
-    c.add(s.add.text(W / 2 + 70, 288, `보유 ${sv.gem}`, font9(8, '#ff9ad0')).setOrigin(1, 0));
+    c.add(s.add.text(W / 2 + 70, 288, `보유 ${sv.gem}`, font9(10, '#ff9ad0')).setOrigin(1, 0));
     c.add(button(s, W / 2, 316, 120, 24, '포기', () => {
       if (busy || c !== this.c) return;
       this.end(c); s.die(true);
@@ -338,7 +345,7 @@ export class Overlay {
     c.add(panel(s, 20, 90, W - 40, 300, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
     const title = s.add.text(W / 2, 118, win ? (s.isBoss ? '보스 격파!' : '스테이지 클리어!') : '쓰러졌다…', font(18, win ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
-    c.add(s.add.text(W / 2, 142, `${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(9, '#c8bfe0')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 142, `${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
     const lines = [
       ['처치', fmt(r.kills)], ['레벨', 'Lv ' + r.lv], ['버틴 정도', Math.round(s.progress() * 100) + '%'],
     ];

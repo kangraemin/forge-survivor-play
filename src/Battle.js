@@ -73,7 +73,7 @@ export class Battle extends Phaser.Scene {
       this.tweens.timeScale = this.speed; this.anims.globalTimeScale = this.speed;
     }
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
-    for (let i = 0; i < 18; i++) this.spawn(true);
+    for (let i = 0; i < 40; i++) this.spawn(true);
     if (!this.bot) playBgm('battle', this.c);
     this.events.once('shutdown', stopBgm);
     if (sv.stats.runs < 2 && !this.bot) this.dragHint();
@@ -232,7 +232,8 @@ export class Battle extends Phaser.Scene {
     const t = this.add.text(W / 2, H - 120, '화면을 누른 채로 끌면 이동', font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
     const hand = this.add.circle(W / 2 - 30, H - 90, 9, 0xffffff, 0.5).setStrokeStyle(2, 0xffffff).setScrollFactor(0).setDepth(120);
     this.tweens.add({ targets: hand, x: W / 2 + 30, duration: 700, yoyo: true, repeat: 2, ease: 'Sine.InOut' });
-    this.tweens.add({ targets: [t, hand], alpha: 0, delay: 3000, duration: 400, onComplete: () => { t.destroy(); hand.destroy(); } });
+    this.hint = [t, hand];
+    this.tweens.add({ targets: [t, hand], alpha: 0, delay: 3000, duration: 400, onComplete: () => { t.destroy(); hand.destroy(); this.hint = null; } });
   }
 
   // ── 스폰 ──
@@ -253,6 +254,9 @@ export class Battle extends Phaser.Scene {
     if (r < 0.35 + 0.3 * f) return c;
     return a;
   }
+
+  // 지속 스킬이 3레벨에 닿으면 붙는 보너스
+  lv3(k, v) { return (this.run.skills[k] || 0) >= D.PASSIVE_LV3 ? v : 0; }
 
   progress() { return Math.min(1, (this.wave * this.waveLen + this.waveT) / (this.waveCount * this.waveLen)); }
 
@@ -295,7 +299,7 @@ export class Battle extends Phaser.Scene {
   // ── 피해 ──
   dmgCalc(mult) {
     const r = this.run, crit = Math.random() < 0.08 + this.tv('luck');
-    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0)) * RF(0.9, 1.1);
+    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0) + this.lv3('might', 0.1)) * RF(0.9, 1.1);
     return { dmg: Math.round(base * (crit ? 2 : 1)), crit };
   }
 
@@ -559,9 +563,9 @@ export class Battle extends Phaser.Scene {
     if (!this.bossPhase) {
       this.waveT += dt;
       if (this.waveT >= this.waveLen) { this.waveT = 0; this.endWave(); return; }
-      // 스폰: 초당 1.5 → 끝날 즈음 4.5마리(초반만 빽빽하게)
+      // 스폰: 초당 2.5 → 끝날 즈음 5.5마리(초반 몹은 약하고 많게)
       const f = this.progress();
-      this.spawnAcc = (this.spawnAcc || 0) + dt * (1.5 + 3 * f) / 1000;
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + 3 * f) / 1000;
       while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * 0.5 && (this.wave > 0 || this.c + this.s > 0)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
@@ -580,7 +584,7 @@ export class Battle extends Phaser.Scene {
     this.midBoss?.update(dt);
 
     // 회복(훈련 + 활력)
-    const regen = this.tv('regen') + 0.3 * (r.skills.vigor || 0);
+    const regen = this.tv('regen') + 0.3 * (r.skills.vigor || 0) + this.lv3('vigor', 0.6);
     if (regen > 0) this.hp = Math.min(this.maxHp, this.hp + regen * dt / 1000);
 
     this.moveHero(time, dt);
@@ -598,7 +602,7 @@ export class Battle extends Phaser.Scene {
     if (this.autoMove) v.copy(this.autoMove(time));
     if (v.length() > 1) v.normalize();
     const r = this.run;
-    const spd = D.PLAYER.spd * (1 + this.tv('spd') + 0.08 * (r.skills.haste || 0) + r.bSpd);
+    const spd = D.PLAYER.spd * (1 + this.tv('spd') + 0.08 * (r.skills.haste || 0) + this.lv3('haste', 0.08) + r.bSpd);
     let vx = v.x * spd, vy = v.y * spd;
     if (this.lunge && this.lunge.t > 0) { vx += this.lunge.x; vy += this.lunge.y; this.lunge.t -= dt; }
     this.hero.setVelocity(vx, vy);
@@ -673,7 +677,7 @@ export class Battle extends Phaser.Scene {
 
   updatePickups(dt) {
     const h = this.hero, r = this.run;
-    const pick = D.PLAYER.pickup * (1 + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + r.bPick);
+    const pick = D.PLAYER.pickup * (1 + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + this.lv3('magnet', 0.4) + r.bPick);
     this.gems.getChildren().slice().forEach(g => {
       const d = Phaser.Math.Distance.Between(g.x, g.y, h.x, h.y);
       if (d < pick || g.pull) { g.pull = true; this.physics.moveToObject(g, h, 120 + (g.sp = (g.sp || 0) + dt * 0.5)); }
@@ -699,7 +703,7 @@ export class Battle extends Phaser.Scene {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));
       this.timeTxt.setText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
       this.timeTxt.setColor(left <= 5 ? '#ffd75e' : '#ffffff');
-      this.waveTxt.setText(`웨이브 ${this.wave + 1}/${this.waveCount}`);
+      this.waveTxt.setText(`웨이브 ${Math.min(this.wave + 1, this.waveCount)}/${this.waveCount}`);
     }
     this.killTxt.setText(fmt(r.kills)); this.silverTxt.setText(fmt(r.silver));
     // 마나 링

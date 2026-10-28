@@ -46,8 +46,8 @@ export const chapterHp = c => Math.pow(2.1, c);           // c는 0부터
 export const chapterDmg = c => 0.65 * Math.pow(1.25, c);
 export const stageMul = s => 1 + 0.1 * s;                // s는 0~5
 export const stageDmg = s => 1 + 0.05 * s;               // 피해는 공격력으로 못 막으니 체력보다 완만하게
-// 판 안 시간에 따른 체력 상승(끝날 즈음 +70%)
-export const timeHp = f => 1 + 0.7 * f;
+// 판 안 시간에 따른 체력 상승(처음 0.75배 → 끝날 즈음 1.7배)
+export const timeHp = f => 0.75 + 0.95 * f;          // 초반 몹은 약하고 많게
 
 // ── 무기·대장간 ──
 export const TIERS = [
@@ -91,7 +91,8 @@ export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.2, lv) / 5) *
 
 // ── 판 안 성장 ──
 export const PLAYER = { hp: 100, spd: 72, iframe: 600, pickup: 34 };
-export const xpNeed = lv => 5 + (lv - 1) * 8;                         // 뱀서(5, +10씩)를 짧은 판에 맞게 줄임
+export const xpNeed = lv => 8 + (lv - 1) * 11;                        // 몹이 많아진 만큼 레벨업 간격을 늘림
+export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 
 // 액티브 스킬. lv별 수치는 Battle에서 lv로 계산한다
@@ -104,12 +105,12 @@ export const SKILLS = {
   fireball: { name: '화염구', type: 'active', icon: 8, desc: ['터지는 불덩이를 쏜다', '피해 +30%', '폭발 범위 +30%', '불덩이 +1', '바닥에 불이 남는다'] },
   ice: { name: '얼음 파편', type: 'active', icon: 9, desc: ['꿰뚫는 얼음을 쏜다', '파편 +1', '적을 얼린다', '피해 +40%', '파편 +2'] },
   orb: { name: '수호 구슬', type: 'active', icon: 11, desc: ['구슬이 몸 주위를 돈다', '구슬 +1', '피해 +30%', '구슬 +1', '구슬 +1, 빨라진다'] },
-  might: { name: '숫돌', type: 'passive', icon: 0, desc: ['피해 +10%'] },
-  haste: { name: '신속 물약', type: 'passive', icon: 10, desc: ['이동 속도 +8%'] },
-  focus: { name: '집중', type: 'passive', icon: 15, desc: ['재사용 대기 -8%'] },
-  area: { name: '넓은 칼날', type: 'passive', icon: 4, desc: ['공격 범위 +10%'] },
-  magnet: { name: '자석', type: 'passive', icon: 13, desc: ['줍는 거리 +30%'] },
-  vigor: { name: '활력', type: 'passive', icon: 14, desc: ['최대 체력 +20, 회복 +0.3/초'] },
+  might: { name: '숫돌', type: 'passive', icon: 0, desc: ['피해 +10%'], bonus: '피해 +10% 더' },
+  haste: { name: '신속 물약', type: 'passive', icon: 10, desc: ['이동 속도 +8%'], bonus: '이동 속도 +8% 더' },
+  focus: { name: '집중', type: 'passive', icon: 15, desc: ['재사용 대기 -8%'], bonus: '재사용 대기 -6% 더' },
+  area: { name: '넓은 칼날', type: 'passive', icon: 4, desc: ['공격 범위 +10%'], bonus: '공격 범위 +10% 더' },
+  magnet: { name: '자석', type: 'passive', icon: 13, desc: ['줍는 거리 +30%'], bonus: '줍는 거리 +40% 더' },
+  vigor: { name: '활력', type: 'passive', icon: 14, desc: ['최대 체력 +20, 회복 +0.3/초'], bonus: '회복 +0.6/초 더' },
 };
 export const PASSIVE_KEYS = ['might', 'haste', 'focus', 'area', 'magnet', 'vigor'];
 

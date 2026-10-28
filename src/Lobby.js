@@ -16,7 +16,9 @@ export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
   // 씬 인스턴스는 재사용되니 전투에서 돌아올 때 잠금·체크 상태를 비운다
-  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.useGuard = false; }
+  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.guardOff = false; }
+  // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
+  get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
 
   create() {
     this.sv = load();
@@ -333,7 +335,7 @@ export class Lobby extends Phaser.Scene {
         if (this.useGuard) chk.add(this.add.text(6, 0, '✓', font(10, '#9ae0ff')).setOrigin(0.5));
         chk.add(this.add.text(18, 0, `파괴 방지권 쓰기 (${sv.guard}장)`, font9(10, sv.guard ? '#e8e2f8' : '#5a5070')).setOrigin(0, 0.5));
         chk.setSize(200, 18).setInteractive({ useHandCursor: true });
-        chk.on('pointerup', () => { if (this.busy) return; if (!sv.guard) { sfx('deny'); return; } sfx('click'); this.useGuard = !this.useGuard; this.show('forge'); });
+        chk.on('pointerup', () => { if (this.busy) return; if (!sv.guard) { sfx('deny'); return; } sfx('click'); this.guardOff = !this.guardOff; this.show('forge'); });
         b.add(chk);
       }
       const ok = sv.gold >= gold && sv.stone >= stone;
@@ -370,7 +372,6 @@ export class Lobby extends Phaser.Scene {
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
     if (win) sv.enh++;
     else if (outcome === 'shatter') { sv.enh = 0; sv.stats.destroyed++; }
-    if (sv.enh < D.DESTROY_FROM || sv.guard <= 0) this.useGuard = false;
     mission('enh'); sv.tut.forge = true;
     save();
     this.refreshTop();
@@ -429,8 +430,8 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, c = this.modal(), cost = D.GEM_SHOP.find(x => x.id === 'guard').cost;
     c.add(panel(this, 24, 150, W - 48, 180, { fill: 0x1a0e12, line: 0xff5050 }));
     c.add(this.add.text(W / 2, 176, `+${from} 칼이 부서졌다`, font(15, '#ff5050')).setOrigin(0.5));
-    c.add(this.add.text(W / 2, 200, '파괴 방지권이 있었다면 지켰다', font9(10, '#e8e2f8')).setOrigin(0.5));
-    c.add(this.add.text(W / 2, 218, `다음 +10 강화부터는 꼭 쓰자 (보유 ${sv.guard}장)`, font9(9, '#a89cc8')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 200, sv.guard > 0 ? '방지권을 켜 두면 지킬 수 있었다' : '파괴 방지권이 있었다면 지켰다', font9(11, '#e8e2f8')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 218, `다음 +10 강화부터는 꼭 쓰자 (보유 ${sv.guard}장)`, font9(10, '#a89cc8')).setOrigin(0.5));
     const bt = button(this, W / 2, 256, 180, 30, `방지권 사기  보석 ${cost}`, () => {
       if (sv.gem < cost) { c.close(); this.shopPage = 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
       sv.gem -= cost; sv.guard++; save(); sfx('buy'); c.close(); toast(this, '파괴 방지권 +1', '#9ae0ff');
