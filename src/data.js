@@ -155,7 +155,7 @@ export const HEAL_PCT = 0.15;
 // 보석으로는 '시간'과 '안전'을 산다(소탕권·방지권·강화석). 무기 공격력을 직접 팔지 않아 실력·강화의 재미를 지킨다
 export const GEM_FREE = { daily: 20, stageFirst: 5, bossFirst: 50 };
 export const IAP = [
-  { id: 'starter', name: '초보 대장장이 꾸러미', price: 1200, once: true, tag: '1회 한정 · 가치 8배', desc: '보석 300 · 방지권 3 · 강화석 60 · 금화 3천', give: { gem: 300, guard: 3, stone: 60, gold: 3000 } },
+  { id: 'starter', name: '초보 대장장이 꾸러미', price: 1200, once: true, tag: '1회 한정 · 가치 8배', desc: '보석300 방지권3 강화석60 금화3천', give: { gem: 300, guard: 3, stone: 60, gold: 3000 } },
   { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '30일 · 매일 보석 60 · 소탕권 +3', give: { gem: 300 }, passDays: 30 },
   { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '광고 없이 바로 보상', give: { gem: 100 }, noAds: true },
   { id: 'gem1', name: '보석 한 줌', price: 1200, give: { gem: 120 } },

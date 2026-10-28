@@ -310,12 +310,12 @@ export class Overlay {
     });
     c.add(s.add.rectangle(W / 2, 220, W - 80, 1, 0x5b4f7a));
     const rew = [[12, '금화', gold], [13, '강화석', stone]];
-    if (guard) rew.push([15, '파괴 방지권', guard]);
+    if (guard) rew.push([11, '파괴 방지권', guard]);
     if (sweep) rew.push([15, '소탕권', sweep]);
     if (gem) rew.push([-1, '보석', gem]);
     const tx = [];
     rew.forEach(([ic, name, n], i) => {
-      const y = 234 + i * 19;
+      const y = 232 + i * 18;
       c.add(ic < 0 ? gemIcon(s, 58, y, 14) : icon(s, 58, y, ic, 18));
       c.add(s.add.text(74, y - 7, name, font(11)));
       const t = s.add.text(W - 50, y - 7, '+0', font(12, '#ffd75e')).setOrigin(1, 0); c.add(t); tx.push(t);
@@ -325,7 +325,7 @@ export class Overlay {
     if (!win) c.add(s.add.text(W / 2, 300, '대장간에서 무기를 강화하고 다시 도전하자', font9(9, '#c8bfe0')).setOrigin(0.5));
     // 광고 보고 금화·강화석 2배(하루 횟수 제한)
     if (win && !s.bot && adsLeft(sv, 'double') > 0) {
-      const db = button(s, W / 2, 328, 190, 22, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
+      const db = button(s, W / 2, 330, 190, 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         if (!ok || !s.scene.isActive()) { db.used = false; db.setEnabled(true); return; }
