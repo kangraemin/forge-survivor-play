@@ -68,7 +68,7 @@ export class Weapons {
     const hs = h.bs ||= h.scaleX;
     s.tweens.add({ targets: h, scaleX: hs * 1.18, scaleY: hs * 0.86, duration: 60, yoyo: true, ease: 'Quad.Out', onComplete: () => h.setScale(hs) });
     h.once('animationcomplete-slash', () => h.play('idle'));
-    s.lunge = { x: Math.cos(ang) * 110, y: Math.sin(ang) * 110, t: 80 };
+    s.lunge = { x: Math.cos(ang) * 40, y: Math.sin(ang) * 40, t: 50 };
     const evo = this.evo('sword');
     const area = this.area() * (lv >= 4 ? 1.2 : 1) * (evo ? 1.35 : 1);
     const mult = evo ? 4 : [1.6, 2, 2, 2, 2.8][lv - 1];
@@ -102,7 +102,8 @@ export class Weapons {
           if (d < reach && (off < 1.9 || d < 18)) { if (s.hitMob(m, mult, { kb: 170, fx: 'big' })) { hit++; if (g.ember && hit <= 3) this.embers(m.x, m.y, g.tint); } }
         });
         // 히트스톱: 맞힌 순간 아주 잠깐 멈춰 손맛을 준다(너무 잦으면 끊겨 보여 간격 제한)
-        if (hit && s.bt - (this.lastStop || 0) > 140) { this.lastStop = s.bt; s.hitstop = 50; s.cameras.main.shake(60, 0.003); }
+        // 일반 타격마다 멈추면 이동이 뚝뚝 끊긴다 → 한꺼번에 여럿 맞혔을 때만, 간격도 넉넉히
+        if (hit >= 4 && s.bt - (this.lastStop || 0) > 600) { this.lastStop = s.bt; s.hitstop = 40; s.cameras.main.shake(50, 0.002); }
       });
     });
     slash(ang, 0);

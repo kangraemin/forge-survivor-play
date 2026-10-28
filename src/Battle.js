@@ -31,7 +31,7 @@ export class Battle extends Phaser.Scene {
   create() {
     const sv = this.sv;
     this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
-    this.paused = false; this.hitstop = 0; this.over = false;
+    this.paused = false; this.hitstop = 0; this.over = false; this.mv = null;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -63,7 +63,7 @@ export class Battle extends Phaser.Scene {
     this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
     this.physics.add.overlap(this.hero, this.ebullets, (h, b) => { this.hurt(b.dmg, 'shot'); b.destroy(); });
 
-    this.cameras.main.startFollow(this.hero, true, 0.15, 0.15).setBounds(0, 0, WORLD, WORLD).setRoundPixels(true);
+    this.cameras.main.startFollow(this.hero, true, 1, 1).setBounds(0, 0, WORLD, WORLD).setRoundPixels(true);
     this.weapons = new Weapons(this);
     this.boss = null;
     this.ui = new Overlay(this);
@@ -138,6 +138,8 @@ export class Battle extends Phaser.Scene {
     this.hero.body.setSize(this.hero.width * 0.45, this.hero.height * 0.35).setOffset(this.hero.width * 0.275, this.hero.height * 0.6);
     this.hero.setCollideWorldBounds(true);
     this.heroShadow = this.add.image(0, 0, 'shadow').setScale(1.6, 1.4);
+    // 몹 떼 속에서도 내 캐릭터가 바로 보이게 발밑에 밝은 고리
+    this.heroRing = this.add.ellipse(0, 0, 24, 10, 0x9ae6ff, 0.18).setStrokeStyle(2, 0x9ae6ff, 1).setDepth(9);
     this.face = 1; this.walkT = 0; this.iframe = 0;
     this.atk = D.weaponAtk(sv.tier, sv.enh);
   }
@@ -171,7 +173,7 @@ export class Battle extends Phaser.Scene {
     this.hpBar = sf(this.add.rectangle(26, 13, 76, 8, 0xe8343a).setOrigin(0));
     this.hpTxt = sf(this.add.text(64, 17, '', font(10)).setOrigin(0.5));
     this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#6fd3ff')));
-    this.comboTxt = sf(this.add.text(W / 2, 46, '', font(12, '#ffb347')).setOrigin(0.5).setAlpha(0));
+    this.comboTxt = sf(this.add.text(W - 8, 46, '', font(12, '#ffb347')).setOrigin(1, 0.5).setAlpha(0));
     this.timeTxt = sf(this.add.text(W / 2, 16, '', font(14)).setOrigin(0.5));
     this.waveTxt = sf(this.add.text(W / 2, 31, '', font(9, '#c8bfe0')).setOrigin(0.5));
     this.killTxt = sf(this.add.text(W - 34, 12, '0', font(10, '#ffffff')).setOrigin(1, 0));
@@ -282,7 +284,13 @@ export class Battle extends Phaser.Scene {
 
   // 이번 스테이지 변종(과 앞 스테이지 변종)을 일정 비율로 섞는다. 거대 변종은 드물게
   rollVariant() {
-    if (this.endless || !this.s) return null;
+    // 무한의 탑: 2층부터 모든 변종이 섞인다
+    if (this.endless) {
+      if (this.wave < 1 || Math.random() > D.VARIANT_RATE) return null;
+      const ks = Object.keys(D.VARIANTS), vk = ks[R(0, ks.length - 1)];
+      return vk === 'giant' && Math.random() > 0.35 ? null : { kind: this.pickKind(), v: vk };
+    }
+    if (!this.s) return null;
     let r = Math.random();
     for (const [st, rate] of [[this.s, D.VARIANT_RATE], [this.s - 1, D.VARIANT_OLD_RATE]]) {
       const sv = D.STAGE_VARIANT[st];
@@ -323,6 +331,15 @@ export class Battle extends Phaser.Scene {
     m.body.setSize(m.width * 0.6, m.height * 0.5).setOffset(m.width * 0.2, m.height * 0.45);
     m.setAlpha(m.float ? 0.85 : 1);
     if (!near) { m.setScale(0.2 * m.scaleX); this.tweens.add({ targets: m, scale: m.bs, duration: 200, ease: 'Back.Out' }); }
+    // 변종은 색만으로는 구별이 안 된다: 발밑 고리와 머리 위 표식을 붙여 실루엣을 바꾼다
+    if (vk && !opt.mini) {
+      const col = v.tint, mk = this.add.container(m.x, m.y).setDepth(9);
+      mk.add(this.add.ellipse(0, 0, 18 * m.bs, 7 * m.bs).setStrokeStyle(vk === 'armor' || vk === 'giant' ? 2 : 1, col, 0.9).setFillStyle(col, 0.18));
+      if (vk === 'burst') { const f = this.add.circle(0, -m.height * m.bs - 2, 2.5, 0xffd040); mk.add(f); this.tweens.add({ targets: f, alpha: 0.2, duration: 180, yoyo: true, repeat: -1 }); }
+      if (vk === 'armor') mk.add(this.add.rectangle(0, -m.height * m.bs - 1, 8, 3, 0xc8d4ea).setStrokeStyle(1, 0x2a3040));
+      m.mark = mk; m.markY = m.height * m.bs * 0.5 - 2;
+      m.once('destroy', () => { this.tweens.killTweensOf(mk.list); mk.destroy(); });
+    }
     // 폭탄 변종은 부풀었다 줄었다 해서 멀리서도 알아본다
     if (vk === 'burst' && !opt.mini) this.tweens.add({ targets: m, scaleX: m.bs * 1.15, scaleY: m.bs * 0.9, duration: 260, yoyo: true, repeat: -1, delay: 220 });
     return m;
@@ -384,7 +401,7 @@ export class Battle extends Phaser.Scene {
   popup(x, y, n, crit, big) {
     // 화면이 숫자로 덮이지 않게: 치명타와 큰 숫자(100 이상)만 띄우고, 8개를 넘으면 오래된 것부터 지운다
     if (!crit && n < 100 && Math.random() > 0.25) return;   // 일반 타격도 네 번에 한 번은 보여 강화 차이가 숫자로 보인다
-    if (this.popups.length >= 8) this.popups.shift().destroy();
+    if (this.popups.length >= 5) this.popups.shift().destroy();
     const t = this.add.text(x + R(-6, 6), y, fmt(n), font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2))
       .setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
     this.popups.push(t);
@@ -674,7 +691,11 @@ export class Battle extends Phaser.Scene {
     if (v.length() > 1) v.normalize();
     const r = this.run;
     const spd = D.PLAYER.spd * (1 + this.tv('spd') + 0.08 * (r.skills.haste || 0) + this.lv3('haste', 0.08) + r.bSpd);
-    let vx = v.x * spd, vy = v.y * spd;
+    // 출발·정지를 짧게 보간해 뻣뻣하지 않게(손가락을 따라 미끄러지듯)
+    const ease = 1 - Math.pow(1 - (v.length() > 0.1 ? 0.3 : 0.4), dt / 16.7);
+    this.mv ||= { x: 0, y: 0 };
+    this.mv.x += (v.x * spd - this.mv.x) * ease; this.mv.y += (v.y * spd - this.mv.y) * ease;
+    let vx = this.mv.x, vy = this.mv.y;
     if (this.lunge && this.lunge.t > 0) { vx += this.lunge.x; vy += this.lunge.y; this.lunge.t -= dt; }
     this.hero.setVelocity(vx, vy);
     const moving = v.length() > 0.1, h = this.hero;
@@ -693,10 +714,12 @@ export class Battle extends Phaser.Scene {
     h.setOrigin(0.5, 0.5 + bob);
     const rock = moving && !slashing && h.anims.currentAnim?.key !== 'walkSide' ? Math.sin(this.walkT) * 8 : 0;
     h.setAngle(slashing ? 0 : rock + v.x * 4);
-    h.setScale(1, moving ? 1 : 1 + Math.sin(this.walkT) * 0.025);
+    // 휘두를 때의 늘어남(weapons.js)을 덮어쓰지 않게 그동안은 손대지 않는다
+    if (!slashing) h.setScale(1, moving ? 1 : 1 + Math.sin(this.walkT) * 0.025);
     h.setAlpha(this.bt < this.iframe && Math.floor(this.bt / 60) % 2 ? 0.55 : 1);
     h.setDepth(10 + h.y / WORLD);
     if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.height / 2 - 3); }
+    this.heroRing.setPosition(h.x, h.y + h.height / 2 - 2);
     this.heroShadow.setPosition(h.x, h.y + h.height / 2 - 2).setScale(1.6 * (1 - bob * 2), 1.4).setDepth(9);
     this.moveV = v;
   }
@@ -707,6 +730,11 @@ export class Battle extends Phaser.Scene {
       if (m.dead || m.isBoss) return;
       m.t += dt;
       m.setDepth(10 + m.y / WORLD);
+      if (m.mark) {
+        m.mark.setPosition(m.x, m.y + m.markY);
+        // 광폭 변종은 붉은 잔상을 남긴다
+        if (m.variant === 'swift' && m.t - (m.trailT || 0) > 110) { m.trailT = m.t; const g = this.add.image(m.x, m.y, m.texture.key, m.frame.name).setFlipX(m.flipX).setScale(m.scaleX).setTintFill(0xff4040).setAlpha(0.35).setDepth(8); this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() }); }
+      }
       m.setFlipX(m.x > h.x);
       if (m.freeze > 0) { m.freeze -= dt; m.setVelocity(0, 0); m.anims.timeScale = 0; return; }
       m.anims.timeScale = m.slow > 0 ? 0.5 : 1;

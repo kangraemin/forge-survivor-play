@@ -16,7 +16,7 @@ export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
   // 씬 인스턴스는 재사용되니 전투에서 돌아올 때 잠금·체크 상태를 비운다
-  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.guardOff = false; this.charmOff = false; }
+  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; }
   // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
   get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
   get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
@@ -406,7 +406,9 @@ export class Lobby extends Phaser.Scene {
 
   enhance() {
     const sv = this.sv, enh = sv.enh;
-    if (this.busy || enh >= D.ENH_MAX) return;
+    // 망치질 중에 또 누르면 버리지 않고 끝난 뒤 이어서 한다(파괴 구간은 한 번씩만)
+    if (this.busy) { if (enh < D.DESTROY_FROM) this.enhQ = true; return; }
+    if (enh >= D.ENH_MAX) return;
     const gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
     if (sv.gold < gold || sv.stone < stone) return;
     this.busy = true;
@@ -423,7 +425,7 @@ export class Lobby extends Phaser.Scene {
     save();
     this.refreshTop();
     // 망치질 세 번(확률이 낮을수록 한 번 더 뜸을 들인다)
-    const hits = D.ENH_RATE[enh] < 40 ? 4 : 3;
+    const hits = D.ENH_RATE[enh] >= 100 ? 2 : D.ENH_RATE[enh] < 40 ? 4 : 3;
     const h = this.hammer, sw = this.sword;
     this.tweens.killTweensOf(sw); sw.y = 168;
     const strike = i => {
@@ -478,7 +480,14 @@ export class Lobby extends Phaser.Scene {
       sw.setVisible(false);
       this.flashText(`파괴!  +${from} → +0`, '#ff5050');
     }
-    this.time.delayedCall(outcome === 'shatter' ? 1500 : 900, () => { this.busy = false; this.show('forge'); if (outcome === 'shatter' && !guarded) this.shatterWin(from); });
+    // 낮은 단계 성공은 짧게 끊어 연타가 답답하지 않게
+    const wait = outcome === 'shatter' ? 1500 : outcome === 'success' && from + 1 < 8 ? 450 : 900;
+    this.time.delayedCall(wait, () => {
+      this.busy = false; this.show('forge');
+      if (outcome === 'shatter' && !guarded) this.shatterWin(from);
+      const q = this.enhQ; this.enhQ = false;
+      if (q && outcome !== 'shatter' && this.sv.enh < D.DESTROY_FROM) this.enhance();
+    });
   }
 
   // 부서진 직후: 방지권이 있었다면 지켰다는 걸 보여 주고 바로 살 수 있게

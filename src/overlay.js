@@ -401,7 +401,7 @@ export class Overlay {
       c.add(s.add.text(74, y - 7, name, font(11)));
       const t = s.add.text(W - 50, y - 7, '+0', font(12, '#ffd75e')).setOrigin(1, 0); c.add(t); tx.push(t);
       const o = { v: 0 };
-      s.tweens.add({ targets: o, v: n, duration: 600, delay: 300 + i * 150, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
+      s.tweens.add({ targets: o, v: n, duration: 350, delay: 150 + i * 80, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
     });
     if (!win && !s.endless) c.add(s.add.text(W / 2, 306, '대장간에서 무기를 강화하고 다시 도전하자', font9(10, '#c8bfe0')).setOrigin(0.5));
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
