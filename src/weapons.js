@@ -8,6 +8,7 @@ export class Weapons {
   constructor(s) { this.s = s; this.cd = {}; this.orbs = []; this.patches = []; this.aura = null; }
 
   get sk() { return this.s.run.skills; }
+  evo(k) { return this.s.run.evo?.[k]; }
   area() { return 1 + 0.1 * (this.sk.area || 0); }
   cdMul() { return 1 - 0.08 * (this.sk.focus || 0); }
 
@@ -46,8 +47,9 @@ export class Weapons {
     h.setFlipX(dir < 0).play('slash', true);
     h.once('animationcomplete-slash', () => h.play('idle'));
     s.lunge = { x: Math.cos(ang) * 110, y: Math.sin(ang) * 110, t: 80 };
-    const area = this.area() * (lv >= 4 ? 1.2 : 1);
-    const mult = [1.6, 2, 2, 2, 2.8][lv - 1];
+    const evo = this.evo('sword');
+    const area = this.area() * (lv >= 4 ? 1.2 : 1) * (evo ? 1.35 : 1);
+    const mult = evo ? 4 : [1.6, 2, 2, 2, 2.8][lv - 1];
     const slash = (a, delay) => s.time.delayedCall(delay, () => {
       const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.85)
         .setScale(0.85 * area).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
@@ -70,6 +72,7 @@ export class Weapons {
     });
     slash(ang, 0);
     if (lv >= 3) slash(ang + Math.PI, 120);
+    if (evo) { slash(ang + Math.PI / 2, 60); slash(ang - Math.PI / 2, 180); return 460; }
     return lv >= 5 ? 520 : 650;
   }
 
@@ -89,12 +92,18 @@ export class Weapons {
       });
     });
     once(0); if (lv >= 5) once(260);
+    if (this.evo('spin')) { once(520); return 1300; }
     return lv >= 4 ? 2200 : 3000;
   }
 
   // ── 투척 단검 ──
   dagger(lv) {
     const s = this.s, h = s.hero;
+    if (this.evo('dagger')) {
+      for (let i = 0; i < 10; i++) this.bullet('dagger', h.x, h.y - 4, s.bt / 300 + i * Math.PI / 5, 320, { mult: 1.1, pierce: 99, src: 'dagger', life: 900, kb: 50 });
+      sfx('shoot', 50);
+      return 650;
+    }
     const n = [1, 2, 2, 3, 5][lv - 1], mult = 0.7 * (lv >= 3 ? 1.3 : 1), pierce = lv >= 4 ? 2 : 0;
     const t = this.nearest(240);
     const base = t ? Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) : (s.face > 0 ? 0 : Math.PI);
@@ -111,7 +120,8 @@ export class Weapons {
   // ── 번개 ──
   bolt(lv) {
     const s = this.s;
-    const n = [1, 2, 2, 3, 3][lv - 1], mult = 1.2 * (lv >= 3 ? 1.4 : 1);
+    const evo = this.evo('bolt');
+    const n = evo ? 5 : [1, 2, 2, 3, 3][lv - 1], mult = 1.2 * (lv >= 3 ? 1.4 : 1) * (evo ? 1.2 : 1);
     const list = Phaser.Utils.Array.Shuffle(this.onScreen()).slice(0, n);
     list.forEach((m, i) => s.time.delayedCall(i * 70, () => {
       if (!m.active) return;
@@ -119,11 +129,11 @@ export class Weapons {
       s.hitMob(m, mult, { kb: 30, fx: 'big' });
       if (lv >= 5) {
         // 근처 두 마리로 튄다
-        s.mobs.getChildren().filter(o => o !== m && !o.dead && Phaser.Math.Distance.Between(o.x, o.y, m.x, m.y) < 60).slice(0, 2)
+        s.mobs.getChildren().filter(o => o !== m && !o.dead && Phaser.Math.Distance.Between(o.x, o.y, m.x, m.y) < (evo ? 90 : 60)).slice(0, evo ? 4 : 2)
           .forEach(o => { this.zapLine(m.x, m.y, o.x, o.y); s.hitMob(o, mult * 0.6, { kb: 20 }); });
       }
     }));
-    return 1600;
+    return evo ? 1200 : 1600;
   }
   zap(x, y) {
     const s = this.s, g = s.add.graphics().setDepth(32).setBlendMode(Phaser.BlendModes.ADD);
@@ -147,7 +157,8 @@ export class Weapons {
   updateAura(dt) {
     const s = this.s, lv = this.sk.holy;
     if (!lv) return;
-    const rad = 36 * this.area() * (lv >= 2 ? 1.2 : 1) * (lv >= 5 ? 1.3 : 1);
+    const evo = this.evo('holy');
+    const rad = 36 * this.area() * (lv >= 2 ? 1.2 : 1) * (lv >= 5 ? 1.3 : 1) * (evo ? 1.6 : 1);
     if (!this.aura) {
       this.aura = s.add.image(0, 0, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe9a0).setDepth(8);
       this.auraRing = s.add.image(0, 0, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd75e).setDepth(8).setAlpha(0.4);
@@ -158,17 +169,30 @@ export class Weapons {
     this.auraT = (this.auraT || 0) + dt;
     if (this.auraT < 500) return;
     this.auraT = 0;
-    const mult = 0.35 * (lv >= 3 ? 1.3 : 1);
+    const mult = 0.35 * (lv >= 3 ? 1.3 : 1) * (evo ? 1.5 : 1);
+    let hit = 0;
     s.mobs.getChildren().slice().forEach(m => {
       if (m.dead) return;
       const dx = m.x - s.hero.x, dy = (m.y - s.hero.y - 6) / 0.75;
-      if (Math.hypot(dx, dy) < rad + (m.isBoss ? 16 : 0)) { s.hitMob(m, mult, { kb: 0 }); if (lv >= 4) m.slow = 600; }
+      if (Math.hypot(dx, dy) < rad + (m.isBoss ? 16 : 0)) { s.hitMob(m, mult, { kb: 0 }); hit++; if (lv >= 4) m.slow = 600; }
     });
+    if (evo && hit && s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + Math.min(hit, 5) * 0.4);
   }
 
   // ── 화염구: 맞거나 멀리 가면 터진다 ──
   fireball(lv) {
     const s = this.s, h = s.hero;
+    if (this.evo('fireball')) {
+      // 화면 안 적 위로 불덩이 6개가 떨어진다
+      const list = Phaser.Utils.Array.Shuffle(this.onScreen()).slice(0, 6);
+      list.forEach((m, i) => s.time.delayedCall(i * 90, () => {
+        const x = m.x, y = m.y;
+        const fb = s.add.image(x, y - 120, 'fireball').setDepth(30).setScale(1.4);
+        s.tweens.add({ targets: fb, y, duration: 260, ease: 'Quad.In', onComplete: () => { fb.destroy(); this.explode(x, y, 5); } });
+      }));
+      sfx('shoot');
+      return 1500;
+    }
     const n = lv >= 4 ? 2 : 1;
     for (let i = 0; i < n; i++) {
       const t = Phaser.Utils.Array.GetRandom(this.onScreen()) || this.nearest();

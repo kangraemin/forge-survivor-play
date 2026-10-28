@@ -159,9 +159,11 @@ export const IAP = [
   { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '30일 · 매일 보석 60 · 소탕권 +3', give: { gem: 300 }, passDays: 30 },
   { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '광고 없이 바로 보상', give: { gem: 100 }, noAds: true },
   { id: 'gem1', name: '보석 한 줌', price: 1200, give: { gem: 120 } },
-  { id: 'gem2', name: '보석 주머니', price: 5900, tag: '+10%', give: { gem: 650 } },
+  { id: 'gem2', name: '보석 주머니', price: 5900, tag: '인기 · +10%', give: { gem: 650 } },
   { id: 'gem3', name: '보석 상자', price: 12000, tag: '+17%', give: { gem: 1400 } },
 ];
+// 보석 묶음은 처음 살 때 보석 2배
+export const FIRST_BUY_X2 = ['gem1', 'gem2', 'gem3'];
 export const PASS_DAILY = { gem: 60, sweep: 3 };
 // 보석으로 사는 것. gold 꾸러미는 지금 도전 중인 스테이지 클리어 금화의 3배
 export const GEM_SHOP = [
@@ -177,3 +179,26 @@ export const ADS = {
   double: { daily: 10 },   // 클리어 보상 2배
 };
 export const REVIVE_GEM = 30; // 쓰러졌을 때 보석 부활(판당 1번, 광고 부활과 같은 기회)
+
+// ── 매일 할 일: 임무 3개 + 출석 7일 ──
+export const MISSIONS = [
+  { id: 'kill', name: '몬스터 100마리 처치', need: 100 },
+  { id: 'clear', name: '스테이지 클리어·소탕 1번', need: 1 },
+  { id: 'enh', name: '대장간에서 강화 1번', need: 1 },
+];
+export const MISSION_GIVE = { gem: 5, stone: 2 };
+export const MISSION_ALL = { gem: 10 };
+// 출석: 하루 빠지면 처음으로 돌아가지 않고 그 자리에 멈춘다
+export const LOGIN_REWARDS = [
+  { goldStage: 1 }, { stone: 20 }, { guard: 1 }, { goldStage: 2 }, { sweep: 3 }, { stone: 40 }, { gem: 100 },
+];
+
+// ── 진화: 액티브 5레벨 + 짝 패시브를 가지면 레벨업 카드에 진화가 뜬다 ──
+export const EVOS = {
+  sword: { need: 'might', name: '폭풍검', desc: '사방을 베고 피해 2배' },
+  spin: { need: 'haste', name: '칼바람', desc: '세 바퀴 돌고 훨씬 자주' },
+  dagger: { need: 'focus', name: '천검', desc: '사방으로 단검 10개 관통' },
+  bolt: { need: 'area', name: '연쇄 번개', desc: '벼락 5개가 4마리씩 튄다' },
+  holy: { need: 'vigor', name: '심판의 땅', desc: '범위 넓게, 태우며 회복' },
+  fireball: { need: 'magnet', name: '용암 비', desc: '화면 곳곳에 불덩이 비' },
+};

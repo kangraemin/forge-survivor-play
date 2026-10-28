@@ -23,6 +23,7 @@ export const giveText = give => Object.entries(give).map(([k, v]) => ({
   gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, sweep: `소탕권 ${v}`, goldStage: `금화 ×${v}`,
 }[k])).join(' · ');
 
+export const firstX2 = (sv, item) => D.FIRST_BUY_X2.includes(item.id) && !sv.bought[item.id];
 export const adsLeft = (sv, kind) => D.ADS[kind].daily - (sv.ads[kind] || 0);
 
 // 화면 위에 뜨는 작은 창(장면이 무엇이든 맨 위)
@@ -62,7 +63,10 @@ export function buy(scene, sv, item) {
         if (item.once) sv.bought[item.id] = true;
         if (item.passDays) sv.passLeft = (sv.passLeft || 0) + item.passDays;
         if (item.noAds) sv.noAds = true;
-        grant(sv, item.give);
+        // 보석 묶음 첫 구매는 보석 2배
+        const x2 = firstX2(sv, item);
+        if (D.FIRST_BUY_X2.includes(item.id)) sv.bought[item.id] = true;
+        grant(sv, x2 ? { ...item.give, gem: item.give.gem * 2 } : item.give);
         sfx('win');
       }
       res(ok);

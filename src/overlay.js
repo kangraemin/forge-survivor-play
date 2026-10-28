@@ -1,7 +1,7 @@
 // 전투 위에 뜨는 창: 레벨업 3택, 스킬 상자, 웨이브 사이 상점, 일시정지, 결과
 import * as D from './data.js';
-import { save } from './save.js';
-import { sfx } from './sfx.js';
+import { save, mission } from './save.js';
+import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
 
@@ -51,6 +51,10 @@ export class Overlay {
       pool.push({ k, w: lv ? 3 : def.type === 'active' ? 2.2 : 1.6 });
     }
     const out = [];
+    // 진화할 수 있으면 첫 칸에 반드시 띄운다
+    for (const [k, e] of Object.entries(D.EVOS)) {
+      if (out.length < 2 && sk[k] >= D.SKILL_MAX && sk[e.need] && !this.s.run.evo[k]) out.push('_evo_' + k);
+    }
     while (out.length < 3 && pool.length) {
       let r = Math.random() * pool.reduce((a, b) => a + b.w, 0), i = 0;
       while ((r -= pool[i].w) > 0) i++;
@@ -76,6 +80,12 @@ export class Overlay {
       this.choices().forEach((k, i) => cards.add(this.card(k, W / 2, 168 + i * 74, i)));
     };
     draw();
+    // 처음 하는 사람: 첫 레벨업 카드를 반짝여 고르는 곳을 알려 준다
+    if (s.sv.stats.runs <= 1 && s.run.lv === 2) {
+      const glow = s.add.rectangle(W / 2, 168, 236, 70).setStrokeStyle(2, 0xffffff).setAlpha(0); c.add(glow);
+      s.tweens.add({ targets: glow, alpha: 1, duration: 350, yoyo: true, repeat: -1, delay: 300 });
+      c.add(s.add.text(W / 2, 140, '▼ 하나를 눌러 고르세요', font9(10, '#ffffff')).setOrigin(0.5));
+    }
     const r = s.run;
     const label = () => r.freeReroll > 0 ? '다시 뽑기 (무료)' : `다시 뽑기  은화 ${this.lvReroll()}`;
     const rb = button(s, W / 2, 400, 150, 28, label(), () => {
@@ -94,6 +104,7 @@ export class Overlay {
   card(k, x, y, i) {
     const s = this.s, sk = s.run.skills;
     const c = s.add.container(x, y); c.key = k;
+    if (k.startsWith('_evo_')) return this.evoCard(k, x, y, i);
     const special = k[0] === '_';
     const def = special ? null : D.SKILLS[k], lv = sk[k] || 0;
     const isAct = def?.type === 'active';
@@ -114,11 +125,36 @@ export class Overlay {
     return c;
   }
 
+  // 진화 카드: 금테두리, 반짝임
+  evoCard(k, x, y, i) {
+    const s = this.s, base = k.slice(5), e = D.EVOS[base];
+    const c = s.add.container(x, y); c.key = k;
+    c.add(panel(s, -115, -32, 230, 64, { fill: 0x3a2a10, line: 0xffd75e }));
+    const shine = s.add.rectangle(0, 0, 230, 64, 0xffd75e, 0.18); c.add(shine);
+    s.tweens.add({ targets: shine, alpha: 0.02, duration: 500, yoyo: true, repeat: -1 });
+    c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(2, 0xffd75e));
+    c.add(icon(s, -88, 0, D.SKILLS[base].icon, 32));
+    c.add(s.add.text(-60, -21, e.name, font(12, '#ffd75e')));
+    c.add(s.add.text(108, -21, '진화!', font(11, '#ff9a3a')).setOrigin(1, 0));
+    c.add(s.add.text(-60, -2, e.desc, { ...font9(10, '#fff2c8'), wordWrap: { width: 165 } }));
+    c.add(s.add.text(-60, 18, `${D.SKILLS[base].name} + ${D.SKILLS[e.need].name}`, font9(9, '#c8a060')));
+    c.setSize(230, 64).setInteractive({ useHandCursor: true });
+    c.on('pointerup', () => this.pick(k, c));
+    c.setScale(0.6).setAlpha(0);
+    s.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 200, delay: i * 70, ease: 'Back.Out' });
+    return c;
+  }
+
   pick(k, cardObj) {
     if (!k || this.picking) return;
     this.picking = true;
     const s = this.s, r = s.run;
-    if (k === '_heal') s.heal(s.maxHp * 0.3);
+    if (k.startsWith('_evo_')) {
+      const base = k.slice(5);
+      r.evo[base] = true; s.refreshSkillRow();
+      s.cameras.main.flash(300, 255, 220, 120);
+      s.banner(D.EVOS[base].name, '무기가 진화했다!');
+    } else if (k === '_heal') s.heal(s.maxHp * 0.3);
     else if (k === '_silver') r.silver += 25;
     else {
       r.skills[k] = (r.skills[k] || 0) + 1;
@@ -284,6 +320,7 @@ export class Overlay {
     if (win) {
       gold = Math.round(D.clearGold(s.c, s.s) * (first ? D.FIRST_CLEAR_MUL : 1));
       stone += D.clearStone(s.c, s.s);
+      mission('clear');
       if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; gem = s.isBoss ? D.GEM_FREE.bossFirst : D.GEM_FREE.stageFirst; }
       sv.best[idx] = 1;
     } else {
@@ -292,6 +329,7 @@ export class Overlay {
     gold = Math.round(gold);
     sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem;
     save();
+    stopBgm();
     sfx(win ? 'win' : 'fail');
     // 열린 창이 있으면 닫고 결과만 띄운다
     if (this.c) { this.c.destroy(); this.c = null; this.open = null; }
@@ -322,9 +360,9 @@ export class Overlay {
       const o = { v: 0 };
       s.tweens.add({ targets: o, v: n, duration: 600, delay: 300 + i * 150, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
     });
-    if (!win) c.add(s.add.text(W / 2, 300, '대장간에서 무기를 강화하고 다시 도전하자', font9(9, '#c8bfe0')).setOrigin(0.5));
-    // 광고 보고 금화·강화석 2배(하루 횟수 제한)
-    if (win && !s.bot && adsLeft(sv, 'double') > 0) {
+    if (!win) c.add(s.add.text(W / 2, 306, '대장간에서 무기를 강화하고 다시 도전하자', font9(10, '#c8bfe0')).setOrigin(0.5));
+    // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
+    if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
       const db = button(s, W / 2, 330, 190, 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');

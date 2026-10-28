@@ -1,7 +1,7 @@
 // 전투: 웨이브 생존, 자동 공격 스킬, 레벨업 3택, 웨이브 사이 상점, 궁극기, 보스
 import * as D from './data.js';
-import { load, save } from './save.js';
-import { sfx } from './sfx.js';
+import { load, save, mission } from './save.js';
+import { sfx, playBgm, stopBgm } from './sfx.js';
 import { font, panel, button, icon, fmt, COLOR } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
@@ -33,7 +33,7 @@ export class Battle extends Phaser.Scene {
     this.paused = false; this.hitstop = 0; this.over = false;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
-      skills: { sword: 1 }, freeReroll: 1, shopRound: 0,
+      skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
       // 판 안에서 산 강화
       bDmg: 0, bSpd: 0, bHp: 0, bPick: 0,
       revive: sv.train.revive ? 1 : 0, lastHeal: 0, dmgBy: {},
@@ -72,7 +72,11 @@ export class Battle extends Phaser.Scene {
       this.physics.world.timeScale = 1 / this.speed; this.time.timeScale = this.speed;
       this.tweens.timeScale = this.speed; this.anims.globalTimeScale = this.speed;
     }
-    for (let i = 0; i < 14; i++) this.spawn(true);
+    // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
+    for (let i = 0; i < 18; i++) this.spawn(true);
+    if (!this.bot) playBgm('battle', this.c);
+    this.events.once('shutdown', stopBgm);
+    if (sv.stats.runs < 2 && !this.bot) this.dragHint();
     this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}`);
     sv.stats.runs++; save();
   }
@@ -186,9 +190,10 @@ export class Battle extends Phaser.Scene {
     this.skillRow.removeAll(true);
     Object.entries(this.run.skills).forEach(([k, lv], i) => {
       const x = (i % 8) * 17, y = Math.floor(i / 8) * 17;
-      this.skillRow.add(this.add.rectangle(x, y, 15, 15, 0x000000, 0.5).setOrigin(0).setStrokeStyle(1, D.SKILLS[k].type === 'active' ? 0x6fd3ff : 0xffd75e, 0.7));
+      const evo = this.run.evo[k];
+      this.skillRow.add(this.add.rectangle(x, y, 15, 15, evo ? 0x5a3a08 : 0x000000, 0.6).setOrigin(0).setStrokeStyle(1, evo ? 0xff9a3a : D.SKILLS[k].type === 'active' ? 0x6fd3ff : 0xffd75e, evo ? 1 : 0.7));
       this.skillRow.add(icon(this, x + 7.5, y + 7.5, D.SKILLS[k].icon, 13));
-      this.skillRow.add(this.add.text(x + 15, y + 15, lv, font(7)).setOrigin(1, 1));
+      this.skillRow.add(this.add.text(x + 15, y + 15, evo ? '★' : lv, font(7, evo ? '#ffd75e' : '#ffffff')).setOrigin(1, 1));
     });
   }
 
@@ -220,6 +225,14 @@ export class Battle extends Phaser.Scene {
     this.tweens.add({ targets: b, scaleY: 1, duration: 160, ease: 'Back.Out' });
     this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 220, delay: 80 });
     this.tweens.add({ targets: [b, t1, t2], alpha: 0, delay: 1500, duration: 300, onComplete: () => [b, t1, t2].forEach(o => o.destroy()) });
+  }
+
+  // 처음 두 판: 이동 방법을 3초 보여 준다
+  dragHint() {
+    const t = this.add.text(W / 2, H - 120, '화면을 누른 채로 끌면 이동', font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
+    const hand = this.add.circle(W / 2 - 30, H - 90, 9, 0xffffff, 0.5).setStrokeStyle(2, 0xffffff).setScrollFactor(0).setDepth(120);
+    this.tweens.add({ targets: hand, x: W / 2 + 30, duration: 700, yoyo: true, repeat: 2, ease: 'Sine.InOut' });
+    this.tweens.add({ targets: [t, hand], alpha: 0, delay: 3000, duration: 400, onComplete: () => { t.destroy(); hand.destroy(); } });
   }
 
   // ── 스폰 ──
@@ -339,7 +352,7 @@ export class Battle extends Phaser.Scene {
   kill(m) {
     m.dead = true; m.body.enable = false;
     const r = this.run;
-    r.kills++; this.sv.stats.kills++;
+    r.kills++; this.sv.stats.kills++; mission('kill');
     r.mana = Math.min(D.MANA_MAX, r.mana + (m.elite ? D.MANA_ELITE : D.MANA_KILL));
     sfx('kill', 50);
     if (m.isBoss) { m.bossAI.die(); return; }
@@ -523,6 +536,7 @@ export class Battle extends Phaser.Scene {
     this.cameras.main.shake(800, 0.006);
     const b = D.BOSSES[this.ch.boss];
     this.banner(b.name, '보스 등장 — 쓰러뜨려라');
+    if (!this.bot) playBgm('boss', this.c);
     this.boss = new BossAI(this, this.ch.boss, this.mobHpMul);
   }
 
@@ -545,9 +559,9 @@ export class Battle extends Phaser.Scene {
     if (!this.bossPhase) {
       this.waveT += dt;
       if (this.waveT >= this.waveLen) { this.waveT = 0; this.endWave(); return; }
-      // 스폰: 초당 0.9 → 끝날 즈음 4.5마리
+      // 스폰: 초당 1.5 → 끝날 즈음 4.5마리(초반만 빽빽하게)
       const f = this.progress();
-      this.spawnAcc = (this.spawnAcc || 0) + dt * (0.9 + 3.6 * f) / 1000;
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (1.5 + 3 * f) / 1000;
       while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * 0.5 && (this.wave > 0 || this.c + this.s > 0)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
