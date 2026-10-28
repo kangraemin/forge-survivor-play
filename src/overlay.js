@@ -1,0 +1,303 @@
+// 전투 위에 뜨는 창: 레벨업 3택, 스킬 상자, 웨이브 사이 상점, 일시정지, 결과
+import * as D from './data.js';
+import { save } from './save.js';
+import { sfx } from './sfx.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast } from './ui.js';
+
+const { W, H } = D;
+const DEPTH = 150;
+
+export class Overlay {
+  constructor(s) { this.s = s; this.open = null; this.pendingLv = 0; this.queue = []; }
+
+  // 창을 열면 전투가 멈춘다. 닫으면 대기 중인 창(레벨업 등)을 이어서 연다
+  begin(name) {
+    const s = this.s;
+    this.open = name;
+    s.paused = true; s.physics.pause(); s.anims.pauseAll();
+    s.joy.o = null; s.joy.v.reset(); s.joy.base.setVisible(false); s.joy.knob.setVisible(false);
+    const c = s.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH);
+    const dim = s.add.rectangle(0, 0, W, H, 0x05030a, 0.72).setOrigin(0).setInteractive();
+    c.add(dim); c.setAlpha(0);
+    s.tweens.add({ targets: c, alpha: 1, duration: 140 });
+    this.c = c;
+    return c;
+  }
+  // c를 넘기면 그 창이 아직 열려 있을 때만 닫는다(늦게 온 콜백·연타가 다른 창을 닫지 않게)
+  end(c = this.c) {
+    const s = this.s;
+    if (!c || c !== this.c) return;
+    this.open = null; this.c = null;
+    s.tweens.add({ targets: c, alpha: 0, duration: 120, onComplete: () => c.destroy() });
+    // 다음 창을 여는 10ms 동안 다른 창이 끼어들지 않게 자리를 잡아 둔다
+    if (this.pendingLv > 0) { this.pendingLv--; this.open = 'next'; s.time.delayedCall(10, () => { if (this.open !== 'next') return; this.open = null; this.levelUp(true); }); return; }
+    const next = this.queue.shift();
+    if (next) { this.open = 'next'; s.time.delayedCall(10, () => { if (this.open !== 'next') return; this.open = null; next(); }); return; }
+    s.paused = false; s.physics.resume(); s.anims.resumeAll();
+  }
+
+  // ── 레벨업: 3장 중 하나 ──
+  choices() {
+    const sk = this.s.run.skills;
+    const act = Object.keys(sk).filter(k => D.SKILLS[k].type === 'active').length;
+    const pas = Object.keys(sk).filter(k => D.SKILLS[k].type === 'passive').length;
+    const pool = [];
+    for (const [k, def] of Object.entries(D.SKILLS)) {
+      const lv = sk[k] || 0;
+      if (lv >= D.SKILL_MAX) continue;
+      if (!lv && (def.type === 'active' ? act >= D.ACTIVE_SLOTS : pas >= D.PASSIVE_SLOTS)) continue;
+      // 이미 가진 걸 키우는 쪽을 조금 더 자주 보여 준다(빌드가 완성되는 맛)
+      pool.push({ k, w: lv ? 3 : def.type === 'active' ? 2.2 : 1.6 });
+    }
+    const out = [];
+    while (out.length < 3 && pool.length) {
+      let r = Math.random() * pool.reduce((a, b) => a + b.w, 0), i = 0;
+      while ((r -= pool[i].w) > 0) i++;
+      out.push(pool.splice(i, 1)[0].k);
+    }
+    if (!out.length) out.push('_heal', '_silver');
+    return out;
+  }
+
+  levelUp(fromQueue = false) {
+    if (this.open && !fromQueue) { this.pendingLv++; return; }
+    const s = this.s;
+    sfx('level');
+    const c = this.begin('level');
+    // 주인공 머리 위로 빛기둥
+    const pil = s.add.sprite(s.hero.x, s.hero.y + 20, 'fx2_r2s').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH - 1).setTint(0x9ad8ff).play('fxPillar');
+    pil.once('animationcomplete', () => pil.destroy());
+    c.add(s.add.text(W / 2, 100, 'LEVEL UP!', font(20, '#6fd3ff')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 122, `Lv ${s.run.lv}  ·  스킬을 하나 고르세요`, font9(10)).setOrigin(0.5));
+    const cards = s.add.container(0, 0); c.add(cards);
+    const draw = () => {
+      cards.removeAll(true);
+      this.choices().forEach((k, i) => cards.add(this.card(k, W / 2, 168 + i * 74, i)));
+    };
+    draw();
+    const r = s.run;
+    const label = () => r.freeReroll > 0 ? '다시 뽑기 (무료)' : `다시 뽑기  은화 ${this.lvReroll()}`;
+    const rb = button(s, W / 2, 400, 150, 28, label(), () => {
+      if (r.freeReroll > 0) r.freeReroll--;
+      else if (r.silver >= this.lvReroll()) { r.silver -= this.lvReroll(); r.lvRerolls = (r.lvRerolls || 0) + 1; }
+      else return;
+      sfx('buy'); draw(); rb.label.setText(label()); rb.setEnabled(r.freeReroll > 0 || r.silver >= this.lvReroll());
+    }, { size: 10, color: 0x3b2f5c });
+    rb.setEnabled(r.freeReroll > 0 || r.silver >= this.lvReroll());
+    c.add(rb);
+    c.add(s.add.text(W / 2, 424, `은화 ${r.silver}`, font9(9, '#d8e0f0')).setOrigin(0.5));
+    if (s.bot) s.time.delayedCall(150, () => this.pick(cards.list[0]?.key));
+  }
+  lvReroll() { return 8 + 6 * (this.s.run.lvRerolls || 0); }
+
+  card(k, x, y, i) {
+    const s = this.s, sk = s.run.skills;
+    const c = s.add.container(x, y); c.key = k;
+    const special = k[0] === '_';
+    const def = special ? null : D.SKILLS[k], lv = sk[k] || 0;
+    const isAct = def?.type === 'active';
+    c.add(panel(s, -115, -32, 230, 64, { fill: lv ? 0x241d38 : 0x1c1830, line: isAct ? 0x6fd3ff : 0xffd75e }));
+    c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(1, isAct ? 0x6fd3ff : 0xffd75e, 0.6));
+    c.add(icon(s, -88, 0, special ? (k === '_heal' ? 14 : 12) : def.icon, 32));
+    const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : def.name;
+    c.add(s.add.text(-60, -21, name, font(12, isAct ? '#9ae0ff' : '#ffe08a')));
+    c.add(s.add.text(108, -21, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(9, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
+    const desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
+    c.add(s.add.text(-60, -2, desc, { ...font9(10, '#e8e2f8'), wordWrap: { width: 165 } }));
+    // 레벨 칸
+    if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 22, 7, 4, j < lv ? 0xffd75e : j === lv ? 0x5fdc6a : 0x3a3450).setOrigin(0, 0.5));
+    c.setSize(230, 64).setInteractive({ useHandCursor: true });
+    c.on('pointerup', () => this.pick(k, c));
+    c.setScale(0.6).setAlpha(0);
+    s.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 200, delay: i * 70, ease: 'Back.Out' });
+    return c;
+  }
+
+  pick(k, cardObj) {
+    if (!k || this.picking) return;
+    this.picking = true;
+    const s = this.s, r = s.run;
+    if (k === '_heal') s.heal(s.maxHp * 0.3);
+    else if (k === '_silver') r.silver += 25;
+    else {
+      r.skills[k] = (r.skills[k] || 0) + 1;
+      if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
+      s.refreshSkillRow();
+    }
+    sfx('buy');
+    const oc = this.c, after = () => { this.picking = false; this.end(oc); };
+    if (cardObj) {
+      s.tweens.add({ targets: cardObj, scale: 1.08, duration: 90, yoyo: true, onComplete: after });
+    } else after();
+  }
+
+  // ── 스킬 상자: 가진 스킬 중 하나가 무료로 오른다 ──
+  chest() {
+    if (this.open) { this.queue.push(() => this.chest()); return; }
+    const s = this.s, sk = s.run.skills;
+    const can = Object.keys(sk).filter(k => sk[k] < D.SKILL_MAX);
+    const c = this.begin('chest');
+    sfx('success');
+    const box = s.add.image(W / 2, 210, 'chest').setScale(4);
+    c.add(box);
+    s.tweens.add({ targets: box, angle: { from: -8, to: 8 }, duration: 70, yoyo: true, repeat: 4 });
+    const k = Phaser.Utils.Array.GetRandom(can);
+    s.time.delayedCall(450, () => {
+      const pil = s.add.sprite(W / 2, 240, 'fx2_r2s').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setScrollFactor(0).setScale(1.6).play('fxPillar');
+      c.add(pil);
+      box.setVisible(false);
+      if (k) {
+        sk[k]++;
+        if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
+        s.refreshSkillRow();
+        c.add(icon(s, W / 2, 200, D.SKILLS[k].icon, 40));
+        c.add(s.add.text(W / 2, 240, `${D.SKILLS[k].name}  Lv ${sk[k]}`, font(13, '#ffd75e')).setOrigin(0.5));
+      } else { s.run.silver += 40; c.add(s.add.text(W / 2, 240, '은화 +40', font(13, '#ffd75e')).setOrigin(0.5)); }
+      c.add(s.add.text(W / 2, 270, '스킬 상자!', font9(10)).setOrigin(0.5));
+      s.time.delayedCall(1100, () => this.end(c));
+    });
+  }
+
+  // ── 웨이브 사이 상점: 은화는 판이 끝나면 사라지니 여기서 쓴다 ──
+  shop(onDone) {
+    if (this.open) { this.queue.push(() => this.shop(onDone)); return; }
+    const s = this.s, r = s.run;
+    const c = this.begin('shop');
+    const round = r.shopRound;
+    let rerolls = 0;
+    c.add(panel(s, 10, 60, W - 20, 380, { fill: 0x1a1426 }));
+    c.add(s.add.text(W / 2, 78, '떠돌이 상인', font(15, '#ffd75e')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 96, '은화는 판이 끝나면 사라진다', font9(9, '#a89cc8')).setOrigin(0.5));
+    const silverTxt = s.add.text(W / 2, 116, '', font(12, '#e8eef8')).setOrigin(0.5); c.add(silverTxt);
+    const hpTxt = s.add.text(W / 2, 132, '', font9(9, '#ff9090')).setOrigin(0.5); c.add(hpTxt);
+    const grid = s.add.container(0, 0); c.add(grid);
+    let stock = [];
+    const roll = () => { stock = Phaser.Utils.Array.Shuffle(D.SHOP_ITEMS.slice()).slice(0, D.SHOP_SLOTS).map(it => ({ ...it, price: D.shopPrice(it.price, round), sold: false })); };
+    const draw = () => {
+      grid.removeAll(true);
+      silverTxt.setText(`보유 은화 ${r.silver}`);
+      hpTxt.setText(`체력 ${Math.ceil(s.hp)} / ${Math.round(s.maxHp)}`);
+      stock.forEach((it, i) => {
+        const x = 75 + (i % 2) * 120, y = 190 + Math.floor(i / 2) * 104;
+        const can = !it.sold && r.silver >= it.price;
+        const g = s.add.container(x, y);
+        g.add(panel(s, -56, -46, 112, 92, { fill: it.sold ? 0x141018 : 0x261f3a, line: can ? 0xffd75e : 0x4a4060 }));
+        g.add(icon(s, 0, -26, it.icon, 26).setAlpha(it.sold ? 0.3 : 1));
+        g.add(s.add.text(0, -4, it.name, font(10, it.sold ? '#666' : '#ffffff')).setOrigin(0.5));
+        g.add(s.add.text(0, 12, it.desc, { ...font9(9, '#c8bfe0'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0));
+        g.add(s.add.text(0, 34, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
+        g.setSize(112, 92).setInteractive({ useHandCursor: true });
+        g.on('pointerup', () => {
+          if (it.sold) return;
+          if (r.silver < it.price) { sfx('deny'); s.tweens.add({ targets: g, x: x + 3, duration: 40, yoyo: true, repeat: 2 }); return; }
+          r.silver -= it.price; it.sold = true; sfx('buy');
+          this.apply(it.id);
+          draw();
+        });
+        grid.add(g);
+      });
+      rb.label.setText(`다시 뽑기  은화 ${D.rerollCost(round, rerolls)}`);
+      rb.setEnabled(r.silver >= D.rerollCost(round, rerolls));
+    };
+    const rb = button(s, 80, 410, 120, 28, '', () => {
+      const cost = D.rerollCost(round, rerolls);
+      if (r.silver < cost) return;
+      r.silver -= cost; rerolls++; sfx('buy'); roll(); draw();
+    }, { size: 9 });
+    const go = button(s, 200, 410, 100, 28, '출발', () => { if (c !== this.c) return; r.shopRound++; this.end(c); onDone?.(); }, { size: 12, color: 0x2f6b3a });
+    c.add([rb, go]);
+    roll(); draw();
+    if (s.bot) s.time.delayedCall(200, () => {
+      // 봇: 체력이 낮으면 고기, 아니면 살 수 있는 것 중 비싼 것부터
+      stock.sort((a, b) => b.price - a.price);
+      if (s.hp < s.maxHp * 0.5) stock.sort((a, b) => (b.id === 'meat') - (a.id === 'meat'));
+      stock.forEach(it => { if (!it.sold && r.silver >= it.price) { r.silver -= it.price; it.sold = true; this.apply(it.id); } });
+      if (c !== this.c) return;
+      r.shopRound++; this.end(c); onDone?.();
+    });
+  }
+
+  apply(id) {
+    const s = this.s, r = s.run;
+    switch (id) {
+      case 'meat': s.heal(s.maxHp * 0.4); break;
+      case 'whet': r.bDmg += 0.08; break;
+      case 'boots': r.bSpd += 0.06; break;
+      case 'heart': s.maxHp += 15; s.hp += 15; break;
+      case 'tome': r.xp = D.xpNeed(r.lv); s.gainXp(0); break;
+      case 'chest': this.queue.push(() => this.chest()); break;
+      case 'mana': r.mana = D.MANA_MAX; break;
+      case 'magnet': r.bPick += 0.25; break;
+    }
+  }
+
+  // ── 일시정지 ──
+  pauseMenu() {
+    if (this.open || this.s.over) return;
+    const s = this.s;
+    const c = this.begin('pause');
+    c.add(panel(s, 45, 150, 180, 170));
+    c.add(s.add.text(W / 2, 172, '일시정지', font(14)).setOrigin(0.5));
+    const sk = Object.entries(s.run.skills).map(([k, lv]) => `${D.SKILLS[k].name} ${lv}`).join('\n');
+    c.add(s.add.text(W / 2, 192, sk, { ...font9(9), align: 'center' }).setOrigin(0.5, 0).setLineSpacing(1));
+    c.add(button(s, W / 2, 268, 130, 26, '계속하기', () => this.end(c), { color: 0x2f6b3a }));
+    c.add(button(s, W / 2, 300, 130, 24, '포기하기', () => { if (c !== this.c) return; this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x6b2f3a }));
+  }
+
+  // ── 결과 ──
+  result(win) {
+    const s = this.s, sv = s.sv, r = s.run;
+    if (this.done) return; this.done = true;
+    s.over = true; s.physics.pause();
+    const idx = s.c * D.STAGES_PER_CHAPTER + s.s;
+    const first = win && idx >= sv.cleared;
+    let gold, stone = r.stones, guard = 0, sweep = 0;
+    if (win) {
+      gold = Math.round(D.clearGold(s.c, s.s) * (first ? D.FIRST_CLEAR_MUL : 1));
+      stone += D.clearStone(s.c, s.s);
+      if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; }
+      sv.best[idx] = 1;
+    } else {
+      gold = Math.round(D.clearGold(s.c, s.s) * s.progress() * D.FAIL_GOLD_RATE);
+    }
+    gold = Math.round(gold);
+    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep);
+    save();
+    sfx(win ? 'win' : 'fail');
+    // 열린 창이 있으면 닫고 결과만 띄운다
+    if (this.c) { this.c.destroy(); this.c = null; this.open = null; }
+    this.queue = []; this.pendingLv = 0;
+    const c = this.begin('result');
+    c.add(panel(s, 20, 90, W - 40, 300, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
+    const title = s.add.text(W / 2, 118, win ? (s.isBoss ? '보스 격파!' : '스테이지 클리어!') : '쓰러졌다…', font(18, win ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
+    c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
+    c.add(s.add.text(W / 2, 142, `${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(9, '#c8bfe0')).setOrigin(0.5));
+    const lines = [
+      ['처치', fmt(r.kills)], ['레벨', 'Lv ' + r.lv], ['버틴 정도', Math.round(s.progress() * 100) + '%'],
+    ];
+    lines.forEach(([a, b], i) => {
+      c.add(s.add.text(50, 166 + i * 16, a, font9(10, '#a89cc8')));
+      c.add(s.add.text(W - 50, 166 + i * 16, b, font(10)).setOrigin(1, 0));
+    });
+    c.add(s.add.rectangle(W / 2, 220, W - 80, 1, 0x5b4f7a));
+    const rew = [[12, '금화', gold], [13, '강화석', stone]];
+    if (guard) rew.push([15, '파괴 방지권', guard]);
+    if (sweep) rew.push([15, '소탕권', sweep]);
+    rew.forEach(([ic, name, n], i) => {
+      const y = 238 + i * 24;
+      c.add(icon(s, 58, y, ic, 18));
+      c.add(s.add.text(74, y - 7, name, font(11)));
+      const t = s.add.text(W - 50, y - 7, '+0', font(12, '#ffd75e')).setOrigin(1, 0); c.add(t);
+      const o = { v: 0 };
+      s.tweens.add({ targets: o, v: n, duration: 600, delay: 300 + i * 150, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
+    });
+    if (!win) c.add(s.add.text(W / 2, 300, '대장간에서 무기를 강화하고 다시 도전하자', font9(9, '#c8bfe0')).setOrigin(0.5));
+    const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
+    c.add(button(s, 85, 360, 110, 30, '로비', () => s.scene.start('Lobby', { tab: win ? 'battle' : 'forge' }), { color: 0x3b2f5c }));
+    c.add(button(s, 190, 360, 100, 30, win ? '다음' : '다시', () => {
+      const n = win ? nextIdx : idx;
+      s.scene.start('Battle', { chapter: Math.floor(n / D.STAGES_PER_CHAPTER), stage: n % D.STAGES_PER_CHAPTER, bot: s.bot });
+    }, { color: 0x2f6b3a }));
+    s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: s.progress(), t: s.bt });
+  }
+}

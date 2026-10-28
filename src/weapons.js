@@ -1,0 +1,265 @@
+// 액티브 스킬 8종. 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
+import { sfx } from './sfx.js';
+import { SKILLS } from './data.js';
+
+const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
+
+export class Weapons {
+  constructor(s) { this.s = s; this.cd = {}; this.orbs = []; this.patches = []; this.aura = null; }
+
+  get sk() { return this.s.run.skills; }
+  area() { return 1 + 0.1 * (this.sk.area || 0); }
+  cdMul() { return 1 - 0.08 * (this.sk.focus || 0); }
+
+  nearest(maxD = 1e9, from = this.s.hero) {
+    let best = null, bd = maxD * maxD;
+    this.s.mobs.getChildren().forEach(m => {
+      if (m.dead) return;
+      const d = Phaser.Math.Distance.Squared(m.x, m.y, from.x, from.y);
+      if (d < bd) { bd = d; best = m; }
+    });
+    return best;
+  }
+  onScreen() {
+    const v = this.s.cameras.main.worldView;
+    return this.s.mobs.getChildren().filter(m => !m.dead && Phaser.Geom.Rectangle.Contains(v, m.x, m.y));
+  }
+
+  update(dt) {
+    for (const [k, lv] of Object.entries(this.sk)) {
+      if (SKILLS[k].type !== 'active') continue;
+      this.cd[k] = (this.cd[k] ?? 300) - dt;
+      if (this.cd[k] <= 0) this.cd[k] = this[k](lv) * this.cdMul();
+    }
+    this.updateOrbs(dt);
+    this.updateAura(dt);
+    this.updateBullets(dt);
+  }
+
+  // ── 검 휘두르기: 가장 가까운 적 쪽으로 내딛으며 벤다. 판정은 궤적이 가장 꽉 찬 순간 ──
+  sword(lv) {
+    const s = this.s, h = s.hero;
+    const target = this.nearest(90);
+    const ang = target ? Phaser.Math.Angle.Between(h.x, h.y, target.x, target.y) : (s.face > 0 ? 0 : Math.PI);
+    const dir = Math.cos(ang) >= 0 ? 1 : -1;
+    s.face = dir;
+    h.setFlipX(dir < 0).play('slash', true);
+    h.once('animationcomplete-slash', () => h.play('idle'));
+    s.lunge = { x: Math.cos(ang) * 110, y: Math.sin(ang) * 110, t: 80 };
+    const area = this.area() * (lv >= 4 ? 1.2 : 1);
+    const mult = [1.6, 2, 2, 2, 2.8][lv - 1];
+    const slash = (a, delay) => s.time.delayedCall(delay, () => {
+      const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.85)
+        .setScale(0.85 * area).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
+      const place = () => fx.setPosition(h.x + Math.cos(a) * 22 * area, h.y - 4 + Math.sin(a) * 18 * area);
+      place(); fx.on('animationupdate', place);
+      fx.once('animationcomplete', () => fx.destroy());
+      sfx('swing', 60);
+      s.time.delayedCall(45, () => {
+        let hit = 0, crit = false;
+        s.mobs.getChildren().slice().forEach(m => {
+          if (m.dead) return;
+          const dx = m.x - h.x, dy = m.y - h.y, d = Math.hypot(dx, dy);
+          const off = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - a));
+          const reach = 56 * area + (m.isBoss ? m.displayWidth * 0.3 : 0);
+          if (d < reach && (off < 1.9 || d < 18)) { if (s.hitMob(m, mult, { kb: 170, fx: 'big' })) hit++; }
+        });
+        // 히트스톱: 맞힌 순간 아주 잠깐 멈춰 손맛을 준다(너무 잦으면 끊겨 보여 간격 제한)
+        if (hit && s.bt - (this.lastStop || 0) > 140) { this.lastStop = s.bt; s.hitstop = 50; s.cameras.main.shake(60, 0.003); }
+      });
+    });
+    slash(ang, 0);
+    if (lv >= 3) slash(ang + Math.PI, 120);
+    return lv >= 5 ? 520 : 650;
+  }
+
+  // ── 회전 베기 ──
+  spin(lv) {
+    const s = this.s, h = s.hero;
+    const rad = 50 * this.area() * (lv >= 3 ? 1.2 : 1);
+    const mult = 0.9 * (lv >= 2 ? 1.3 : 1);
+    const once = delay => s.time.delayedCall(delay, () => {
+      const fx = s.add.sprite(h.x, h.y, 'fx2_r1s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.9)
+        .setScale(rad * 2 / 90).play('fxSpin');
+      fx.on('animationupdate', () => fx.setPosition(h.x, h.y));
+      fx.once('animationcomplete', () => fx.destroy());
+      sfx('swing');
+      s.mobs.getChildren().slice().forEach(m => {
+        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, h.x, h.y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 140, fx: 'big' });
+      });
+    });
+    once(0); if (lv >= 5) once(260);
+    return lv >= 4 ? 2200 : 3000;
+  }
+
+  // ── 투척 단검 ──
+  dagger(lv) {
+    const s = this.s, h = s.hero;
+    const n = [1, 2, 2, 3, 5][lv - 1], mult = 0.7 * (lv >= 3 ? 1.3 : 1), pierce = lv >= 4 ? 2 : 0;
+    const t = this.nearest(240);
+    const base = t ? Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) : (s.face > 0 ? 0 : Math.PI);
+    for (let i = 0; i < n; i++) {
+      s.time.delayedCall(i * 60, () => {
+        const a = base + (i - (n - 1) / 2) * 0.16;
+        this.bullet('dagger', h.x, h.y - 4, a, 300, { mult, pierce, src: 'dagger', life: 900, kb: 50 });
+        sfx('shoot', 50);
+      });
+    }
+    return 900;
+  }
+
+  // ── 번개 ──
+  bolt(lv) {
+    const s = this.s;
+    const n = [1, 2, 2, 3, 3][lv - 1], mult = 1.2 * (lv >= 3 ? 1.4 : 1);
+    const list = Phaser.Utils.Array.Shuffle(this.onScreen()).slice(0, n);
+    list.forEach((m, i) => s.time.delayedCall(i * 70, () => {
+      if (!m.active) return;
+      this.zap(m.x, m.y);
+      s.hitMob(m, mult, { kb: 30, fx: 'big' });
+      if (lv >= 5) {
+        // 근처 두 마리로 튄다
+        s.mobs.getChildren().filter(o => o !== m && !o.dead && Phaser.Math.Distance.Between(o.x, o.y, m.x, m.y) < 60).slice(0, 2)
+          .forEach(o => { this.zapLine(m.x, m.y, o.x, o.y); s.hitMob(o, mult * 0.6, { kb: 20 }); });
+      }
+    }));
+    return 1600;
+  }
+  zap(x, y) {
+    const s = this.s, g = s.add.graphics().setDepth(32).setBlendMode(Phaser.BlendModes.ADD);
+    let px = x + R(-10, 10), py = y - 140;
+    g.lineStyle(3, 0x9ad8ff, 1); g.beginPath(); g.moveTo(px, py);
+    while (py < y) { py += R(10, 22); px += R(-10, 10); g.lineTo(Math.min(py, y) === y ? x : px, Math.min(py, y)); }
+    g.strokePath(); g.lineStyle(1, 0xffffff, 1).strokePath();
+    s.tweens.add({ targets: g, alpha: 0, duration: 160, onComplete: () => g.destroy() });
+    const f = s.add.sprite(x, y, 'fx1_r1s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31).setTint(0x9ad8ff).play('fxHit');
+    f.once('animationcomplete', () => f.destroy());
+    sfx('zap', 60);
+  }
+  zapLine(x1, y1, x2, y2) {
+    const g = this.s.add.graphics().setDepth(32).setBlendMode(Phaser.BlendModes.ADD);
+    g.lineStyle(2, 0x9ad8ff, 1).lineBetween(x1, y1, (x1 + x2) / 2 + R(-8, 8), (y1 + y2) / 2 + R(-8, 8)).lineBetween((x1 + x2) / 2, (y1 + y2) / 2, x2, y2);
+    this.s.tweens.add({ targets: g, alpha: 0, duration: 140, onComplete: () => g.destroy() });
+  }
+
+  // ── 성역: 발밑 빛이 0.5초마다 태운다 ──
+  holy() { return 500; }
+  updateAura(dt) {
+    const s = this.s, lv = this.sk.holy;
+    if (!lv) return;
+    const rad = 36 * this.area() * (lv >= 2 ? 1.2 : 1) * (lv >= 5 ? 1.3 : 1);
+    if (!this.aura) {
+      this.aura = s.add.image(0, 0, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe9a0).setDepth(8);
+      this.auraRing = s.add.image(0, 0, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd75e).setDepth(8).setAlpha(0.4);
+    }
+    const pulse = 1 + Math.sin(s.bt / 200) * 0.04;
+    this.aura.setPosition(s.hero.x, s.hero.y + 6).setScale(rad / 32 * pulse, rad / 32 * 0.75 * pulse).setAlpha(0.5);
+    this.auraRing.setPosition(s.hero.x, s.hero.y + 6).setScale(rad / 32 * pulse, rad / 32 * 0.75 * pulse);
+    this.auraT = (this.auraT || 0) + dt;
+    if (this.auraT < 500) return;
+    this.auraT = 0;
+    const mult = 0.35 * (lv >= 3 ? 1.3 : 1);
+    s.mobs.getChildren().slice().forEach(m => {
+      if (m.dead) return;
+      const dx = m.x - s.hero.x, dy = (m.y - s.hero.y - 6) / 0.75;
+      if (Math.hypot(dx, dy) < rad + (m.isBoss ? 16 : 0)) { s.hitMob(m, mult, { kb: 0 }); if (lv >= 4) m.slow = 600; }
+    });
+  }
+
+  // ── 화염구: 맞거나 멀리 가면 터진다 ──
+  fireball(lv) {
+    const s = this.s, h = s.hero;
+    const n = lv >= 4 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      const t = Phaser.Utils.Array.GetRandom(this.onScreen()) || this.nearest();
+      const a = t ? Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) + (i ? 0.3 : 0) : RF(0, 6.28);
+      this.bullet('fireball', h.x, h.y - 4, a, 160, { mult: 0, explode: lv, src: 'fire', life: 1400, kb: 0 });
+    }
+    sfx('shoot');
+    return 1800;
+  }
+  explode(x, y, lv) {
+    const s = this.s, rad = 30 * this.area() * (lv >= 3 ? 1.3 : 1), mult = 1.3 * (lv >= 2 ? 1.3 : 1);
+    const f = s.add.sprite(x, y, 'fx1_r1s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31).setTint(0xff8a3a).setScale(rad / 20).play('fxHit');
+    f.once('animationcomplete', () => f.destroy());
+    const ring = s.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff6a2a).setScale(0.2).setDepth(31);
+    s.tweens.add({ targets: ring, scale: rad / 30, alpha: 0, duration: 260, onComplete: () => ring.destroy() });
+    s.cameras.main.shake(70, 0.003);
+    sfx('boom', 80);
+    s.mobs.getChildren().slice().forEach(m => {
+      if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, x, y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 120, fx: 'big', from: { x, y } });
+    });
+    if (lv >= 5) {
+      const p = s.add.image(x, y, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff5a1a).setScale(rad / 32, rad / 32 * 0.7).setDepth(7).setAlpha(0.6);
+      this.patches.push({ x, y, rad, t: 2000, g: p, tick: 0 });
+    }
+  }
+
+  // ── 얼음 파편: 꿰뚫는다, 3레벨부터 얼림 ──
+  ice(lv) {
+    const s = this.s, h = s.hero;
+    const n = [1, 2, 2, 2, 4][lv - 1], mult = 0.9 * (lv >= 4 ? 1.4 : 1);
+    const t = this.nearest(260);
+    const base = t ? Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) : RF(0, 6.28);
+    for (let i = 0; i < n; i++) {
+      const a = base + (i - (n - 1) / 2) * 0.35;
+      this.bullet('ice', h.x, h.y - 4, a, 220, { mult, pierce: 99, src: 'ice', life: 1200, kb: 40, freeze: lv >= 3 });
+    }
+    sfx('shoot');
+    return 1300;
+  }
+
+  // ── 수호 구슬 ──
+  orb() { return 99999; }
+  updateOrbs(dt) {
+    const s = this.s, lv = this.sk.orb;
+    if (!lv) return;
+    const n = [1, 2, 2, 3, 4][lv - 1];
+    while (this.orbs.length < n) this.orbs.push(s.add.image(0, 0, 'orb').setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setScale(1.3));
+    const sp = lv >= 5 ? 3.6 : 2.6, rad = 44 * this.area(), mult = 0.6 * (lv >= 3 ? 1.3 : 1);
+    this.orbA = (this.orbA || 0) + sp * dt / 1000;
+    this.orbs.forEach((o, i) => {
+      const a = this.orbA + i * Math.PI * 2 / n;
+      o.setPosition(s.hero.x + Math.cos(a) * rad, s.hero.y - 4 + Math.sin(a) * rad * 0.8);
+      s.mobs.getChildren().forEach(m => {
+        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, o.x, o.y) < 12 + (m.isBoss ? 18 : 0)) s.hitMob(m, mult, { src: 'orb' + i, cd: 400, kb: 90, from: o });
+      });
+    });
+  }
+
+  // ── 발사체 공통 ──
+  bullet(tex, x, y, a, spd, o) {
+    const b = this.s.pbullets.create(x, y, tex).setDepth(27).setRotation(a);
+    b.setVelocity(Math.cos(a) * spd, Math.sin(a) * spd);
+    Object.assign(b, o, { hits: 0, seen: new Set() });
+    if (tex === 'fireball') this.s.tweens.add({ targets: b, scale: 1.3, duration: 120, yoyo: true, repeat: -1 });
+    return b;
+  }
+  updateBullets(dt) {
+    const s = this.s;
+    s.pbullets.getChildren().slice().forEach(b => {
+      b.life -= dt;
+      let dead = b.life <= 0;
+      if (!dead) for (const m of s.mobs.getChildren()) {
+        if (m.dead || b.seen.has(m)) continue;
+        if (Phaser.Math.Distance.Between(m.x, m.y, b.x, b.y) > 10 + (m.isBoss ? 22 : m.displayWidth * 0.25)) continue;
+        b.seen.add(m);
+        if (b.explode) { dead = true; break; }
+        s.hitMob(m, b.mult, { kb: b.kb, from: b });
+        if (b.freeze && Math.random() < 0.3) { m.freeze = 600; m.setTint(0x9ae8ff); s.time.delayedCall(600, () => m.active && !m.dead && m.clearTint()); }
+        if (++b.hits > b.pierce) { dead = true; break; }
+      }
+      if (dead) { if (b.explode) this.explode(b.x, b.y, b.explode); b.destroy(); }
+    });
+    this.patches = this.patches.filter(p => {
+      p.t -= dt; p.tick -= dt;
+      if (p.tick <= 0) {
+        p.tick = 400;
+        s.mobs.getChildren().slice().forEach(m => { if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, p.x, p.y) < p.rad) s.hitMob(m, 0.3, { kb: 0 }); });
+      }
+      p.g.setAlpha(0.6 * Math.min(1, p.t / 500));
+      if (p.t <= 0) { p.g.destroy(); return false; }
+      return true;
+    });
+  }
+}

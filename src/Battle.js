@@ -1,0 +1,725 @@
+// 전투: 웨이브 생존, 자동 공격 스킬, 레벨업 3택, 웨이브 사이 상점, 궁극기, 보스
+import * as D from './data.js';
+import { load, save } from './save.js';
+import { sfx } from './sfx.js';
+import { font, panel, button, icon, fmt, COLOR } from './ui.js';
+import { Weapons } from './weapons.js';
+import { BossAI } from './boss.js';
+import { Overlay } from './overlay.js';
+
+const { W, H } = D;
+const WORLD = 1600;
+const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
+
+export class Battle extends Phaser.Scene {
+  constructor() { super('Battle'); }
+
+  init(data) {
+    this.c = data.chapter; this.s = data.stage;
+    this.ch = D.CHAPTERS[this.c];
+    this.isBoss = this.s === D.STAGES_PER_CHAPTER - 1;
+    this.sv = load();
+    const q = new URLSearchParams(location.search);
+    this.bot = !!data.bot || q.has('bot');
+    this.speed = +(q.get('speed') || 1);   // 자동 검증용 배속
+  }
+
+  // 훈련 효과(영구)
+  tv(id) { const t = D.TRAINING.find(x => x.id === id); return (this.sv.train[id] || 0) * t.v; }
+
+  create() {
+    const sv = this.sv;
+    this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
+    this.paused = false; this.hitstop = 0; this.over = false;
+    this.run = {
+      lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
+      skills: { sword: 1 }, freeReroll: 1, shopRound: 0,
+      // 판 안에서 산 강화
+      bDmg: 0, bSpd: 0, bHp: 0, bPick: 0,
+      revive: sv.train.revive ? 1 : 0, lastHeal: 0, dmgBy: {},
+    };
+    this.wave = 0;
+    this.waveLen = this.ch.dur * 1000 / D.WAVES;
+    this.waveCount = this.isBoss ? D.WAVES - 1 : D.WAVES;
+    this.waveT = 0;
+    this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (1 - this.tv('def'));
+    this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s);
+
+    this.makeMap();
+    this.makeHero();
+    this.makeFx();
+
+    this.mobs = this.physics.add.group();
+    this.gems = this.physics.add.group();
+    this.items = this.physics.add.group();
+    this.ebullets = this.physics.add.group();
+    this.pbullets = this.physics.add.group();
+    this.physics.world.setBounds(0, 0, WORLD, WORLD);
+    this.physics.add.collider(this.mobs, this.mobs, null, (a, b) => !a.float && !b.float && !a.dead && !b.dead);
+    this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
+    this.physics.add.overlap(this.hero, this.ebullets, (h, b) => { this.hurt(b.dmg, 'shot'); b.destroy(); });
+
+    this.cameras.main.startFollow(this.hero, true, 0.15, 0.15).setBounds(0, 0, WORLD, WORLD).setRoundPixels(true);
+    this.weapons = new Weapons(this);
+    this.boss = null;
+    this.ui = new Overlay(this);
+    this.makeHud();
+    this.makeJoystick();
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE');
+    this.keys.SPACE.on('down', () => this.ult());
+
+    if (this.speed !== 1) {
+      this.physics.world.timeScale = 1 / this.speed; this.time.timeScale = this.speed;
+      this.tweens.timeScale = this.speed; this.anims.globalTimeScale = this.speed;
+    }
+    for (let i = 0; i < 14; i++) this.spawn(true);
+    this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}`);
+    sv.stats.runs++; save();
+  }
+
+  // ── 지도 ──
+  makeMap() {
+    const key = this.textures.exists(this.ch.tiles) ? this.ch.tiles : 'tiles';
+    const tintless = key === this.ch.tiles;
+    const ts = this.textures.get(key).getSourceImage();
+    const T = ts.width / 4;
+    if (!this.textures.exists(key + '_t')) this.textures.addSpriteSheet(key + '_t', ts, { frameWidth: T, frameHeight: T });
+    const rt = this.add.renderTexture(0, 0, WORLD, WORLD).setOrigin(0).setDepth(-10);
+    const stamp = this.make.image({ key: key + '_t', add: false });
+    const c = WORLD / 2;
+    const zone = (x, y) => (Math.hypot(x - c, y - c) < 190 || Math.abs(x - c) < 50 || Math.abs(y - c) < 50) ? 1 : 0;
+    for (let y = 0; y < WORLD; y += T) for (let x = 0; x < WORLD; x += T) {
+      const z = zone(x, y), edge = z !== zone(x + T, y) || z !== zone(x - T, y) || z !== zone(x, y + T) || z !== zone(x, y - T);
+      const n = Math.random();
+      stamp.setFrame(edge ? R(10, 11) : z ? (n < 0.85 ? R(4, 5) : R(8, 9)) : (n < 0.85 ? Phaser.Math.RND.pick([0, 2]) : 3));
+      stamp.setAngle(R(0, 3) * 90);
+      rt.draw(stamp, x + T / 2, y + T / 2);
+    }
+    // 전용 바닥 그림이 없는 챕터는 1챕터 바닥에 색을 입힌다
+    const TINT = [0xffffff, 0x8a9ab8, 0xd07050, 0xd8f0ff, 0x9a70b0];
+    if (!tintless && this.c > 0) rt.setTint(TINT[this.c]);
+    if (!this.textures.exists('decos')) {
+      const ds = this.textures.get('deco').getSourceImage();
+      this.textures.addSpriteSheet('decos', ds, { frameWidth: ds.width / 4, frameHeight: ds.height });
+    }
+    this.torches = [];
+    for (let i = 0; i < 90; i++) {
+      const x = R(0, WORLD), y = R(0, WORLD);
+      if (Math.hypot(x - c, y - c) < 220) continue;
+      this.add.image(x, y, 'decos', R(0, 2)).setOrigin(0.5, 1).setDepth(10 + y / WORLD).setTint(this.c ? TINT[this.c] : 0xffffff);
+    }
+    for (let a = 0; a < 8; a++) {
+      const x = c + Math.cos(a * Math.PI / 4) * 200, y = c + Math.sin(a * Math.PI / 4) * 200;
+      this.add.image(x, y, 'decos', 3).setOrigin(0.5, 1).setDepth(10 + y / WORLD);
+      this.torches.push({ x, y: y - 40 });
+    }
+    // 어두운 화면 + 빛
+    this.dark = this.add.renderTexture(0, 0, W, H).setOrigin(0).setScrollFactor(0).setDepth(50);
+    this.glow = this.add.image(0, 0, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(this.ch.light).setAlpha(0.16).setDepth(49);
+  }
+
+  makeHero() {
+    const sv = this.sv;
+    this.maxHp = D.PLAYER.hp * (1 + this.tv('hp')) * (1 + 0.15 * this.sv.tier);   // 무기 등급이 오르면 체력도 오른다
+    this.hp = this.maxHp;
+    this.hero = this.physics.add.sprite(WORLD / 2, WORLD / 2, 'hero2_r0s').play('idle');
+    this.hero.body.setSize(this.hero.width * 0.45, this.hero.height * 0.35).setOffset(this.hero.width * 0.275, this.hero.height * 0.6);
+    this.hero.setCollideWorldBounds(true);
+    this.heroShadow = this.add.image(0, 0, 'shadow').setScale(1.6, 1.4);
+    this.face = 1; this.walkT = 0; this.iframe = 0;
+    this.atk = D.weaponAtk(sv.tier, sv.enh);
+  }
+
+  makeFx() {
+    this.spark = this.add.particles(0, 0, 'px', {
+      speed: { min: 40, max: 140 }, lifespan: { min: 150, max: 380 }, scale: { start: 1.5, end: 0 },
+      tint: [0xffffff, 0xffe066, 0xff7b3a], emitting: false,
+    }).setDepth(30);
+    this.dust = this.add.particles(0, 0, 'px', {
+      speedX: { min: -14, max: 14 }, speedY: { min: -18, max: -4 }, lifespan: 380, scale: { start: 2, end: 0 },
+      alpha: { start: 0.5, end: 0 }, tint: 0xc8bfa8, emitting: false,
+    }).setDepth(9);
+    this.goo = this.add.particles(0, 0, 'px', {
+      speed: { min: 30, max: 110 }, lifespan: 450, scale: { start: 2, end: 0.5 }, gravityY: 200, emitting: false,
+    }).setDepth(9);
+    this.hurtFx = this.add.rectangle(0, 0, W, H, 0xff2020, 0).setOrigin(0).setScrollFactor(0).setDepth(60);
+    this.flashFx = this.add.rectangle(0, 0, W, H, 0xffffff, 0).setOrigin(0).setScrollFactor(0).setDepth(61);
+    this.popups = [];
+  }
+
+  // ── HUD ──
+  makeHud() {
+    const d = 100, sf = o => o.setScrollFactor(0).setDepth(d);
+    sf(this.add.rectangle(0, 0, W, 4, 0x000000, 0.7).setOrigin(0));
+    this.xpBar = sf(this.add.rectangle(0, 0, 0, 4, 0x6fd3ff).setOrigin(0));
+    sf(panel(this, 4, 7, 104, 20));
+    this.add.text(9, 12, 'HP', font(9, '#ff6b6b')).setScrollFactor(0).setDepth(d);
+    sf(this.add.rectangle(26, 13, 76, 8, 0x3a1014).setOrigin(0));
+    this.hpLag = sf(this.add.rectangle(26, 13, 76, 8, 0xffffff).setOrigin(0));
+    this.hpBar = sf(this.add.rectangle(26, 13, 76, 8, 0xe8343a).setOrigin(0));
+    this.hpTxt = sf(this.add.text(64, 17, '', font(8)).setOrigin(0.5));
+    this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#6fd3ff')));
+    this.timeTxt = sf(this.add.text(W / 2, 16, '', font(14)).setOrigin(0.5));
+    this.waveTxt = sf(this.add.text(W / 2, 31, '', font(9, '#c8bfe0')).setOrigin(0.5));
+    this.killTxt = sf(this.add.text(W - 34, 12, '0', font(10, '#ffffff')).setOrigin(1, 0));
+    this.silverTxt = sf(this.add.text(W - 34, 26, '0', font(10, '#d8e0f0')).setOrigin(1, 0));
+    sf(this.add.image(W - 30, 18, 'px').setTint(0xff6b6b).setScale(2).setOrigin(0, 0.5));
+    sf(this.add.image(W - 29, 32, 'silver').setOrigin(0, 0.5));
+    // 일시정지
+    const pb = button(this, W - 13, 21, 18, 22, 'II', () => this.ui.pauseMenu(), { size: 9, color: 0x2a2440 });
+    pb.setScrollFactor(0).setDepth(d);
+    // 보유 스킬 아이콘 줄
+    this.skillRow = this.add.container(8, 46).setScrollFactor(0).setDepth(d);
+    // 궁극기 버튼(마나)
+    const ux = W - 32, uy = H - 40;
+    this.ultBase = sf(this.add.circle(ux, uy, 22, 0x15121f, 0.9).setStrokeStyle(2, 0x5b4f7a));
+    this.ultFill = sf(this.add.graphics());
+    this.ultIcon = sf(icon(this, ux, uy, 4, 22));
+    this.ultTxt = sf(this.add.text(ux, uy + 28, '궁극기', font(8, '#c8bfe0')).setOrigin(0.5));
+    this.ultBase.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.ult());
+    this.ultPos = { x: ux, y: uy };
+    this.bossBar = null;
+    this.refreshSkillRow();
+  }
+
+  refreshSkillRow() {
+    this.skillRow.removeAll(true);
+    Object.entries(this.run.skills).forEach(([k, lv], i) => {
+      const x = (i % 8) * 17, y = Math.floor(i / 8) * 17;
+      this.skillRow.add(this.add.rectangle(x, y, 15, 15, 0x000000, 0.5).setOrigin(0).setStrokeStyle(1, D.SKILLS[k].type === 'active' ? 0x6fd3ff : 0xffd75e, 0.7));
+      this.skillRow.add(icon(this, x + 7.5, y + 7.5, D.SKILLS[k].icon, 13));
+      this.skillRow.add(this.add.text(x + 15, y + 15, lv, font(7)).setOrigin(1, 1));
+    });
+  }
+
+  makeJoystick() {
+    this.joy = {
+      base: this.add.circle(0, 0, 28, 0xffffff, 0.07).setStrokeStyle(1, 0xffffff, 0.3).setScrollFactor(0).setDepth(99).setVisible(false),
+      knob: this.add.circle(0, 0, 11, 0xffffff, 0.3).setScrollFactor(0).setDepth(99).setVisible(false), v: new Phaser.Math.Vector2(),
+    };
+    this.input.on('pointerdown', (p, over) => {
+      if (over.length || this.paused) return;
+      this.joy.o = { x: p.x, y: p.y, id: p.id };
+      this.joy.base.setPosition(p.x, p.y).setVisible(true); this.joy.knob.setPosition(p.x, p.y).setVisible(true);
+    });
+    this.input.on('pointermove', p => {
+      if (!this.joy.o || !p.isDown || p.id !== this.joy.o.id) return;
+      const v = new Phaser.Math.Vector2(p.x - this.joy.o.x, p.y - this.joy.o.y).limit(28);
+      this.joy.knob.setPosition(this.joy.o.x + v.x, this.joy.o.y + v.y);
+      this.joy.v.copy(v).scale(1 / 28);
+    });
+    const up = p => { if (this.joy.o && p.id !== this.joy.o.id) return; this.joy.o = null; this.joy.v.reset(); this.joy.base.setVisible(false); this.joy.knob.setVisible(false); };
+    this.input.on('pointerup', up); this.input.on('pointerupoutside', up);
+  }
+
+  banner(big, small) {
+    const y = 150;
+    const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.55).setScrollFactor(0).setDepth(110).setScale(1, 0);
+    const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
+    const t2 = this.add.text(W / 2, y + 12, small, font(9, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
+    this.tweens.add({ targets: b, scaleY: 1, duration: 160, ease: 'Back.Out' });
+    this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 220, delay: 80 });
+    this.tweens.add({ targets: [b, t1, t2], alpha: 0, delay: 1500, duration: 300, onComplete: () => [b, t1, t2].forEach(o => o.destroy()) });
+  }
+
+  // ── 스폰 ──
+  spawnPoint(min = 200, max = 250) {
+    for (let i = 0; i < 8; i++) {
+      const a = RF(0, Math.PI * 2), d = RF(min, max);
+      const x = this.hero.x + Math.cos(a) * d, y = this.hero.y + Math.sin(a) * d;
+      if (x > 20 && y > 20 && x < WORLD - 20 && y < WORLD - 20) return { x, y };
+    }
+    return { x: Phaser.Math.Clamp(this.hero.x + R(-200, 200), 20, WORLD - 20), y: Phaser.Math.Clamp(this.hero.y + 220, 20, WORLD - 20) };
+  }
+
+  // 웨이브 진행도(0~1)에 따라 몬스터 종류 비율이 바뀐다: 초반엔 기본형, 갈수록 단단한 놈과 떼거리
+  pickKind() {
+    const f = this.progress(), [a, b, c] = this.ch.mobs;
+    const r = Math.random();
+    if (r < 0.15 + 0.25 * f) return b;
+    if (r < 0.35 + 0.3 * f) return c;
+    return a;
+  }
+
+  progress() { return Math.min(1, (this.wave * this.waveLen + this.waveT) / (this.waveCount * this.waveLen)); }
+
+  spawn(near = false, kind = this.pickKind(), opt = {}) {
+    if (this.mobs.countActive() >= 120 + this.c * 10 && !opt.force) return null;
+    const m0 = D.MOBS[kind];
+    const p = opt.at || (near ? this.spawnPoint(110, 230) : this.spawnPoint());
+    const m = this.mobs.create(p.x, p.y, null);
+    m.play({ key: kind, startFrame: R(0, 3) });
+    m.kind = kind; m.ai = m0.ai; m.float = m0.ai === 'float';
+    const elite = !!opt.elite;
+    m.elite = elite;
+    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1);
+    m.dmg = m0.dmg * this.mobDmgMul * (elite ? 1.2 : 1);
+    m.spd = m0.spd * (1 + 0.04 * this.c) * RF(0.9, 1.1);
+    m.kbRes = m.ai === 'tank' ? 0.45 : elite ? 0.3 : 1;
+    m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.phase = RF(0, 6); m.t = 0;
+    m.hitBy = {};
+    if (this.registry.get('fallback')[kind] && this.c > 0) m.setTint(m0.color);
+    m.baseTint = m.tintTopLeft;
+    if (elite) {
+      m.setScale(1.5);
+      m.preFX?.addGlow(0xffd75e, 3, 0, false, 0.1, 8);
+    }
+    m.body.setSize(m.width * 0.6, m.height * 0.5).setOffset(m.width * 0.2, m.height * 0.45);
+    m.setAlpha(m.float ? 0.85 : 1);
+    if (!near) { m.setScale(0.2 * m.scaleX); this.tweens.add({ targets: m, scale: elite ? 1.5 : 1, duration: 200, ease: 'Back.Out' }); }
+    return m;
+  }
+
+  // 뱀서식 포위: 떼거리가 원을 그리며 한꺼번에 몰려온다
+  encircle() {
+    const kind = this.ch.mobs[2], n = 18;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2;
+      this.spawn(false, kind, { force: true, at: { x: Phaser.Math.Clamp(this.hero.x + Math.cos(a) * 190, 10, WORLD - 10), y: Phaser.Math.Clamp(this.hero.y + Math.sin(a) * 190, 10, WORLD - 10) } });
+    }
+  }
+
+  // ── 피해 ──
+  dmgCalc(mult) {
+    const r = this.run, crit = Math.random() < 0.08 + this.tv('luck');
+    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0)) * RF(0.9, 1.1);
+    return { dmg: Math.round(base * (crit ? 2 : 1)), crit };
+  }
+
+  // src: 같은 무기가 같은 몹을 너무 자주 때리지 않게 하는 키. kb: 밀려나는 세기
+  hitMob(m, mult, { src = 'x', cd = 0, kb = 60, fx = 'small', from } = {}) {
+    if (!m.active || m.dead) return false;
+    if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
+    m.hitBy[src] = this.bt;
+    const { dmg, crit } = this.dmgCalc(mult);
+    m.hp -= dmg;
+    // 흰 번쩍임 + 찌그러짐
+    m.setTintFill(0xffffff);
+    this.time.delayedCall(60, () => { if (m.active && !m.dead) { m.clearTint(); if (m.baseTint !== 0xffffff) m.setTint(m.baseTint); } });
+    if (!m.isBoss) {
+      const ox = from ? from.x : this.hero.x, oy = from ? from.y : this.hero.y;
+      const ang = Phaser.Math.Angle.Between(ox, oy, m.x, m.y), k = kb * (crit ? 1.5 : 1) * m.kbRes;
+      if (k > 0) { m.setVelocity(Math.cos(ang) * k, Math.sin(ang) * k); m.kb = 120; }
+      const sc = m.elite ? 1.5 : 1;
+      this.tweens.add({ targets: m, scaleX: 1.3 * sc, scaleY: 0.75 * sc, duration: 50, yoyo: true, ease: 'Quad.Out', onComplete: () => m.active && m.setScale(sc) });
+      if (m.hp > 0 && this.anims.exists(m.kind + 'Hurt') && fx === 'big') {
+        m.play(m.kind + 'Hurt');
+        this.time.delayedCall(150, () => m.active && !m.dead && m.play(m.kind));
+      }
+    }
+    if (fx === 'big' || crit) {
+      const s = this.add.sprite(m.x + RF(-4, 4), m.y + RF(-6, 2), 'fx1_r1s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31)
+        .setScale(crit ? 1.1 : 0.7).setRotation(RF(0, 6.28)).play('fxHit');
+      s.once('animationcomplete', () => s.destroy());
+      if (crit) {
+        const c2 = this.add.sprite(m.x, m.y, 'fx2_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31).setScale(0.8).play('fxCrit');
+        c2.once('animationcomplete', () => c2.destroy());
+      }
+      this.spark.explode(crit ? 12 : 5, m.x, m.y);
+    } else this.spark.explode(2, m.x, m.y);
+    this.popup(m.x, m.y - 12, dmg, crit, fx === 'big');
+    sfx(crit ? 'crit' : 'hit', 45);
+    if (m.hp <= 0) this.kill(m);
+    return true;
+  }
+
+  popup(x, y, n, crit, big) {
+    // 숫자가 너무 많으면 오래된 것부터 지운다
+    if (this.popups.length > 26) this.popups.shift().destroy();
+    const t = this.add.text(x + R(-6, 6), y, fmt(n), font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2))
+      .setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
+    this.popups.push(t);
+    this.tweens.add({ targets: t, scale: 1, duration: 110, ease: 'Back.Out' });
+    this.tweens.add({
+      targets: t, y: y - 16, alpha: 0, delay: crit ? 380 : 220, duration: 300,
+      onComplete: () => { t.destroy(); this.popups = this.popups.filter(p => p !== t); },
+    });
+  }
+
+  kill(m) {
+    m.dead = true; m.body.enable = false;
+    const r = this.run;
+    r.kills++; this.sv.stats.kills++;
+    r.mana = Math.min(D.MANA_MAX, r.mana + (m.elite ? D.MANA_ELITE : D.MANA_KILL));
+    sfx('kill', 50);
+    if (m.isBoss) { m.bossAI.die(); return; }
+    // 쓰러지는 그림(전용 시트가 있으면 무너짐, 없으면 흰빛으로 부풀었다 사라짐)
+    if (this.anims.exists(m.kind + 'Die')) {
+      const c = this.add.sprite(m.x, m.y, m.texture.key).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff).play(m.kind + 'Die');
+      this.time.delayedCall(60, () => c.clearTint());
+      c.once('animationcomplete', () => this.tweens.add({ targets: c, alpha: 0, delay: 250, duration: 400, onComplete: () => c.destroy() }));
+    } else {
+      const c = this.add.sprite(m.x, m.y, m.texture.key, m.frame.name).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff);
+      this.tweens.add({ targets: c, scaleX: c.scaleX * 1.4, scaleY: c.scaleY * 0.2, alpha: 0, duration: 220, ease: 'Quad.In', onComplete: () => c.destroy() });
+    }
+    this.goo.setParticleTint(m.color); this.goo.explode(m.elite ? 24 : 8, m.x, m.y);
+    const sm = this.add.sprite(m.x, m.y - 2, 'fx1_r2s').setBlendMode(Phaser.BlendModes.ADD).setDepth(30).setAlpha(0.35).setScale(m.elite ? 1 : 0.5).setTint(m.color).play('fxSmoke');
+    sm.once('animationcomplete', () => sm.destroy());
+    this.drop(m);
+    m.destroy();
+  }
+
+  // ── 드롭 ──
+  drop(m) {
+    const r = this.run, P = D.DROP;
+    this.addGem(m.x, m.y, m.elite ? 10 : m.ai === 'tank' ? 2 : 1);
+    if (m.elite) {
+      const n = R(...P.eliteSilver);
+      for (let i = 0; i < 6; i++) this.addItem(m.x + R(-10, 10), m.y + R(-10, 10), 'silver', Math.ceil(n / 6));
+      this.addItem(m.x, m.y, 'chest');
+      r.stones += R(1, 2);
+      return;
+    }
+    if (Math.random() < P.silver * (1 + this.tv('luck'))) this.addItem(m.x + R(-4, 4), m.y + R(-4, 4), 'silver', 1);
+    // 회복: 기본 1.5%, 체력이 낮을수록 확률 가산, 90초 동안 안 나오면 확정
+    const f = this.hp / this.maxHp;
+    let ph = P.heal + (f < 0.4 ? P.healLow : 0) + (f < 0.3 ? P.healCrit : 0);
+    if (f < 0.9 && this.bt - r.lastHeal > P.healPity) ph = 1;
+    if (Math.random() < ph) { this.addItem(m.x, m.y, 'meat'); r.lastHeal = this.bt; }
+    else if (Math.random() < P.magnet) this.addItem(m.x, m.y, 'magnetItem');
+  }
+
+  addGem(x, y, v) {
+    // 보석이 너무 많으면 가장 먼 보석에 값을 합쳐 개수를 줄인다
+    if (this.gems.countActive() > 160) {
+      const far = this.gems.getChildren().reduce((a, b) => (Phaser.Math.Distance.Squared(a.x, a.y, this.hero.x, this.hero.y) > Phaser.Math.Distance.Squared(b.x, b.y, this.hero.x, this.hero.y) ? a : b));
+      far.v += v; far.setTexture(far.v >= 10 ? 'gem3' : far.v >= 3 ? 'gem2' : 'gem1');
+      return;
+    }
+    const g = this.gems.create(x + R(-3, 3), y + R(-3, 3), v >= 10 ? 'gem3' : v >= 2 ? 'gem2' : 'gem1').setDepth(8);
+    g.v = v;
+    this.tweens.add({ targets: g, y: g.y - 6, duration: 140, yoyo: true, ease: 'Quad.Out' });
+  }
+
+  addItem(x, y, kind, v = 1) {
+    const it = this.items.create(x, y, kind).setDepth(8);
+    it.kind = kind; it.v = v;
+    this.tweens.add({ targets: it, y: y - 8, duration: 160, yoyo: true, ease: 'Quad.Out' });
+    if (kind === 'chest' || kind === 'meat') this.tweens.add({ targets: it, scale: 1.15, duration: 400, yoyo: true, repeat: -1 });
+    return it;
+  }
+
+  pickup(it) {
+    const r = this.run;
+    if (it.kind === 'silver') { r.silver += it.v; sfx('coin', 60); }
+    else if (it.kind === 'meat') { this.heal(this.maxHp * D.HEAL_PCT); }
+    else if (it.kind === 'magnetItem') { this.gems.getChildren().forEach(g => g.pull = true); sfx('level'); }
+    else if (it.kind === 'chest') { r.chests++; this.ui.chest(); }
+    it.destroy();
+  }
+
+  heal(n) {
+    this.hp = Math.min(this.maxHp, this.hp + n);
+    sfx('heal');
+    const t = this.add.text(this.hero.x, this.hero.y - 26, '+' + Math.round(n), font(10, '#5fdc6a')).setOrigin(0.5).setDepth(40);
+    this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 700, onComplete: () => t.destroy() });
+    this.hero.setTint(0x9dff9d); this.time.delayedCall(120, () => this.hero.clearTint());
+  }
+
+  gainXp(v) {
+    const r = this.run;
+    r.xp += v;
+    sfx('gem', 35);
+    if (r.xp >= D.xpNeed(r.lv)) {
+      r.xp -= D.xpNeed(r.lv); r.lv++;
+      this.lvTxt.setText('Lv ' + r.lv);
+      this.ui.levelUp();
+    }
+  }
+
+  // ── 피격 ──
+  hurt(dmg, src = 'boss') {
+    if (this.over || this.paused || this.bt < this.iframe) return;
+    const d = Math.max(1, Math.round(dmg));
+    const by = this.run.dmgBy; by[src] = (by[src] || 0) + d;
+    this.hp -= d;
+    this.iframe = this.bt + D.PLAYER.iframe;
+    this.run.mana = Math.min(D.MANA_MAX, this.run.mana + D.MANA_HURT);
+    sfx('hurt', 120);
+    this.hurtFx.setAlpha(0.3); this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 240 });
+    this.cameras.main.shake(90, 0.004);
+    this.hero.setTint(0xff7070); this.time.delayedCall(90, () => this.hero.clearTint());
+    this.hurtUntil = this.bt + 160; this.hero.play('hurtPose');
+    const t = this.add.text(this.hero.x, this.hero.y - 26, '-' + d, font(10, '#ff5050')).setOrigin(0.5).setDepth(40);
+    this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 600, onComplete: () => t.destroy() });
+    if (this.hp <= 0) this.die();
+  }
+
+  die() {
+    if (this.run.revive > 0) {
+      this.run.revive--;
+      this.hp = this.maxHp * 0.5;
+      this.blast(6, true);
+      this.banner('부활!', '한 번 더 싸운다');
+      return;
+    }
+    this.over = true;
+    this.hp = 0;
+    this.physics.pause();
+    this.hero.play('hurtPose');
+    this.time.timeScale = 1;
+    this.tweens.add({ targets: this.hero, angle: 90 * this.face, alpha: 0.4, duration: 500 });
+    this.cameras.main.zoomTo(1.3, 600);
+    this.time.delayedCall(900, () => this.ui.result(false));
+  }
+
+  // ── 궁극기: 화면 전체 베기 + 2초 무적 ──
+  ult() {
+    if (this.paused || this.over || this.run.mana < D.MANA_MAX) return;
+    this.run.mana = 0;
+    this.blast(9, false);
+  }
+
+  blast(mult, revive) {
+    sfx('ult');
+    this.iframe = this.bt + 2000;
+    this.hitstop = 120;
+    this.flashFx.setAlpha(0.8); this.tweens.add({ targets: this.flashFx, alpha: 0, duration: 400 });
+    this.cameras.main.shake(300, 0.012);
+    const sp = this.add.sprite(this.hero.x, this.hero.y, 'fx2_r1s').setBlendMode(Phaser.BlendModes.ADD).setDepth(32).setScale(1).play('fxSpin');
+    this.tweens.add({ targets: sp, scale: 4, duration: 500, ease: 'Quad.Out' });
+    sp.once('animationcomplete', () => sp.destroy());
+    const cam = this.cameras.main.worldView;
+    this.mobs.getChildren().slice().forEach(m => {
+      if (!Phaser.Geom.Rectangle.Contains(cam, m.x, m.y)) return;
+      this.hitMob(m, m.isBoss ? mult / 2 : mult, { kb: 260, fx: 'big' });
+    });
+    this.ebullets.clear(true, true);
+  }
+
+  // ── 웨이브 ──
+  endWave() {
+    this.wave++;
+    // 남은 몹은 흩어지고 보석은 다 끌려온다(브로타토식 자동 수거)
+    this.mobs.getChildren().slice().forEach(m => {
+      if (m.isBoss || m.dead) return;
+      m.dead = true; m.body.enable = false;
+      this.tweens.add({ targets: m, alpha: 0, scale: 0.3, duration: 250, onComplete: () => m.destroy() });
+    });
+    this.ebullets.clear(true, true);
+    this.gems.getChildren().forEach(g => g.pull = true);
+    this.items.getChildren().forEach(it => { if (it.kind === 'silver') it.pull = true; });
+    this.time.delayedCall(700, () => {
+      if (this.over) return;
+      if (this.wave >= this.waveCount) {
+        if (this.isBoss) { this.ui.shop(() => this.startBoss()); }
+        else this.ui.result(true);
+      } else this.ui.shop(() => this.banner(`웨이브 ${this.wave + 1} / ${this.waveCount}`, this.wave === this.waveCount - 1 ? '마지막 웨이브' : '버텨라'));
+    });
+  }
+
+  startBoss() {
+    this.bossPhase = true;
+    sfx('bossIn');
+    this.cameras.main.shake(800, 0.006);
+    const b = D.BOSSES[this.ch.boss];
+    this.banner(b.name, '보스 등장 — 쓰러뜨려라');
+    this.boss = new BossAI(this, this.ch.boss, this.mobHpMul);
+  }
+
+  // ── 매 프레임 ──
+  update(time, delta) {
+    if (this.over) return;
+    if (this.hitstop > 0) {
+      this.hitstop -= delta;
+      if (!this.physics.world.isPaused) this.physics.pause();
+      this.anims.pauseAll();
+      if (this.hitstop <= 0 && !this.paused) { this.physics.resume(); this.anims.resumeAll(); }
+      return;
+    }
+    if (this.paused) return;
+    const dt = Math.min(delta, 50) * this.speed;
+    this.bt += dt;
+    const r = this.run;
+
+    // 웨이브 시간
+    if (!this.bossPhase) {
+      this.waveT += dt;
+      if (this.waveT >= this.waveLen) { this.waveT = 0; this.endWave(); return; }
+      // 스폰: 초당 0.9 → 끝날 즈음 4.5마리
+      const f = this.progress();
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (0.9 + 3.6 * f) / 1000;
+      while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
+      // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
+      if (!this.eliteDone && this.waveT > this.waveLen * 0.5 && (this.wave > 0 || this.c + this.s > 0)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
+      if (this.wave >= 1 && !this.ringDone && this.waveT > this.waveLen * 0.25) { this.ringDone = true; this.encircle(); }
+      if (this.waveT < dt * 2) { this.eliteDone = false; this.ringDone = false; }
+      // 3번째 스테이지는 마지막 웨이브에 해골 장군(중간 보스)
+      if (this.s === 2 && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.3) {
+        this.midDone = true; this.midBoss = new BossAI(this, 'general', this.mobHpMul, true);
+        this.banner('해골 장군', '중간 보스'); sfx('bossIn');
+      }
+    } else {
+      this.spawnAcc = (this.spawnAcc || 0) + dt * 1.2 / 1000;
+      while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
+    }
+    this.boss?.update(dt);
+    this.midBoss?.update(dt);
+
+    // 회복(훈련 + 활력)
+    const regen = this.tv('regen') + 0.3 * (r.skills.vigor || 0);
+    if (regen > 0) this.hp = Math.min(this.maxHp, this.hp + regen * dt / 1000);
+
+    this.moveHero(time, dt);
+    this.weapons.update(dt);
+    this.updateMobs(dt);
+    this.updatePickups(dt);
+    this.updateHud(time);
+    if (this.bot) this.botThink();
+  }
+
+  moveHero(time, dt) {
+    const k = this.keys, v = this.joy.v.clone();
+    if (k.A.isDown || k.LEFT.isDown) v.x = -1; if (k.D.isDown || k.RIGHT.isDown) v.x = 1;
+    if (k.W.isDown || k.UP.isDown) v.y = -1; if (k.S.isDown || k.DOWN.isDown) v.y = 1;
+    if (this.autoMove) v.copy(this.autoMove(time));
+    if (v.length() > 1) v.normalize();
+    const r = this.run;
+    const spd = D.PLAYER.spd * (1 + this.tv('spd') + 0.08 * (r.skills.haste || 0) + r.bSpd);
+    let vx = v.x * spd, vy = v.y * spd;
+    if (this.lunge && this.lunge.t > 0) { vx += this.lunge.x; vy += this.lunge.y; this.lunge.t -= dt; }
+    this.hero.setVelocity(vx, vy);
+    const moving = v.length() > 0.1, h = this.hero;
+    const slashing = (h.anims.currentAnim?.key === 'slash' && h.anims.isPlaying) || this.bt < (this.hurtUntil || 0);
+    if (Math.abs(v.x) > 0.2 && !slashing) this.face = Math.sign(v.x);
+    if (!slashing) {
+      // 위·아래로 갈 땐 앞·뒷모습, 그 밖엔 옆모습(좌우 뒤집기). 서 있으면 숨쉬는 자세
+      const want = !moving ? 'idle' : Math.abs(v.y) > Math.abs(v.x) * 1.3 ? (v.y < 0 ? 'walkUp' : 'walkFront') : 'walkSide';
+      if (h.anims.currentAnim?.key !== want) h.play(want);
+      h.anims.timeScale = moving ? 0.6 + v.length() * 0.9 : 1;
+      h.setFlipX(want === 'walkSide' || want === 'idle' ? this.face < 0 : false);
+    }
+    // 걸을 때 통통 튀고, 앞·뒷모습은 좌우로 흔들어 발걸음을 보이게. 무적 중엔 깜빡임
+    this.walkT += dt * (moving ? 0.018 : 0.004);
+    const bob = moving ? Math.abs(Math.sin(this.walkT)) * 0.08 : 0;
+    h.setOrigin(0.5, 0.5 + bob);
+    const rock = moving && !slashing && h.anims.currentAnim?.key !== 'walkSide' ? Math.sin(this.walkT) * 8 : 0;
+    h.setAngle(slashing ? 0 : rock + v.x * 4);
+    h.setScale(1, moving ? 1 : 1 + Math.sin(this.walkT) * 0.025);
+    h.setAlpha(this.bt < this.iframe && Math.floor(this.bt / 60) % 2 ? 0.55 : 1);
+    h.setDepth(10 + h.y / WORLD);
+    if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.height / 2 - 3); }
+    this.heroShadow.setPosition(h.x, h.y + h.height / 2 - 2).setScale(1.6 * (1 - bob * 2), 1.4).setDepth(9);
+    this.moveV = v;
+  }
+
+  updateMobs(dt) {
+    const h = this.hero;
+    this.mobs.getChildren().forEach(m => {
+      if (m.dead || m.isBoss) return;
+      m.t += dt;
+      m.setDepth(10 + m.y / WORLD);
+      m.setFlipX(m.x > h.x);
+      if (m.freeze > 0) { m.freeze -= dt; m.setVelocity(0, 0); m.anims.timeScale = 0; return; }
+      m.anims.timeScale = m.slow > 0 ? 0.5 : 1;
+      if (m.slow > 0) m.slow -= dt;
+      if (m.kb > 0) { m.kb -= dt; m.body.velocity.scale(0.86); return; }
+      const spd = m.spd * (m.slow > 0 ? 0.5 : 1);
+      const dx = h.x - m.x, dy = h.y - m.y, d = Math.hypot(dx, dy) || 1;
+      // 너무 멀어진 몹은 플레이어 근처로 다시 데려온다
+      if (d > 420) { const p = this.spawnPoint(); m.setPosition(p.x, p.y); return; }
+      if (m.ai === 'swarm') {
+        const wob = Math.sin(m.t / 180 + m.phase) * 0.7;
+        m.setVelocity((dx / d - dy / d * wob) * spd, (dy / d + dx / d * wob) * spd);
+      } else if (m.ai === 'charge') {
+        m.cd = (m.cd ?? 2000 + R(0, 1500)) - dt;
+        if (m.dash > 0) { m.dash -= dt; return; }
+        if (m.wind > 0) {
+          m.wind -= dt; m.setVelocity(0, 0); m.x += Math.sin(m.t) * 0.6;
+          if (m.wind <= 0) { m.dash = 450; m.setVelocity(dx / d * spd * 3, dy / d * spd * 3); m.setTint(m.baseTint); }
+          return;
+        }
+        if (m.cd <= 0 && d < 140) { m.cd = 3200; m.wind = 600; m.setTint(0xff6060); return; }
+        m.setVelocity(dx / d * spd, dy / d * spd);
+      } else if (m.ai === 'ranged') {
+        const want = d > 120 ? 1 : d < 90 ? -0.6 : 0;
+        m.setVelocity(dx / d * spd * want, dy / d * spd * want);
+        m.cd = (m.cd ?? 1500 + R(0, 1500)) - dt;
+        if (m.cd <= 0 && d < 200) { m.cd = 2600; this.enemyShot(m.x, m.y, Math.atan2(dy, dx), 85, m.dmg); }
+      } else m.setVelocity(dx / d * spd, dy / d * spd);
+    });
+  }
+
+  enemyShot(x, y, ang, spd, dmg) {
+    const b = this.ebullets.create(x, y, 'ebullet').setDepth(29);
+    b.dmg = dmg; b.setVelocity(Math.cos(ang) * spd, Math.sin(ang) * spd); b.body.setCircle(3, 1, 1);
+    b.life = 4000;
+    sfx('shoot', 120);
+    return b;
+  }
+
+  updatePickups(dt) {
+    const h = this.hero, r = this.run;
+    const pick = D.PLAYER.pickup * (1 + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + r.bPick);
+    this.gems.getChildren().slice().forEach(g => {
+      const d = Phaser.Math.Distance.Between(g.x, g.y, h.x, h.y);
+      if (d < pick || g.pull) { g.pull = true; this.physics.moveToObject(g, h, 120 + (g.sp = (g.sp || 0) + dt * 0.5)); }
+      if (d < 10) { this.gainXp(g.v); g.destroy(); }
+    });
+    this.items.getChildren().slice().forEach(it => {
+      const d = Phaser.Math.Distance.Between(it.x, it.y, h.x, h.y);
+      if (d < pick * 0.8 || it.pull) { it.pull = true; this.physics.moveToObject(it, h, 140); }
+      if (d < 12) this.pickup(it);
+    });
+    this.ebullets.getChildren().slice().forEach(b => { b.life -= dt; if (b.life <= 0) b.destroy(); });
+  }
+
+  updateHud(time) {
+    const r = this.run, cam = this.cameras.main;
+    this.xpBar.width = W * Math.min(1, r.xp / D.xpNeed(r.lv));
+    const f = Math.max(0, this.hp / this.maxHp);
+    this.hpBar.width = 76 * f;
+    this.hpLag.width += (76 * f - this.hpLag.width) * 0.06;
+    this.hpTxt.setText(`${Math.ceil(Math.max(0, this.hp))} / ${Math.round(this.maxHp)}`);
+    if (this.bossPhase) { this.timeTxt.setText('보스'); this.waveTxt.setText(''); }
+    else {
+      const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));
+      this.timeTxt.setText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
+      this.timeTxt.setColor(left <= 5 ? '#ffd75e' : '#ffffff');
+      this.waveTxt.setText(`웨이브 ${this.wave + 1}/${this.waveCount}`);
+    }
+    this.killTxt.setText(fmt(r.kills)); this.silverTxt.setText(fmt(r.silver));
+    // 마나 링
+    const mf = r.mana / D.MANA_MAX, full = mf >= 1;
+    this.ultFill.clear().lineStyle(3, full ? 0xffd75e : 0x6fd3ff, 1)
+      .beginPath().arc(this.ultPos.x, this.ultPos.y, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * mf).strokePath();
+    this.ultIcon.setAlpha(full ? 1 : 0.45).setScale((full ? 1 + Math.sin(time / 120) * 0.08 : 1) * (this.ultIcon.baseScale ||= this.ultIcon.scaleX));
+    this.ultTxt.setText(full ? '눌러서 발동!' : `궁극기 ${Math.floor(mf * 100)}%`).setColor(full ? '#ffd75e' : '#c8bfe0');
+    // 조명
+    this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);
+    this.dark.clear().fill(0x06040c, this.ch.dark).erase('light', this.hero.x - cam.scrollX - 150, this.hero.y - cam.scrollY - 150);
+    for (const t of this.torches) {
+      const sx = t.x - cam.scrollX, sy = t.y - cam.scrollY;
+      if (sx > -150 && sy > -150 && sx < W + 150 && sy < H + 150) this.dark.erase('light', sx - 150, sy - 150);
+    }
+  }
+
+  // ── 자동 플레이(테스트용 ?bot) ──
+  botThink() {
+    const h = this.hero; let ax = 0, ay = 0, near = null, nd = 1e9;
+    // 바짝 붙은 적과 탄만 피하고, 아니면 가장 가까운 적에게 다가가 벤다(사람이 하듯)
+    this.mobs.getChildren().forEach(m => {
+      if (m.dead) return;
+      const dx = h.x - m.x, dy = h.y - m.y, d2 = dx * dx + dy * dy + 1;
+      if (d2 < nd) { nd = d2; near = m; }
+      // 보스는 공격 준비 중(busy)일 때만 크게 피하고, 평소엔 검이 닿는 거리(약 70)를 지킨다
+      const big = m.isBoss || m.elite, R2 = m.isBoss ? (m.bossAI.busy > 0 ? 120 * 120 : 62 * 62) : m.elite ? 80 * 80 : 42 * 42;
+      if (d2 < R2) { ax += dx / d2 * (big ? 2500 : 260); ay += dy / d2 * (big ? 2500 : 260); }
+    });
+    this.ebullets.getChildren().forEach(b => {
+      const dx = h.x - b.x, dy = h.y - b.y, d2 = dx * dx + dy * dy + 1;
+      if (d2 < 60 * 60) { ax += dx / d2 * 900; ay += dy / d2 * 900; }
+    });
+    const bm = this.boss?.m;
+    if (bm?.active && !(this.boss.busy > 0)) { const dx = bm.x - h.x, dy = bm.y - h.y, d = Math.hypot(dx, dy) + 1; if (d > 75) { ax += dx / d * 0.8; ay += dy / d * 0.8; } }
+    else if (near && !near.isBoss && !near.elite && nd > 46 * 46 && Math.hypot(ax, ay) < 0.5) { const d = Math.sqrt(nd); ax += (near.x - h.x) / d * 0.7; ay += (near.y - h.y) / d * 0.7; }
+    // 보석·고기 쪽으로 살짝 끌림, 가운데로 복귀
+    let best = null, bd = 1e9;
+    this.items.getChildren().concat(this.gems.getChildren()).forEach(g => { const d = Phaser.Math.Distance.Squared(g.x, g.y, h.x, h.y); if (d < bd) { bd = d; best = g; } });
+    if (best && bd < 150 * 150) { const d = Math.sqrt(bd) + 1; ax += (best.x - h.x) / d * 0.6; ay += (best.y - h.y) / d * 0.6; }
+    ax += (WORLD / 2 - h.x) / 2000; ay += (WORLD / 2 - h.y) / 2000;
+    const v = new Phaser.Math.Vector2(ax, ay);
+    this.joy.v.copy(v.length() > 0.15 ? v.normalize() : v.scale(0));
+    if (this.run.mana >= D.MANA_MAX && (this.boss || this.mobs.countActive() > 40)) this.ult();
+  }
+}

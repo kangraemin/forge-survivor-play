@@ -1,0 +1,151 @@
+// 게임 데이터와 밸런스 수치. 숫자는 전부 여기서만 바꾼다. 근거는 docs/DESIGN.md
+export const W = 270, H = 480;
+
+// 챕터: 몬스터 3종 + 보스. dur은 일반 스테이지 길이(초)
+export const CHAPTERS = [
+  { name: '이끼 폐허', tiles: 'tiles', mobs: ['slime', 'skel', 'bat'], boss: 'kingslime', dur: 150, dark: 0.45, light: 0xff9a3c },
+  { name: '망자의 묘지', tiles: 'tile2', mobs: ['zombie', 'ghost', 'spider'], boss: 'lich', dur: 165, dark: 0.6, light: 0x9ad8ff },
+  { name: '용암 동굴', tiles: 'tile3', mobs: ['imp', 'golem', 'fskull'], boss: 'lavagolem', dur: 180, dark: 0.5, light: 0xff6a2a },
+  { name: '얼어붙은 설원', tiles: 'tile4', mobs: ['wolf', 'yeti', 'icesp'], boss: 'wyrm', dur: 195, dark: 0.35, light: 0xbfe8ff },
+  { name: '마왕성', tiles: 'tile5', mobs: ['dknight', 'cultist', 'gargoyle'], boss: 'demonlord', dur: 210, dark: 0.6, light: 0xff4060 },
+];
+export const STAGES_PER_CHAPTER = 6;
+
+// 몬스터 기본값(1챕터 기준). ai: chase 추적, swarm 빠르고 흔들림, tank 느리고 단단함, float 겹쳐 통과, charge 돌진, ranged 거리 두고 쏨
+// sheet/row: 걷기 시트 위치, die: 전용 죽음 시트 행(없으면 공통 연기)
+export const MOBS = {
+  slime: { sheet: 'mob', row: 0, die: 0, hp: 14, spd: 30, dmg: 6, ai: 'chase', color: 0x6fe36a },
+  skel: { sheet: 'mob', row: 1, die: 1, hp: 30, spd: 24, dmg: 7.5, ai: 'tank', color: 0xe8e2c8 },
+  bat: { sheet: 'mob', row: 2, die: 2, hp: 8, spd: 52, dmg: 4, ai: 'swarm', color: 0xa45cff },
+  zombie: { sheet: 'z2', row: 0, hp: 16, spd: 26, dmg: 6, ai: 'chase', color: 0x7fae5a },
+  ghost: { sheet: 'z2', row: 1, hp: 11, spd: 40, dmg: 5, ai: 'float', color: 0xaee6ff },
+  spider: { sheet: 'z2', row: 2, hp: 18, spd: 32, dmg: 6.5, ai: 'charge', color: 0x8a4cc0 },
+  imp: { sheet: 'z3', row: 0, hp: 10, spd: 54, dmg: 4, ai: 'swarm', color: 0xff5a3a },
+  golem: { sheet: 'z3', row: 1, hp: 44, spd: 19, dmg: 7.5, ai: 'tank', color: 0xff9a3a },
+  fskull: { sheet: 'z3', row: 2, hp: 13, spd: 30, dmg: 5, ai: 'ranged', color: 0xffc23a },
+  wolf: { sheet: 'z4', row: 0, hp: 18, spd: 44, dmg: 6.5, ai: 'charge', color: 0xdff2ff },
+  yeti: { sheet: 'z4', row: 1, hp: 48, spd: 21, dmg: 8, ai: 'tank', color: 0xffffff },
+  icesp: { sheet: 'z4', row: 2, hp: 13, spd: 30, dmg: 5, ai: 'ranged', color: 0x7fe8ff },
+  dknight: { sheet: 'z5', row: 0, hp: 46, spd: 25, dmg: 8, ai: 'tank', color: 0xc04050 },
+  cultist: { sheet: 'z5', row: 1, hp: 15, spd: 28, dmg: 5, ai: 'ranged', color: 0xb070ff },
+  gargoyle: { sheet: 'z5', row: 2, hp: 14, spd: 52, dmg: 4.5, ai: 'swarm', color: 0x9a9aa8 },
+};
+
+// 보스: sheet/row는 2프레임 시트. hp는 1챕터 배율 기준 값(챕터 배율이 곱해진다)
+export const BOSSES = {
+  kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1500, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'summon', 'jump', 'ring'] },
+  lich: { name: '리치 왕', sheet: 'boss1', row: 1, hp: 1500, dmg: 12, spd: 22, color: 0x9dff7a, pattern: ['ring', 'summon', 'aimed', 'ring'] },
+  lavagolem: { name: '용암 거신', sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'] },
+  wyrm: { name: '서리 용', sheet: 'boss2', row: 0, hp: 1650, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'] },
+  demonlord: { name: '마왕', sheet: 'boss2', row: 1, hp: 1800, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'] },
+  general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon'] },
+};
+
+// 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다
+export const chapterHp = c => Math.pow(2.1, c);           // c는 0부터
+export const chapterDmg = c => 0.65 * Math.pow(1.25, c);
+export const stageMul = s => 1 + 0.1 * s;                // s는 0~5
+export const stageDmg = s => 1 + 0.05 * s;               // 피해는 공격력으로 못 막으니 체력보다 완만하게
+// 판 안 시간에 따른 체력 상승(끝날 즈음 +70%)
+export const timeHp = f => 1 + 0.7 * f;
+
+// ── 무기·대장간 ──
+export const TIERS = [
+  { name: '녹슨 철검', atk: 10, icon: 0 },
+  { name: '강철검', atk: 21, icon: 1 },
+  { name: '미스릴검', atk: 44, icon: 2 },
+  { name: '룬 대검', atk: 92, icon: 2, tint: 0xffa0ff },
+  { name: '전설의 화염검', atk: 190, icon: 3 },
+];
+export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * enh);
+// 강화 성공 확률(%) — 인덱스는 현재 강화 수치
+export const ENH_RATE = [100, 100, 95, 90, 85, 75, 65, 55, 50, 45, 40, 35, 30, 27, 24, 20, 17, 14, 12, 10];
+export const ENH_MAX = 20;
+export const DESTROY_FROM = 10;                            // +10에서 +11을 노릴 때부터 실패하면 파괴
+const TIER_COST = [1, 2.2, 4.8, 10.5, 23];
+export const enhGold = (tier, enh) => Math.round(40 * TIER_COST[tier] * Math.pow(1.22, enh) / 5) * 5;
+export const enhStone = (tier, enh) => Math.ceil((enh + 1) / 2) + tier;
+export const PROMOTE_NEED = 10;                            // 승급하려면 +10 이상
+export const promoteGold = tier => Math.round(600 * TIER_COST[tier + 1] / 50) * 50;
+
+// ── 스테이지 보상(금화·강화석) ──
+export const clearGold = (c, s) => Math.round(75 * TIER_COST[c] * (1 + 0.2 * s) / 5) * 5;
+export const FIRST_CLEAR_MUL = 2.5;
+export const clearStone = (c, s) => 3 + s + c * 2;
+export const FAIL_GOLD_RATE = 0.5;                         // 실패해도 버틴 시간 비율 × 클리어 금화의 50%를 준다
+// 은화는 판이 끝나면 사라진다(아껴 두지 말고 상점에서 바로 쓰게)
+export const SWEEP_DAILY = 5, SWEEP_MAX = 12;
+
+// ── 훈련(영구 능력치). v는 레벨당 효과 ──
+export const TRAINING = [
+  { id: 'hp', name: '체력', desc: '최대 체력', v: 0.06, unit: '%', max: 15, base: 50 },
+  { id: 'atk', name: '근력', desc: '모든 피해', v: 0.03, unit: '%', max: 15, base: 60 },
+  { id: 'def', name: '갑옷', desc: '받는 피해 감소', v: 0.015, unit: '%', max: 20, base: 70 },
+  { id: 'spd', name: '신속', desc: '이동 속도', v: 0.02, unit: '%', max: 10, base: 60 },
+  { id: 'mag', name: '자력', desc: '줍는 거리', v: 0.1, unit: '%', max: 10, base: 40 },
+  { id: 'luck', name: '행운', desc: '은화·치명타', v: 0.04, unit: '%', max: 10, base: 80 },
+  { id: 'regen', name: '회복', desc: '초당 체력 회복', v: 0.1, unit: '', max: 10, base: 90 },
+  { id: 'revive', name: '부활', desc: '한 판에 한 번 되살아남', v: 1, unit: '회', max: 1, base: 2500 },
+];
+export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.2, lv) / 5) * 5;
+
+// ── 판 안 성장 ──
+export const PLAYER = { hp: 100, spd: 72, iframe: 600, pickup: 34 };
+export const xpNeed = lv => 5 + (lv - 1) * 8;                         // 뱀서(5, +10씩)를 짧은 판에 맞게 줄임
+export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
+
+// 액티브 스킬. lv별 수치는 Battle에서 lv로 계산한다
+export const SKILLS = {
+  sword: { name: '검 휘두르기', type: 'active', icon: 0, desc: ['가장 가까운 적을 벤다', '피해 +25%', '뒤쪽도 함께 벤다', '범위 +20%', '피해 +40%, 빨라진다'] },
+  spin: { name: '회전 베기', type: 'active', icon: 4, desc: ['주변을 한 바퀴 벤다', '피해 +30%', '범위 +20%', '더 자주 쓴다', '두 바퀴 돈다'] },
+  dagger: { name: '투척 단검', type: 'active', icon: 5, desc: ['가까운 적에게 단검을 던진다', '단검 +1', '피해 +30%', '단검 +1, 관통', '단검 +2'] },
+  bolt: { name: '번개', type: 'active', icon: 6, desc: ['무작위 적에게 벼락', '벼락 +1', '피해 +40%', '벼락 +1', '번개가 튄다'] },
+  holy: { name: '성역', type: 'active', icon: 7, desc: ['발밑의 빛이 계속 태운다', '범위 +20%', '피해 +30%', '적을 느리게 한다', '범위 +30%'] },
+  fireball: { name: '화염구', type: 'active', icon: 8, desc: ['터지는 불덩이를 쏜다', '피해 +30%', '폭발 범위 +30%', '불덩이 +1', '바닥에 불이 남는다'] },
+  ice: { name: '얼음 파편', type: 'active', icon: 9, desc: ['꿰뚫는 얼음을 쏜다', '파편 +1', '적을 얼린다', '피해 +40%', '파편 +2'] },
+  orb: { name: '수호 구슬', type: 'active', icon: 11, desc: ['구슬이 몸 주위를 돈다', '구슬 +1', '피해 +30%', '구슬 +1', '구슬 +1, 빨라진다'] },
+  might: { name: '숫돌', type: 'passive', icon: 0, desc: ['피해 +10%'] },
+  haste: { name: '신속 물약', type: 'passive', icon: 10, desc: ['이동 속도 +8%'] },
+  focus: { name: '집중', type: 'passive', icon: 15, desc: ['재사용 대기 -8%'] },
+  area: { name: '넓은 칼날', type: 'passive', icon: 4, desc: ['공격 범위 +10%'] },
+  magnet: { name: '자석', type: 'passive', icon: 13, desc: ['줍는 거리 +30%'] },
+  vigor: { name: '활력', type: 'passive', icon: 14, desc: ['최대 체력 +20, 회복 +0.3/초'] },
+};
+export const PASSIVE_KEYS = ['might', 'haste', 'focus', 'area', 'magnet', 'vigor'];
+
+// ── 판 안 상점(웨이브 사이) ──
+// 가격 = 내림((기본가 + 회차×3) × (1 + 0.1×회차)) — 브로타토 가격 공식 변형. 회차는 이번 판에서 상점이 열린 횟수(0부터)
+export const SHOP_ITEMS = [
+  { id: 'meat', name: '회복 물약', icon: 14, price: 18, desc: '체력 40% 회복' },
+  { id: 'whet', name: '숫돌 갈기', icon: 0, price: 30, desc: '이번 판 피해 +8%' },
+  { id: 'boots', name: '신속 물약', icon: 10, price: 22, desc: '이번 판 이동 +6%' },
+  { id: 'heart', name: '철벽 방패', icon: 11, price: 34, desc: '이번 판 최대 체력 +15' },
+  { id: 'tome', name: '수련서', icon: 15, price: 40, desc: '즉시 레벨 업' },
+  { id: 'chest', name: '빛의 축복', icon: 7, price: 55, desc: '가진 스킬 하나 +1' },
+  { id: 'mana', name: '마나 수정', icon: 13, price: 20, desc: '궁극기 게이지 가득' },
+  { id: 'magnet', name: '탐욕의 동전', icon: 12, price: 16, desc: '이번 판 줍는 거리 +25%' },
+];
+export const SHOP_SLOTS = 4;
+export const shopPrice = (base, round) => Math.floor((base + round * 3) * (1 + 0.1 * round));
+export const rerollCost = (round, n) => 3 + round + 2 * n;   // n: 이번 상점에서 리롤한 횟수
+
+// 웨이브: 일반 스테이지는 3웨이브(사이 상점 2번), 보스 스테이지는 2웨이브 + 보스
+export const WAVES = 3;
+
+// 궁극기(마나): 처치로 차고 가득 차면 버튼으로 쓴다
+// 처치 +1, 엘리트 +10, 피격 +2. 발동: 화면 전체 큰 피해 + 2초 무적(보스는 피해 절반)
+export const MANA_MAX = 100;
+export const MANA_KILL = 1, MANA_ELITE = 10, MANA_HURT = 2;
+
+// ── 드롭 ──
+export const DROP = {
+  silver: 0.55,        // 일반 몹 은화 확률(1개)
+  heal: 0.02,          // 고기(최대 체력 15%) 기본 확률
+  healLow: 0.03,       // 체력 40% 이하일 때 추가
+  healCrit: 0.06,      // 체력 30% 이하일 때 추가
+  healPity: 90000,     // 마지막 고기 뒤 90초 지나면 다음 처치에 확정
+  magnet: 0.002,       // 화면의 보석을 다 끌어오는 자석
+  eliteSilver: [15, 25],
+  bossSilver: 100,
+};
+export const HEAL_PCT = 0.15;
