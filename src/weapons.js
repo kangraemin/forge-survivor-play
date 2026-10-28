@@ -39,7 +39,7 @@ export class Weapons {
 
   enhGlow() {
     const e = this.s.sv.enh;
-    return e >= 15 ? { tint: 0xd06bff, scale: 1.2, ember: true } : e >= 10 ? { tint: 0xff9a3a, scale: 1.12, ember: true } : e >= 5 ? { tint: 0x7fd8ff, scale: 1.06 } : { tint: 0, scale: 1 };
+    return e >= 15 ? { tint: 0xd06bff, scale: 1.45, ember: true, glow: true } : e >= 10 ? { tint: 0xff8a2a, scale: 1.3, ember: true, glow: true } : e >= 5 ? { tint: 0x5fc8ff, scale: 1.15 } : { tint: 0, scale: 1 };
   }
   // +10부터 맞힌 자리에 불티가 튄다
   embers(x, y, color) {
@@ -69,7 +69,15 @@ export class Weapons {
       const g = this.enhGlow();
       const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.85)
         .setScale(0.85 * area * g.scale).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
-      if (g.tint) fx.setTint(g.tint);
+      if (g.tint) fx.setTint(g.tint).setAlpha(1);
+      // +10부터 같은 궤적을 한 겹 더 크게 깔아 눈에 띄게 한다
+      if (g.glow) {
+        const fx2 = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setAlpha(0.6).setTint(g.tint)
+          .setScale(0.85 * area * g.scale * 1.25).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
+        fx.on('animationupdate', () => { if (fx2.active) fx2.setPosition(fx.x, fx.y); });
+        fx2.setPosition(h.x + Math.cos(a) * 22 * area, h.y - 4 + Math.sin(a) * 18 * area);
+        fx2.once('animationcomplete', () => fx2.destroy());
+      }
       const place = () => fx.setPosition(h.x + Math.cos(a) * 22 * area, h.y - 4 + Math.sin(a) * 18 * area);
       place(); fx.on('animationupdate', place);
       fx.once('animationcomplete', () => fx.destroy());

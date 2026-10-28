@@ -7,7 +7,8 @@ export const font9 = (size, color = '#d8d2e8') => ({ fontFamily: 'G9', fontSize:
 
 export const COLOR = { panel: 0x15121f, panel2: 0x221c33, line: 0x5b4f7a, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
 
-export const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1) + 'k' : String(Math.floor(n));
+// 상단 바 칸이 좁아 4글자 안팎으로 자른다(반올림하면 99999가 100.0k가 되니 버림)
+export const fmt = n => n >= 1e6 ? Math.floor(n / 1e5) / 10 + 'M' : n >= 10000 ? Math.floor(n / 1000) + 'k' : String(Math.floor(n));
 
 export function panel(scene, x, y, w, h, { fill = COLOR.panel, line = COLOR.line, alpha = 0.94 } = {}) {
   const g = scene.add.graphics();
@@ -66,6 +67,13 @@ export function toast(scene, msg, color = '#ffffff') {
   t.add([scene.add.rectangle(0, 0, Math.min(262, tx.width + 24), 24, 0x0a0710, 0.85).setStrokeStyle(1, 0x5b4f7a), tx]);
   scene.tweens.add({ targets: t, alpha: 1, y: 88, duration: 160, ease: 'Back.Out' });
   scene.tweens.add({ targets: t, alpha: 0, y: 76, delay: 1300, duration: 300, onComplete: () => t.destroy() });
+}
+
+// 스킬 아이콘: 아이콘 칸이 모자라 같은 그림을 쓰는 스킬은 색으로 구분한다
+export function skillIcon(scene, x, y, def, size) {
+  const im = icon(scene, x, y, def.icon, size);
+  if (def.tint) im.setTint(def.tint);
+  return im;
 }
 
 // 보석(유료 재화) 아이콘: 아이콘 시트에 없어 직접 그린 분홍 다이아

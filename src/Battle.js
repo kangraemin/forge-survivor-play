@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, playBgm, stopBgm } from './sfx.js';
-import { font, panel, button, icon, fmt, COLOR } from './ui.js';
+import { font, panel, button, icon, skillIcon, fmt, COLOR } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
@@ -17,7 +17,8 @@ export class Battle extends Phaser.Scene {
   init(data) {
     this.c = data.chapter; this.s = data.stage;
     this.ch = D.CHAPTERS[this.c];
-    this.isBoss = this.s === D.STAGES_PER_CHAPTER - 1;
+    this.endless = !!data.endless;
+    this.isBoss = !this.endless && this.s === D.STAGES_PER_CHAPTER - 1;
     this.sv = load();
     const q = new URLSearchParams(location.search);
     this.bot = !!data.bot || q.has('bot');
@@ -39,8 +40,8 @@ export class Battle extends Phaser.Scene {
       revive: sv.train.revive ? 1 : 0, lastHeal: 0, dmgBy: {},
     };
     this.wave = 0;
-    this.waveLen = this.ch.dur * 1000 / D.WAVES;
-    this.waveCount = this.isBoss ? D.WAVES - 1 : D.WAVES;
+    this.waveLen = this.endless ? D.ENDLESS.floorSec * 1000 : this.ch.dur * 1000 / D.WAVES;
+    this.waveCount = this.endless ? Infinity : this.isBoss ? D.WAVES - 1 : D.WAVES;
     this.waveT = 0;
     this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (1 - this.tv('def'));
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s);
@@ -77,7 +78,8 @@ export class Battle extends Phaser.Scene {
     if (!this.bot) playBgm('battle', this.c);
     this.events.once('shutdown', stopBgm);
     if (sv.stats.runs < 2 && !this.bot) this.dragHint();
-    this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}`);
+    if (this.endless) this.banner('무한의 탑', `1층  ·  최고 ${sv.endBest}층`);
+    else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}`);
     sv.stats.runs++; save();
   }
 
@@ -192,7 +194,7 @@ export class Battle extends Phaser.Scene {
       const x = (i % 8) * 17, y = Math.floor(i / 8) * 17;
       const evo = this.run.evo[k];
       this.skillRow.add(this.add.rectangle(x, y, 15, 15, evo ? 0x5a3a08 : 0x000000, 0.6).setOrigin(0).setStrokeStyle(1, evo ? 0xff9a3a : D.SKILLS[k].type === 'active' ? 0x6fd3ff : 0xffd75e, evo ? 1 : 0.7));
-      this.skillRow.add(icon(this, x + 7.5, y + 7.5, D.SKILLS[k].icon, 13));
+      this.skillRow.add(skillIcon(this, x + 7.5, y + 7.5, D.SKILLS[k], 13));
       this.skillRow.add(this.add.text(x + 15, y + 15, evo ? '★' : lv, font(7, evo ? '#ffd75e' : '#ffffff')).setOrigin(1, 1));
     });
   }
@@ -248,7 +250,7 @@ export class Battle extends Phaser.Scene {
 
   // 웨이브 진행도(0~1)에 따라 몬스터 종류 비율이 바뀐다: 초반엔 기본형, 갈수록 단단한 놈과 떼거리
   pickKind() {
-    const f = this.progress(), [a, b, c] = this.ch.mobs;
+    const f = Math.min(1, this.progress()), [a, b, c] = this.ch.mobs;
     const r = Math.random();
     if (r < 0.15 + 0.25 * f) return b;
     if (r < 0.35 + 0.3 * f) return c;
@@ -258,7 +260,17 @@ export class Battle extends Phaser.Scene {
   // 지속 스킬이 3레벨에 닿으면 붙는 보너스
   lv3(k, v) { return (this.run.skills[k] || 0) >= D.PASSIVE_LV3 ? v : 0; }
 
-  progress() { return Math.min(1, (this.wave * this.waveLen + this.waveT) / (this.waveCount * this.waveLen)); }
+  // 결과 창·실패 보상용 진행도. 보스 스테이지는 웨이브를 다 버텨도 70%, 나머지 30%는 보스에게 준 피해
+  runProgress() {
+    if (!this.isBoss) return this.progress();
+    const m = this.boss?.m, hurt = m ? 1 - Math.max(0, m.hp) / m.maxHp : 0;
+    return Math.min(1, this.progress() * 0.7 + hurt * 0.3);
+  }
+
+  // 무한의 탑은 3층에 걸쳐 1이 되고 그 뒤로도 maxF까지 계속 오른다
+  progress() {
+    if (this.endless) return Math.min(D.ENDLESS.maxF, (this.wave * this.waveLen + this.waveT) / (3 * this.waveLen));
+    return Math.min(1, (this.wave * this.waveLen + this.waveT) / (this.waveCount * this.waveLen)); }
 
   spawn(near = false, kind = this.pickKind(), opt = {}) {
     if (this.mobs.countActive() >= 120 + this.c * 10 && !opt.force) return null;
@@ -269,8 +281,10 @@ export class Battle extends Phaser.Scene {
     m.kind = kind; m.ai = m0.ai; m.float = m0.ai === 'float';
     const elite = !!opt.elite;
     m.elite = elite;
-    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1);
-    m.dmg = m0.dmg * this.mobDmgMul * (elite ? 1.2 : 1);
+    // 무한의 탑은 층마다 몹이 곱으로 세져 언젠가는 반드시 쓰러진다
+    const tower = this.endless ? [Math.pow(D.ENDLESS.hpGrow, this.wave), Math.pow(D.ENDLESS.dmgGrow, this.wave)] : [1, 1];
+    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1) * tower[0];
+    m.dmg = m0.dmg * this.mobDmgMul * (elite ? 1.2 : 1) * tower[1];
     m.spd = m0.spd * (1 + 0.04 * this.c) * RF(0.9, 1.1);
     m.kbRes = m.ai === 'tank' ? 0.45 : elite ? 0.3 : 1;
     m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.phase = RF(0, 6); m.t = 0;
@@ -530,7 +544,8 @@ export class Battle extends Phaser.Scene {
       if (this.wave >= this.waveCount) {
         if (this.isBoss) { this.ui.shop(() => this.startBoss()); }
         else this.ui.result(true);
-      } else this.ui.shop(() => this.banner(`웨이브 ${this.wave + 1} / ${this.waveCount}`, this.wave === this.waveCount - 1 ? '마지막 웨이브' : '버텨라'));
+      } else if (this.endless) this.ui.shop(() => this.banner(`${this.wave + 1}층`, this.wave % 3 === 2 ? '해골 장군이 온다' : '더 세진다'));
+      else this.ui.shop(() => this.banner(`웨이브 ${this.wave + 1} / ${this.waveCount}`, this.wave === this.waveCount - 1 ? '마지막 웨이브' : '버텨라'));
     });
   }
 
@@ -572,8 +587,9 @@ export class Battle extends Phaser.Scene {
       if (this.wave >= 1 && !this.ringDone && this.waveT > this.waveLen * 0.25) { this.ringDone = true; this.encircle(); }
       if (this.waveT < dt * 2) { this.eliteDone = false; this.ringDone = false; }
       // 3번째 스테이지는 마지막 웨이브에 해골 장군(중간 보스)
-      if (this.s === 2 && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.3) {
-        this.midDone = true; this.midBoss = new BossAI(this, 'general', this.mobHpMul, true);
+      const towerBoss = this.endless && this.wave % 3 === 2 && this.midWave !== this.wave && !this.midBoss;
+      if ((towerBoss || this.s === 2 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
+        this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1), true);
         this.banner('해골 장군', '중간 보스'); sfx('bossIn');
       }
     } else {
@@ -703,7 +719,7 @@ export class Battle extends Phaser.Scene {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));
       this.timeTxt.setText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
       this.timeTxt.setColor(left <= 5 ? '#ffd75e' : '#ffffff');
-      this.waveTxt.setText(`웨이브 ${Math.min(this.wave + 1, this.waveCount)}/${this.waveCount}`);
+      this.waveTxt.setText(this.endless ? `${this.wave + 1}층` : `웨이브 ${Math.min(this.wave + 1, this.waveCount)}/${this.waveCount}`);
     }
     this.killTxt.setText(fmt(r.kills)); this.silverTxt.setText(fmt(r.silver));
     // 마나 링

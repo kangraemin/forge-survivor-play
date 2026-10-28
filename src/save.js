@@ -5,7 +5,7 @@ const dayNo = d => Math.floor((d - d.getTimezoneOffset() * 60000) / 86400000); /
 
 const KEY = 'forge-survivor-v1';
 const fresh = () => ({
-  gold: 150, stone: 10, guard: 1, sweep: SWEEP_DAILY,
+  gold: 150, stone: 10, guard: 1, charm: 0, sweep: SWEEP_DAILY,
   tier: 0, enh: 0,
   cleared: 0,              // 깬 스테이지 수(0이면 1-1 도전 가능). 챕터c 스테이지s의 번호 = c*6+s
   best: {},                // 스테이지별 최고 기록(초)
@@ -20,6 +20,7 @@ const fresh = () => ({
   streak: 0, dayN: 0, loginGot: true, // 출석 일수, 마지막 접속 날짜 번호, 오늘 출석 보상 받았나
   tut: {},                 // 처음 하는 사람 안내를 마쳤나
   starterShown: false,
+  endBest: 0,              // 무한의 탑 최고 층
   stats: { runs: 0, kills: 0, destroyed: 0, playMs: 0 },
   sound: true,
 });

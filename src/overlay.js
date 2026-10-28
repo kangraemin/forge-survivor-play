@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
 
 const { W, H } = D;
@@ -113,7 +113,7 @@ export class Overlay {
     const isAct = def?.type === 'active';
     c.add(panel(s, -115, -35, 230, 70, { fill: lv ? 0x241d38 : 0x1c1830, line: isAct ? 0x6fd3ff : 0xffd75e }));
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(1, isAct ? 0x6fd3ff : 0xffd75e, 0.6));
-    c.add(icon(s, -88, 0, special ? (k === '_heal' ? 14 : 12) : def.icon, 32));
+    c.add(special ? icon(s, -88, 0, k === '_heal' ? 14 : 12, 32) : skillIcon(s, -88, 0, def, 32));
     const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : def.name;
     c.add(s.add.text(-60, -24, name, font(12, isAct ? '#9ae0ff' : '#ffe08a')));
     c.add(s.add.text(108, -24, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(11, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
@@ -194,7 +194,7 @@ export class Overlay {
         sk[k]++;
         if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
         s.refreshSkillRow();
-        c.add(icon(s, W / 2, 200, D.SKILLS[k].icon, 40));
+        c.add(skillIcon(s, W / 2, 200, D.SKILLS[k], 40));
         c.add(s.add.text(W / 2, 240, `${D.SKILLS[k].name}  Lv ${sk[k]}`, font(13, '#ffd75e')).setOrigin(0.5));
       } else { s.run.silver += 40; c.add(s.add.text(W / 2, 240, '은화 +40', font(13, '#ffd75e')).setOrigin(0.5)); }
       c.add(s.add.text(W / 2, 270, '스킬 상자!', font9(10)).setOrigin(0.5));
@@ -227,9 +227,9 @@ export class Overlay {
         const g = s.add.container(x, y);
         g.add(panel(s, -56, -46, 112, 92, { fill: it.sold ? 0x141018 : 0x261f3a, line: can ? 0xffd75e : 0x4a4060 }));
         g.add(icon(s, 0, -26, it.icon, 26).setAlpha(it.sold ? 0.3 : 1));
-        g.add(s.add.text(0, -4, it.name, font(10, it.sold ? '#666' : '#ffffff')).setOrigin(0.5));
-        g.add(s.add.text(0, 12, it.desc, { ...font9(10, '#c8bfe0'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0));
-        g.add(s.add.text(0, 34, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
+        g.add(s.add.text(0, -8, it.name, font(10, it.sold ? '#666' : '#ffffff')).setOrigin(0.5));
+        g.add(s.add.text(0, 7, it.desc, { ...font9(10, '#c8bfe0'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0).setLineSpacing(-1));
+        g.add(s.add.text(0, 37, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
         g.setSize(112, 92).setInteractive({ useHandCursor: true });
         g.on('pointerup', () => {
           if (it.sold) return;
@@ -322,16 +322,24 @@ export class Overlay {
     if (this.done) return; this.done = true;
     s.over = true; s.physics.pause();
     const idx = s.c * D.STAGES_PER_CHAPTER + s.s;
-    const first = win && idx >= sv.cleared;
+    const first = win && !s.endless && idx >= sv.cleared;
     let gold, stone = r.stones, guard = 0, sweep = 0, gem = 0;
-    if (win) {
+    // 무한의 탑: 버틴 층만큼 받고, 최고 기록을 넘은 층마다 보석
+    const floors = s.wave, best = sv.endBest || 0;
+    if (s.endless) {
+      gold = D.clearGold(s.c, D.STAGES_PER_CHAPTER - 1) * D.ENDLESS.goldPerFloor * floors;
+      stone += D.ENDLESS.stonePerFloor * floors;
+      gem = Math.max(0, floors - best) * D.ENDLESS.gemPerNewFloor;
+      sv.endBest = Math.max(best, floors);
+      if (floors >= 3) mission('clear');
+    } else if (win) {
       gold = Math.round(D.clearGold(s.c, s.s) * (first ? D.FIRST_CLEAR_MUL : 1));
       stone += D.clearStone(s.c, s.s);
       mission('clear');
       if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; gem = s.isBoss ? D.GEM_FREE.bossFirst : D.GEM_FREE.stageFirst; }
       sv.best[idx] = 1;
     } else {
-      gold = Math.round(D.clearGold(s.c, s.s) * s.progress() * D.FAIL_GOLD_RATE);
+      gold = Math.round(D.clearGold(s.c, s.s) * s.runProgress() * D.FAIL_GOLD_RATE);
     }
     gold = Math.round(gold);
     sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem;
@@ -343,11 +351,11 @@ export class Overlay {
     this.queue = []; this.pendingLv = 0;
     const c = this.begin('result');
     c.add(panel(s, 20, 90, W - 40, 300, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
-    const title = s.add.text(W / 2, 118, win ? (s.isBoss ? '보스 격파!' : '스테이지 클리어!') : '쓰러졌다…', font(18, win ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
+    const title = s.add.text(W / 2, 118, s.endless ? (floors > best ? '최고 기록!' : '탑 도전 끝') : win ? (s.isBoss ? '보스 격파!' : '스테이지 클리어!') : '쓰러졌다…', font(18, win || (s.endless && floors > best) ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
-    c.add(s.add.text(W / 2, 142, `${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 142, s.endless ? `무한의 탑  ·  최고 ${sv.endBest}층` : `${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
     const lines = [
-      ['처치', fmt(r.kills)], ['레벨', 'Lv ' + r.lv], ['버틴 정도', Math.round(s.progress() * 100) + '%'],
+      ['처치', fmt(r.kills)], ['레벨', 'Lv ' + r.lv], s.endless ? ['버틴 층', `${floors}층`] : ['버틴 정도', Math.round(s.runProgress() * 100) + '%'],
     ];
     lines.forEach(([a, b], i) => {
       c.add(s.add.text(50, 166 + i * 16, a, font9(10, '#a89cc8')));
@@ -367,7 +375,7 @@ export class Overlay {
       const o = { v: 0 };
       s.tweens.add({ targets: o, v: n, duration: 600, delay: 300 + i * 150, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
     });
-    if (!win) c.add(s.add.text(W / 2, 306, '대장간에서 무기를 강화하고 다시 도전하자', font9(10, '#c8bfe0')).setOrigin(0.5));
+    if (!win && !s.endless) c.add(s.add.text(W / 2, 306, '대장간에서 무기를 강화하고 다시 도전하자', font9(10, '#c8bfe0')).setOrigin(0.5));
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
       const db = button(s, W / 2, 330, 190, 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
@@ -383,11 +391,12 @@ export class Overlay {
       c.add(db);
     }
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
-    c.add(button(s, 85, 360, 110, 30, '로비', () => s.scene.start('Lobby', { tab: win ? 'battle' : 'forge' }), { color: 0x3b2f5c }));
+    c.add(button(s, 85, 360, 110, 30, '로비', () => s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }), { color: 0x3b2f5c }));
     c.add(button(s, 190, 360, 100, 30, win ? '다음' : '다시', () => {
+      if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });
       const n = win ? nextIdx : idx;
       s.scene.start('Battle', { chapter: Math.floor(n / D.STAGES_PER_CHAPTER), stage: n % D.STAGES_PER_CHAPTER, bot: s.bot });
     }, { color: 0x2f6b3a }));
-    s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: s.progress(), t: s.bt });
+    s.registry.set('lastResult', { win, floors: s.endless ? floors : undefined, gold, stone, idx, kills: r.kills, lv: r.lv, progress: s.progress(), t: s.bt });
   }
 }

@@ -20,7 +20,7 @@ export function grant(sv, give) {
   save();
 }
 export const giveText = give => Object.entries(give).map(([k, v]) => ({
-  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, sweep: `소탕권 ${v}`, goldStage: `금화 ×${v}`,
+  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, goldStage: `금화 ×${v}`,
 }[k])).join(' · ');
 
 export const firstX2 = (sv, item) => D.FIRST_BUY_X2.includes(item.id) && !sv.bought[item.id];
@@ -42,7 +42,7 @@ export function showAd(scene, sv, kind) {
     const c = modal(scene);
     c.add(panel(scene, 30, 170, W - 60, 130, { fill: 0x101018 }));
     c.add(scene.add.text(W / 2, 196, '광고', font(14, '#ffd75e')).setOrigin(0.5));
-    c.add(scene.add.text(W / 2, 218, '(웹 체험판에서는 광고 대신 잠깐 기다린다)', font9(9, '#a89cc8')).setOrigin(0.5));
+    c.add(scene.add.text(W / 2, 218, '(웹 체험판에서는 광고 대신 잠깐 기다린다)', font9(10, '#a89cc8')).setOrigin(0.5));
     const t = scene.add.text(W / 2, 250, '3', font(22)).setOrigin(0.5); c.add(t);
     let n = 3;
     const tick = () => {
@@ -75,7 +75,7 @@ export function buy(scene, sv, item) {
     const c = modal(scene);
     c.add(panel(scene, 24, 160, W - 48, 160, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(scene.add.text(W / 2, 186, item.name, font(13, '#ffd75e')).setOrigin(0.5));
-    c.add(scene.add.text(W / 2, 210, giveText(item.give) + (item.passDays ? ` · ${item.passDays}일` : ''), { ...font9(9, '#e8e2f8'), wordWrap: { width: W - 70 }, align: 'center' }).setOrigin(0.5, 0));
+    c.add(scene.add.text(W / 2, 210, giveText(item.give) + (item.passDays ? ` · ${item.passDays}일` : ''), { ...font9(10, '#e8e2f8'), wordWrap: { width: W - 70 }, align: 'center' }).setOrigin(0.5, 0));
     if (!devpay()) {
       c.add(scene.add.text(W / 2, 248, '웹 체험판에서는 결제가 열리지 않는다\n앱에서 구매할 수 있다', { ...font9(10, '#ff9a8a'), align: 'center' }).setOrigin(0.5));
       c.add(button(scene, W / 2, 292, 120, 28, '닫기', () => { c.destroy(); done(false); }));

@@ -104,11 +104,11 @@ export const SKILLS = {
   holy: { name: '성역', type: 'active', icon: 7, desc: ['발밑의 빛이 계속 태운다', '범위 +20%', '피해 +30%', '적을 느리게 한다', '범위 +30%'] },
   fireball: { name: '화염구', type: 'active', icon: 8, desc: ['터지는 불덩이를 쏜다', '피해 +30%', '폭발 범위 +30%', '불덩이 +1', '바닥에 불이 남는다'] },
   ice: { name: '얼음 파편', type: 'active', icon: 9, desc: ['꿰뚫는 얼음을 쏜다', '파편 +1', '적을 얼린다', '피해 +40%', '파편 +2'] },
-  orb: { name: '수호 구슬', type: 'active', icon: 11, desc: ['구슬이 몸 주위를 돈다', '구슬 +1', '피해 +30%', '구슬 +1', '구슬 +1, 빨라진다'] },
-  might: { name: '숫돌', type: 'passive', icon: 0, desc: ['피해 +10%'], bonus: '피해 +10% 더' },
+  orb: { name: '수호 구슬', type: 'active', icon: 11, tint: 0x9ad0ff, desc: ['구슬이 몸 주위를 돈다', '구슬 +1', '피해 +30%', '구슬 +1', '구슬 +1, 빨라진다'] },
+  might: { name: '숫돌', type: 'passive', icon: 0, tint: 0xff9a5a, desc: ['피해 +10%'], bonus: '피해 +10% 더' },
   haste: { name: '신속 물약', type: 'passive', icon: 10, desc: ['이동 속도 +8%'], bonus: '이동 속도 +8% 더' },
   focus: { name: '집중', type: 'passive', icon: 15, desc: ['재사용 대기 -8%'], bonus: '재사용 대기 -6% 더' },
-  area: { name: '넓은 칼날', type: 'passive', icon: 4, desc: ['공격 범위 +10%'], bonus: '공격 범위 +10% 더' },
+  area: { name: '넓은 칼날', type: 'passive', icon: 4, tint: 0x8affa0, desc: ['공격 범위 +10%'], bonus: '공격 범위 +10% 더' },
   magnet: { name: '자석', type: 'passive', icon: 13, desc: ['줍는 거리 +30%'], bonus: '줍는 거리 +40% 더' },
   vigor: { name: '활력', type: 'passive', icon: 14, desc: ['최대 체력 +20, 회복 +0.3/초'], bonus: '회복 +0.6/초 더' },
 };
@@ -167,8 +167,14 @@ export const IAP = [
 export const FIRST_BUY_X2 = ['gem1', 'gem2', 'gem3'];
 export const PASS_DAILY = { gem: 60, sweep: 3 };
 // 보석으로 사는 것. gold 꾸러미는 지금 도전 중인 스테이지 클리어 금화의 3배
+// 행운 부적: 강화 한 번 성공 확률 +5%p(1회 소모). 부서진 칼 되살리기: 보석 30 + 단계×10
+export const CHARM_RATE = 5;
+// 무한의 탑: 1장 보스를 깨면 열린다. 층(웨이브)마다 몹이 세지고 3층마다 해골 장군
+export const ENDLESS = { unlock: 6, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.22, dmgGrow: 1.12 };
+export const restoreGem = enh => 30 + enh * 10;
 export const GEM_SHOP = [
   { id: 'guard', name: '파괴 방지권', icon: 11, cost: 80, give: { guard: 1 } },
+  { id: 'charm', name: '행운 부적', icon: 7, cost: 120, give: { charm: 1 } },
   { id: 'sweep', name: '소탕권 5장', icon: 15, cost: 40, give: { sweep: 5 } },
   { id: 'stone', name: '강화석 40개', icon: 13, cost: 60, give: { stone: 40 } },
   { id: 'gold', name: '금화 꾸러미', icon: 12, cost: 100, give: { goldStage: 3 } },
