@@ -44,11 +44,14 @@ export class Overlay {
     const sk = this.s.run.skills;
     const act = Object.keys(sk).filter(k => D.SKILLS[k].type === 'active').length;
     const pas = Object.keys(sk).filter(k => D.SKILLS[k].type === 'passive').length;
+    const first = this.s.sv.stats.runs <= 1 && this.s.run.lv === 2;
     const pool = [];
     for (const [k, def] of Object.entries(D.SKILLS)) {
       const lv = sk[k] || 0;
       if (lv >= D.SKILL_MAX || this.s.run.banned?.[k]) continue;
       if (!lv && (def.type === 'active' ? act >= D.ACTIVE_SLOTS : pas >= D.PASSIVE_SLOTS)) continue;
+      // 처음 하는 사람의 첫 레벨업은 바로 눈에 보이는 공격 스킬만 보여 준다
+      if (first && def.type !== 'active') continue;
       // 이미 가진 걸 키우는 쪽을 조금 더 자주 보여 준다(빌드가 완성되는 맛)
       pool.push({ k, w: lv ? 3 : def.type === 'active' ? 2.2 : 1.6 });
     }
@@ -82,7 +85,7 @@ export class Overlay {
     const draw = () => {
       cards.removeAll(true);
       this.choices().forEach((k, i) => cards.add(this.card(k, W / 2, 172 + i * 78, i)));
-      banTxt.setText(r.banLeft > 0 ? `✕ 누르면 이번 판에서 뺀다 · ${r.banLeft}번` : '');
+      banTxt.setText(r.banLeft > 0 ? `카드 모서리 X를 누르면 이번 판에서 뺀다 · ${r.banLeft}번` : '');
     };
     const r = s.run;
     if (r.banLeft === undefined) r.banLeft = D.BANISH_PER_RUN;
@@ -116,12 +119,14 @@ export class Overlay {
     const special = k[0] === '_';
     const def = special ? null : D.SKILLS[k], lv = sk[k] || 0;
     const isAct = def?.type === 'active';
+    const firstRun = s.sv.stats.runs <= 1;
+    const canBan = !special && s.run.banLeft > 0 && !(firstRun && s.run.lv === 2);
     c.add(panel(s, -115, -35, 230, 70, { fill: lv ? 0x241d38 : 0x1c1830, line: isAct ? 0x6fd3ff : 0xffd75e }));
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(1, isAct ? 0x6fd3ff : 0xffd75e, 0.6));
     c.add(special ? icon(s, -88, 0, k === '_heal' ? 14 : 12, 32) : skillIcon(s, -88, 0, def, 32));
     const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : def.name;
     c.add(s.add.text(-60, -24, name, font(12, isAct ? '#9ae0ff' : '#ffe08a')));
-    c.add(s.add.text(108, -24, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(11, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
+    c.add(s.add.text(canBan ? 84 : 108, -24, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(11, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
     let desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
     if (def?.bonus && lv + 1 === D.PASSIVE_LV3) desc += `\n+ Lv3 보너스: ${def.bonus}`;
     c.add(s.add.text(-60, -6, desc, { ...font9(11, '#e8e2f8'), wordWrap: { width: 165 } }).setLineSpacing(1));
@@ -129,15 +134,16 @@ export class Overlay {
     if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 26, 7, 4, j < lv ? 0xffd75e : j === lv ? 0x5fdc6a : 0x3a3450).setOrigin(0, 0.5));
     // 진화 재료 표시: 이 스킬이 다른 스킬의 진화에 쓰이면 짝을 알려 준다
     const evoOf = special ? null : def.type === 'active' ? D.EVOS[k] && D.SKILLS[D.EVOS[k].need].name : Object.keys(D.EVOS).filter(b => D.EVOS[b].need === k).map(b => D.SKILLS[b].name).join('·');
-    if (evoOf && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(evoOf.length > 6 ? 10 : 11, '#e0b060')).setOrigin(1, 0.5));
+    if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(evoOf.length > 6 ? 10 : 11, '#e0b060')).setOrigin(1, 0.5));
     c.setSize(230, 70).setInteractive({ useHandCursor: true });
     c.on('pointerup', () => this.pick(k, c));
     // 추방: 이번 판에서 다시 안 나온다(첫 레벨업에는 숨김)
-    if (!special && s.run.banLeft > 0 && !(s.sv.stats.runs <= 1 && s.run.lv === 2)) {
-      const x = s.add.container(108, -33);
-      x.add(s.add.rectangle(0, 0, 18, 16, 0x000000, 0.7).setStrokeStyle(1, 0x8a5060));
-      x.add(s.add.text(0, 0, '✕', font(10, '#ff8090')).setOrigin(0.5));
-      x.setSize(22, 20).setInteractive({ useHandCursor: true });
+    if (canBan) {
+      // 카드 오른쪽 위 모서리에 붙인다. 글꼴에 따라 ✕가 x로 보여 선 두 개로 그린다
+      const x = s.add.container(103, -24);
+      x.add(s.add.rectangle(0, 0, 24, 22, 0x2a0e16, 0.9).setStrokeStyle(1, 0xc06070));
+      const g = s.add.graphics().lineStyle(2, 0xff8090).lineBetween(-5, -5, 5, 5).lineBetween(-5, 5, 5, -5); x.add(g);
+      x.setSize(28, 26).setInteractive({ useHandCursor: true });
       x.on('pointerup', (p, lx, ly, ev) => {
         ev?.stopPropagation();
         if (this.picking || s.run.banLeft <= 0) return;

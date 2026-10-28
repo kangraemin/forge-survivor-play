@@ -93,16 +93,18 @@ export class Lobby extends Phaser.Scene {
       body.add(this.add.text(W / 2, 288, '하루 빠져도 처음으로 돌아가지 않는다', font9(10, '#a89cc8')).setOrigin(0.5));
       D.LOGIN_REWARDS.forEach((g, i) => {
         const x = W / 2 + (i - 3) * 31, y = 324, past = i < day || (i === day && sv.loginGot), today = i === day;
-        body.add(this.add.rectangle(x, y, 28, 40, today ? 0x3b2f5c : 0x15111f).setStrokeStyle(1, today ? 0xffd75e : 0x3a3450));
-        body.add(this.add.text(x, y - 15, `${i + 1}일`, font9(10, today ? '#ffd75e' : '#8a80a0')).setOrigin(0.5));
+        body.add(this.add.rectangle(x, y, 28, 50, today ? 0x3b2f5c : 0x15111f).setStrokeStyle(1, today ? 0xffd75e : 0x3a3450));
+        body.add(this.add.text(x, y - 16, `${i + 1}일`, font9(10, today ? '#ffd75e' : '#8a80a0')).setOrigin(0.5).setPadding(0, 2));
         const [k, v] = Object.entries(g)[0];
-        body.add(k === 'gem' ? gemIcon(this, x, y, 12) : icon(this, x, y, { goldStage: 12, stone: 13, guard: 11, sweep: 15 }[k], 14));
-        body.add(this.add.text(x, y + 14, k === 'goldStage' ? `×${v}` : String(v), font9(10, '#ffffff')).setOrigin(0.5));
-        if (past) { body.add(this.add.rectangle(x, y, 28, 40, 0x000000, 0.55)); body.add(this.add.text(x + 9, y - 13, '✓', font(11, '#5fdc6a')).setOrigin(0.5)); }
+        body.add(k === 'gem' ? gemIcon(this, x, y - 3, 12) : icon(this, x, y - 3, { goldStage: 12, stone: 13, guard: 11, sweep: 15 }[k], 14));
+        body.add(this.add.text(x, y + 10, k === 'goldStage' ? `×${v}` : String(v), font9(10, '#ffffff')).setOrigin(0.5));
+        if (g.skin && !sv.skins?.[g.skin]) body.add(this.add.text(x, y + 20, '+칼빛', font9(9, '#ff9a5a')).setOrigin(0.5));
+        if (past) { body.add(this.add.rectangle(x, y, 28, 50, 0x000000, 0.55)); body.add(this.add.text(x + 9, y - 15, '✓', font(11, '#5fdc6a')).setOrigin(0.5)); }
       });
       const lb = button(this, W / 2, 368, 170, 26, sv.loginGot ? '오늘 출석 완료' : '출석 보상 받기', () => {
         if (sv.loginGot) return;
-        const g = D.LOGIN_REWARDS[day];
+        const g = { ...D.LOGIN_REWARDS[day] };
+        if (g.skin && sv.skins?.[g.skin]) delete g.skin;   // 이미 가진 칼빛은 다시 주지 않는다
         sv.loginGot = true; grant(sv, g); sfx('win'); this.refreshTop();
         toast(this, `출석 보상 ${giveText(g)}`, '#ffd75e'); draw();
       }, { size: 11, color: 0x2f6b3a });
@@ -450,6 +452,15 @@ export class Lobby extends Phaser.Scene {
       this.sparks(W / 2, 168, 40, 0xffe08a);
       this.tweens.add({ targets: sw, scale: sw.scale * 1.25, duration: 160, yoyo: true });
       this.flashText(`강화 성공!  +${from + 1}`, '#ffd75e');
+      // +8부터는 성공이 귀하다: 화면을 번쩍이고 오른 공격력을 크게 띄운다
+      if (from + 1 >= 8) {
+        const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));
+        this.cameras.main.flash(220, 255, 220, 120);
+        this.sparks(W / 2, 168, 30, 0xffffff);
+        const t = this.add.text(W / 2, 240, `공격력 ${a0} → ${a1}`, font(18, '#ffe08a', 4)).setOrigin(0.5).setDepth(60).setScale(0.3);
+        this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.Out' });
+        this.tweens.add({ targets: t, y: 224, alpha: 0, delay: 900, duration: 400, onComplete: () => t.destroy() });
+      }
     } else if (outcome === 'fail') {
       sfx('fail');
       sw.setTint?.(0x6a6a7a); this.time.delayedCall(400, () => sw.clearTint?.());

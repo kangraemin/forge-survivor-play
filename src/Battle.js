@@ -163,7 +163,7 @@ export class Battle extends Phaser.Scene {
     sf(this.add.rectangle(26, 13, 76, 8, 0x3a1014).setOrigin(0));
     this.hpLag = sf(this.add.rectangle(26, 13, 76, 8, 0xffffff).setOrigin(0));
     this.hpBar = sf(this.add.rectangle(26, 13, 76, 8, 0xe8343a).setOrigin(0));
-    this.hpTxt = sf(this.add.text(64, 17, '', font(8)).setOrigin(0.5));
+    this.hpTxt = sf(this.add.text(64, 17, '', font(10)).setOrigin(0.5));
     this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#6fd3ff')));
     this.timeTxt = sf(this.add.text(W / 2, 16, '', font(14)).setOrigin(0.5));
     this.waveTxt = sf(this.add.text(W / 2, 31, '', font(9, '#c8bfe0')).setOrigin(0.5));
@@ -349,14 +349,15 @@ export class Battle extends Phaser.Scene {
       this.spark.explode(crit ? 12 : 5, m.x, m.y);
     } else this.spark.explode(2, m.x, m.y);
     this.popup(m.x, m.y - 12, dmg, crit, fx === 'big');
-    sfx(crit ? 'crit' : 'hit', 45);
+    sfx(crit ? 'crit' : 'hit', 45, 1 + 0.1 * Math.min(3, Math.floor(this.sv.enh / 5)));
     if (m.hp <= 0) this.kill(m);
     return true;
   }
 
   popup(x, y, n, crit, big) {
-    // 숫자가 너무 많으면 오래된 것부터 지운다
-    if (this.popups.length > 26) this.popups.shift().destroy();
+    // 화면이 숫자로 덮이지 않게: 치명타와 큰 숫자(100 이상)만 띄우고, 8개를 넘으면 오래된 것부터 지운다
+    if (!crit && n < 100) return;
+    if (this.popups.length >= 8) this.popups.shift().destroy();
     const t = this.add.text(x + R(-6, 6), y, fmt(n), font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2))
       .setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
     this.popups.push(t);

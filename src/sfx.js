@@ -42,7 +42,8 @@ function combo() { const now = performance.now(); gemN = now - gemT < 450 ? Math
 
 const SOUNDS = {
   swing: (c, t) => hiss(c, t, { dur: 0.09, vol: 0.18, hp: 1800, lp: 6000 }),
-  hit: (c, t) => { tone(c, t, { f0: 220, f1: 90, dur: 0.07, vol: 0.25 }); hiss(c, t, { dur: 0.05, vol: 0.25, hp: 2000 }); },
+  // p: 음 높이 배율(강화 단계가 오를수록 맞는 소리가 높고 날카로워진다)
+  hit: (c, t, p = 1) => { tone(c, t, { f0: 220 * p, f1: 90 * p, dur: 0.07, vol: 0.25 }); hiss(c, t, { dur: 0.05, vol: 0.25, hp: 2000 * p }); },
   crit: (c, t) => { tone(c, t, { f0: 900, f1: 300, dur: 0.12, vol: 0.2 }); hiss(c, t, { dur: 0.1, vol: 0.3, hp: 1500 }); },
   kill: (c, t) => { tone(c, t, { f0: 160, f1: 50, dur: 0.14, type: 'triangle', vol: 0.35 }); hiss(c, t, { dur: 0.12, vol: 0.18, hp: 300, lp: 2500 }); },
   // 연달아 주우면 음이 한 칸씩 올라간다(최대 한 옥타브)
@@ -67,13 +68,13 @@ const SOUNDS = {
   win: (c, t) => [523, 523, 659, 784, 1047].forEach((f, i) => tone(c, t + i * 0.11, { f0: f, dur: 0.22, type: 'square', vol: 0.13 })),
 };
 
-export function sfx(name, gap = 40) {
+export function sfx(name, gap = 40, p) {
   if (!on) return;
   const c = ac(); if (!c) return;
   const now = performance.now();
   if (now - (last[name] || 0) < gap) return;
   last[name] = now;
-  try { SOUNDS[name](c, c.currentTime); } catch { /* 오디오 실패는 무시 */ }
+  try { SOUNDS[name](c, c.currentTime, p); } catch { /* 오디오 실패는 무시 */ }
 }
 
 // ── 배경음: 파일 없이 짧은 마디를 합성해 반복한다 ──

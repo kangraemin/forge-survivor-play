@@ -94,7 +94,8 @@ export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) 
 
 // ── 판 안 성장 ──
 export const PLAYER = { hp: 100, spd: 72, iframe: 600, pickup: 34 };
-export const xpNeed = lv => 8 + (lv - 1) * 11;                        // 몹이 많아진 만큼 레벨업 간격을 늘림
+// 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 20% 줄여 한 판 안에 진화까지 닿게 한다
+export const xpNeed = lv => lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.8)) : 8 + (lv - 1) * 11;
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 
@@ -209,7 +210,7 @@ export const MISSION_GIVE = { gem: 5, stone: 2 };
 export const MISSION_ALL = { gem: 10 };
 // 출석: 하루 빠지면 처음으로 돌아가지 않고 그 자리에 멈춘다
 export const LOGIN_REWARDS = [
-  { goldStage: 1 }, { stone: 20 }, { guard: 1 }, { goldStage: 2 }, { sweep: 3 }, { stone: 40 }, { gem: 100 },
+  { goldStage: 1 }, { stone: 20 }, { guard: 1 }, { goldStage: 2 }, { sweep: 3 }, { stone: 40 }, { gem: 100, skin: 'flame' },  // 7일째: 처음 한 번은 불꽃 칼빛까지
 ];
 
 // ── 진화: 액티브 5레벨 + 짝 패시브를 가지면 레벨업 카드에 진화가 뜬다 ──
