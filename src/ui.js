@@ -69,6 +69,14 @@ export function toast(scene, msg, color = '#ffffff') {
   scene.tweens.add({ targets: t, alpha: 0, y: 76, delay: 1300, duration: 300, onComplete: () => t.destroy() });
 }
 
+// 칼빛 꾸미기: 궤적 그림(하늘색)의 색상을 돌려 다른 색으로 만든다. tint는 곱셈이라 하늘색을 빨강·금색으로 못 바꾼다
+export function skinFx(sprite, sk) {
+  const cm = sprite.preFX?.addColorMatrix();
+  if (!cm) return sprite.setTint(sk.tint);
+  if (sk.gray) { cm.grayscale(1); cm.brightness(1.4, true); } else cm.hue(sk.hue);
+  return sprite;
+}
+
 // 스킬 아이콘: 아이콘 칸이 모자라 같은 그림을 쓰는 스킬은 색으로 구분한다
 export function skillIcon(scene, x, y, def, size) {
   const im = icon(scene, x, y, def.icon, size);

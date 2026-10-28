@@ -21,6 +21,7 @@ const fresh = () => ({
   tut: {},                 // 처음 하는 사람 안내를 마쳤나
   starterShown: false,
   endBest: 0,              // 무한의 탑 최고 층
+  skins: {}, skin: '',     // 산 칼빛, 끼고 있는 칼빛
   stats: { runs: 0, kills: 0, destroyed: 0, playMs: 0 },
   sound: true,
 });

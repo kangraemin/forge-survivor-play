@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 
 const { W, H } = D;
@@ -296,7 +296,7 @@ export class Lobby extends Phaser.Scene {
     this.tweens.add({ targets: go, scale: 1.04, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
   }
 
-  tv(id) { const t = D.TRAINING.find(x => x.id === id); return (this.sv.train[id] || 0) * t.v; }
+  tv(id) { const t = D.TRAINING.find(x => x.id === id); return D.trainVal(t, this.sv.train[id] || 0); }
 
   startBattle(c, s, endless = false) {
     if (this.busy) return; this.busy = true;
@@ -383,7 +383,8 @@ export class Lobby extends Phaser.Scene {
       const eb = button(this, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 82 : W / 2, 410, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 130 : 180, 38, '강화', () => this.enhance(), { size: 15, color: danger ? 0x8a3a2a : 0x7a5a1a });
       eb.setEnabled(ok); b.add(eb);
       // 처음 하는 사람: 강화 버튼을 가리킨다
-      if (sv.cleared >= 1 && !sv.tut.forge && ok) {
+      this.forgeArrow = sv.cleared >= 1 && !sv.tut.forge && ok;
+      if (this.forgeArrow) {
         const ar = this.add.text(eb.x, 376, '▼ 눌러서 강화', font(11, '#ffffff')).setOrigin(0.5); b.add(ar);
         this.tweens.add({ targets: ar, y: 382, duration: 350, yoyo: true, repeat: -1 });
       }
@@ -395,7 +396,8 @@ export class Lobby extends Phaser.Scene {
       const need = (sv.tier + 1) * 6, okBoss = sv.cleared >= need, cost = D.promoteGold(sv.tier);
       const pb = button(this, max ? W / 2 : 200, 410, max ? 180 : 110, 38, `승급 ${fmt(cost)}`, () => this.promote(), { size: 12, color: 0x5a2f8a });
       pb.setEnabled(okBoss && sv.gold >= cost); b.add(pb);
-      if (!okBoss) b.add(this.add.text(W / 2, 384, `승급하려면 ${sv.tier + 1}장 보스를 쓰러뜨려야 한다`, font9(10, '#ff9a8a')).setOrigin(0.5, 0));
+      if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }
+      else if (!okBoss) b.add(this.add.text(W / 2, 384, `승급하려면 ${sv.tier + 1}장 보스를 쓰러뜨려야 한다`, font9(10, '#ff9a8a')).setOrigin(0.5, 0));
       else b.add(this.add.text(W / 2, 384, `다음: ${D.TIERS[sv.tier + 1].name} (공격력 ${D.TIERS[sv.tier + 1].atk})`, font9(10, '#c8a0ff')).setOrigin(0.5, 0));
     }
   }
@@ -521,14 +523,16 @@ export class Lobby extends Phaser.Scene {
   trainTab() {
     const sv = this.sv, b = this.body;
     b.add(this.add.text(W / 2, 52, '훈련장', font(15, '#ffd75e')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 70, '금화로 영원히 강해진다', font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 70, `금화로 영원히 강해진다 · ★${D.TRAIN_MILE}레벨마다 1단계 덤`, font9(10, '#a89cc8')).setOrigin(0.5));
     D.TRAINING.forEach((t, i) => {
       const lv = sv.train[t.id] || 0, max = lv >= t.max, cost = D.trainCost(t, lv);
       const y = 84 + i * 40;
       b.add(panel(this, 12, y, W - 24, 36, { fill: 0x1a1528 }));
       b.add(this.add.text(22, y + 5, t.name, font(11)));
       b.add(this.add.text(70, y + 7, `Lv ${lv}/${t.max}`, font9(10, max ? '#ffd75e' : '#a89cc8')));
-      const val = t.unit === '%' ? `+${Math.round(lv * t.v * 100)}%` : t.unit === '회' ? (lv ? '있음' : '없음') : `+${(lv * t.v).toFixed(1)}`;
+      const tvv = D.trainVal(t, lv), val = t.unit === '%' ? `+${Math.round(tvv * 100)}%` : t.unit === '회' ? (lv ? '있음' : '없음') : `+${tvv.toFixed(1)}`;
+      const nextMile = t.max >= D.TRAIN_MILE && !max ? (Math.floor(lv / D.TRAIN_MILE) + 1) * D.TRAIN_MILE : 0;
+      if (nextMile) b.add(this.add.text(W - 92, y + 7, `★Lv${nextMile}`, font9(10, lv % D.TRAIN_MILE === D.TRAIN_MILE - 1 ? '#ffd75e' : '#8a80a0')).setOrigin(1, 0));
       b.add(this.add.text(118, y + 7, val, font9(10, '#ffd75e')));
       b.add(this.add.text(22, y + 20, t.desc, font9(10, '#e8e2f8')));
       const btn = button(this, W - 52, y + 18, 70, 26, max ? '최대' : fmt(cost), () => {
@@ -546,14 +550,42 @@ export class Lobby extends Phaser.Scene {
 
   update() { if (this.topTxt) this.topTxt.forEach(t => { const v = t.get(); if (t.text !== String(v)) t.setText(v); }); }
 
+  // ── 칼빛 꾸미기: 보석으로 사고 골라 낀다 ──
+  skinPage() {
+    const sv = this.sv, b = this.body;
+    b.add(this.add.text(16, 76, '칼빛 꾸미기', font(11, '#ff9ad0')));
+    b.add(this.add.text(16, 92, '휘두르는 궤적 색만 바뀐다 · 능력치는 그대로', font9(10, '#a89cc8')));
+    D.SKINS.forEach((sk, i) => {
+      const y = 112 + i * 64, own = !sk.id || sv.skins?.[sk.id], on = (sv.skin || '') === sk.id;
+      b.add(panel(this, 16, y, W - 32, 56, { fill: on ? 0x2e2448 : COLOR.panel, line: on ? 0xffd75e : COLOR.line }));
+      const fx = this.add.sprite(52, y + 28, 'fx1_r0s', 2).setBlendMode(Phaser.BlendModes.ADD).setScale(0.8);
+      if (sk.id) skinFx(fx, sk);
+      b.add(fx);
+      b.add(this.add.text(80, y + 10, sk.name, font(11)));
+      b.add(this.add.text(80, y + 28, sk.desc, font9(10, '#c8bfe0')));
+      const label = on ? '끼는 중' : own ? '끼기' : `   ${sk.cost}`;
+      const bt = button(this, W - 60, y + 28, 76, 26, label, () => {
+        if (this.busy || on) return;
+        if (!own) {
+          if (sv.gem < sk.cost) { sfx('deny'); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          sv.gem -= sk.cost; (sv.skins ||= {})[sk.id] = true; sfx('buy'); toast(this, `${sk.name} 얻음!`, '#ffd75e');
+        } else sfx('click');
+        sv.skin = sk.id; save(); this.refreshTop(); this.show('shop');
+      }, { size: 10, color: on ? 0x3b2f5c : own ? 0x2f6b3a : 0x8a2f6a });
+      b.add(bt);
+      if (!own) b.add(gemIcon(this, W - 78, y + 28, 10));
+    });
+  }
+
   // ── 상점 탭: 보석으로 사기·광고 보상 / 패키지(결제) ──
   shopTab() {
     const sv = this.sv, b = this.body, page = this.shopPage || 'gem';
     const sub = (x, id, name) => {
-      const bt = button(this, x, 54, 120, 24, name, () => { this.shopPage = id; this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : 0x2a2440 });
+      const bt = button(this, x, 54, 82, 24, name, () => { this.shopPage = id; this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : 0x2a2440 });
       b.add(bt);
     };
-    sub(72, 'gem', '보석 상점'); sub(198, 'pack', '패키지');
+    sub(50, 'gem', '보석 상점'); sub(135, 'skin', '칼빛'); sub(220, 'pack', '패키지');
+    if (page === 'skin') return this.skinPage();
     const after = msg => { this.refreshTop(); this.bump(4); toast(this, msg, '#ffd75e'); this.show('shop'); };
     if (page === 'gem') {
       b.add(this.add.text(16, 76, '보석으로 사기', font(11, '#ff9ad0')));

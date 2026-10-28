@@ -1,6 +1,7 @@
 // 액티브 스킬 8종. 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
 import { sfx } from './sfx.js';
-import { SKILLS, PASSIVE_LV3 } from './data.js';
+import { skinFx } from './ui.js';
+import { SKILLS, PASSIVE_LV3, SKINS } from './data.js';
 
 const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
 
@@ -38,7 +39,11 @@ export class Weapons {
   }
 
   enhGlow() {
-    const e = this.s.sv.enh;
+    const sv = this.s.sv, g = this.enhBase(sv.enh), sk = sv.skin && SKINS.find(x => x.id === sv.skin);
+    // 칼빛을 끼면 색만 바꾼다(크기는 강화 단계 그대로)
+    return sk ? { ...g, tint: sk.tint, skin: sk, ember: g.ember || sk.ember } : g;
+  }
+  enhBase(e) {
     return e >= 15 ? { tint: 0xd06bff, scale: 1.45, ember: true, glow: true } : e >= 10 ? { tint: 0xff8a2a, scale: 1.3, ember: true, glow: true } : e >= 5 ? { tint: 0x5fc8ff, scale: 1.15 } : { tint: 0, scale: 1 };
   }
   // +10부터 맞힌 자리에 불티가 튄다
@@ -69,11 +74,13 @@ export class Weapons {
       const g = this.enhGlow();
       const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.85)
         .setScale(0.85 * area * g.scale).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
-      if (g.tint) fx.setTint(g.tint).setAlpha(1);
+      if (g.skin) skinFx(fx, g.skin).setAlpha(1);
+      else if (g.tint) fx.setTint(g.tint).setAlpha(1);
       // +10부터 같은 궤적을 한 겹 더 크게 깔아 눈에 띄게 한다
       if (g.glow) {
-        const fx2 = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setAlpha(0.6).setTint(g.tint)
+        const fx2 = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setAlpha(0.6)
           .setScale(0.85 * area * g.scale * 1.25).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
+        if (g.skin) skinFx(fx2, g.skin); else fx2.setTint(g.tint);
         fx.on('animationupdate', () => { if (fx2.active) fx2.setPosition(fx.x, fx.y); });
         fx2.setPosition(h.x + Math.cos(a) * 22 * area, h.y - 4 + Math.sin(a) * 18 * area);
         fx2.once('animationcomplete', () => fx2.destroy());
@@ -247,6 +254,14 @@ export class Weapons {
   // ── 얼음 파편: 꿰뚫는다, 3레벨부터 얼림 ──
   ice(lv) {
     const s = this.s, h = s.hero;
+    if (this.evo('ice')) {
+      // 사방 12개 + 가장 가까운 적에게 3개 더(보스에게도 박히게)
+      for (let i = 0; i < 12; i++) this.bullet('ice', h.x, h.y - 4, i * Math.PI / 6 + RF(-0.1, 0.1), 240, { mult: 1.4, pierce: 99, src: 'ice', life: 1100, kb: 50, freeze: true });
+      const t = this.nearest(260);
+      if (t) for (let i = -1; i <= 1; i++) this.bullet('ice', h.x, h.y - 4, Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) + i * 0.15, 260, { mult: 1.8, pierce: 99, src: 'ice', life: 1100, kb: 50, freeze: true });
+      sfx('shoot');
+      return 1000;
+    }
     const n = [1, 2, 2, 2, 4][lv - 1], mult = 0.9 * (lv >= 4 ? 1.4 : 1);
     const t = this.nearest(260);
     const base = t ? Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) : RF(0, 6.28);
@@ -263,15 +278,16 @@ export class Weapons {
   updateOrbs(dt) {
     const s = this.s, lv = this.sk.orb;
     if (!lv) return;
-    const n = [1, 2, 2, 3, 4][lv - 1];
+    const evo = this.evo('orb'), n = evo ? 6 : [1, 2, 2, 3, 4][lv - 1];
     while (this.orbs.length < n) this.orbs.push(s.add.image(0, 0, 'orb').setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setScale(1.3));
-    const sp = lv >= 5 ? 3.6 : 2.6, rad = 44 * this.area(), mult = 0.6 * (lv >= 3 ? 1.3 : 1);
+    if (evo && !this.orbEvo) { this.orbEvo = true; this.orbs.forEach(o => o.setScale(2).setTint(0xffd75e)); }
+    const sp = evo ? 4.4 : lv >= 5 ? 3.6 : 2.6, rad = 44 * this.area() * (evo ? 1.35 : 1), mult = 0.6 * (lv >= 3 ? 1.3 : 1) * (evo ? 2 : 1);
     this.orbA = (this.orbA || 0) + sp * dt / 1000;
     this.orbs.forEach((o, i) => {
       const a = this.orbA + i * Math.PI * 2 / n;
       o.setPosition(s.hero.x + Math.cos(a) * rad, s.hero.y - 4 + Math.sin(a) * rad * 0.8);
       s.mobs.getChildren().forEach(m => {
-        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, o.x, o.y) < 12 + (m.isBoss ? 18 : 0)) s.hitMob(m, mult, { src: 'orb' + i, cd: 400, kb: 90, from: o });
+        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, o.x, o.y) < (evo ? 18 : 12) + (m.isBoss ? 18 : 0)) s.hitMob(m, mult, { src: 'orb' + i, cd: 400, kb: 90, from: o });
       });
     });
   }

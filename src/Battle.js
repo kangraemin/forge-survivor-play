@@ -26,7 +26,7 @@ export class Battle extends Phaser.Scene {
   }
 
   // 훈련 효과(영구)
-  tv(id) { const t = D.TRAINING.find(x => x.id === id); return (this.sv.train[id] || 0) * t.v; }
+  tv(id) { const t = D.TRAINING.find(x => x.id === id); return D.trainVal(t, this.sv.train[id] || 0); }
 
   create() {
     const sv = this.sv;
@@ -374,6 +374,9 @@ export class Battle extends Phaser.Scene {
     r.mana = Math.min(D.MANA_MAX, r.mana + (m.elite ? D.MANA_ELITE : D.MANA_KILL));
     sfx('kill', 50);
     if (m.isBoss) { m.bossAI.die(); return; }
+    // +10부터는 쓰러뜨린 자리에도 불티가 튄다(+15는 더 자주)
+    const g = this.weapons.enhGlow();
+    if (g.ember && Math.random() < (this.sv.enh >= 15 ? 0.6 : 0.35)) this.weapons.embers(m.x, m.y, g.tint);
     // 쓰러지는 그림(전용 시트가 있으면 무너짐, 없으면 흰빛으로 부풀었다 사라짐)
     if (this.anims.exists(m.kind + 'Die')) {
       const c = this.add.sprite(m.x, m.y, m.texture.key).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff).play(m.kind + 'Die');
@@ -583,7 +586,7 @@ export class Battle extends Phaser.Scene {
       this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + 3 * f) / 1000;
       while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
-      if (!this.eliteDone && this.waveT > this.waveLen * 0.5 && (this.wave > 0 || this.c + this.s > 0)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
+      if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
       if (this.wave >= 1 && !this.ringDone && this.waveT > this.waveLen * 0.25) { this.ringDone = true; this.encircle(); }
       if (this.waveT < dt * 2) { this.eliteDone = false; this.ringDone = false; }
       // 3번째 스테이지는 마지막 웨이브에 해골 장군(중간 보스)

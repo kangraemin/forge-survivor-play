@@ -87,7 +87,10 @@ export const TRAINING = [
   { id: 'regen', name: '회복', desc: '초당 체력 회복', v: 0.1, unit: '', max: 10, base: 90 },
   { id: 'revive', name: '부활', desc: '한 판에 한 번 되살아남', v: 1, unit: '회', max: 1, base: 2500 },
 ];
-export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.2, lv) / 5) * 5;
+// 5레벨마다 이정표: 한 레벨치 효과를 덤으로 준다(부활 같은 1회짜리는 제외)
+export const TRAIN_MILE = 5, TRAIN_MILE_BONUS = 1;
+export const trainVal = (t, lv) => (lv + (t.max >= TRAIN_MILE ? Math.floor(lv / TRAIN_MILE) * TRAIN_MILE_BONUS : 0)) * t.v;
+export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
 
 // ── 판 안 성장 ──
 export const PLAYER = { hp: 100, spd: 72, iframe: 600, pickup: 34 };
@@ -157,7 +160,7 @@ export const HEAL_PCT = 0.15;
 export const GEM_FREE = { daily: 20, stageFirst: 5, bossFirst: 50 };
 export const IAP = [
   { id: 'starter', name: '초보 대장장이 꾸러미', price: 1200, once: true, tag: '1회 한정 · 가치 8배', desc: '보석300 방지권3 강화석60 금화3천', give: { gem: 300, guard: 3, stone: 60, gold: 3000 } },
-  { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '30일 · 매일 보석 60 · 소탕권 +3', give: { gem: 300 }, passDays: 30 },
+  { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '총 보석 2,100 · 하루 163원 · 매일 소탕권 +3', give: { gem: 300 }, passDays: 30 },
   { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '광고 없이 바로 보상', give: { gem: 100 }, noAds: true },
   { id: 'gem1', name: '보석 한 줌', price: 1200, give: { gem: 120 } },
   { id: 'gem2', name: '보석 주머니', price: 5900, tag: '인기 · +10%', give: { gem: 650 } },
@@ -169,8 +172,17 @@ export const PASS_DAILY = { gem: 60, sweep: 3 };
 // 보석으로 사는 것. gold 꾸러미는 지금 도전 중인 스테이지 클리어 금화의 3배
 // 행운 부적: 강화 한 번 성공 확률 +5%p(1회 소모). 부서진 칼 되살리기: 보석 30 + 단계×10
 export const CHARM_RATE = 5;
+// 레벨업 카드 추방(이번 판에서 다시 안 나옴) 횟수
+export const BANISH_PER_RUN = 2;
 // 무한의 탑: 1장 보스를 깨면 열린다. 층(웨이브)마다 몹이 세지고 3층마다 해골 장군
 export const ENDLESS = { unlock: 6, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.22, dmgGrow: 1.12 };
+// 칼빛(궤적 색) 꾸미기: 능력치는 그대로, 보이는 것만 바뀐다
+export const SKINS = [
+  { id: '', name: '기본 칼빛', desc: '강화 단계 색', cost: 0 },
+  { id: 'flame', name: '불꽃 칼빛', desc: '붉은 불길이 남는다', hue: 175, tint: 0xff5a2a, cost: 300 },
+  { id: 'silver', name: '은빛 칼빛', desc: '하얀 달빛이 남는다', gray: true, tint: 0xffffff, cost: 600 },
+  { id: 'gold', name: '황금 칼빛', desc: '금빛 궤적 + 불티', hue: -150, tint: 0xffd75e, cost: 1200, ember: true },
+];
 export const restoreGem = enh => 30 + enh * 10;
 export const GEM_SHOP = [
   { id: 'guard', name: '파괴 방지권', icon: 11, cost: 80, give: { guard: 1 } },
@@ -208,4 +220,6 @@ export const EVOS = {
   bolt: { need: 'area', name: '연쇄 번개', desc: '벼락 5개가 4마리씩 튄다' },
   holy: { need: 'vigor', name: '심판의 땅', desc: '범위 넓게, 태우며 회복' },
   fireball: { need: 'magnet', name: '용암 비', desc: '화면 곳곳에 불덩이 비' },
+  orb: { need: 'area', name: '태양 고리', desc: '큰 구슬 6개가 넓고 빠르게 돈다' },
+  ice: { need: 'focus', name: '눈보라', desc: '사방으로 얼음 12개, 맞으면 언다' },
 };
