@@ -11,6 +11,8 @@ const start = () => {
     width: W, height: H,
     backgroundColor: '#0d0a14',
     pixelArt: true, roundPixels: true,
+    // 아이폰 사파리에서 여러 텍스처를 한 번에 그리면 다른 그림이 섞여 나온다(화덕 빛이 불기둥으로 보임). 한 장씩 그린다
+    render: { maxTextures: 1 },
     physics: { default: 'arcade', arcade: { debug: false } },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { activePointers: 2 },

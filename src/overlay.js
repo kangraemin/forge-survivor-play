@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
 
 const { W, H } = D;
@@ -136,7 +136,7 @@ export class Overlay {
     const evoOf = special ? null : def.type === 'active' ? D.EVOS[k] && D.SKILLS[D.EVOS[k].need].name : Object.keys(D.EVOS).filter(b => D.EVOS[b].need === k).map(b => D.SKILLS[b].name).join('·');
     if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(evoOf.length > 6 ? 10 : 11, '#e0b060')).setOrigin(1, 0.5));
     c.setSize(230, 70).setInteractive({ useHandCursor: true });
-    c.on('pointerup', () => this.pick(k, c));
+    onTap(c, () => this.pick(k, c));
     // 추방: 이번 판에서 다시 안 나온다(첫 레벨업에는 숨김)
     if (canBan) {
       // 카드 오른쪽 위 모서리에 붙인다. 글꼴에 따라 ✕가 x로 보여 선 두 개로 그린다
@@ -144,7 +144,7 @@ export class Overlay {
       x.add(s.add.rectangle(0, 0, 24, 22, 0x2a0e16, 0.9).setStrokeStyle(1, 0xc06070));
       const g = s.add.graphics().lineStyle(2, 0xff8090).lineBetween(-5, -5, 5, 5).lineBetween(-5, 5, 5, -5); x.add(g);
       x.setSize(28, 26).setInteractive({ useHandCursor: true });
-      x.on('pointerup', (p, lx, ly, ev) => {
+      onTap(x, (p, lx, ly, ev) => {
         ev?.stopPropagation();
         if (this.picking || s.run.banLeft <= 0) return;
         s.run.banLeft--; (s.run.banned ||= {})[k] = true; sfx('deny'); this.redraw?.();
@@ -170,7 +170,7 @@ export class Overlay {
     c.add(s.add.text(-60, -6, e.desc, { ...font9(11, '#fff2c8'), wordWrap: { width: 165 } }));
     c.add(s.add.text(-60, 20, `${D.SKILLS[base].name} + ${D.SKILLS[e.need].name}`, font9(11, '#c8a060')));
     c.setSize(230, 70).setInteractive({ useHandCursor: true });
-    c.on('pointerup', () => this.pick(k, c));
+    onTap(c, () => this.pick(k, c));
     c.setScale(0.6).setAlpha(0);
     s.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 200, delay: i * 70, ease: 'Back.Out' });
     return c;
@@ -255,7 +255,7 @@ export class Overlay {
         g.add(s.add.text(0, 7, it.desc, { ...font9(10, '#c8bfe0'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0).setLineSpacing(-1));
         g.add(s.add.text(0, 37, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
         g.setSize(112, 92).setInteractive({ useHandCursor: true });
-        g.on('pointerup', () => {
+        onTap(g, () => {
           if (it.sold) return;
           if (r.silver < it.price) { sfx('deny'); s.tweens.add({ targets: g, x: x + 3, duration: 40, yoyo: true, repeat: 2 }); return; }
           r.silver -= it.price; it.sold = true; sfx('buy');

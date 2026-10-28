@@ -36,15 +36,26 @@ export function button(scene, x, y, w, h, label, onTap, { color = 0x3b2f5c, size
   c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x3a3a44, false); t.setAlpha(v ? 1 : 0.55); return c; };
   c.setColor = col => { c.col = col; draw(col, false); return c; };
   draw(color, false);
-  c.on('pointerdown', (p, lx, ly, ev) => { ev?.stopPropagation?.(); draw(c.enabled ? c.col : 0x3a3a44, true); t.y = 2; });
-  c.on('pointerout', () => { draw(c.enabled ? c.col : 0x3a3a44, false); t.y = 0; });
+  c.on('pointerdown', (p, lx, ly, ev) => { ev?.stopPropagation?.(); c.armed = true; draw(c.enabled ? c.col : 0x3a3a44, true); t.y = 2; });
+  c.on('pointerout', () => { c.armed = false; draw(c.enabled ? c.col : 0x3a3a44, false); t.y = 0; });
   c.on('pointerup', (p, lx, ly, ev) => {
     ev?.stopPropagation?.();
+    // 이동하느라 누르고 있던 손가락을 떼는 것은 누른 게 아니다: 이 버튼 위에서 눌렀을 때만 받는다
+    if (!c.armed) return;
+    c.armed = false;
     draw(c.enabled ? c.col : 0x3a3a44, false); t.y = 0;
     if (!c.enabled) { sfx('deny'); scene.tweens.add({ targets: c, x: x + 3, duration: 40, yoyo: true, repeat: 2 }); return; }
     sfx('click'); onTap?.();
   });
   return c;
+}
+
+// 이 물체 위에서 눌렀다 뗐을 때만 fn을 부른다(다른 데서 누른 채 끌고 와 떼면 무시)
+export function onTap(obj, fn) {
+  obj.on('pointerdown', () => { obj.armed = true; });
+  obj.on('pointerout', () => { obj.armed = false; });
+  obj.on('pointerup', (...a) => { if (!obj.armed) return; obj.armed = false; fn(...a); });
+  return obj;
 }
 
 // 아이콘 시트(4x4)에서 번호로 한 칸. 시트가 없으면 글자로 대신한다
