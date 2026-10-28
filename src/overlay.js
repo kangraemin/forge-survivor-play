@@ -2,7 +2,8 @@
 import * as D from './data.js';
 import { save } from './save.js';
 import { sfx } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer } from './ui.js';
+import { showAd, adsLeft } from './shop.js';
 
 const { W, H } = D;
 const DEPTH = 150;
@@ -16,7 +17,7 @@ export class Overlay {
     this.open = name;
     s.paused = true; s.physics.pause(); s.anims.pauseAll();
     s.joy.o = null; s.joy.v.reset(); s.joy.base.setVisible(false); s.joy.knob.setVisible(false);
-    const c = s.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH);
+    const c = fixedContainer(s).setDepth(DEPTH);
     const dim = s.add.rectangle(0, 0, W, H, 0x05030a, 0.72).setOrigin(0).setInteractive();
     c.add(dim); c.setAlpha(0);
     s.tweens.add({ targets: c, alpha: 1, duration: 140 });
@@ -244,6 +245,34 @@ export class Overlay {
     c.add(button(s, W / 2, 300, 130, 24, '포기하기', () => { if (c !== this.c) return; this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x6b2f3a }));
   }
 
+  // ── 쓰러졌을 때 부활 제안(판당 1번): 광고 또는 보석 ──
+  revive() {
+    const s = this.s, sv = s.sv;
+    const c = this.begin('revive');
+    c.add(panel(s, 30, 150, W - 60, 190, { fill: 0x1a1426, line: 0x7a3a4a }));
+    c.add(s.add.text(W / 2, 176, '쓰러졌다…', font(16, '#ff7070')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 198, '체력 절반으로 일어나 이어서 싸울까?', font9(10, '#e8e2f8')).setOrigin(0.5));
+    let busy = false;
+    const up = () => { this.end(c); s.reviveNow(); };
+    const ad = button(s, W / 2, 232, 170, 28, sv.noAds ? '무료 부활' : '광고 보고 부활 ▶', async () => {
+      if (busy || c !== this.c) return; busy = true;
+      const ok = await showAd(s, sv, 'revive');
+      busy = false;
+      if (ok && c === this.c) up();
+    }, { size: 11, color: 0x2f5a7a });
+    const gm = button(s, W / 2, 268, 170, 28, `보석 ${D.REVIVE_GEM}으로 부활`, () => {
+      if (busy || c !== this.c || sv.gem < D.REVIVE_GEM) return;
+      sv.gem -= D.REVIVE_GEM; save(); up();
+    }, { size: 11, color: 0x8a2f6a });
+    gm.setEnabled(sv.gem >= D.REVIVE_GEM);
+    c.add([ad, gm, gemIcon(s, W / 2 - 62, 268, 12)]);
+    c.add(s.add.text(W / 2 + 70, 288, `보유 ${sv.gem}`, font9(8, '#ff9ad0')).setOrigin(1, 0));
+    c.add(button(s, W / 2, 316, 120, 24, '포기', () => {
+      if (busy || c !== this.c) return;
+      this.end(c); s.die(true);
+    }, { size: 10, color: 0x4a3a4a }));
+  }
+
   // ── 결과 ──
   result(win) {
     const s = this.s, sv = s.sv, r = s.run;
@@ -251,17 +280,17 @@ export class Overlay {
     s.over = true; s.physics.pause();
     const idx = s.c * D.STAGES_PER_CHAPTER + s.s;
     const first = win && idx >= sv.cleared;
-    let gold, stone = r.stones, guard = 0, sweep = 0;
+    let gold, stone = r.stones, guard = 0, sweep = 0, gem = 0;
     if (win) {
       gold = Math.round(D.clearGold(s.c, s.s) * (first ? D.FIRST_CLEAR_MUL : 1));
       stone += D.clearStone(s.c, s.s);
-      if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; }
+      if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; gem = s.isBoss ? D.GEM_FREE.bossFirst : D.GEM_FREE.stageFirst; }
       sv.best[idx] = 1;
     } else {
       gold = Math.round(D.clearGold(s.c, s.s) * s.progress() * D.FAIL_GOLD_RATE);
     }
     gold = Math.round(gold);
-    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep);
+    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem;
     save();
     sfx(win ? 'win' : 'fail');
     // 열린 창이 있으면 닫고 결과만 띄운다
@@ -283,15 +312,31 @@ export class Overlay {
     const rew = [[12, '금화', gold], [13, '강화석', stone]];
     if (guard) rew.push([15, '파괴 방지권', guard]);
     if (sweep) rew.push([15, '소탕권', sweep]);
+    if (gem) rew.push([-1, '보석', gem]);
+    const tx = [];
     rew.forEach(([ic, name, n], i) => {
-      const y = 238 + i * 24;
-      c.add(icon(s, 58, y, ic, 18));
+      const y = 234 + i * 19;
+      c.add(ic < 0 ? gemIcon(s, 58, y, 14) : icon(s, 58, y, ic, 18));
       c.add(s.add.text(74, y - 7, name, font(11)));
-      const t = s.add.text(W - 50, y - 7, '+0', font(12, '#ffd75e')).setOrigin(1, 0); c.add(t);
+      const t = s.add.text(W - 50, y - 7, '+0', font(12, '#ffd75e')).setOrigin(1, 0); c.add(t); tx.push(t);
       const o = { v: 0 };
       s.tweens.add({ targets: o, v: n, duration: 600, delay: 300 + i * 150, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
     });
     if (!win) c.add(s.add.text(W / 2, 300, '대장간에서 무기를 강화하고 다시 도전하자', font9(9, '#c8bfe0')).setOrigin(0.5));
+    // 광고 보고 금화·강화석 2배(하루 횟수 제한)
+    if (win && !s.bot && adsLeft(sv, 'double') > 0) {
+      const db = button(s, W / 2, 328, 190, 22, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
+        if (db.used) return; db.used = true; db.setEnabled(false);
+        const ok = await showAd(s, sv, 'double');
+        if (!ok || !s.scene.isActive()) { db.used = false; db.setEnabled(true); return; }
+        sv.ads.double = (sv.ads.double || 0) + 1;
+        sv.gold += gold; sv.stone += stone; save();
+        tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
+        [tx[0], tx[1]].forEach(t => s.tweens.add({ targets: t, scale: 1.4, duration: 120, yoyo: true }));
+        sfx('coin'); db.label.setText('2배 받았다!');
+      }, { size: 10, color: 0x2f5a7a });
+      c.add(db);
+    }
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
     c.add(button(s, 85, 360, 110, 30, '로비', () => s.scene.start('Lobby', { tab: win ? 'battle' : 'forge' }), { color: 0x3b2f5c }));
     c.add(button(s, 190, 360, 100, 30, win ? '다음' : '다시', () => {

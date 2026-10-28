@@ -149,3 +149,31 @@ export const DROP = {
   bossSilver: 100,
 };
 export const HEAL_PCT = 0.15;
+
+// ── 과금 ──
+// 보석: 유료 재화. 무료로도 꾸준히 모인다(출석·첫 클리어·광고). 보석 1개 ≈ 10원
+// 보석으로는 '시간'과 '안전'을 산다(소탕권·방지권·강화석). 무기 공격력을 직접 팔지 않아 실력·강화의 재미를 지킨다
+export const GEM_FREE = { daily: 20, stageFirst: 5, bossFirst: 50 };
+export const IAP = [
+  { id: 'starter', name: '초보 대장장이 꾸러미', price: 1200, once: true, tag: '1회 한정 · 가치 8배', desc: '보석 300 · 방지권 3 · 강화석 60 · 금화 3천', give: { gem: 300, guard: 3, stone: 60, gold: 3000 } },
+  { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '30일 · 매일 보석 60 · 소탕권 +3', give: { gem: 300 }, passDays: 30 },
+  { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '광고 없이 바로 보상', give: { gem: 100 }, noAds: true },
+  { id: 'gem1', name: '보석 한 줌', price: 1200, give: { gem: 120 } },
+  { id: 'gem2', name: '보석 주머니', price: 5900, tag: '+10%', give: { gem: 650 } },
+  { id: 'gem3', name: '보석 상자', price: 12000, tag: '+17%', give: { gem: 1400 } },
+];
+export const PASS_DAILY = { gem: 60, sweep: 3 };
+// 보석으로 사는 것. gold 꾸러미는 지금 도전 중인 스테이지 클리어 금화의 3배
+export const GEM_SHOP = [
+  { id: 'guard', name: '파괴 방지권', icon: 11, cost: 80, give: { guard: 1 } },
+  { id: 'sweep', name: '소탕권 5장', icon: 15, cost: 40, give: { sweep: 5 } },
+  { id: 'stone', name: '강화석 40개', icon: 13, cost: 60, give: { stone: 40 } },
+  { id: 'gold', name: '금화 꾸러미', icon: 12, cost: 100, give: { goldStage: 3 } },
+];
+// 보상형 광고: 하루 횟수 제한
+export const ADS = {
+  gem: { name: '보석 +15', daily: 3, give: { gem: 15 } },
+  sweep: { name: '소탕권 +2', daily: 2, give: { sweep: 2 } },
+  double: { daily: 10 },   // 클리어 보상 2배
+};
+export const REVIVE_GEM = 30; // 쓰러졌을 때 보석 부활(판당 1번, 광고 부활과 같은 기회)

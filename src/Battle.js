@@ -445,14 +445,16 @@ export class Battle extends Phaser.Scene {
     if (this.hp <= 0) this.die();
   }
 
-  die() {
-    if (this.run.revive > 0) {
+  die(final = false) {
+    if (!final && this.run.revive > 0) {
       this.run.revive--;
       this.hp = this.maxHp * 0.5;
       this.blast(6, true);
       this.banner('부활!', '한 번 더 싸운다');
       return;
     }
+    // 판당 한 번: 광고·보석으로 부활할 기회
+    if (!final && !this.bot && !this.run.offered) { this.run.offered = true; this.hp = 0; this.ui.revive(); return; }
     this.over = true;
     this.hp = 0;
     this.physics.pause();
@@ -461,6 +463,13 @@ export class Battle extends Phaser.Scene {
     this.tweens.add({ targets: this.hero, angle: 90 * this.face, alpha: 0.4, duration: 500 });
     this.cameras.main.zoomTo(1.3, 600);
     this.time.delayedCall(900, () => this.ui.result(false));
+  }
+
+  reviveNow() {
+    this.hp = this.maxHp * 0.5;
+    this.iframe = this.bt + 2000;
+    this.blast(6, true);
+    this.banner('부활!', '한 번 더 싸운다');
   }
 
   // ── 궁극기: 화면 전체 베기 + 2초 무적 ──

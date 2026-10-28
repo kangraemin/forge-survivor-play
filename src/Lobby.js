@@ -2,11 +2,12 @@
 import * as D from './data.js';
 import { load, save } from './save.js';
 import { sfx, setSound, unlock } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon } from './ui.js';
+import { showAd, buy, grant, giveText, adsLeft, won } from './shop.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
-const TABS = [['battle', '전투', 1], ['forge', '대장간', 13], ['train', '훈련', 14]];
+const TABS = [['battle', '전투', 1], ['forge', '대장간', 13], ['train', '훈련', 14], ['shop', '상점', 12]];
 
 // 스테이지별 권장 공격력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
 export const recAtk = (c, s) => Math.round(D.TIERS[Math.min(c, D.TIERS.length - 1)].atk * (1 + 0.1 * Math.min(10, s * 1.9)));
@@ -52,10 +53,11 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv;
     this.add.rectangle(0, 0, W, 34, 0x07050c, 0.9).setOrigin(0).setDepth(50);
     this.add.rectangle(0, 34, W, 1, COLOR.line).setOrigin(0).setDepth(50);
-    const items = [[12, () => fmt(sv.gold), '#ffd75e'], [13, () => fmt(sv.stone), '#9ae0ff'], [11, () => sv.guard, '#e8e2f8'], [15, () => `${sv.sweep}`, '#c8f0a0']];
+    const items = [[12, () => fmt(sv.gold), '#ffd75e'], [13, () => fmt(sv.stone), '#9ae0ff'], [11, () => sv.guard, '#e8e2f8'], [15, () => `${sv.sweep}`, '#c8f0a0'], [-1, () => fmt(sv.gem), '#ff9ad0']];
     this.topTxt = items.map(([ic, get, col], i) => {
-      const x = 10 + i * 58;
-      this.add.existing(icon(this, x + 7, 17, ic, 14).setDepth(51));
+      const x = 6 + i * 50;
+      if (ic < 0) gemIcon(this, x + 7, 17, 13).setDepth(51);
+      else this.add.existing(icon(this, x + 7, 17, ic, 14).setDepth(51));
       const t = this.add.text(x + 17, 10, '', font(11, col)).setDepth(51);
       t.get = get; return t;
     });
@@ -71,10 +73,10 @@ export class Lobby extends Phaser.Scene {
     this.add.rectangle(0, H - 50, W, 50, 0x07050c, 0.95).setOrigin(0).setDepth(50);
     this.add.rectangle(0, H - 50, W, 1, COLOR.line).setOrigin(0).setDepth(50);
     this.tabBtns = TABS.map(([id, name, ic], i) => {
-      const x = W / 6 + i * W / 3, c = this.add.container(x, H - 25).setDepth(51);
-      const hl = this.add.rectangle(0, 0, W / 3 - 6, 44, 0xffd75e, 0.12).setStrokeStyle(1, 0xffd75e, 0.5);
+      const tw = W / TABS.length, x = tw / 2 + i * tw, c = this.add.container(x, H - 25).setDepth(51);
+      const hl = this.add.rectangle(0, 0, tw - 6, 44, 0xffd75e, 0.12).setStrokeStyle(1, 0xffd75e, 0.5);
       c.add([hl, icon(this, 0, -7, ic, 18), this.add.text(0, 12, name, font(10)).setOrigin(0.5)]);
-      c.hl = hl; c.setSize(W / 3, 50).setInteractive({ useHandCursor: true });
+      c.hl = hl; c.setSize(tw, 50).setInteractive({ useHandCursor: true });
       c.on('pointerup', () => { if (this.busy) return; sfx('click'); this.show(id); });
       c.id = id; return c;
     });
@@ -90,6 +92,7 @@ export class Lobby extends Phaser.Scene {
     if (id === 'battle') this.battleTab();
     if (id === 'forge') this.forgeTab();
     if (id === 'train') this.trainTab();
+    if (id === 'shop') this.shopTab();
     this.body.setAlpha(0); this.tweens.add({ targets: this.body, alpha: 1, duration: 150 });
   }
 
@@ -358,6 +361,77 @@ export class Lobby extends Phaser.Scene {
   }
 
   update() { if (this.topTxt) this.topTxt.forEach(t => { const v = t.get(); if (t.text !== String(v)) t.setText(v); }); }
+
+  // ── 상점 탭: 보석으로 사기·광고 보상 / 패키지(결제) ──
+  shopTab() {
+    const sv = this.sv, b = this.body, page = this.shopPage || 'gem';
+    const sub = (x, id, name) => {
+      const bt = button(this, x, 54, 120, 24, name, () => { this.shopPage = id; this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : 0x2a2440 });
+      b.add(bt);
+    };
+    sub(72, 'gem', '보석 상점'); sub(198, 'pack', '패키지');
+    const after = msg => { this.refreshTop(); this.bump(4); toast(this, msg, '#ffd75e'); this.show('shop'); };
+    if (page === 'gem') {
+      b.add(this.add.text(16, 76, '보석으로 사기', font(11, '#ff9ad0')));
+      D.GEM_SHOP.forEach((it, i) => {
+        const x = 16 + (i % 2) * 122, y = 94 + Math.floor(i / 2) * 64;
+        const c = this.add.container(x, y); b.add(c);
+        c.add(panel(this, 0, 0, 116, 58));
+        c.add(icon(this, 18, 22, it.icon, 22));
+        c.add(this.add.text(34, 8, it.name, font(10)));
+        c.add(this.add.text(34, 24, giveText(it.give), font9(9, '#c8bfe0')));
+        const ok = sv.gem >= it.cost;
+        c.add(gemIcon(this, 40, 46, 10));
+        c.add(this.add.text(50, 39, String(it.cost), font(10, ok ? '#ff9ad0' : '#7a5a6a')));
+        const z = this.add.zone(x, y, 116, 58).setOrigin(0).setInteractive({ useHandCursor: true }); b.add(z);
+        z.on('pointerup', () => {
+          if (this.busy) return;
+          if (sv.gem < it.cost) { sfx('deny'); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          sv.gem -= it.cost; grant(sv, it.give); sfx('buy');
+          after(`${it.name} 구매!`);
+        });
+      });
+      b.add(this.add.text(16, 230, '무료 보상 (광고)', font(11, '#9ae0ff')));
+      Object.entries(D.ADS).filter(([k]) => k !== 'double').forEach(([k, ad], i) => {
+        const y = 262 + i * 42, left = adsLeft(sv, k);
+        b.add(panel(this, 16, y - 18, W - 32, 36));
+        b.add(this.add.text(28, y - 7, ad.name, font(11)));
+        b.add(this.add.text(150, y - 6, `오늘 ${left}/${ad.daily}`, font9(9, left ? '#c8bfe0' : '#5a5070')));
+        const bt = button(this, W - 52, y, 64, 24, sv.noAds ? '받기' : '보기 ▶', async () => {
+          if (this.busy || adsLeft(sv, k) <= 0) return;
+          this.busy = true;
+          const ok = await showAd(this, sv, k);
+          this.busy = false;
+          if (!ok || !this.scene.isActive()) return;
+          sv.ads[k] = (sv.ads[k] || 0) + 1; grant(sv, ad.give);
+          after(`${ad.name} 받았다`);
+        }, { size: 10, color: 0x2f5a7a });
+        bt.setEnabled(left > 0); b.add(bt);
+      });
+      const info = [`매일 접속하면 보석 +${D.GEM_FREE.daily}`, `스테이지 첫 클리어 보석 +${D.GEM_FREE.stageFirst} · 보스 +${D.GEM_FREE.bossFirst}`];
+      if (sv.passLeft > 0) info.push(`월정액: 남은 ${sv.passLeft}일 · 매일 보석 ${D.PASS_DAILY.gem}`);
+      info.forEach((t, i) => b.add(this.add.text(W / 2, 354 + i * 16, t, font9(9, i === 2 ? '#ffd75e' : '#a89cc8')).setOrigin(0.5)));
+      return;
+    }
+    // 패키지
+    D.IAP.forEach((it, i) => {
+      const y = 76 + i * 56, sold = it.once && sv.bought[it.id];
+      const hot = it.id === 'starter' || it.id === 'pass';
+      b.add(panel(this, 12, y, W - 24, 50, { line: hot && !sold ? 0xffd75e : COLOR.line }));
+      b.add(gemIcon(this, 30, y + 25, 18));
+      b.add(this.add.text(46, y + 8, it.name, font(11, hot ? '#ffd75e' : '#ffffff')));
+      b.add(this.add.text(46, y + 24, it.desc || giveText(it.give) + (it.passDays ? ` (+매일 ${D.PASS_DAILY.gem})` : '') + (it.noAds ? ' · 광고 없음' : ''), font9(it.desc ? 8 : 9, '#e8e2f8')));
+      if (it.tag) b.add(this.add.text(46, y + 37, it.id === 'pass' && sv.passLeft > 0 ? `남은 ${sv.passLeft}일 · 사면 연장` : it.tag, font9(8, '#ff9ad0')));
+      const bt = button(this, W - 46, y + 25, 60, 26, sold ? '구매함' : won(it.price), async () => {
+        if (this.busy || sold) return;
+        this.busy = true;
+        const ok = await buy(this, sv, it);
+        this.busy = false;
+        if (ok && this.scene.isActive()) after(`${it.name} 구매 완료!`);
+      }, { size: 9, color: 0x5a2f8a });
+      bt.setEnabled(!sold); b.add(bt);
+    });
+  }
 }
 
 const RF = Phaser.Math.FloatBetween;

@@ -64,3 +64,35 @@ export function toast(scene, msg, color = '#ffffff') {
   scene.tweens.add({ targets: t, alpha: 1, y: 360, duration: 160, ease: 'Back.Out' });
   scene.tweens.add({ targets: t, alpha: 0, y: 340, delay: 1100, duration: 300, onComplete: () => t.destroy() });
 }
+
+// 보석(유료 재화) 아이콘: 아이콘 시트에 없어 직접 그린 분홍 다이아
+export function gemIcon(scene, x, y, size = 14) {
+  if (!scene.textures.exists('gemc')) {
+    const g = scene.make.graphics({ add: false });
+    const px = (c, pts) => { g.fillStyle(c); pts.forEach(([a, b, w = 1, h = 1]) => g.fillRect(a, b, w, h)); };
+    px(0x2a0a1e, [[3, 0, 6], [1, 2, 10], [0, 3, 12, 2], [1, 5, 10], [2, 6, 8], [3, 7, 6], [4, 8, 4], [5, 9, 2]]);
+    px(0xff4fa8, [[3, 1, 6], [1, 3, 10, 2], [2, 5, 8], [3, 6, 6], [4, 7, 4], [5, 8, 2]]);
+    px(0xffb0dc, [[4, 1, 2], [2, 3, 3], [3, 5, 2]]);
+    px(0xffffff, [[4, 1], [3, 3]]);
+    g.generateTexture('gemc', 12, 10); g.destroy();
+  }
+  return scene.add.image(x, y, 'gemc').setScale(size / 12);
+}
+
+// 화면에 고정된 컨테이너. Phaser는 컨테이너의 scrollFactor를 자식의 입력 판정에 쓰지 않아
+// 카메라가 움직이면 버튼이 눌리지 않는다 → 넣는 자식(그 안의 자식까지)도 전부 0으로 맞춘다
+export function fixedContainer(scene, x = 0, y = 0) {
+  // 안쪽 컨테이너는 나중에 채워질 수 있으니 그 add도 같은 식으로 감싼다
+  const pin = o => {
+    o.setScrollFactor?.(0);
+    if (!o.list) return;
+    o.list.forEach(pin);
+    if (o.add.pinned) return;
+    const add = o.add.bind(o);
+    o.add = ch => { [].concat(ch).forEach(pin); return add(ch); };
+    o.add.pinned = true;
+  };
+  const c = scene.add.container(x, y);
+  pin(c);
+  return c;
+}
