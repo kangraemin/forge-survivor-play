@@ -275,7 +275,7 @@ export class Battle extends Phaser.Scene {
     const r = Math.random();
     if (this.hordeKind && r < 0.6) return this.hordeKind;
     // 뒤 스테이지일수록 처음부터 단단한 놈·떼거리가 섞인다
-    const st = this.endless ? 0 : this.s * 0.06;
+    const st = this.endless ? 0 : this.s * 0.03;
     if (r < 0.15 + st + 0.25 * f) return b;
     if (r < 0.35 + 2 * st + 0.3 * f) return c;
     return a;
