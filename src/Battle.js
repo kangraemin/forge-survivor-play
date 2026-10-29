@@ -819,9 +819,10 @@ export class Battle extends Phaser.Scene {
     } else {
       // 보스전에도 졸개가 꾸준히 나온다(1.2마리면 화면이 비어 보였다)
       // 다만 40마리를 넘으면 멈추고, 보스가 거의 죽으면 줄여 막판에 포위당해 지지 않게 한다
-      const bm = this.boss?.m, low = bm && bm.hp < bm.maxHp * 0.3;
-      this.spawnAcc = (this.spawnAcc || 0) + dt * (low ? 1.1 : 2.2) / 1000;
-      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < 40) this.spawn(); }
+      // 분노하면 새 패턴을 보고 피할 수 있게 졸개도 줄인다
+      const bm = this.boss?.m, low = bm && bm.hp < bm.maxHp * 0.3, calm = low || this.boss?.rage;
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (calm ? 1.1 : 2.2) / 1000;
+      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (calm ? 25 : 40)) this.spawn(); }
     }
     this.boss?.update(dt);
     this.midBoss?.update(dt);

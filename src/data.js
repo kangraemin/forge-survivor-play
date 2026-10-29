@@ -108,7 +108,8 @@ export const promoteGold = tier => Math.round(600 * TIER_COST[tier + 1] / 50) * 
 export const promoteEnh = (tier, enh) => { let e = 0; while (e < PROMOTE_NEED - 1 && weaponAtk(tier + 1, e) < weaponAtk(tier, enh)) e++; return e; };
 
 // ── 스테이지 보상(금화·강화석) ──
-export const clearGold = (c, s) => Math.round(75 * TIER_COST[c] * (1 + 0.2 * s) / 5) * 5;
+// 2장부터 10% 더 준다: 후반 강화 한 번에 판이 너무 많이 들었다(25%면 완주가 3.7시간으로 짧아졌다)
+export const clearGold = (c, s) => Math.round(75 * TIER_COST[c] * (1 + 0.2 * s) * (c >= 1 ? 1.1 : 1) / 5) * 5;
 export const FIRST_CLEAR_MUL = 2.5;
 export const clearStone = (c, s) => 3 + s + c * 2;
 export const FAIL_STONE_RATE = 0.5;                        // 져도 강화석을 같은 식으로 조금 준다(0개면 허탈했다)

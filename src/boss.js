@@ -1,7 +1,7 @@
 // 보스: 패턴을 돌아가며 쓴다. 모든 공격은 빨간 예고 표시가 먼저 뜨고, 체력 절반 이하면 빨라진다
 import * as D from './data.js';
 import { sfx } from './sfx.js';
-import { font } from './ui.js';
+import { font, toast } from './ui.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 
@@ -54,7 +54,10 @@ export class BossAI {
     }
     if (enraged && !this.rage) {
       this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; s.cameras.main.shake(300, 0.005); sfx('bossIn');
-      if (this.b.rage && !this.mid) s.banner(`${this.b.name}이 분노했다!`, this.b.rage === 'sweep' ? '새 공격: 휩쓰는 광선' : '새 공격: 남는 장판');
+      const what = { sweep: '휩쓰는 광선', pools: '남는 장판', slam: '연속 내려찍기' }[this.b.rage];
+      // 중간 보스는 배너 대신 짧은 알림(예고 없이 새 공격이 나왔다)
+      if (this.b.rage && !this.mid) s.banner(`${this.b.name}이 분노했다!`, `새 공격: ${what}`);
+      else if (this.b.rage) toast(s, `${this.b.name} 분노! 새 공격: ${what}`, '#ff9a8a', 120);
     }
     m.setFlipX(h.x < m.x);
     m.setDepth(10 + m.y / 1600);
@@ -82,7 +85,8 @@ export class BossAI {
     const st = { f: 0 };
     s.tweens.add({
       targets: st, f: 1, duration: ms,
-      onUpdate: () => { g.clear().fillStyle(0xff2030, 0.18).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(1, 0xff4050, 0.9).strokeEllipse(x, y, r * 2, r * 1.5).fillStyle(0xff2030, 0.3).fillEllipse(x, y, r * 2 * st.f, r * 1.5 * st.f); },
+      // 몹·이펙트에 묻히지 않게 테두리를 굵게 하고 깜빡인다
+      onUpdate: () => { const blink = 0.55 + 0.45 * Math.abs(Math.sin(st.f * 12)); g.clear().fillStyle(0xff2030, 0.2).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(2.5, 0xff4050, blink).strokeEllipse(x, y, r * 2, r * 1.5).fillStyle(0xff2030, 0.32).fillEllipse(x, y, r * 2 * st.f, r * 1.5 * st.f); },
       onComplete: () => { g.destroy(); onBoom(); },
     });
   }

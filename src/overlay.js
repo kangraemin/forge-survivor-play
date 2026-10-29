@@ -102,7 +102,7 @@ export class Overlay {
     };
     const r = s.run;
     if (r.banLeft === undefined) r.banLeft = D.BANISH_PER_RUN;
-    const banTxt = s.add.text(W / 2, 432, '', font9(10, '#8a80a0')).setOrigin(0.5); c.add(banTxt);
+    const banTxt = s.add.text(W / 2, 436, '', font9(10, '#c8bfe0')).setOrigin(0.5); c.add(banTxt);
     this.redraw = draw;
     draw();
     // 처음 하는 사람: 첫 레벨업 카드를 반짝여 고르는 곳을 알려 준다
@@ -121,11 +121,14 @@ export class Overlay {
       else if (s.sv.gem >= D.REROLL_GEM) { s.sv.gem -= D.REROLL_GEM; save(); gem = true; }
       else return;
       s.log('levelup_reroll', { n: r.lvRerolls || 0, silver: r.silver, gem });
-      sfx('buy'); draw(); rb.label.setText(label()); rb.setEnabled(can());
+      sfx('buy'); draw(); rb.label.setText(label()); rb.setEnabled(can()); own.setText(ownTxt());
     }, { size: 10, color: 0x3b2f5c });
     rb.setEnabled(can());
     c.add(rb);
-    c.add(s.add.text(W / 2, 418, `은화 ${r.silver}`, font9(11, '#d8e0f0')).setOrigin(0.5));
+    // '은화 0'만 있으면 무슨 숫자인지 몰랐다: 가진 은화·보석을 같이 보여 준다
+    const ownTxt = () => `가진 은화 ${r.silver}  ·  보석 ${s.sv.gem}`;
+    const own = s.add.text(W / 2, 420, ownTxt(), font9(10, '#d8e0f0')).setOrigin(0.5); c.add(own);
+    this.lvOwn = () => own.active && own.setText(ownTxt());
     if (s.bot) s.time.delayedCall(150, () => this.pick(cards.list[0]?.key));
   }
   lvReroll() { return 8 + 6 * (this.s.run.lvRerolls || 0); }
@@ -170,7 +173,7 @@ export class Overlay {
         if (s.run.banLeft > 0) s.run.banLeft--;
         else if (s.sv.gem >= D.BAN_GEM) { s.sv.gem -= D.BAN_GEM; save(); s.log('banish_gem'); }
         else return;
-        (s.run.banned ||= {})[k] = true; sfx('deny'); this.redraw?.();
+        (s.run.banned ||= {})[k] = true; sfx('deny'); this.redraw?.(); this.lvOwn?.();
       });
       c.add(x);
     }
@@ -240,7 +243,11 @@ export class Overlay {
       if (!it) { c.add(s.add.text(x, 204, '비어 있음', font9(10, '#6a6080')).setOrigin(0.5)); return; }
       c.add(itemBox(s, x, 200, it, 32));
       c.add(s.add.text(x, 224, it.n, font9(10, RARITY[it.r].css)).setOrigin(0.5));
-      Object.entries(it.st).forEach(([k, v], i) => c.add(s.add.text(x, 240 + i * 13, statText(k, v), font9(9, '#c8bfe0')).setOrigin(0.5)));
+      // 주운 것은 지금 것보다 오른 능력치를 초록 ▲, 내린 것을 빨강 ▼로(계산 안 해도 보이게)
+      Object.entries(it.st).forEach(([k, v], i) => {
+        const o = it === item && cur ? cur.st[k] || 0 : null, mark = o == null || v === o ? '' : v > o ? ' ▲' : ' ▼';
+        c.add(s.add.text(x, 240 + i * 13, statText(k, v) + mark, font9(9, mark === ' ▲' ? '#5fdc6a' : mark ? '#ff8a8a' : '#c8bfe0')).setOrigin(0.5));
+      });
     };
     side(W / 2 - 54, cur, '지금', '#a89cc8');
     side(W / 2 + 54, item, '주운 것', '#5fdc6a');
@@ -458,7 +465,7 @@ export class Overlay {
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
     c.add(s.add.text(W / 2, 142, s.endless ? `무한의 탑  ·  최고 ${sv.endBest}층` : `${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
     const lines = [
-      ['처치', fmt(r.kills)], ['레벨', 'Lv ' + r.lv], s.endless ? ['넘은 층', `${floors}층`] : ['버틴 정도', Math.round((win ? 1 : s.runProgress()) * 100) + '%'],
+      ['처치', fmt(r.kills)], ['레벨', 'Lv ' + r.lv], s.endless ? ['넘은 층', `${floors}층`] : win ? ['결과', '클리어'] : ['버틴 정도', Math.round(s.runProgress() * 100) + '%'],
     ];
     lines.forEach(([a, b], i) => {
       c.add(s.add.text(50, 166 + i * 16, a, font9(10, '#a89cc8')));
