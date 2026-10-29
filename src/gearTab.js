@@ -32,9 +32,14 @@ export const GearTab = {
     const subs = [['gear', '장비'], ['pet', '펫'], ['stat', '스탯']];
     subs.forEach(([id, name], i) => {
       const on = this.gearPage === id;
-      const bt = button(this, 50 + i * 85, 50, 78, 22, name, () => { if (this.busy) return; this.gearPage = id; this.invPage = 0; sfx('click'); this.show('gear'); }, { size: 10, color: on ? 0x5a3f8a : 0x2a2440 });
-      b.add(bt);
-      if (id === 'stat' && spFree(sv) > 0) b.add(this.add.circle(50 + i * 85 + 34, 42, 4, 0xff5050));
+      // 아래 무기 버튼 줄과 똑같이 생겨 헷갈렸다: 위는 글자+밑줄 탭으로 구분한다
+      const x = 50 + i * 85, t = this.add.text(x, 50, name, font(12, on ? '#ffffff' : '#8a80a0')).setOrigin(0.5);
+      b.add(t);
+      if (on) b.add(this.add.rectangle(x, 62, 60, 2, 0xffffff));
+      const hit = this.add.rectangle(x, 52, 80, 28, 0, 0).setInteractive({ useHandCursor: true });
+      hit.on('pointerup', () => { if (this.busy) return; this.gearPage = id; this.invPage = 0; sfx('click'); this.show('gear'); });
+      b.add(hit);
+      if (id === 'stat' && spFree(sv) > 0) b.add(this.add.circle(x + t.width / 2 + 6, 45, 3, 0xff5050));
     });
     if (this.gearPage === 'pet') return this.petPage();
     if (this.gearPage === 'stat') return this.statPage();
@@ -47,42 +52,41 @@ export const GearTab = {
     // 무기 종류
     WTYPES.forEach((w, i) => {
       const open = sv.cleared >= w.unlock, on = sv.wtype === w.id;
-      const bt = button(this, 50 + i * 85, 78, 78, 20, open ? w.name : `🔒 ${w.name}`, () => {
+      const bt = button(this, 50 + i * 85, 82, 78, 22, open ? w.name : `🔒 ${w.name}`, () => {
         if (this.busy) return;
         if (!open) { sfx('deny'); toast(this, `${w.hint} 열린다`, '#ff9a8a'); return; }
         sv.wtype = w.id; save(); sfx('buy'); track('wtype_set', { wtype: w.id }); this.show('gear');
         toast(this, `${w.name}: ${w.desc}`, '#ffd75e');
-      }, { size: 10, color: on ? 0x7a5a1a : open ? 0x2f2a44 : 0x1a1726 });
+      }, { size: 10, color: on ? 0x5a3f8a : open ? 0x2a2440 : 0x1a1726 });
       b.add(bt);
     });
     const wt = WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
-    b.add(this.add.text(W / 2, 96, `${wt.desc} · 전용 스킬 「${D.SKILLS[wt.own].name}」`, font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 101, `${wt.desc}. 전용 스킬 「${D.SKILLS[wt.own].name}」`, font9(10, '#a89cc8')).setOrigin(0.5));
     // 낀 장비 5칸
     SLOTS.forEach((sl, i) => {
-      const x = 31 + i * 52, y = 126, u = sv.eq?.[sl.id], it = u && sv.inv.find(v => v.u === u);
+      const x = 31 + i * 52, y = 132, u = sv.eq?.[sl.id], it = u && sv.inv.find(v => v.u === u);
       if (it) {
         const box = itemBox(this, x, y, it, 38); b.add(box);
         box.setInteractive({ useHandCursor: true }).on('pointerup', () => !this.busy && this.itemWin(it));
       } else {
         b.add(this.add.rectangle(x, y, 38, 38, 0x0d0a14).setStrokeStyle(1, 0x3a3450));
-        b.add(this.add.text(x, y, '빈칸', font9(9, '#5a5070')).setOrigin(0.5));
       }
-      b.add(this.add.text(x, y + 25, sl.name, font9(9, '#8a80a0')).setOrigin(0.5));
+      b.add(this.add.text(x, y + 25, sl.name, font9(10, '#a89cc8')).setOrigin(0.5));
     });
     // 합친 효과
     const parts = Object.keys(STATS).filter(k => g[k] > 0.0005).map(k => `${SHORT[k]} +${STATS[k].pct ? Math.round(g[k] * 100) + '%' : g[k].toFixed(1)}`);
-    b.add(this.add.text(W / 2, 164, parts.length ? parts.join('  ') : '장비를 끼면 능력치가 오른다', { ...font9(9, '#e8e2f8'), align: 'center', wordWrap: { width: W - 20 } }).setOrigin(0.5, 0));
+    b.add(this.add.text(W / 2, 170, parts.length ? parts.join('  ') : '장비를 끼면 능력치가 오른다', { ...font9(9, '#e8e2f8'), align: 'center', wordWrap: { width: W - 20 } }).setOrigin(0.5, 0));
     const setLine = Object.entries(g.sets).map(([k, n]) => `${SETS[k].name} ${n}/4${n >= 4 ? ' ★' : n >= 2 ? ' ☆' : ''}`).join('  ');
-    if (setLine) b.add(this.add.text(W / 2, 192, setLine, font9(9, '#ffb050')).setOrigin(0.5, 0));
+    if (setLine) b.add(this.add.text(W / 2, 194, setLine, font9(9, '#ffb050')).setOrigin(0.5, 0));
     // 가방
     const on = new Set(Object.values(sv.eq || {}));
     const inv = (sv.inv || []).slice().sort((a, c) => (on.has(c.u) - on.has(a.u)) || (c.r - a.r) || (itemScore(c) - itemScore(a)));
     const pages = Math.max(1, Math.ceil(inv.length / PAGE));
     this.invPage = Math.min(this.invPage || 0, pages - 1);
-    b.add(this.add.text(14, 206, `장비 가방 ${inv.length}/${INV_MAX}`, font(10, '#ffd75e')));
+    b.add(this.add.text(14, 206, `장비 가방 ${inv.length}/${INV_MAX}`, font(10)));
     const toStat = () => { if (this.busy) return; sfx('click'); track('sp_hint_go'); this.gearPage = 'stat'; this.show('gear'); };
     if (!inv.length) {
-      b.add(this.add.text(W / 2, 252, '스테이지를 깨거나\n정예·보물 고블린을 잡으면 장비가 나온다\n빈 칸에는 자동으로 낀다', { ...font(11, '#c8bfe0'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
+      b.add(this.add.text(W / 2, 258, '스테이지를 깨면 장비가 나온다\n빈 칸에는 알아서 낀다', { ...font9(11, '#c8bfe0'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
       // 탭의 빨간 점 = 찍을 스탯 포인트. 비었을 땐 가운데 버튼으로 바로 보낸다
       if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x3b2f5c }));
       b.add(button(this, W / 2, spFree(sv) > 0 ? 334 : 310, 170, 26, '장비 얻으러 전투하기 →', () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
@@ -107,8 +111,9 @@ export const GearTab = {
       sv.inv = sv.inv.filter(it => !junk.includes(it)); sv.stone += st; save();
       track('gear_salvage_all', { n: junk.length, stone: st });
       sfx('coin'); this.refreshTop(); this.bump(1); toast(this, `강화석 +${st}`, '#9ae0ff'); this.show('gear');
-    }, { size: 9, color: 0x5a3a2a });
-    sb.setEnabled(junk.length > 0); b.add(sb);
+    }, { size: 9, color: 0x3b2f5c });
+    // 빈 가방엔 분해 버튼을 안 둔다(탭 몸통에 안 넣으면 다른 탭까지 남는다: 바로 지운다)
+    sb.setEnabled(junk.length > 0); if (inv.length) b.add(sb); else sb.destroy();
   },
 
   // 장비 한 개 창: 옵션, 낀 것과 비교, 끼기·빼기·분해

@@ -217,11 +217,12 @@ export class Battle extends Phaser.Scene {
     this.xpBar = sf(this.add.rectangle(0, 0, 0, 4, 0x6fd3ff).setOrigin(0));
     sf(panel(this, 4, 7, 104, 20));
     this.add.text(9, 12, 'HP', font(9, '#ff6b6b')).setScrollFactor(0).setDepth(d);
-    sf(this.add.rectangle(26, 13, 76, 8, 0x3a1014).setOrigin(0));
-    this.hpLag = sf(this.add.rectangle(26, 13, 76, 8, 0xffffff).setOrigin(0));
-    this.hpBar = sf(this.add.rectangle(26, 13, 76, 8, 0xe8343a).setOrigin(0));
+    // 막대를 글자 높이만큼 키워 숫자가 막대 안에 들어가게 한다(8px 막대 위에 10px 글자가 걸쳐 지저분했다)
+    sf(this.add.rectangle(26, 10, 76, 14, 0x3a1014).setOrigin(0));
+    this.hpLag = sf(this.add.rectangle(26, 10, 76, 14, 0xffffff, 0.5).setOrigin(0));
+    this.hpBar = sf(this.add.rectangle(26, 10, 76, 14, 0xc8303a).setOrigin(0));
     this.hpTxt = sf(this.add.text(64, 17, '', font(10)).setOrigin(0.5));
-    this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#6fd3ff')));
+    this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#d8d2e8')));
     this.comboTxt = sf(this.add.text(W - 8, 46, '', font(12, '#ffb347')).setOrigin(1, 0.5).setAlpha(0));
     this.timeTxt = sf(this.add.text(W / 2, 16, '', font(14)).setOrigin(0.5));
     this.waveTxt = sf(this.add.text(W / 2, 31, '', font(9, '#c8bfe0')).setOrigin(0.5));
@@ -983,7 +984,7 @@ export class Battle extends Phaser.Scene {
     const f = Math.max(0, this.hp / this.maxHp);
     this.hpBar.width = 76 * f;
     this.hpLag.width += (76 * f - this.hpLag.width) * 0.06;
-    this.hpTxt.setText(`${Math.ceil(Math.max(0, this.hp))} / ${Math.round(this.maxHp)}`);
+    this.hpTxt.setText(`${Math.ceil(Math.max(0, this.hp))}/${Math.round(this.maxHp)}`);
     if (this.bossPhase) { this.timeTxt.setText('보스'); this.waveTxt.setText(''); }
     else {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));

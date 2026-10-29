@@ -695,31 +695,28 @@ export class Lobby extends Phaser.Scene {
   // ── 훈련 탭 ──
   trainTab() {
     const sv = this.sv, b = this.body;
-    b.add(this.add.text(W / 2, 52, '훈련장', font(15, '#ffd75e')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 70, `금화로 영원히 강해진다 · ★${D.TRAIN_MILE}레벨마다 1단계 덤`, font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 52, '훈련장', font(15)).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 70, `금화로 영원히 강해진다. ${D.TRAIN_MILE}레벨마다 한 단계 덤`, font9(10, '#a89cc8')).setOrigin(0.5));
+    // 한 줄에 이름·레벨 / 설명·지금 효과 두 덩어리만(Lv·효과·★·설명이 한 줄에 다 있어 빽빽했다)
     D.TRAINING.forEach((t, i) => {
       const lv = sv.train[t.id] || 0, max = lv >= t.max, cost = D.trainCost(t, lv);
       const y = 84 + i * 40;
       b.add(panel(this, 12, y, W - 24, 36, { fill: 0x1a1528 }));
-      b.add(this.add.text(22, y + 5, t.name, font(11)));
-      b.add(this.add.text(70, y + 7, `Lv ${lv}/${t.max}`, font9(10, max ? '#ffd75e' : '#a89cc8')));
-      const tvv = D.trainVal(t, lv), val = t.unit === '%' ? `+${Math.round(tvv * 100)}%` : t.unit === '회' ? (lv ? '있음' : '없음') : `+${tvv.toFixed(1)}`;
-      const nextMile = t.max >= D.TRAIN_MILE && !max ? (Math.floor(lv / D.TRAIN_MILE) + 1) * D.TRAIN_MILE : 0;
-      if (nextMile) b.add(this.add.text(W - 92, y + 7, `★Lv${nextMile}`, font9(10, lv % D.TRAIN_MILE === D.TRAIN_MILE - 1 ? '#ffd75e' : '#8a80a0')).setOrigin(1, 0));
-      b.add(this.add.text(118, y + 7, val, font9(10, '#ffd75e')));
-      b.add(this.add.text(22, y + 20, t.desc, font9(10, '#e8e2f8')));
+      const nm = this.add.text(22, y + 5, t.name, font(11)); b.add(nm);
+      const mile = t.max >= D.TRAIN_MILE && !max && lv % D.TRAIN_MILE === D.TRAIN_MILE - 1;
+      b.add(this.add.text(28 + nm.width, y + 6, max ? `Lv ${lv} 최대` : `Lv ${lv}${mile ? ' (다음에 덤)' : ''}`, font9(10, mile ? '#ffd75e' : '#a89cc8')));
+      const tvv = D.trainVal(t, lv), val = !lv ? '' : t.unit === '%' ? ` +${Math.round(tvv * 100)}%` : t.unit === '회' ? '' : ` +${tvv.toFixed(1)}`;
+      b.add(this.add.text(22, y + 20, t.desc + val, font9(10, '#c8bfe0')));
       const btn = button(this, W - 52, y + 18, 70, 26, max ? '최대' : fmt(cost), () => {
         if (sv.gold < cost || max) return;
         sv.gold -= cost; sv.train[t.id] = lv + 1; save();
         track('train', { stat: t.id, lv: lv + 1, cost, power: D.powerOf(sv) });
         sfx('buy'); this.refreshTop(); this.bump(0);
         this.show('train');
-      }, { size: 10, color: 0x7a5a1a });
+      }, { size: 10, color: 0x3b2f5c });
       btn.setEnabled(!max && sv.gold >= cost);
       b.add(btn);
     });
-    const st = sv.stats;
-    b.add(this.add.text(W / 2, 422, `출전 ${st.runs}  ·  처치 ${fmt(st.kills)}  ·  파괴 ${st.destroyed}`, font9(10, '#6a6080')).setOrigin(0.5, 1));
   }
 
   update() { if (this.topTxt) this.topTxt.forEach(t => { const v = t.get(); if (t.text !== String(v)) t.setText(v); }); }

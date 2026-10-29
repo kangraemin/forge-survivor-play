@@ -89,20 +89,20 @@ export class Overlay {
     // 주인공 머리 위로 빛기둥
     const pil = s.add.sprite(s.hero.x, s.hero.y + 20, 'fx2_r2s').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH - 1).setTint(0x9ad8ff).play('fxPillar');
     pil.once('animationcomplete', () => pil.destroy());
-    c.add(s.add.text(W / 2, 100, 'LEVEL UP!', font(20, '#6fd3ff')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 100, `레벨 ${s.run.lv}`, font(18, '#ffffff')).setOrigin(0.5));
     // 처음 하는 사람에게는 같은 자리에서 고르는 법을 알려 준다(카드와 겹치지 않게)
     const firstLv = s.sv.stats.runs <= 1 && s.run.lv === 2;
-    c.add(s.add.text(W / 2, 122, firstLv ? '▼ 아래 카드 하나를 눌러 고르세요' : `Lv ${s.run.lv}  ·  스킬을 하나 고르세요`, font9(11, firstLv ? '#ffffff' : '#d8d2e8')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 122, firstLv ? '▼ 아래 카드 하나를 눌러 고르세요' : '스킬 하나를 고르세요', font9(11, firstLv ? '#ffffff' : '#c8bfe0')).setOrigin(0.5));
     const cards = s.add.container(0, 0); c.add(cards);
     const draw = () => {
       cards.removeAll(true);
       this.choices().forEach((k, i) => cards.add(this.card(k, W / 2, 172 + i * 78, i)));
-      // 다시 뽑기와 헷갈렸다(설명을 듣고도 몰랐다): 카드의 '빼기'는 그 카드만, 아래 버튼은 3장 전부
-      banTxt.setText(`빼기: 그 카드만 바꾸고 이번 판엔 다시 안 나옴 · ${r.banLeft > 0 ? `무료 ${r.banLeft}번` : `보석 ${D.BAN_GEM}`}`);
+      // 다시 뽑기와 헷갈렸다: 카드의 '빼기'는 그 카드만 바꾼다고 짧게 적는다(긴 설명은 화면 밖으로 넘쳤다)
+      banTxt.setText(r.banLeft > 0 ? `빼기는 그 카드만 바꾼다 · 남은 ${r.banLeft}번` : `빼기는 그 카드만 바꾼다 · 보석 ${D.BAN_GEM}`);
     };
     const r = s.run;
     if (r.banLeft === undefined) r.banLeft = D.BANISH_PER_RUN;
-    const banTxt = s.add.text(W / 2, 436, '', font9(10, '#c8bfe0')).setOrigin(0.5); c.add(banTxt);
+    const banTxt = s.add.text(W / 2, 438, '', font9(10, '#a89cc8')).setOrigin(0.5); c.add(banTxt);
     this.redraw = draw;
     draw();
     // 처음 하는 사람: 첫 레벨업 카드를 반짝여 고르는 곳을 알려 준다
@@ -129,7 +129,7 @@ export class Overlay {
     c.add(rb);
     // '은화 0'만 있으면 무슨 숫자인지 몰랐다: 가진 은화·보석을 같이 보여 준다
     const ownTxt = () => `가진 은화 ${r.silver}  ·  보석 ${s.sv.gem}`;
-    const own = s.add.text(W / 2, 420, ownTxt(), font9(11, '#e8eef8')).setOrigin(0.5); c.add(own);
+    const own = s.add.text(W / 2, 422, ownTxt(), font9(11, '#e8eef8')).setOrigin(0.5); c.add(own);
     this.lvOwn = () => own.active && own.setText(ownTxt());
     if (s.bot) s.time.delayedCall(150, () => this.pick(cards.list[0]?.key));
   }
@@ -144,29 +144,30 @@ export class Overlay {
     const isAct = def?.type === 'active';
     const firstRun = s.sv.stats.runs <= 1;
     const banGem = s.run.banLeft <= 0, canBan = !special && (!banGem || s.sv.gem >= D.BAN_GEM) && !(firstRun && s.run.lv === 2);
-    c.add(panel(s, -115, -35, 230, 70, { fill: lv ? 0x241d38 : 0x1c1830, line: isAct ? 0x6fd3ff : 0xffd75e }));
-    c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(1, isAct ? 0x6fd3ff : 0xffd75e, 0.6));
+    // 카드는 한 가지 틀: 공격/보조 구분은 이름 옆 작은 글로만 한다(테두리 색이 두 가지라 어지러웠다)
+    c.add(panel(s, -115, -35, 230, 70, { fill: 0x1c1830, line: 0x4a4068 }));
+    c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4));
     c.add(special ? icon(s, -88, 0, k === '_heal' ? 14 : 12, 32) : skillIcon(s, -88, 0, def, 32));
     // 기본 공격 이름은 든 무기를 따른다(창 찌르기·도끼 찍기)
     const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : k === 'sword' ? { sword: def.name, spear: '창 찌르기', axe: '도끼 찍기' }[s.wtype.id] : def.name;
-    c.add(s.add.text(-60, -24, name, font(12, isAct ? '#9ae0ff' : '#ffe08a')));
-    c.add(s.add.text(canBan ? 72 : 108, -24, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(11, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
+    const nm = s.add.text(-60, -24, name, font(12, '#ffffff')); c.add(nm);
+    if (!special) c.add(s.add.text(-60 + nm.width + 5, -23, lv ? `Lv ${lv}→${lv + 1}` : isAct ? '공격' : '보조', font9(10, '#a89cc8')));
     let desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
     if (def?.bonus && lv + 1 === D.PASSIVE_LV3) desc += `\n+ Lv3 보너스: ${def.bonus}`;
-    c.add(s.add.text(-60, -6, desc, { ...font9(11, '#e8e2f8'), wordWrap: { width: 165 } }).setLineSpacing(1));
+    c.add(s.add.text(-60, -6, desc, { ...font9(11, '#d8d2e8'), wordWrap: { width: 165 } }).setLineSpacing(1));
     // 레벨 칸
-    if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 26, 7, 4, j < lv ? 0xffd75e : j === lv ? 0x5fdc6a : 0x3a3450).setOrigin(0, 0.5));
+    if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 26, 7, 4, j < lv ? 0xd8d2e8 : j === lv ? 0x5fdc6a : 0x3a3450).setOrigin(0, 0.5));
     // 진화 재료 표시: 이 스킬이 다른 스킬의 진화에 쓰이면 짝을 알려 준다
     const evoOf = special ? null : def.type === 'active' ? D.EVOS[k] && D.SKILLS[D.EVOS[k].need].name : Object.keys(D.EVOS).filter(b => D.EVOS[b].need === k).map(b => D.SKILLS[b].name).join('·');
-    if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(evoOf.length > 6 ? 10 : 11, '#e0b060')).setOrigin(1, 0.5));
+    if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(10, '#a89cc8')).setOrigin(1, 0.5));
     c.setSize(230, 70).setInteractive({ useHandCursor: true });
     onTap(c, () => this.pick(k, c));
     // 추방: 이번 판에서 다시 안 나온다(첫 레벨업에는 숨김)
     if (canBan) {
       // 카드 오른쪽 위 모서리에 '빼기'라고 글로 붙인다(X만 있으면 다시 뽑기와 구분이 안 됐다)
-      const x = s.add.container(98, -24);
-      x.add(s.add.rectangle(0, 0, 36, 20, 0x2a0e16, 0.9).setStrokeStyle(1, 0xc06070));
-      x.add(s.add.text(banGem ? 4 : 0, 0, banGem ? `빼기${D.BAN_GEM}` : '빼기', font9(10, '#ff9aa8')).setOrigin(0.5));
+      const x = s.add.container(96, -22);
+      x.add(s.add.rectangle(0, 0, 38, 22, 0x2c2640, 1).setStrokeStyle(1, 0x5a5078));
+      x.add(s.add.text(banGem ? 4 : 0, 0, banGem ? `빼기${D.BAN_GEM}` : '빼기', font9(10, '#c8bfe0')).setOrigin(0.5));
       if (banGem) x.add(gemIcon(s, -13, 0, 8));
       x.setSize(42, 24).setInteractive({ useHandCursor: true });
       onTap(x, (p, lx, ly, ev) => {
@@ -474,41 +475,42 @@ export class Overlay {
     const title = s.add.text(W / 2, 118, s.endless ? (floors > best ? '최고 기록!' : '탑 도전 끝') : win ? (s.isBoss ? '보스 격파!' : '스테이지 클리어!') : '쓰러졌다…', font(18, win || (s.endless && floors > best) ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
     c.add(s.add.text(W / 2, 142, s.endless ? `무한의 탑  ·  최고 ${sv.endBest}층` : `${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
-    const lines = [
-      ['처치', fmt(r.kills)], ['레벨', 'Lv ' + r.lv], s.endless ? ['넘은 층', `${floors}층`] : win ? ['결과', '클리어'] : ['버틴 정도', Math.round(s.runProgress() * 100) + '%'],
-    ];
+    // 판 기록은 한 줄 칸으로(이름·값 세 줄이 보상 목록과 섞여 빽빽했다)
+    const lines = [['처치', fmt(r.kills)], ['레벨', String(r.lv)]];
+    if (s.endless) lines.push(['넘은 층', `${floors}층`]); else if (!win) lines.push(['버틴 정도', Math.round(s.runProgress() * 100) + '%']);
     lines.forEach(([a, b], i) => {
-      c.add(s.add.text(50, 166 + i * 16, a, font9(10, '#a89cc8')));
-      c.add(s.add.text(W - 50, 166 + i * 16, b, font(10)).setOrigin(1, 0));
+      const x = W / 2 + (i - (lines.length - 1) / 2) * 70;
+      c.add(s.add.text(x, 164, a, font9(10, '#a89cc8')).setOrigin(0.5));
+      c.add(s.add.text(x, 180, b, font(13)).setOrigin(0.5));
     });
-    c.add(s.add.rectangle(W / 2, 220, W - 80, 1, 0x5b4f7a));
+    c.add(s.add.rectangle(W / 2, 198, W - 80, 1, 0x3a3450));
     const rew = [[12, '금화', gold], [13, '강화석', stone]];
-    if (guard) rew.push([11, '파괴 방지권', guard]);
+    if (guard) rew.push([11, '방지권', guard]);
     if (sweep) rew.push([15, '소탕권', sweep]);
     if (charm) rew.push([7, '행운 부적', charm]);
     if (gem) rew.push([-1, '보석', gem]);
     const tx = [];
-    const gap = rew.length >= 5 ? 13 : 16;   // 보스 보상은 줄이 많아 좁혀야 광고 버튼에 안 겹친다
+    // 보상은 두 칸 격자(한 줄씩 쌓으면 보스 보상 6줄이 겹쳤다)
     rew.forEach(([ic, name, n], i) => {
-      const y = 228 + i * gap;
-      c.add(ic < 0 ? gemIcon(s, 58, y, 14) : icon(s, 58, y, ic, 18));
-      c.add(s.add.text(74, y - 7, name, font(11)));
-      const t = s.add.text(W - 50, y - 7, '+0', font(12, '#ffd75e')).setOrigin(1, 0); c.add(t); tx.push(t);
+      const x = i % 2 ? 146 : 38, y = 214 + Math.floor(i / 2) * 22;
+      c.add(ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
+      c.add(s.add.text(x + 20, y, name, font9(10, '#c8bfe0')).setOrigin(0, 0.5));
+      const t = s.add.text(x + 88, y, '+0', font(12)).setOrigin(1, 0.5); c.add(t); tx.push(t);
       const o = { v: 0 };
       s.tweens.add({ targets: o, v: n, duration: 350, delay: 150 + i * 80, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
     });
     // 졌으면 무엇이 모자랐는지 숫자로 보여 준다
     if (!win && !s.endless) {
       const pw = D.powerOf(sv), rp = D.recPower(s.c, s.s);
-      c.add(s.add.text(W / 2, 294, `내 전투력 ${pw}  ·  권장 ${rp}`, font(11, D.powerCol(pw, rp, s.s))).setOrigin(0.5));
-      c.add(pw >= rp ? s.add.text(W / 2, 310, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#c8bfe0')).setOrigin(0.5) : s.add.text(W / 2, 310, `권장까지 ${rp - pw} 부족 · 강화·훈련하자`, font(12, '#ffb070')).setOrigin(0.5));
+      c.add(s.add.text(W / 2, 266, `내 전투력 ${pw} / 권장 ${rp}`, font(11, D.powerCol(pw, rp, s.s))).setOrigin(0.5));
+      c.add(pw >= rp ? s.add.text(W / 2, 282, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#c8bfe0')).setOrigin(0.5) : s.add.text(W / 2, 282, `권장까지 ${rp - pw} 모자란다. 강화하자`, font9(11, '#e8e2f8')).setOrigin(0.5));
     }
     // 자랑하기: 이겼거나 탑 기록을 넘으면 공유(친구가 들어올 길이 없었다). 하루 한 번 보석
     const brag = !s.bot && (win || (s.endless && floors > best));
     if (brag) {
       const gift = sv.shareDay !== sv.day;
-      // 광고 버튼 옆에서 묻혀서 한 줄을 통째로 쓰고 반짝인다
-      const sb = button(s, W / 2, 329, 190, 22, gift ? `자랑하기 보석+${D.SHARE_GEM}` : '자랑하기', async () => {
+      // 광고 버튼 아래 한 줄. 강조색은 주 버튼 하나만 쓴다(주황·파랑·초록이 한 창에 다 있었다)
+      const sb = button(s, W / 2, 316, 190, 24, gift ? `자랑하기 보석+${D.SHARE_GEM}` : '자랑하기', async () => {
         const msg = s.endless ? `무한의 탑 ${floors}층 돌파!` : `${s.isBoss ? D.BOSSES[s.ch.boss].name + ' 격파! ' : ''}${s.c + 1}-${s.s + 1} 클리어`;
         const text = `${msg} 내 칼은 ${D.TIERS[sv.tier].name} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
         let ok = false;
@@ -518,13 +520,12 @@ export class Overlay {
         } catch { /* 공유 창을 닫았다 */ }
         s.log('share', { ok, boss: !!s.isBoss, endless: !!s.endless });
         if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += D.SHARE_GEM; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
-      }, { size: 11, color: 0xc0702a });
+      }, { size: 11, color: 0x3b2f5c });
       c.add(sb);
-      s.tweens.add({ targets: sb, scale: 1.05, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
-      const db = button(s, W / 2, brag ? 304 : 330, 190, brag ? 18 : 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
+      const db = button(s, W / 2, brag ? 288 : 310, 190, 24, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         s.log('double_reward', { ok, gold, stone });
@@ -534,29 +535,29 @@ export class Overlay {
         tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
         [tx[0], tx[1]].forEach(t => s.tweens.add({ targets: t, scale: 1.4, duration: 120, yoyo: true }));
         sfx('coin'); db.label.setText('2배 받았다!');
-      }, { size: 10, color: 0x2f5a7a });
+      }, { size: 11, color: 0x3b2f5c });
       c.add(db);
     }
     // 얻은 장비 줄(판 안, 버튼 위). 빈 부위는 알아서 끼워졌다
-    c.add(s.add.rectangle(W / 2, 344, W - 80, 1, 0x5b4f7a));
+    c.add(s.add.rectangle(W / 2, 336, W - 80, 1, 0x3a3450));
     const egg = loot.find(it => it.egg), top = loot.reduce((a, it) => Math.max(a, it.r < 4 ? it.r : -1), -1);
     // 장 보스를 처음 잡으면 새 무기가 열린다(장마다 받는 큰 보상)
     const wNew = first && s.isBoss && WTYPES.find(w => w.unlock === sv.cleared);
-    const head = wNew ? `새 무기 「${wNew.name}」 획득! · 장비 탭에서 바꾸자` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개 → 장비 가방${salvaged ? ` · 가득 차 강화석 +${salvaged}` : ''}` : '';
-    if (head) c.add(s.add.text(W / 2, 356, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
+    const head = wNew ? `새 무기 「${wNew.name}」 획득!` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
+    if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
     const n = Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);
     loot.slice(0, n).forEach((it, i) => {
-      const box = itemBox(s, x0 + i * 30, 382, it, 26);
+      const box = itemBox(s, x0 + i * 30, 376, it, 26);
       c.add(box); box.setScale(0);
       s.tweens.add({ targets: box, scale: 1, duration: 220, delay: 450 + i * 90, ease: 'Back.Out', onStart: () => it.r >= 2 && sfx('level') });
     });
-    if (loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 382, `+${loot.length - n}`, font(10, '#c8bfe0')).setOrigin(0, 0.5));
+    if (loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#c8bfe0')).setOrigin(0, 0.5));
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
     // 이겼으면 다음 스테이지가 주인공(로비는 작게)
     const fw = win || s.endless;
     // 장 보스를 잡으면 다음 장이 확 세지니 대장간 정비가 주인공이다
     if (win && s.isBoss && !s.endless && sv.cleared <= nextIdx) {
-      c.add(button(s, 172, 424, 160, 34, '대장간에서 정비 ▶', () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0xc0702a }));
+      c.add(button(s, 172, 424, 160, 34, '대장간에서 정비 ▶', () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0x2f6b3a }));
       c.add(button(s, 52, 424, 72, 26, '다음 장', () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, bot: s.bot }); }, { color: 0x3b2f5c }));
       s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
       return;
