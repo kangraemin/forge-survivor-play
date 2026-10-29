@@ -23,6 +23,8 @@ export class Lobby extends Phaser.Scene {
   get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
 
   create() {
+    // 전투가 멈춘 채 끝났어도 로비 애니메이션은 돌아야 한다(애니메이션 관리자는 장면끼리 공유)
+    this.anims.resumeAll(); this.anims.globalTimeScale = 1;
     this.sv = load();
     const sv = this.sv;
     setSound(sv.sound);
@@ -383,8 +385,10 @@ export class Lobby extends Phaser.Scene {
     }
     // 모루 위의 칼
     const halo = this.halo = this.add.image(W / 2, 170, 'disc').setScale(1.6).setTint(enh >= 10 ? 0xffd75e : 0x9ad8ff).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD);
-    this.sword = icon(this, W / 2, 168, t.icon, 72);
-    if (t.tint) this.sword.setTint?.(t.tint);
+    // 강화할수록 칼이 커지고 빛깔이 물든다(+5 푸른, +10 주황, +15 보라)
+    this.sword = icon(this, W / 2, 168, t.icon, 72 * (1 + Math.min(enh, 20) * 0.012));
+    const et = enh >= 15 ? 0xf0c0ff : enh >= 10 ? 0xffd8b0 : enh >= 5 ? 0xd0f0ff : 0;
+    if (t.tint) this.sword.setTint?.(t.tint); else if (et) this.sword.setTint?.(et);
     this.tweens.add({ targets: this.sword, y: 162, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     this.hammer = this.add.image(W / 2 + 54, 130, 'hammer').setScale(2.2).setOrigin(0.5, 0.9).setAngle(30);
     b.add([halo, this.sword, this.hammer]);

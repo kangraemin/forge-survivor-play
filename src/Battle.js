@@ -79,6 +79,9 @@ export class Battle extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE');
     this.keys.SPACE.on('down', () => this.ult());
 
+    // 애니메이션 관리자는 판끼리 공유된다: 지난 판이 멈춤(히트스톱·보스 처치) 중에 끝났으면 멈춘 채 넘어와
+    // 첫 베기 궤적이 끝나지 않고 잔상으로 남는다 → 판을 시작할 때 늘 풀어 준다
+    this.anims.resumeAll(); this.anims.globalTimeScale = 1;
     if (this.speed !== 1) {
       this.physics.world.timeScale = 1 / this.speed; this.time.timeScale = this.speed;
       this.tweens.timeScale = this.speed; this.anims.globalTimeScale = this.speed;
@@ -162,7 +165,10 @@ export class Battle extends Phaser.Scene {
     this.hero.setCollideWorldBounds(true);
     this.heroShadow = this.add.image(0, 0, 'shadow').setScale(1.6, 1.4);
     // 몹 떼 속에서도 내 캐릭터가 바로 보이게 발밑에 밝은 고리
-    this.heroRing = this.add.ellipse(0, 0, 24, 10, 0x9ae6ff, 0.18).setStrokeStyle(2, 0x9ae6ff, 1).setDepth(9);
+    // 고리 색은 강화 단계를 따른다(+5 파랑, +10 주황, +15 보라). +10부터는 몸에도 빛이 돈다
+    const rc = sv.enh >= 15 ? 0xd06bff : sv.enh >= 10 ? 0xff8a2a : sv.enh >= 5 ? 0x5fc8ff : 0x9ae6ff;
+    this.heroRing = this.add.ellipse(0, 0, 24, 10, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(9);
+    if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
     this.face = 1; this.walkT = 0; this.iframe = 0;
     this.atk = D.weaponAtk(sv.tier, sv.enh);
   }
