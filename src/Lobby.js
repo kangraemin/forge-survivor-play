@@ -327,34 +327,40 @@ export class Lobby extends Phaser.Scene {
       t.on('pointerup', () => { sfx('click'); this.tower = true; track('tower_open', { best: sv.endBest || 0 }); this.show('battle'); });
       b.add(t);
     } else arrow(W - 22, 1, c < unlockedC);
-    // 지역 미리보기: 몹 세 마리와 보스, 아래에 보스까지 몇 판
+    // 무기가 주인공: 성채 그림 위에 지금 든 무기와 강화 단계를 크게 세운다(칸과 글자만 빽빽했다)
     const pv = this.add.container(0, 0); b.add(pv);
-    pv.add(panel(this, 12, 70, W - 24, 64, { fill: 0x15111f }));
+    const AY = 68, AH = 138;
+    if (this.textures.exists('lobby_bg')) pv.add(this.add.image(0, AY - 30, 'lobby_bg').setOrigin(0).setCrop(0, 30, W, AH));
+    else pv.add(this.add.rectangle(0, AY, W, AH, 0x15111f).setOrigin(0));
+    pv.add(this.add.rectangle(0, AY + AH - 44, W, 44, 0x05030a, 0.55).setOrigin(0));
+    pv.add(this.add.rectangle(0, AY, W, 18, 0x05030a, 0.5).setOrigin(0));
+    const enh = sv.enh, ec = enh >= 15 ? 0xd06bff : enh >= 10 ? 0xff8a2a : enh >= 5 ? 0x5fc8ff : 0x9ad8ff;
+    const halo = this.add.image(W / 2, AY + 46, 'disc').setScale(1.3).setTint(ec).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD);
+    pv.add(halo);
+    this.tweens.add({ targets: halo, scale: 1.3, alpha: 0.18, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    const wpn = weaponIcon(this, W / 2, AY + 46, wtypeOf(sv).id, sv.tier, 70 * (1 + Math.min(enh, 20) * 0.012));
+    pv.add(wpn);
+    this.tweens.add({ targets: wpn, y: wpn.y - 3, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    pv.add(this.add.text(W / 2, AY + 84, `+${enh} ${D.tierName(sv.tier, wtypeOf(sv))}`, font(13, enh >= 15 ? '#e8a0ff' : enh >= 10 ? '#ffd75e' : '#ffffff', 3)).setOrigin(0.5));
+    // 보스는 오른쪽 위 작게, 아래에 보스까지 몇 판
     const fb = this.registry.get('fallback') || {};
-    ch.mobs.forEach((k, i) => {
-      const sp = this.add.sprite(40 + i * 40, 104, null).play(k);
-      sp.setScale(30 / sp.height); if (fb[k]) sp.setTint(D.MOBS[k].color);
-      pv.add(sp);
-    });
-    const bs = this.add.sprite(W - 56, 100, null).play(ch.boss);
-    bs.setScale((fb[ch.boss] ? 38 : 50) / bs.height); if (fb[ch.boss]) bs.setTint(D.BOSSES[ch.boss].color);
+    const bs = this.add.sprite(W - 34, AY + 26, null).play(ch.boss);
+    bs.setScale((fb[ch.boss] ? 26 : 34) / bs.height); if (fb[ch.boss]) bs.setTint(D.BOSSES[ch.boss].color);
     pv.add(bs);
     const bossLeft = c * D.STAGES_PER_CHAPTER + D.STAGES_PER_CHAPTER - 1 - prog;
-    if (sv.title) pv.add(this.add.text(22, 120, `칭호 「${sv.title}」`, font9(10, '#ffb050')));
-    pv.add(this.add.text(W - 56, 129, bossLeft > 0 ? `보스까지 ${bossLeft}판` : bossLeft === 0 ? '보스 도전!' : '보스 격파', font(10, bossLeft < 0 ? '#8a80a0' : '#ff9090', 3)).setOrigin(0.5, 1));
+    pv.add(this.add.text(W - 34, AY + 52, bossLeft > 0 ? `보스까지 ${bossLeft}판` : bossLeft === 0 ? '보스 도전!' : '보스 격파', font(9, bossLeft < 0 ? '#a8a0c0' : '#ff9090', 3)).setOrigin(0.5, 0));
+    if (sv.title) pv.add(this.add.text(10, AY + 4, `「${sv.title}」`, font9(10, '#ffb050', 3)));
     // 돌아올 이유: 자리를 비워도 견습생이 번다(조용한 한 줄)
-    if (sv.cleared >= 1) pv.add(this.add.text(22, 76, `견습생이 시간당 금화 ${fmt(Math.round(D.dunBase(sv).gold * D.IDLE.perH))}를 번다`, font9(10, '#8a80a0')));
-    // 스테이지 3칸: 번호와 한 줄(무엇이 다른지)만. 자세한 건 아래 정보판에
-    const twistOf = s => D.isBossS(s) ? D.BOSSES[ch.boss].name : s === 1 ? '중간 보스' : (vr => vr ? `${D.VARIANTS[vr[1]].pre} ${D.MOB_NAMES[ch.mobs[vr[0]]]}` : '기본 몬스터')(D.stageVariant(c, s));
+    if (sv.cleared >= 1) pv.add(this.add.text(sv.title ? 90 : 10, AY + 4, `견습생 금화 ${fmt(Math.round(D.dunBase(sv).gold * D.IDLE.perH))}/시간`, font9(9, '#d8d0e8', 3)));
+    // 스테이지 3칸: 그림 아래 띠에 작게. 무엇이 다른지는 아래 정보판에
     for (let s = 0; s < D.STAGES_PER_CHAPTER; s++) {
-      const idx = c * D.STAGES_PER_CHAPTER + s, x = 47 + s * 88, y = 172;
+      const idx = c * D.STAGES_PER_CHAPTER + s, x = 47 + s * 88, y = AY + AH - 20;
       const locked = idx > prog, done = idx < prog, sel = s === this.selS, boss = D.isBossS(s);
       const g = this.add.container(x, y);
-      g.add(panel(this, -40, -30, 80, 60, { fill: locked ? 0x100d16 : sel ? (hard ? 0x3a1a24 : 0x2e2548) : hard ? 0x22121a : 0x1c1729, line: sel ? 0xffd75e : boss && !locked ? 0xa03848 : 0x3a3150 }));
-      g.add(this.add.text(0, -12, `${c + 1}-${s + 1}`, font(14, locked ? '#4a4060' : '#ffffff')).setOrigin(0.5));
-      g.add(this.add.text(0, 13, locked ? '잠김' : twistOf(s), font9(10, locked ? '#4a4060' : boss ? '#ff9090' : '#c8bfe0')).setOrigin(0.5));
-      if (done) g.add(this.add.text(36, -26, '★', font(9, '#ffd75e')).setOrigin(1, 0));
-      g.setSize(80, 60).setInteractive({ useHandCursor: true });
+      g.add(panel(this, -38, -14, 76, 28, { fill: locked ? 0x100d16 : sel ? (hard ? 0x3a1a24 : 0x2e2548) : hard ? 0x22121a : 0x1c1729, line: sel ? 0xffd75e : boss && !locked ? 0xa03848 : 0x3a3150 }));
+      g.add(this.add.text(0, 0, locked ? '잠김' : `${c + 1}-${s + 1}${boss ? ' 보스' : ''}`, font(11, locked ? '#4a4060' : boss ? '#ff9090' : '#ffffff')).setOrigin(0.5));
+      if (done) g.add(this.add.text(34, -12, '★', font(9, '#ffd75e')).setOrigin(1, 0));
+      g.setSize(76, 28).setInteractive({ useHandCursor: true });
       g.on('pointerup', () => { if (locked) { sfx('deny'); track('locked_stage_tap', { stage: `${c + 1}-${s + 1}` }); toast(this, '앞 스테이지를 먼저 깨야 한다', '#ff9090'); return; } sfx('click'); this.selS = s; track('stage_select', { stage: `${c + 1}-${s + 1}` }); this.show('battle'); });
       b.add(g);
     }

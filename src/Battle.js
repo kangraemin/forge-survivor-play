@@ -292,7 +292,7 @@ export class Battle extends Phaser.Scene {
     this.ultTxt = sf(this.add.text(ux, uy + 28, '궁극기', font(9, '#c8bfe0')).setOrigin(0.5));
     this.ultBase.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.ult());
     this.ultPos = { x: ux, y: uy };
-    this.showUlt = v => [this.ultBase, this.ultFill, this.ultIcon, this.ultTxt].forEach(o => o.setVisible(v));
+    this.showUlt = v => [this.ultBase, this.ultFill, this.ultIcon, this.ultTxt, this.ultTip, this.ultTip?.ring].forEach(o => o?.setVisible(v));
     this.bossBar = null; this.bannerObjs = null;
     this.refreshSkillRow();
   }
@@ -790,6 +790,8 @@ export class Battle extends Phaser.Scene {
     sfx('hurt', 120);
     this.hurtFx.setAlpha(0.3); this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 240 });
     this.cameras.main.shake(90, 0.004);
+    // 폰에서는 짧게 떨어 맞은 걸 손으로도 느끼게 한다(38차: 위험이 안 느껴졌다)
+    try { navigator.vibrate?.(30); } catch (e) {}
     this.hero.setTint(0xff7070); this.time.delayedCall(90, () => this.hero.clearTint());
     this.hurtUntil = this.bt + 160; this.hero.play('hurtPose');
     const t = this.add.text(this.hero.x, this.hero.y - 26, '-' + d, font(10, '#ff5050')).setOrigin(0.5).setDepth(40);
@@ -846,7 +848,7 @@ export class Battle extends Phaser.Scene {
     if (this.paused || this.over || this.run.mana < D.MANA_MAX) return;
     this.run.mana = 0;
     if (!this.sv.tut.ult) { this.sv.tut.ult = true; save(); }
-    if (this.ultTip) { this.tweens.killTweensOf(this.ultTip); this.ultTip.destroy(); }
+    if (this.ultTip) { this.tweens.killTweensOf(this.ultTip); this.ultTip.ring?.destroy(); this.ultTip.destroy(); }
     this.log('ult_use', { boss: !!this.boss, mobs: this.mobs.countActive() });
     this.blast(9, false);
   }
@@ -929,7 +931,7 @@ export class Battle extends Phaser.Scene {
       const early = !this.endless && this.s === 0 && this.bt < 20000 ? 2 : 0;
       this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 5 * f) * (this.dungeon ? 1.6 : 1) / 1000;   // 던전은 잡을 몹이 많아야 한다
       // 화면에 70마리가 넘으면 더 내보내지 않는다(3장에서 89마리까지 쌓여 저사양 폰이 버거웠다)
-      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 25 : 35) : 70)) this.spawn(); }
+      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 25 : 42) : 70)) this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
       if (this.eventAt != null && !this.eventDone && this.progress() >= this.eventAt) { this.eventDone = true; this.surprise(this.eventKind); }
@@ -1139,6 +1141,10 @@ export class Battle extends Phaser.Scene {
     if (full && !this.sv.tut.ult && !this.ultTip) {
       this.ultTip = this.add.text(this.ultPos.x + 20, this.ultPos.y - 40, '궁극기가 찼다! 눌러 봐 ▼', font(10, '#ffd75e')).setOrigin(1, 0.5).setBackgroundColor('#2a1e3a').setPadding(4, 2, 4, 2).setScrollFactor(0).setDepth(101);
       this.tweens.add({ targets: this.ultTip, y: '-=4', duration: 400, yoyo: true, repeat: -1 });
+      // 말풍선만으론 안 눌렀다(38차): 버튼 둘레로 금빛 고리가 계속 퍼진다
+      const ur = this.add.circle(this.ultPos.x, this.ultPos.y, 24).setStrokeStyle(3, 0xffd75e).setScrollFactor(0).setDepth(101);
+      this.tweens.add({ targets: ur, scale: 1.8, alpha: 0, duration: 700, repeat: -1 });
+      this.ultTip.ring = ur;
     }
     this.ultTxt.setText(full ? '눌러서 발동!' : `궁극기 ${Math.floor(mf * 100)}%`).setColor(full ? '#ffd75e' : '#c8bfe0');
     // 조명
