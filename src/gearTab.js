@@ -164,37 +164,36 @@ export const GearTab = {
     c.add(button(this, W - 52, 372, 44, 26, '닫기', () => c.close(), { size: 10 }));
   },
 
-  // ── 펫 ──
+  // ── 펫: 잡은 보스가 작아져 따라온다. 맵마다 잘 듣는 펫이 달라 바꿔 데려간다 ──
   petPage() {
-    const sv = this.sv, b = this.body, g = gearStats(sv);
-    b.add(this.add.text(W / 2, 76, '한 마리를 데려간다 · 금화로 먹이를 주면 세진다', font9(10, '#a89cc8')).setOrigin(0.5));
+    const sv = this.sv, b = this.body, g = gearStats(sv), fb = this.registry.get('fallback') || {};
+    const chN = c => `${c + 1}장`;
+    b.add(this.add.text(W / 2, 74, '한 마리를 데려간다 · 맵마다 잘 듣는 펫이 다르다', font9(10, '#a89cc8')).setOrigin(0.5));
     PETS.forEach((p, i) => {
-      const y = 90 + i * 92, open = sv.cleared >= p.unlock, lv = sv.pets?.[p.id] || 0, on = sv.pet === p.id;
-      b.add(panel(this, 12, y, W - 24, 86, { fill: on ? 0x2e2448 : 0x1a1528, line: on ? 0xffd75e : COLOR.line }));
-      b.add(this.add.circle(42, y + 30, 18, p.color, open ? 0.25 : 0.1).setStrokeStyle(1, p.color, open ? 0.8 : 0.3));
-      // 전투와 같은 모습으로 보여 준다(슬라임·박쥐는 몬스터 그림에 색, 불씨는 불덩이)
-      const anim = { slime: 'slime', bat: 'bat' }[p.id];
-      if (!open) b.add(this.add.text(42, y + 30, '?', font(14)).setOrigin(0.5));
-      else if (anim && this.anims.exists(anim)) b.add(this.add.sprite(42, y + 30, null).play(anim).setScale(0.9).setTint(p.color));
-      else { const f = this.add.image(42, y + 30, 'fireball').setScale(2.6).setBlendMode(Phaser.BlendModes.ADD); b.add(f); this.tweens.add({ targets: f, scale: 3, duration: 400, yoyo: true, repeat: -1 }); }
-      b.add(this.add.text(66, y + 8, open ? `${p.name}  Lv ${lv}` : `??? (${p.hint})`, font(11, open ? '#ffffff' : '#6a6080')));
-      b.add(this.add.text(66, y + 26, open ? p.desc : '스테이지를 더 깨면 만난다', font9(10, open ? '#e8e2f8' : '#5a5070')));
-      if (!open) return;
-      b.add(this.add.text(66, y + 42, `위력 ${Math.round(petPow(lv) * (1 + g.pet) * 100)}%${lv < PET_MAX ? ` → ${Math.round(petPow(lv + 1) * (1 + g.pet) * 100)}%` : ''}`, font9(10, '#ffd75e')));
-      const tb = button(this, 66 + 44, y + 68, 88, 22, on ? '함께하는 중' : '데려가기', () => {
+      const y = 86 + i * 50, open = sv.cleared >= p.unlock, lv = sv.pets?.[p.id] || 0, on = sv.pet === p.id;
+      b.add(panel(this, 12, y, W - 24, 46, { fill: on ? 0x2e2448 : 0x1a1528, line: on ? 0xffd75e : COLOR.line }));
+      // 전투와 같은 모습(보스를 작게)
+      if (!open) b.add(this.add.text(34, y + 23, '?', font(14, '#6a6080')).setOrigin(0.5));
+      else if (this.anims.exists(p.id)) { const sp = this.add.sprite(34, y + 23, null).play(p.id).setScale(fb[p.id] ? 0.8 : 0.36); if (fb[p.id]) sp.setTint(p.color); b.add(sp); }
+      b.add(this.add.text(56, y + 5, open ? `${p.name}  Lv ${lv}` : `??? · ${p.hint}`, font(11, open ? '#ffffff' : '#6a6080')));
+      if (!open) { b.add(this.add.text(56, y + 23, '보스를 잡으면 따라온다', font9(10, '#5a5070'))); return; }
+      b.add(this.add.text(56, y + 20, p.desc, font9(10, '#e8e2f8')));
+      const fit = `강함 ${(p.good || []).map(chN).join('·') || '-'}${p.weak ? `  약함 ${p.weak.map(chN).join('·')}` : ''}`;
+      b.add(this.add.text(56, y + 33, fit, font9(9, '#8fdc8a')));
+      const tb = button(this, W - 50, y + 13, 62, 18, on ? '함께' : '데려가기', () => {
         if (this.busy || on) return;
         sv.pet = p.id; save(); sfx('buy'); track('pet_set', { pet: p.id, lv }); this.show('gear');
-      }, { size: 10, color: on ? 0x3b2f5c : 0x2f6b3a });
+      }, { size: 10, color: on ? 0x3a3846 : 0x2f6b3a });
       tb.setEnabled(!on); b.add(tb);
       const cost = petCost(lv), max = lv >= PET_MAX;
-      const fb = button(this, W - 62, y + 68, 90, 22, max ? '최대' : `먹이 ${fmt(cost)}`, () => {
+      const fbt = button(this, W - 50, y + 34, 62, 18, max ? '최대' : `먹이 ${fmt(cost)}`, () => {
         if (this.busy || max || sv.gold < cost) return;
         sv.gold -= cost; (sv.pets ||= {})[p.id] = lv + 1; save();
         track('pet_feed', { pet: p.id, lv: lv + 1, cost }); sfx('level'); this.refreshTop(); this.bump(0); this.show('gear');
-      }, { size: 10, color: 0x2f6b3a });
-      fb.setEnabled(!max && sv.gold >= cost); b.add(fb);
+      }, { size: 10 });
+      fbt.setEnabled(!max && sv.gold >= cost); b.add(fbt);
     });
-    b.add(this.add.text(W / 2, 372, `펫 목걸이(장비)를 끼면 펫 피해가 오른다 · 지금 +${Math.round(g.pet * 100)}%`, font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 392, `맞는 맵이면 효과 ×1.8 · 받는 피해 -20%  ·  펫 목걸이 +${Math.round(g.pet * 100)}%`, font9(9, '#a89cc8')).setOrigin(0.5));
   },
 
   // ── 스탯: 스테이지를 처음 깰 때 점수를 받아 찍는다 ──

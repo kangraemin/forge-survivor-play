@@ -116,11 +116,20 @@ export const spReq = idx => { const e = Math.round(spTotal(idx) * SP_INVEST); re
 export const SP_RESET_GEM = 50;
 
 // ── 펫: 깬 스테이지 수로 열린다. 금화로 키우고 목걸이를 끼워 준다 ──
+// 보스를 처음 잡으면 그 보스를 작게 만든 펫이 따라온다. 장(맵)마다 잘 듣는 펫이 달라 처음 받은 펫도 뒷 장에서 다시 쓴다
+// good: 그 장에서 효과 ×1.8 + 주인공 받는 피해 -20%, weak: 그 장에서 효과 ×0.6 (장 번호는 0부터)
 export const PETS = [
-  { id: 'fire', name: '불씨 정령', desc: '가까운 적에게 불꽃을 쏜다', unlock: 2, hint: '1-2를 깨면', color: 0xff8a3a },
-  { id: 'slime', name: '수호 슬라임', desc: '7초마다 체력을 채우고 주변을 밀친다', unlock: 5, hint: '2-2를 깨면', color: 0x6fe08a },
-  { id: 'bat', name: '황금 박쥐', desc: '주변 적을 물고 은화를 더 줍게 한다', unlock: 8, hint: '3-2를 깨면', color: 0xffd75e },
+  { id: 'general', name: '해골 장군', desc: '방패로 한 대를 막아 준다', unlock: 2, hint: '1-2 중간 보스', color: 0xe8e2c8, good: [2] },
+  { id: 'kingslime', name: '슬라임 왕', desc: '은화·상자를 주워 온다', unlock: 3, hint: '1-3 보스', color: 0x6fe36a, good: [1], weak: [2] },
+  { id: 'lich', name: '리치 왕', desc: '저주로 적을 약하게 한다', unlock: 6, hint: '2-3 보스', color: 0xb07aff, good: [4], weak: [1] },
+  { id: 'lavagolem', name: '용암 거신', desc: '둘레에 불바다를 깐다', unlock: 9, hint: '3-3 보스', color: 0xff7a2a, good: [3], weak: [2] },
+  { id: 'wyrm', name: '서리 용', desc: '입김으로 앞쪽 적을 얼린다', unlock: 12, hint: '4-3 보스', color: 0x9ae8ff, good: [2], weak: [3] },
+  { id: 'demonlord', name: '마왕', desc: '마탄 세 발을 흩뿌린다', unlock: 15, hint: '5-3 보스', color: 0xff3a50, good: [0, 1], weak: [4] },
 ];
+// 예전 펫(불씨·슬라임·박쥐)을 키운 만큼 같은 때 받는 보스 펫으로 옮긴다
+export const PET_OLD = { fire: 'general', slime: 'lich', bat: 'lavagolem' };
+export const PET_GOOD = 1.8, PET_WEAK = 0.6, PET_GOOD_DEF = 0.2;
+export const petFit = (p, c) => p.good?.includes(c) ? PET_GOOD : p.weak?.includes(c) ? PET_WEAK : 1;
 export const PET_MAX = 20;
 export const petCost = lv => Math.round(90 * Math.pow(1.27, lv) / 5) * 5;
 // 펫 한 번 공격의 무기 공격력 대비 배율

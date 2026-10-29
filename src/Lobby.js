@@ -6,7 +6,7 @@ import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedCont
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
-import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf } from './gear.js';
+import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf, PETS } from './gear.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -321,6 +321,9 @@ export class Lobby extends Phaser.Scene {
     const head = boss ? `보스 ${D.BOSSES[ch.boss].name}` : s === 1 ? `${mod.name} 규칙 + 중간 보스` : vr ? `새 몬스터 ${D.VARIANTS[vr[1]].pre} ${D.MOB_NAMES[ch.mobs[vr[0]]]}` : '기본 몬스터';
     const sub = boss ? (idx >= D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1 ? '마지막 보스. 잡으면 끝이다' : `잡으면 ${c + 2}장과 새 무기가 열린다`) : s === 1 ? `${mod.desc}. 깨면 다음은 보스` : vr ? D.VARIANTS[vr[1]].desc : '2판 깨면 보스가 나온다';
     b.add(this.add.text(24, 254, `${c + 1}-${s + 1}  ${head}`, font(12, boss ? '#ff9090' : '#ffffff')));
+    // 이 맵에 잘 듣는 펫(데려가고 있으면 초록)
+    const rp = PETS.find(p => p.good?.includes(c));
+    if (rp) b.add(this.add.text(W - 22, 353, `추천 펫 ${sv.cleared >= rp.unlock ? rp.name : '???'}`, font9(9, sv.pet === rp.id ? '#5fdc6a' : '#ffd75e')).setOrigin(1, 0));
     b.add(this.add.text(24, 273, sub, { ...font9(10, '#a89cc8'), wordWrap: { width: W - 48 } }));
     // 전투력: 숫자 두 개보다 막대 하나가 빨리 읽힌다
     const pc = D.powerCol(atk, rec, s), ratio = Math.min(1, atk / rec);

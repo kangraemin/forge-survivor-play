@@ -269,6 +269,8 @@ export const BANISH_PER_RUN = 2;
 // 공짜 빼기·다시 뽑기를 다 쓰면 보석으로 더 쓴다
 export const BAN_GEM = 5, REROLL_GEM = 5;
 // 무한의 탑: 1장 보스를 깨면 열린다. 층(웨이브)마다 몹이 세지고 3층마다 해골 장군
+// 3장부터 몬스터가 더 아프다: 상성 펫이 받는 피해를 줄여 이걸 메운다
+export const LATE_DMG = 1.12;
 export const ENDLESS = { unlock: 3, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.22, dmgGrow: 1.12 };
 // 칼빛(궤적 색) 꾸미기: 능력치는 그대로, 보이는 것만 바뀐다
 export const SKINS = [

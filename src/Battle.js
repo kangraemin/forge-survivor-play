@@ -2,11 +2,11 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, playBgm, stopBgm } from './sfx.js';
-import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX } from './ui.js';
+import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
-import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore } from './gear.js';
+import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF } from './gear.js';
 import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 
@@ -59,7 +59,7 @@ export class Battle extends Phaser.Scene {
     this.waveLen = this.endless ? D.ENDLESS.floorSec * 1000 : this.ch.dur * 1000 / D.WAVES;
     this.waveCount = this.endless ? Infinity : this.isBoss ? D.WAVES - 1 : D.WAVES;
     this.waveT = 0;
-    this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (this.endless ? 1 : D.easeDmg(this.c, this.s)) * (1 - this.tv('def'));
+    this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (this.endless ? 1 : D.easeDmg(this.c, this.s)) * (1 - this.tv('def')) * (!this.endless && this.c >= 2 ? D.LATE_DMG : 1);   // 3장부터는 맞는 펫(받는 피해 -20%) 없이는 버겁게
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless;
     if (this.easy) { this.mobDmgMul *= 0.55; this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
@@ -84,6 +84,7 @@ export class Battle extends Phaser.Scene {
     this.weapons = new Weapons(this);
     this.boss = null;
     this.ui = new Overlay(this);
+    this.petShield = false;
     this.pet = new Pet(this);
     this.makeHud();
     this.makeJoystick();
@@ -115,6 +116,12 @@ export class Battle extends Phaser.Scene {
     if (sv.stats.runs < 2 && !this.bot) this.dragHint();
     if (this.endless) this.banner('무한의 탑', `1층  ·  최고 ${sv.endBest}층`);
     else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}  ·  ${this.s === 1 ? '깨면 다음은 보스!' : '2판 깨면 보스'}`);
+    // 펫 상성: 잘 듣는 펫이면 알려 주고, 없으면 이 장에 맞는 펫을 알려 준다(가진 것만)
+    if (!this.endless) {
+      const pf = this.pet.def && this.pet.fit, rec = PETS.find(p => p.good?.includes(this.c) && this.sv.cleared >= p.unlock);
+      const msg = pf > 1 ? ['펫 상성 좋음! 받는 피해 -20%', '#5fdc6a'] : pf < 1 ? [`${this.pet.def.name}은 이 맵에서 약하다${rec ? ` · 추천 ${rec.name}` : ''}`, '#ff9070'] : rec ? [`이 맵 추천 펫: ${rec.name}`, '#ffd75e'] : null;
+      if (msg) this.time.delayedCall(2600, () => !this.over && toast(this, msg[0], msg[1], 96));
+    }
     if (this.mod) this.time.delayedCall(4200, () => !this.over && this.banner(`이번 판: ${this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : ''}${this.mod.name}`, this.mod.desc));
     // 이번 스테이지에 처음 나오는 변종을 알려 준다
     const nv = !this.endless && !this.isBoss && D.stageVariant(this.c, this.s);
@@ -389,7 +396,7 @@ export class Battle extends Phaser.Scene {
     if (v?.ai) m.ai = v.ai;
     m.kbRes = v?.kb ?? (m.ai === 'tank' ? 0.45 : elite ? 0.3 : 1);
     m.variant = opt.mini ? null : vk; m.bs = (elite ? 1.5 : 1) * (v?.scale || 1) * (opt.mini ? 0.65 : 1);
-    m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.phase = RF(0, 6); m.t = 0;
+    m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.curse = 0; m.tint0 = undefined; m.phase = RF(0, 6); m.t = 0;
     m.hitBy = {};
     if (this.registry.get('fallback')[kind] && this.c > 0) m.setTint(m0.color);
     if (v) m.setTint(v.tint);
@@ -456,7 +463,7 @@ export class Battle extends Phaser.Scene {
     if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
     m.hitBy[src] = this.bt;
     const { dmg, crit } = this.dmgCalc(mult, tag);
-    m.hp -= dmg * (m.weak || 1);   // 지친 보스는 더 아프게 맞는다
+    m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.3 : 1);   // 지친 보스·리치 왕에게 저주받은 적은 더 아프게 맞는다
     // 흰 번쩍임 + 찌그러짐
     // 보스는 몸집이 커서 흰 번쩍임이 화면을 덮는다: 붉게만 물들인다
     if (m.isBoss) m.setTint(0xff8a8a); else m.setTintFill(0xffffff);
@@ -566,7 +573,7 @@ export class Battle extends Phaser.Scene {
       r.stones += R(1, 2);
       return;
     }
-    if (Math.random() < P.silver * (1 + this.tv('luck')) * (this.sv.pet === 'bat' ? 1.3 : 1)) this.addItem(m.x + R(-4, 4), m.y + R(-4, 4), 'silver', 1);
+    if (Math.random() < P.silver * (1 + this.tv('luck')) * (this.pet.def?.id === 'kingslime' ? 1.3 : 1)) this.addItem(m.x + R(-4, 4), m.y + R(-4, 4), 'silver', 1);
     // 회복: 기본 1.5%, 체력이 낮을수록 확률 가산, 90초 동안 안 나오면 확정
     const f = this.hp / this.maxHp;
     let ph = P.heal + (f < 0.4 ? P.healLow : 0) + (f < 0.3 ? P.healCrit : 0);
@@ -674,7 +681,9 @@ export class Battle extends Phaser.Scene {
   // ── 피격 ──
   hurt(dmg, src = 'boss') {
     if (this.over || this.paused || this.bt < this.iframe) return;
-    const d = Math.max(1, Math.round(dmg));
+    // 해골 장군 펫의 방패가 한 대를 막는다
+    if (this.petShield) { this.iframe = this.bt + D.PLAYER.iframe; this.pet.block(); return; }
+    const d = Math.max(1, Math.round(dmg * (this.pet.fit > 1 ? 1 - PET_GOOD_DEF : 1)));
     const by = this.run.dmgBy; by[src] = (by[src] || 0) + d;
     this.hp -= d;
     this.iframe = this.bt + D.PLAYER.iframe;

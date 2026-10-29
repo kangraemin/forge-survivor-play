@@ -1,6 +1,7 @@
 // 진행 저장(localStorage). 접근이 막힌 브라우저에서도 게임은 돌아가게 메모리로 대체한다
 import { SWEEP_DAILY, SWEEP_MAX, GEM_FREE, PASS_DAILY } from './data.js';
 import { track } from './log.js';
+import { PET_OLD } from './gear.js';
 
 const dayNo = d => Math.floor((d - d.getTimezoneOffset() * 60000) / 86400000); // 기기 시간대 기준 날짜 번호
 
@@ -41,6 +42,10 @@ export function load() {
   if (!mem.st3) { const o = mem.cleared || 0, k = o % 6; mem.cleared = Math.floor(o / 6) * 3 + (k >= 1) + (k >= 4); mem.best = {}; mem.sp = {}; mem.st3 = true; }
   // 무기 7종으로 바뀌기 전 저장: 예전에 깬 만큼 창·도끼를 준다. 스탯 규칙(무기 스탯 1점 +10%)이 바뀌어 찍은 점수를 한 번 돌려준다
   if (!mem.wOwn) { mem.wOwn = { sword: true }; if (mem.cleared >= 3) mem.wOwn.spear = true; if (mem.cleared >= 6) mem.wOwn.axe = true; }
+  // 펫이 보스 펫으로 바뀌기 전 저장: 키운 단계와 데려가던 펫을 옮긴다
+  if (mem.pets && !mem.petV) { for (const [o, n] of Object.entries(PET_OLD)) if (mem.pets[o]) { mem.pets[n] = Math.max(mem.pets[n] || 0, mem.pets[o]); delete mem.pets[o]; } }
+  if (PET_OLD[mem.pet]) mem.pet = PET_OLD[mem.pet];
+  mem.petV = 2;
   if (!mem.spV) { mem.sp = { str: 0, dex: 0, int: 0, vit: 0 }; mem.spV = 2; }
   // 마지막으로 저장한 뒤 얼마나 비웠나(자리 비움 보상). 로비가 읽고 0으로 돌린다
   if (mem.seenAt) mem.idleMs = Math.max(mem.idleMs || 0, Date.now() - mem.seenAt);

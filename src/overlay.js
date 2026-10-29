@@ -472,9 +472,9 @@ export class Overlay {
     }
     const salvaged = addItems(sv, loot);
     eggsSettled();
-    // 처음 열린 펫은 알아서 데려간다(펫 탭을 안 열어도 보이게). 한 번만
-    const newPet = !sv.pet && !sv.petAuto && PETS.find(p => sv.cleared >= p.unlock);
-    if (newPet) { sv.pet = newPet.id; sv.petAuto = true; }
+    // 보스를 처음 잡으면 그 보스 펫이 합류한다. 펫이 없으면 알아서 데려간다(펫 탭을 안 열어도 보이게)
+    const newPet = first && PETS.find(p => p.unlock === sv.cleared);
+    if (newPet && !sv.pet) sv.pet = newPet.id;
     sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem; sv.charm = (sv.charm || 0) + charm;
     save();
     s.log('battle_end', { win, first, progress: Math.round((win ? 1 : s.runProgress()) * 100), wave: s.wave, floors: s.endless ? floors : undefined, kills: r.kills, gold, stone, gem, power: D.powerOf(sv), rec: s.endless ? undefined : D.recPower(s.c, s.s), top_dmg: s.topHit(), revived: !!r.revived, cleared: sv.cleared, loot: loot.length, skills: Object.entries(r.skills).map(([k, v]) => k + v).join(',').slice(0, 100) });
@@ -557,6 +557,8 @@ export class Overlay {
     // 장 보스를 처음 잡으면 새 무기가 열린다(장마다 받는 큰 보상)
     const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
     const head = wNew ? `새 무기 「${wNew.name}」 획득!` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
+    // 보스를 처음 잡으면 새 무기와 보스 펫이 같이 온다: 펫은 한 줄 위에 따로
+    if (wNew && newPet) c.add(s.add.text(W / 2, 334, `새 펫 「${newPet.name}」 합류!`, font9(10, '#ffb050')).setOrigin(0.5));
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
     // 새 무기는 장비 아이콘 대신 무기 이름 칸으로 보여 준다(장비 그림이 나와 무엇을 얻었는지 헷갈렸다)
     if (wNew) {
