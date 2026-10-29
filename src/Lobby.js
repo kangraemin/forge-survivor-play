@@ -474,10 +474,10 @@ export class Lobby extends Phaser.Scene {
     if (max) {
       b.add(this.add.text(W / 2, 300, '최대 강화', font(14, '#ffd75e')).setOrigin(0.5));
     } else {
-      const rate = Math.min(100, D.ENH_RATE[enh] + (this.useCharm ? D.CHARM_RATE : 0) + this.apron()), gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
+      const pity = D.pityRate(sv), rate = Math.min(100, D.ENH_RATE[enh] + (this.useCharm ? D.CHARM_RATE : 0) + this.apron() + pity), gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
       const danger = enh >= D.DESTROY_FROM;
       const row = (y, a, v, col) => { b.add(this.add.text(24, y, a, font9(10, '#a89cc8'))); b.add(this.add.text(W - 24, y, v, font(10, col)).setOrigin(1, 0)); };
-      row(282, '성공 확률', rate + '%' + (this.useCharm ? ' (부적)' : ''), rate >= 70 ? '#5fdc6a' : rate >= 35 ? '#ffd75e' : '#ff7070');
+      row(282, '성공 확률', rate + '%' + (this.useCharm ? ' (부적)' : '') + (pity ? ` (천장 +${pity})` : ''), rate >= 70 ? '#5fdc6a' : rate >= 35 ? '#ffd75e' : '#ff7070');
       row(300, '실패하면', danger ? (this.useGuard ? '방지권이 지킴 · 금화 30% 환급' : `파괴 → +${D.shatterTo(enh)} · 금화 30% 환급`) : '그대로 유지', danger ? (this.useGuard ? '#9ae0ff' : '#ff5050') : '#e8e2f8');
       row(318, '비용', `금화 ${fmt(gold)} · 강화석 ${stone}`, sv.gold >= gold && sv.stone >= stone ? '#ffd75e' : '#ff7070');
       if (danger) {
@@ -546,7 +546,8 @@ export class Lobby extends Phaser.Scene {
     const danger = enh >= D.DESTROY_FROM, guard = danger && this.useGuard && sv.guard > 0;
     const charm = this.useCharm;
     if (charm) sv.charm--;
-    const win = Math.random() * 100 < D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0) + this.apron();
+    const win = Math.random() * 100 < D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0) + this.apron() + D.pityRate(sv);
+    sv.pity = win || enh < D.PITY_FROM ? 0 : (sv.pity || 0) + 1;
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
     if (guard && !win) sv.guard--;   // 방지권은 칼을 지켜 냈을 때만 쓴다(성공해도 사라지면 아까워서 안 켰다)
     if (!win && danger) sv.gold += Math.round(gold * D.FAIL_REFUND);

@@ -57,7 +57,7 @@ export class BossAI {
       const what = { sweep: '휩쓰는 광선', pools: '남는 장판', slam: '연속 내려찍기' }[this.b.rage];
       // 중간 보스는 배너 대신 짧은 알림(예고 없이 새 공격이 나왔다)
       if (this.b.rage && !this.mid) s.banner(`${this.b.name}이 분노했다!`, `새 공격: ${what}`);
-      else if (this.b.rage) toast(s, `${this.b.name} 분노! 새 공격: ${what}`, '#ff9a8a', 120);
+      else if (this.b.rage) toast(s, `${this.b.name} 분노! 새 공격: ${what}`, '#ff9a8a', 200);   // 위쪽 배너와 겹치지 않게
     }
     m.setFlipX(h.x < m.x);
     m.setDepth(10 + m.y / 1600);

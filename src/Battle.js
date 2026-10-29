@@ -802,7 +802,8 @@ export class Battle extends Phaser.Scene {
       // x-1은 판 시작 20초에 초당 2마리를 더 내보낸다: 첫 판 초반 화면이 비어 지루했다(뒤 스테이지는 원래 많다)
       const early = !this.endless && this.s === 0 && this.bt < 20000 ? 2 : 0;
       this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 3 * f) / 1000;
-      while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
+      // 화면에 70마리가 넘으면 더 내보내지 않는다(3장에서 89마리까지 쌓여 저사양 폰이 버거웠다)
+      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < 70) this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
       if (this.goblinAt != null && !this.goblinDone && this.progress() >= this.goblinAt) { this.goblinDone = true; this.spawnGoblin(); }

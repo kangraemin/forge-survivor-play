@@ -127,7 +127,7 @@ export class Overlay {
     c.add(rb);
     // '은화 0'만 있으면 무슨 숫자인지 몰랐다: 가진 은화·보석을 같이 보여 준다
     const ownTxt = () => `가진 은화 ${r.silver}  ·  보석 ${s.sv.gem}`;
-    const own = s.add.text(W / 2, 420, ownTxt(), font9(10, '#d8e0f0')).setOrigin(0.5); c.add(own);
+    const own = s.add.text(W / 2, 420, ownTxt(), font9(11, '#e8eef8')).setOrigin(0.5); c.add(own);
     this.lvOwn = () => own.active && own.setText(ownTxt());
     if (s.bot) s.time.delayedCall(150, () => this.pick(cards.list[0]?.key));
   }
@@ -244,9 +244,12 @@ export class Overlay {
       c.add(itemBox(s, x, 200, it, 32));
       c.add(s.add.text(x, 224, it.n, font9(10, RARITY[it.r].css)).setOrigin(0.5));
       // 주운 것은 지금 것보다 오른 능력치를 초록 ▲, 내린 것을 빨강 ▼로(계산 안 해도 보이게)
-      Object.entries(it.st).forEach(([k, v], i) => {
-        const o = it === item && cur ? cur.st[k] || 0 : null, mark = o == null || v === o ? '' : v > o ? ' ▲' : ' ▼';
-        c.add(s.add.text(x, 240 + i * 13, statText(k, v) + mark, font9(9, mark === ' ▲' ? '#5fdc6a' : mark ? '#ff8a8a' : '#c8bfe0')).setOrigin(0.5));
+      // 지금 것에만 있는 능력치는 '잃음'으로 빨갛게 보여 준다(새 템에 없으면 손해를 몰랐다)
+      const keys = it === item && cur ? [...new Set([...Object.keys(it.st), ...Object.keys(cur.st)])] : Object.keys(it.st);
+      keys.forEach((k, i) => {
+        const v = it.st[k] || 0, o = it === item && cur ? cur.st[k] || 0 : null, mark = o == null || v === o ? '' : v > o ? ' ▲' : ' ▼';
+        const txt = v ? statText(k, v) + mark : statText(k, o).replace(/ \+.*/, ' 잃음 ▼');
+        c.add(s.add.text(x, 240 + i * 13, txt, font9(9, mark === ' ▲' ? '#5fdc6a' : mark ? '#ff8a8a' : '#c8bfe0')).setOrigin(0.5));
       });
     };
     side(W / 2 - 54, cur, '지금', '#a89cc8');
@@ -491,9 +494,26 @@ export class Overlay {
       c.add(s.add.text(W / 2, 294, `내 전투력 ${pw}  ·  권장 ${rp}`, font(11, D.powerCol(pw, rp, s.s))).setOrigin(0.5));
       c.add(pw >= rp ? s.add.text(W / 2, 310, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#c8bfe0')).setOrigin(0.5) : s.add.text(W / 2, 310, `권장까지 ${rp - pw} 부족 · 강화·훈련하자`, font(12, '#ffb070')).setOrigin(0.5));
     }
+    // 자랑하기: 이겼거나 탑 기록을 넘으면 공유(친구가 들어올 길이 없었다). 하루 한 번 보석
+    const brag = !s.bot && (win || (s.endless && floors > best));
+    if (brag) {
+      const gift = sv.shareDay !== sv.day;
+      const sb = button(s, 212, 330, 76, 20, gift ? `자랑 +${D.SHARE_GEM}` : '자랑하기', async () => {
+        const msg = s.endless ? `무한의 탑 ${floors}층 돌파!` : `${s.isBoss ? D.BOSSES[s.ch.boss].name + ' 격파! ' : ''}${s.c + 1}-${s.s + 1} 클리어`;
+        const text = `${msg} 내 칼은 ${D.TIERS[sv.tier].name} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
+        let ok = false;
+        try {
+          if (navigator.share) { await navigator.share({ title: '강화 서바이버', text, url }); ok = true; }
+          else { await navigator.clipboard.writeText(`${text} ${url}`); ok = true; toast(s, '링크를 복사했다 · 친구에게 붙여 넣자', '#9ae0ff'); }
+        } catch { /* 공유 창을 닫았다 */ }
+        s.log('share', { ok, boss: !!s.isBoss, endless: !!s.endless });
+        if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += D.SHARE_GEM; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
+      }, { size: 10, color: 0x7a4a2f });
+      c.add(sb);
+    }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
-      const db = button(s, W / 2, 330, 190, 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
+      const db = button(s, brag ? 98 : W / 2, 330, brag ? 140 : 190, 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         s.log('double_reward', { ok, gold, stone });

@@ -94,6 +94,11 @@ export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * Math.min(en
 // 강화 성공 확률(%) — 인덱스는 현재 강화 수치
 export const ENH_RATE = [100, 100, 95, 90, 85, 75, 65, 55, 50, 45, 45, 40, 36, 32, 28, 22, 18, 15, 12, 10];
 export const ENH_MAX = 20;
+// 결과 창 자랑하기: 하루 한 번 보석
+export const SHARE_GEM = 3, SHARE_URL = 'https://kangraemin.github.io/forge-survivor-play/';
+// 천장: +15부터 실패할 때마다 다음 확률 +3%(성공하면 0으로). +19→+20(10%)에 운이 없으면 끝없이 갈렸다
+export const PITY_FROM = 15, PITY_STEP = 3;
+export const pityRate = sv => sv.enh >= PITY_FROM ? (sv.pity || 0) * PITY_STEP : 0;
 export const DESTROY_FROM = 10;                            // +10에서 +11을 노릴 때부터 실패하면 파괴
 // 부서지면 두 단계 떨어진다(+0이나 +5까지 떨어지면 성공 +10%에 실패 -32%라 아무도 위험을 지지 않았다)
 export const SHATTER_DROP = 2;
