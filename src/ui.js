@@ -26,11 +26,13 @@ export function panel(scene, x, y, w, h, { fill = COLOR.panel, line = COLOR.line
   g.fillStyle(fill, alpha).fillRoundedRect(x, y, w, h, 6);
   g.lineStyle(1, line, 1).strokeRoundedRect(x + 0.5, y + 0.5, w - 1, h - 1, 6);
   g.lineStyle(1, 0xffffff, 0.08).lineBetween(x + 5, y + 2, x + w - 5, y + 2);
+  g.box = { x, y, w, h };   // 배치 검사용(버튼이 패널 밖으로 나갔는지)
   return g;
 }
 
 // 버튼: 누르면 살짝 눌렸다 튀어 오르고 소리. disabled면 회색에 거절음
-export function button(scene, x, y, w, h, label, onTap, { color = 0x3b2f5c, size = 12, textColor = '#ffffff', onDeny } = {}) {
+// 색은 셋만 쓴다: 주 행동 초록 0x2f6b3a, 위험(분해·포기·초기화) 빨강 0x8a2f3a, 그 밖은 기본 회색 0x3a3846
+export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size = 12, textColor = '#ffffff', onDeny } = {}) {
   const c = scene.add.container(x, y);
   const g = scene.add.graphics();
   const draw = (col, down) => {
@@ -42,8 +44,8 @@ export function button(scene, x, y, w, h, label, onTap, { color = 0x3b2f5c, size
   };
   const t = scene.add.text(0, 0, label, font(size, textColor)).setOrigin(0.5);
   c.add([g, t]); c.setSize(w, h).setInteractive({ useHandCursor: true });
-  c.label = t; c.enabled = true; c.col = color;
-  c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x3a3a44, false); t.setAlpha(v ? 1 : 0.55); return c; };
+  c.label = t; c.enabled = true; c.col = color; c.isBtn = true;
+  c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x221f2a, false); t.setAlpha(v ? 1 : 0.45); return c; };
   c.setColor = col => { c.col = col; draw(col, false); return c; };
   draw(color, false);
   c.on('pointerdown', (p, lx, ly, ev) => { ev?.stopPropagation?.(); c.armed = true; draw(c.enabled ? c.col : 0x3a3a44, true); t.y = 2; });

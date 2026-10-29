@@ -5,10 +5,10 @@ export const W = 270, H = 480;
 // 챕터: 몬스터 3종 + 보스. dur은 일반 스테이지 길이(초)
 export const CHAPTERS = [
   { name: '이끼 폐허', tiles: 'tiles', mobs: ['slime', 'skel', 'bat'], boss: 'kingslime', dur: 150, dark: 0.45, light: 0xff9a3c },
-  { name: '망자의 묘지', tiles: 'tile2', mobs: ['zombie', 'ghost', 'spider'], boss: 'lich', dur: 165, dark: 0.6, light: 0x9ad8ff },
+  { name: '망자의 묘지', tiles: 'tile2', mobs: ['zombie', 'ghost', 'spider'], boss: 'lich', dur: 165, dark: 0.48, light: 0x9ad8ff },
   { name: '용암 동굴', tiles: 'tile3', mobs: ['imp', 'golem', 'fskull'], boss: 'lavagolem', dur: 180, dark: 0.5, light: 0xff6a2a },
   { name: '얼어붙은 설원', tiles: 'tile4', mobs: ['wolf', 'yeti', 'icesp'], boss: 'wyrm', dur: 195, dark: 0.35, light: 0xbfe8ff },
-  { name: '마왕성', tiles: 'tile5', mobs: ['dknight', 'cultist', 'gargoyle'], boss: 'demonlord', dur: 210, dark: 0.6, light: 0xff4060 },
+  { name: '마왕성', tiles: 'tile5', mobs: ['dknight', 'cultist', 'gargoyle'], boss: 'demonlord', dur: 210, dark: 0.5, light: 0xff4060 },
 ];
 // 장마다 3판: 일반 → 일반(규칙·변종·중간 보스) → 보스. 6판일 땐 같은 맵·같은 몹이 이어져 x-5쯤 질렸다
 export const STAGES_PER_CHAPTER = 3;

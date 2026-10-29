@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, playBgm, stopBgm } from './sfx.js';
-import { font, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX } from './ui.js';
+import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
@@ -169,8 +169,8 @@ export class Battle extends Phaser.Scene {
     }
     // 어두운 화면 + 빛
     this.dark = this.add.renderTexture(0, 0, W, H).setOrigin(0).setScrollFactor(0).setDepth(50);
-    // x-2는 더 어둡다(횃불 빛 안만 보인다)
-    this.darkA = Math.min(0.8, this.ch.dark + (this.s === 1 && !this.endless ? 0.2 : 0));
+    // x-2는 조금 더 어둡다. 0.2를 더하면 2장·5장이 0.8이 돼 몹이 안 보였다
+    this.darkA = Math.min(0.62, this.ch.dark + (this.s === 1 && !this.endless ? 0.1 : 0));
     this.glow = this.add.image(0, 0, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(this.ch.light).setAlpha(0.16).setDepth(49);
   }
 
@@ -218,20 +218,23 @@ export class Battle extends Phaser.Scene {
     sf(panel(this, 4, 7, 104, 20));
     this.add.text(9, 12, 'HP', font(9, '#ff6b6b')).setScrollFactor(0).setDepth(d);
     // 막대를 글자 높이만큼 키워 숫자가 막대 안에 들어가게 한다(8px 막대 위에 10px 글자가 걸쳐 지저분했다)
-    sf(this.add.rectangle(26, 10, 76, 14, 0x3a1014).setOrigin(0));
+    sf(this.add.rectangle(26, 10, 76, 14, 0x1c0709).setOrigin(0));
     this.hpLag = sf(this.add.rectangle(26, 10, 76, 14, 0xffffff, 0.5).setOrigin(0));
-    this.hpBar = sf(this.add.rectangle(26, 10, 76, 14, 0xc8303a).setOrigin(0));
+    this.hpBar = sf(this.add.rectangle(26, 10, 76, 14, 0xe23a44).setOrigin(0));   // 빈 칸은 더 어둡게, 막대는 밝게(남은 체력이 한눈에 안 보였다)
     this.hpTxt = sf(this.add.text(64, 17, '', font(10)).setOrigin(0.5));
     this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#d8d2e8')));
-    this.comboTxt = sf(this.add.text(W - 8, 46, '', font(12, '#ffb347')).setOrigin(1, 0.5).setAlpha(0));
+    // 콤보는 가운데 위(오른쪽 숫자 밑에 붙어 처치 수와 헷갈렸다)
+    this.comboTxt = sf(this.add.text(W / 2, 72, '', font(12, '#ffb347')).setOrigin(0.5).setAlpha(0));
     this.timeTxt = sf(this.add.text(W / 2, 16, '', font(14)).setOrigin(0.5));
     this.waveTxt = sf(this.add.text(W / 2, 31, '', font(9, '#c8bfe0')).setOrigin(0.5));
-    this.killTxt = sf(this.add.text(W - 34, 12, '0', font(10, '#ffffff')).setOrigin(1, 0));
-    this.silverTxt = sf(this.add.text(W - 34, 26, '0', font(10, '#d8e0f0')).setOrigin(1, 0));
-    sf(this.add.image(W - 30, 18, 'px').setTint(0xff6b6b).setScale(2).setOrigin(0, 0.5));
-    sf(this.add.image(W - 29, 32, 'silver').setOrigin(0, 0.5));
+    // 처치·은화: 점 아이콘만으로는 무슨 숫자인지 몰랐다. 글자 이름을 붙인다
+    sf(this.add.rectangle(W - 88, 7, 62, 34, 0x000000, 0.45).setOrigin(0));
+    sf(this.add.text(W - 85, 17, '처치', font9(10, '#a89cc8')).setOrigin(0, 0.5));
+    sf(this.add.text(W - 85, 32, '은화', font9(10, '#a89cc8')).setOrigin(0, 0.5));
+    this.killTxt = sf(this.add.text(W - 30, 17, '0', font(10, '#ffffff')).setOrigin(1, 0.5));
+    this.silverTxt = sf(this.add.text(W - 30, 32, '0', font(10, '#ffffff')).setOrigin(1, 0.5));
     // 일시정지
-    const pb = button(this, W - 13, 21, 18, 22, 'II', () => this.ui.pauseMenu(), { size: 9, color: 0x2a2440 });
+    const pb = button(this, W - 13, 21, 18, 22, 'II', () => this.ui.pauseMenu(), { size: 9, color: 0x3a3846 });
     pb.setScrollFactor(0).setDepth(d);
     // 보유 스킬 아이콘 줄
     this.skillRow = this.add.container(8, 46).setScrollFactor(0).setDepth(d);
@@ -287,7 +290,7 @@ export class Battle extends Phaser.Scene {
     if (this.bannerObjs) this.bannerObjs.forEach(o => { this.tweens.killTweensOf(o); o.destroy(); });
     const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.35).setScrollFactor(0).setDepth(110).setScale(1, 0);
     const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
-    const t2 = this.add.text(W / 2, y + 12, small, font(9, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
+    const t2 = this.add.text(W / 2, y + 12, small, font9(11, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     this.tweens.add({ targets: b, scaleY: 1, duration: 160, ease: 'Back.Out' });
     this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 220, delay: 80 });
     this.bannerObjs = [b, t1, t2];

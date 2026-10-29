@@ -87,14 +87,14 @@ export class Lobby extends Phaser.Scene {
         const bt = button(this, W - 60, y + 17, 52, 24, got ? '완료' : '받기', () => {
           if (got || !done) return;
           sv.misGot[m.id] = true; track('mission_claim', { mission: m.id }); grant(sv, D.MISSION_GIVE); sfx('coin'); this.refreshTop(); draw();
-        }, { size: 10, color: 0x7a5a1a });
+        }, { size: 10, color: 0x2f6b3a });
         bt.setEnabled(done && !got); body.add(bt);
       });
       const allDone = D.MISSIONS.every(m => sv.misGot[m.id]);
       const ab = button(this, W / 2, 236, 190, 24, sv.misGot.all ? '모두 완료 보너스 받음' : `3개 모두 하면 보석 +${D.MISSION_ALL.gem}`, () => {
         if (!allDone || sv.misGot.all) return;
         sv.misGot.all = true; track('mission_claim', { mission: 'all' }); grant(sv, D.MISSION_ALL); sfx('win'); this.refreshTop(); draw();
-      }, { size: 10, color: 0x8a2f6a });
+      }, { size: 10, color: 0x3a3846 });
       ab.setEnabled(allDone && !sv.misGot.all); body.add(ab);
       // 출석 7일
       body.add(this.add.rectangle(W / 2, 258, W - 60, 1, 0x5b4f7a));
@@ -119,7 +119,7 @@ export class Lobby extends Phaser.Scene {
         toast(this, `출석 보상 ${giveText(g, sv)}`, '#ffd75e'); draw();
       }, { size: 11, color: 0x2f6b3a });
       lb.setEnabled(!sv.loginGot); body.add(lb);
-      body.add(button(this, W / 2, 404, 110, 24, '닫기', () => c.close(), { size: 10, color: 0x3b2f5c }));
+      body.add(button(this, W / 2, 404, 110, 24, '닫기', () => c.close(), { size: 10, color: 0x3a3846 }));
     };
     draw();
   }
@@ -159,7 +159,7 @@ export class Lobby extends Phaser.Scene {
         sv.gold += gold; sv.stone += stone; save(); this.refreshTop();
         tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
         sfx('coin'); db.label.setText('2배 받았다!'); track('idle_double', { gold, stone });
-      }, { size: 10, color: 0x2f5a7a });
+      }, { size: 10, color: 0x2f6b3a });
       c.add(db);
     }
     c.add(button(this, W / 2, 330, 110, 26, '좋아', () => c.close(), { size: 11, color: 0x2f6b3a }));
@@ -175,13 +175,13 @@ export class Lobby extends Phaser.Scene {
     c.add(gemIcon(this, W / 2, 204, 26));
     c.add(this.add.text(W / 2, 230, giveText(it.give), { ...font9(10, '#e8e2f8'), align: 'center', wordWrap: { width: W - 80 } }).setOrigin(0.5, 0));
     c.add(this.add.text(W / 2, 268, `${it.tag}  ·  ${won(it.price)}`, font(11, '#ffd75e')).setOrigin(0.5));
-    c.add(button(this, 88, 310, 96, 28, '다음에', () => { track('starter_offer_close'); c.close(); }, { size: 11, color: 0x3b2f5c }));
+    c.add(button(this, 88, 310, 96, 28, '다음에', () => { track('starter_offer_close'); c.close(); }, { size: 11, color: 0x3a3846 }));
     c.add(button(this, 186, 310, 100, 28, '사기', async () => {
       track('starter_offer_click');
       const ok = await buy(this, sv, it);
       if (ok) toast(this, `${it.name} 구매 완료!`, '#ffd75e');
       c.close();
-    }, { size: 12, color: 0x5a2f8a }));
+    }, { size: 12, color: 0x2f6b3a }));
   }
 
   makeTextures() {
@@ -201,12 +201,12 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv;
     this.add.rectangle(0, 0, W, 34, 0x07050c, 0.9).setOrigin(0).setDepth(50);
     this.add.rectangle(0, 34, W, 1, COLOR.line).setOrigin(0).setDepth(50);
-    const items = [[12, () => fmt(sv.gold), '#ffd75e'], [13, () => fmt(sv.stone), '#9ae0ff'], [11, () => sv.guard, '#e8e2f8'], [15, () => `${sv.sweep}`, '#c8f0a0'], [-1, () => fmt(sv.gem), '#ff9ad0']];
-    this.topTxt = items.map(([ic, get, col], i) => {
+    const items = [[12, () => fmt(sv.gold)], [13, () => fmt(sv.stone)], [11, () => sv.guard], [15, () => `${sv.sweep}`], [-1, () => fmt(sv.gem)]];
+    this.topTxt = items.map(([ic, get], i) => {
       const x = [4, 66, 116, 154, 192][i];   // 금화 자리를 넓게: 네 자리면 옆 아이콘에 붙는다
       if (ic < 0) gemIcon(this, x + 7, 17, 13).setDepth(51);
       else this.add.existing(icon(this, x + 7, 17, ic, 14).setDepth(51));
-      const t = this.add.text(x + 17, 10, '', font(11, col)).setDepth(51);
+      const t = this.add.text(x + 17, 10, '', font(11, '#ffffff')).setDepth(51);   // 숫자는 흰색: 색은 아이콘이 맡는다(다섯 색이 나란히 있어 어지러웠다)
       t.get = get; return t;
     });
     // 소리 켜고 끄기
@@ -348,7 +348,7 @@ export class Lobby extends Phaser.Scene {
       rx += 10 + t.width + 14;
     });
     const go = button(this, 95, 398, 150, 32, boss ? '보스 도전' : '전투 시작', () => this.startBattle(c, s), { size: 14, color: boss ? 0x8a2a3a : 0x2f6b3a });
-    const sw = button(this, 214, 398, 76, 32, `소탕 ${sv.sweep}`, () => this.sweep(c, s), { size: 11, color: 0x2e2a40 });
+    const sw = button(this, 214, 398, 76, 32, `소탕 ${sv.sweep}`, () => this.sweep(c, s), { size: 11, color: 0x3a3846 });
     sw.setEnabled(done && sv.sweep > 0);
     b.add([go, sw]);
   }
@@ -371,7 +371,7 @@ export class Lobby extends Phaser.Scene {
     b.add(this.add.text(24, 276, '보상', font(12, '#c8a0ff')));
     [`층마다 금화와 강화석 ${D.ENDLESS.stonePerFloor}개`, `최고 기록을 넘은 층마다 보석 ${D.ENDLESS.gemPerNewFloor}`, '3층을 버티면 임무 클리어로 친다.'].forEach((t, i) =>
       b.add(this.add.text(24, 296 + i * 17, '- ' + t, font9(10, '#e8e2f8'))));
-    const go = button(this, W / 2, 398, 190, 32, '탑 오르기', () => this.startBattle(c, 0, true), { size: 14, color: 0x5a3a8a });
+    const go = button(this, W / 2, 398, 190, 32, '탑 오르기', () => this.startBattle(c, 0, true), { size: 14, color: 0x2f6b3a });
     b.add(go);
     this.tweens.add({ targets: go, scale: 1.04, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
   }
@@ -479,18 +479,20 @@ export class Lobby extends Phaser.Scene {
       b.add(this.add.rectangle(x, y, 18, 5, i < enh ? (i >= 15 ? 0xff9a3a : i >= 10 ? 0xffd75e : 0x6fd3ff) : 0x2a2438).setOrigin(0, 0.5));
     }
     // 정보 패널
-    b.add(panel(this, 12, 272, W - 24, max ? 56 : enh >= D.DESTROY_FROM ? 99 : 66, { fill: 0x15111f }));   // 빈 칸 없이 내용만큼
+    // 높이는 체크 줄 수만큼(부적 줄이 패널 테두리에 걸쳐 겹쳐 보였다)
+    const nChk = max ? 0 : (enh >= D.DESTROY_FROM ? 1 : 0) + (sv.charm > 0 && D.ENH_RATE[enh] < 100 ? 1 : 0);
+    b.add(panel(this, 12, 272, W - 24, max ? 56 : 62 + nChk * 17, { fill: 0x15111f }));   // 빈 칸 없이 내용만큼
     if (max) {
       b.add(this.add.text(W / 2, 300, '최대 강화', font(14, '#ffd75e')).setOrigin(0.5));
     } else {
       const pity = D.pityRate(sv), rate = Math.min(100, D.ENH_RATE[enh] + (this.useCharm ? D.CHARM_RATE : 0) + this.apron() + pity), gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
       const danger = enh >= D.DESTROY_FROM;
       const row = (y, a, v, col) => { b.add(this.add.text(24, y, a, font9(10, '#a89cc8'))); b.add(this.add.text(W - 24, y, v, font(10, col)).setOrigin(1, 0)); };
-      row(282, '성공 확률', rate + '%' + (this.useCharm ? ' (부적)' : '') + (pity ? ` (천장 +${pity})` : ''), rate >= 70 ? '#5fdc6a' : rate >= 35 ? '#ffd75e' : '#ff7070');
-      row(300, '실패하면', danger ? (this.useGuard ? '방지권이 지킴 · 금화 30% 환급' : `파괴 → +${D.shatterTo(enh)} · 금화 30% 환급`) : '그대로 유지', danger ? (this.useGuard ? '#9ae0ff' : '#ff5050') : '#e8e2f8');
-      row(318, '비용', `금화 ${fmt(gold)} · 강화석 ${stone}`, sv.gold >= gold && sv.stone >= stone ? '#ffd75e' : '#ff7070');
+      row(280, '성공 확률', rate + '%' + (this.useCharm ? ' (부적)' : '') + (pity ? ` (천장 +${pity})` : ''), rate >= 70 ? '#5fdc6a' : rate >= 35 ? '#ffd75e' : '#ff7070');
+      row(296, '실패하면', danger ? (this.useGuard ? '방지권이 지킴 · 금화 30% 환급' : `파괴 → +${D.shatterTo(enh)} · 금화 30% 환급`) : '그대로 유지', danger ? (this.useGuard ? '#9ae0ff' : '#ff5050') : '#e8e2f8');
+      row(312, '비용', `금화 ${fmt(gold)} · 강화석 ${stone}`, sv.gold >= gold && sv.stone >= stone ? '#ffd75e' : '#ff7070');
       if (danger) {
-        const chk = this.add.container(24, 344);
+        const chk = this.add.container(24, 340);
         chk.add(this.add.rectangle(0, 0, 12, 12, 0x000000).setStrokeStyle(1, 0x9ae0ff).setOrigin(0, 0.5));
         if (this.useGuard) chk.add(this.add.text(6, 0, '✓', font(10, '#9ae0ff')).setOrigin(0.5));
         chk.add(this.add.text(18, 0, `방지권 쓰기 · 실패 때만 씀 (${sv.guard}장)`, font9(10, sv.guard ? '#e8e2f8' : '#5a5070')).setOrigin(0, 0.5));
@@ -500,7 +502,7 @@ export class Lobby extends Phaser.Scene {
       }
       // 행운 부적: 가지고 있을 때만 보인다(기본으로 켜짐)
       if (sv.charm > 0 && D.ENH_RATE[enh] < 100) {
-        const ck = this.add.container(24, danger ? 362 : 344);
+        const ck = this.add.container(24, danger ? 357 : 340);
         ck.add(this.add.rectangle(0, 0, 12, 12, 0x000000).setStrokeStyle(1, 0xffd75e).setOrigin(0, 0.5));
         if (this.useCharm) ck.add(this.add.text(6, 0, '✓', font(10, '#ffd75e')).setOrigin(0.5));
         ck.add(this.add.text(18, 0, `행운 부적 쓰기 +${D.CHARM_RATE}%p (${sv.charm}장)`, font9(10, '#e8e2f8')).setOrigin(0, 0.5));
@@ -509,7 +511,7 @@ export class Lobby extends Phaser.Scene {
         b.add(ck);
       }
       const ok = sv.gold >= gold && sv.stone >= stone;
-      const eb = button(this, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 82 : W / 2, 404, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 124 : 180, 30, ok ? '강화' : sv.gold < gold ? `금화 ${fmt(gold - sv.gold)} 부족` : `강화석 ${stone - sv.stone} 부족`, () => this.enhance(), { size: ok ? 15 : 11, color: danger ? 0x8a3a2a : 0x7a5a1a, onDeny: () => this.enhance() });
+      const eb = button(this, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 82 : W / 2, 404, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 124 : 180, 30, ok ? '강화' : sv.gold < gold ? `금화 ${fmt(gold - sv.gold)} 부족` : `강화석 ${stone - sv.stone} 부족`, () => this.enhance(), { size: ok ? 15 : 11, color: danger ? 0x8a2f3a : 0x2f6b3a, onDeny: () => this.enhance() });
       eb.setEnabled(ok); b.add(eb);
       // 처음 하는 사람: 강화 버튼을 가리킨다
       this.forgeArrow = sv.cleared >= 1 && !sv.tut.forge && ok;
@@ -523,14 +525,14 @@ export class Lobby extends Phaser.Scene {
     // 승급: +10 이상이고 그 등급 챕터 보스를 깨면 다음 등급 무기로(지금보다 약해지지 않는 강화 수치부터)
     if (sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1) {
       const need = (sv.tier + 1) * D.STAGES_PER_CHAPTER, okBoss = sv.cleared >= need, cost = D.promoteGold(sv.tier);
-      const pb = button(this, max ? W / 2 : 200, 404, max ? 180 : 110, 30, `승급 ${fmt(cost)}`, () => this.promote(), { size: 12, color: 0x5a2f8a });
+      const pb = button(this, max ? W / 2 : 200, 404, max ? 180 : 110, 30, `승급 ${fmt(cost)}`, () => this.promote(), { size: 12, color: 0x2f6b3a });
       pb.setEnabled(okBoss && sv.gold >= cost); b.add(pb);
       if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }
       else if (!okBoss) b.add(this.add.text(W / 2, 375, `승급하려면 ${sv.tier + 1}장 보스를 쓰러뜨려야 한다`, font9(10, '#ff9a8a')).setOrigin(0.5, 0));
       else {
         // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
         const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
-        b.add(this.add.text(W / 2, 384, `${D.tierName(sv.tier + 1, wtypeOf(sv))}: 공격력 ${now} → ${next} (+${e}부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
+        b.add(this.add.text(W / 2, 372, `${D.tierName(sv.tier + 1, wtypeOf(sv))}: 공격력 ${now} → ${next} (+${e}부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
       }
     }
   }
@@ -652,15 +654,15 @@ export class Lobby extends Phaser.Scene {
       track('shatter_restore_click', { from, enough: sv.gem >= back });
       if (sv.gem < back) { c.close(); this.shopPage = 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
       sv.gem -= back; sv.enh = from; sv.stats.destroyed--; save(); sfx('win'); c.close(); this.refreshTop(); this.show('forge'); toast(this, `+${from} 칼이 돌아왔다!`, '#ffd75e');
-    }, { size: 11, color: 0x8a5a1a });
+    }, { size: 11, color: 0x2f6b3a });
     c.add([rb, gemIcon(this, W / 2 - 80, 240, 12)]);
     const bt = button(this, W / 2, 280, 190, 28, `방지권 사기  보석 ${cost}`, () => {
       track('shatter_guard_click', { enough: sv.gem >= cost });
       if (sv.gem < cost) { c.close(); this.shopPage = 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
       sv.gem -= cost; sv.guard++; save(); sfx('buy'); c.close(); toast(this, '파괴 방지권 +1', '#9ae0ff');
-    }, { size: 11, color: 0x8a2f6a });
+    }, { size: 11, color: 0x3a3846 });
     c.add([bt, gemIcon(this, W / 2 - 80, 280, 12)]);
-    c.add(button(this, W / 2, 322, 110, 24, '그냥 닫기', () => { track('shatter_offer_close', { from }); c.close(); }, { size: 10, color: 0x3b2f5c }));
+    c.add(button(this, W / 2, 322, 110, 24, '그냥 닫기', () => { track('shatter_offer_close', { from }); c.close(); }, { size: 10, color: 0x3a3846 }));
   }
 
   promote() {
@@ -713,7 +715,7 @@ export class Lobby extends Phaser.Scene {
         track('train', { stat: t.id, lv: lv + 1, cost, power: D.powerOf(sv) });
         sfx('buy'); this.refreshTop(); this.bump(0);
         this.show('train');
-      }, { size: 10, color: 0x3b2f5c });
+      }, { size: 10, color: 0x3a3846 });
       btn.setEnabled(!max && sv.gold >= cost);
       b.add(btn);
     });
@@ -796,7 +798,7 @@ export class Lobby extends Phaser.Scene {
           sv.ads[k] = (sv.ads[k] || 0) + 1; grant(sv, ad.give);
           track('ad_reward', { kind: k, n: sv.ads[k] });
           after(`${ad.name} 받았다`);
-        }, { size: 10, color: 0x2f5a7a });
+        }, { size: 10, color: 0x2f6b3a });
         bt.setEnabled(left > 0); b.add(bt);
       });
       const info = [`매일 접속하면 보석 +${D.GEM_FREE.daily}`, `스테이지 첫 클리어 보석 +${D.GEM_FREE.stageFirst} · 보스 +${D.GEM_FREE.bossFirst}`];
@@ -821,7 +823,7 @@ export class Lobby extends Phaser.Scene {
         const ok = await buy(this, sv, it);
         this.busy = false;
         if (ok && this.scene.isActive()) after(`${it.name} 구매 완료!`);
-      }, { size: 9, color: 0x5a2f8a });
+      }, { size: 9, color: 0x2f6b3a });
       bt.setEnabled(!sold); b.add(bt);
     });
   }

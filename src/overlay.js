@@ -20,6 +20,8 @@ export class Overlay {
     s.paused = true; s.physics.pause(); s.anims.pauseAll();
     // 이동 안내가 창 뒤로 비치지 않게 바로 지운다
     s.hint?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.hint = null;
+    // 떠 있던 배너(웨이브·보스 이름)도 지운다: 창 제목과 겹쳐 읽을 수 없었다
+    s.bannerObjs?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.bannerObjs = null;
     s.joy.o = null; s.joy.v.reset(); s.joy.base.setVisible(false); s.joy.knob.setVisible(false);
     s.showUlt?.(false);   // 창 아래 안내 글과 겹치지 않게 궁극기 버튼을 숨긴다
     const c = fixedContainer(s).setDepth(DEPTH);
@@ -124,7 +126,7 @@ export class Overlay {
       else return;
       s.log('levelup_reroll', { n: r.lvRerolls || 0, silver: r.silver, gem });
       sfx('buy'); draw(); rb.label.setText(label()); rb.setEnabled(can()); own.setText(ownTxt());
-    }, { size: 10, color: 0x3b2f5c });
+    }, { size: 10, color: 0x3a3846 });
     rb.setEnabled(can());
     c.add(rb);
     // '은화 0'만 있으면 무슨 숫자인지 몰랐다: 가진 은화·보석을 같이 보여 준다
@@ -259,8 +261,8 @@ export class Overlay {
     side(W / 2 + 54, item, '주운 것', '#5fdc6a');
     c.add(s.add.text(W / 2, 200, '→', font(14, '#ffd75e')).setOrigin(0.5));
     // 끼는 쪽이 기본: 장착 버튼을 크게, 가방은 작게
-    c.add(button(s, W / 2 - 64, 340, 70, 26, '가방에', () => { item.bag = true; s.log('loot_ask', { equip: false }); this.end(c); }, { size: 10, color: 0x3b2f5c }));
-    c.add(button(s, W / 2 + 38, 340, 124, 32, '바로 장착', () => { s.equipNow(item); sfx('level'); s.log('loot_ask', { equip: true }); this.end(c); }, { size: 12, color: 0x2f7a3a }));
+    c.add(button(s, W / 2 - 64, 340, 70, 26, '가방에', () => { item.bag = true; s.log('loot_ask', { equip: false }); this.end(c); }, { size: 10, color: 0x3a3846 }));
+    c.add(button(s, W / 2 + 38, 340, 124, 32, '바로 장착', () => { s.equipNow(item); sfx('level'); s.log('loot_ask', { equip: true }); this.end(c); }, { size: 12, color: 0x2f6b3a }));
   }
 
   // ── 스킬 상자: 가진 스킬 중 하나가 무료로 오른다 ──
@@ -386,7 +388,7 @@ export class Overlay {
     const sk = Object.entries(s.run.skills).map(([k, lv]) => `${D.SKILLS[k].name} ${lv}`).join('\n');
     c.add(s.add.text(W / 2, 192, sk, { ...font9(10), align: 'center' }).setOrigin(0.5, 0).setLineSpacing(1));
     c.add(button(s, W / 2, 268, 130, 26, '계속하기', () => this.end(c), { color: 0x2f6b3a }));
-    c.add(button(s, W / 2, 300, 130, 24, '포기하기', () => { if (c !== this.c) return; s.log('give_up', { wave: s.wave, progress: Math.round(s.runProgress() * 100) }); this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x6b2f3a }));
+    c.add(button(s, W / 2, 300, 130, 24, '포기하기', () => { if (c !== this.c) return; s.log('give_up', { wave: s.wave, progress: Math.round(s.runProgress() * 100) }); this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x8a2f3a }));
   }
 
   // ── 쓰러졌을 때 부활 제안(판당 1번): 광고 또는 보석 ──
@@ -408,11 +410,11 @@ export class Overlay {
       busy = false;
       s.log('revive_choice', { via: free ? 'free' : 'ad', ok });
       if (ok && c === this.c) up();
-    }, { size: 11, color: 0x2f5a7a });
+    }, { size: 11, color: 0x2f6b3a });
     const gm = button(s, W / 2, 268, 170, 28, `보석 ${D.REVIVE_GEM}으로 부활`, () => {
       if (busy || c !== this.c || sv.gem < D.REVIVE_GEM) return;
       sv.gem -= D.REVIVE_GEM; save(); s.log('revive_choice', { via: 'gem', ok: true, gem_left: sv.gem }); up();
-    }, { size: 11, color: 0x8a2f6a });
+    }, { size: 11, color: 0x3a3846 });
     // 보석이 모자라면 버튼 대신 작은 안내만(못 누르는 큰 버튼이 광고 부활을 가렸다)
     if (sv.gem >= D.REVIVE_GEM) {
       c.add([gm, gemIcon(s, W / 2 - 62, 268, 12)]);
@@ -423,7 +425,7 @@ export class Overlay {
       if (busy || c !== this.c) return;
       s.log('revive_choice', { via: 'giveup' });
       this.end(c); s.die(true);
-    }, { size: 10, color: 0x4a3a4a }));
+    }, { size: 10, color: 0x8a2f3a }));
   }
 
   // ── 결과 ──
@@ -531,7 +533,7 @@ export class Overlay {
         } catch { /* 공유 창을 닫았다 */ }
         s.log('share', { ok, boss: !!s.isBoss, endless: !!s.endless });
         if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += D.SHARE_GEM; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
-      }, { size: 11, color: 0x3b2f5c });
+      }, { size: 11, color: 0x3a3846 });
       c.add(sb);
     }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
@@ -546,7 +548,7 @@ export class Overlay {
         tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
         [tx[0], tx[1]].forEach(t => s.tweens.add({ targets: t, scale: 1.4, duration: 120, yoyo: true }));
         sfx('coin'); db.label.setText('2배 받았다!');
-      }, { size: 11, color: 0x3b2f5c });
+      }, { size: 11, color: 0x3a3846 });
       c.add(db);
     }
     // 얻은 장비 줄(판 안, 버튼 위). 빈 부위는 알아서 끼워졌다
@@ -556,25 +558,32 @@ export class Overlay {
     const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
     const head = wNew ? `새 무기 「${wNew.name}」 획득!` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
-    const n = Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);
+    // 새 무기는 장비 아이콘 대신 무기 이름 칸으로 보여 준다(장비 그림이 나와 무엇을 얻었는지 헷갈렸다)
+    if (wNew) {
+      const st = { str: '힘', dex: '민첩', int: '지능' }[wNew.stat];
+      c.add(panel(s, W / 2 - 90, 362, 180, 30, { fill: 0x2a2010, line: 0xffb050 }));
+      c.add(s.add.text(W / 2, 371, `${wNew.name} · ${st}을 따른다`, font(11, '#ffd75e')).setOrigin(0.5));
+      c.add(s.add.text(W / 2, 384, '장비 탭에서 바꿔 들 수 있다', font9(10, '#c8bfe0')).setOrigin(0.5));
+    }
+    const n = wNew ? 0 : Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);
     loot.slice(0, n).forEach((it, i) => {
       const box = itemBox(s, x0 + i * 30, 376, it, 26);
       c.add(box); box.setScale(0);
       s.tweens.add({ targets: box, scale: 1, duration: 220, delay: 450 + i * 90, ease: 'Back.Out', onStart: () => it.r >= 2 && sfx('level') });
     });
-    if (loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#c8bfe0')).setOrigin(0, 0.5));
+    if (!wNew && loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#c8bfe0')).setOrigin(0, 0.5));
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
     // 이겼으면 다음 스테이지가 주인공(로비는 작게)
     const fw = win || s.endless;
     // 장 보스를 잡으면 다음 장이 확 세지니 대장간 정비가 주인공이다
     if (win && s.isBoss && !s.endless && sv.cleared <= nextIdx) {
-      c.add(button(s, 172, 424, 160, 34, '대장간에서 정비 ▶', () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0x2f6b3a }));
-      c.add(button(s, 52, 424, 72, 26, '다음 장', () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, bot: s.bot }); }, { color: 0x3b2f5c }));
+      c.add(button(s, 176, 424, 136, 32, '대장간에서 정비 ▶', () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0x2f6b3a }));
+      c.add(button(s, 68, 424, 76, 28, '다음 장', () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, bot: s.bot }); }, { color: 0x3a3846 }));
       s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
       return;
     }
-    c.add(button(s, fw ? 52 : 85, 424, fw ? 72 : 110, fw ? 26 : 30, fw ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3b2f5c }));
-    c.add(button(s, fw ? 172 : 190, 424, fw ? 160 : 100, fw ? 34 : 30, win ? (s.endless ? '다시 도전' : s.s === 1 && !s.isBoss ? '보스 도전 ▶' : '다음 스테이지 ▶') : '다시', () => {
+    c.add(button(s, fw ? 68 : 82, 424, fw ? 76 : 100, fw ? 28 : 30, fw ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3a3846 }));
+    c.add(button(s, fw ? 176 : 190, 424, fw ? 136 : 100, fw ? 32 : 30, win ? (s.endless ? '다시 도전' : s.s === 1 && !s.isBoss ? '보스 도전 ▶' : '다음 스테이지 ▶') : '다시', () => {
       s.log('result_action', { act: win ? 'next' : 'retry', win });
       if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });
       const n = win ? nextIdx : idx;

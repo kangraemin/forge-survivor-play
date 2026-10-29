@@ -88,7 +88,7 @@ export const GearTab = {
     if (!inv.length) {
       b.add(this.add.text(W / 2, 258, '스테이지를 깨면 장비가 나온다\n빈 칸에는 알아서 낀다', { ...font9(11, '#c8bfe0'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
       // 탭의 빨간 점 = 찍을 스탯 포인트. 비었을 땐 가운데 버튼으로 바로 보낸다
-      if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x3b2f5c }));
+      if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x3a3846 }));
       b.add(button(this, W / 2, spFree(sv) > 0 ? 334 : 310, 170, 26, '장비 얻으러 전투하기 →', () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
     } else if (spFree(sv) > 0) {
       const t = this.add.text(W - 14, 207, `● 스탯 포인트 ${spFree(sv)} 찍기 →`, font9(10, '#ff8080')).setOrigin(1, 0);
@@ -111,7 +111,7 @@ export const GearTab = {
       sv.inv = sv.inv.filter(it => !junk.includes(it)); sv.stone += st; save();
       track('gear_salvage_all', { n: junk.length, stone: st });
       sfx('coin'); this.refreshTop(); this.bump(1); toast(this, `강화석 +${st}`, '#9ae0ff'); this.show('gear');
-    }, { size: 9, color: 0x3b2f5c });
+    }, { size: 9, color: 0x3a3846 });
     // 빈 가방엔 분해 버튼을 안 둔다(탭 몸통에 안 넣으면 다른 탭까지 남는다: 바로 지운다)
     sb.setEnabled(junk.length > 0); if (inv.length) b.add(sb); else sb.destroy();
   },
@@ -159,7 +159,7 @@ export const GearTab = {
       if (it.egg || isOn) return;
       sv.inv = sv.inv.filter(v => v !== it); sv.stone += salv; save();
       track('gear_salvage', { rarity: it.r, stone: salv }); sfx('coin'); c.close(); toast(this, `강화석 +${salv}`, '#9ae0ff');
-    }, { size: 10, color: 0x5a3a2a });
+    }, { size: 10, color: 0x8a2f3a });
     xb.setEnabled(!it.egg && !isOn); c.add(xb);
     c.add(button(this, W - 52, 372, 44, 26, '닫기', () => c.close(), { size: 10 }));
   },
@@ -191,7 +191,7 @@ export const GearTab = {
         if (this.busy || max || sv.gold < cost) return;
         sv.gold -= cost; (sv.pets ||= {})[p.id] = lv + 1; save();
         track('pet_feed', { pet: p.id, lv: lv + 1, cost }); sfx('level'); this.refreshTop(); this.bump(0); this.show('gear');
-      }, { size: 10, color: 0x7a5a1a });
+      }, { size: 10, color: 0x2f6b3a });
       fb.setEnabled(!max && sv.gold >= cost); b.add(fb);
     });
     b.add(this.add.text(W / 2, 372, `펫 목걸이(장비)를 끼면 펫 피해가 오른다 · 지금 +${Math.round(g.pet * 100)}%`, font9(10, '#a89cc8')).setOrigin(0.5));
@@ -207,7 +207,7 @@ export const GearTab = {
       const y = 104 + i * 54, v = sv.sp[st.id] || 0;
       b.add(panel(this, 12, y, W - 24, 48, { fill: 0x1a1528 }));
       b.add(this.add.text(24, y + 7, st.name, font(12, st.css)));
-      if (st.id === wt.stat) b.add(this.add.text(W - 74, y + 7, `${wt.name} 스탯`, font9(9, '#ffd75e')).setOrigin(1, 0));
+      if (st.id === wt.stat) b.add(this.add.text(W - 44, y + 4, `${wt.name} 스탯`, font9(9, '#ffd75e')).setOrigin(0.5, 0));
       b.add(this.add.text(70, y + 9, String(v), font(11)));
       // 지금 효과와 다음 5점 보너스까지 남은 점수
       const dmgStat = st.id !== 'vit';
@@ -215,7 +215,7 @@ export const GearTab = {
       const left = SP_MILE - v % SP_MILE;
       b.add(this.add.text(92, y + 10, `+${now}% · ${left}점 뒤 +${Math.round((dmgStat ? SP_MILE_DMG : SP_MILE_HP) * 100)}%`, font9(9, '#ffd75e')));
       b.add(this.add.text(24, y + 28, st.desc, font9(10, '#e8e2f8')));
-      const pb = button(this, W - 44, y + 24, 44, 28, '+1', () => {
+      const pb = button(this, W - 44, y + 30, 44, 24, '+1', () => {
         if (this.busy || spFree(sv) <= 0) return;
         sv.sp[st.id] = v + 1; save(); sfx('buy'); track('stat_up', { stat: st.id, v: v + 1, power: D.powerOf(sv) }); this.show('gear');
       }, { size: 11, color: 0x2f6b3a });
@@ -233,7 +233,7 @@ export const GearTab = {
       else { sfx('deny'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
       sv.sp = { str: 0, dex: 0, int: 0, vit: 0 }; save();
       track('stat_reset', { used }); sfx('win'); this.refreshTop(); toast(this, '스탯을 되돌렸다', '#ffd75e'); this.show('gear');
-    }, { size: 10, color: 0x5a2f8a });
+    }, { size: 10, color: 0x8a2f3a });
     rb.setEnabled(used > 0); b.add(rb);
   },
 };

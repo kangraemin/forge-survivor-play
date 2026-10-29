@@ -11,10 +11,10 @@ export class Pet {
     this.pow = petPow(this.lv) * (1 + s.gear.pet);
     this.t = 0; this.x = s.hero.x - 20; this.y = s.hero.y;
     const anim = { slime: 'slime', bat: 'bat' }[this.def.id];
-    if (anim && s.anims.exists(anim)) this.g = s.add.sprite(this.x, this.y, null).play(anim).setScale(0.6).setTint(this.def.color);
-    else this.g = s.add.image(this.x, this.y, 'fireball').setBlendMode(Phaser.BlendModes.ADD).setScale(1.3);
+    if (anim && s.anims.exists(anim)) this.g = s.add.sprite(this.x, this.y, null).play(anim).setScale(1).setTint(this.def.color);
+    else this.g = s.add.image(this.x, this.y, 'fireball').setBlendMode(Phaser.BlendModes.ADD).setScale(1.7);
     this.g.setDepth(27);
-    this.ring = s.add.ellipse(this.x, this.y, 12, 5, this.def.color, 0.25).setDepth(8);
+    this.ring = s.add.ellipse(this.x, this.y, 18, 7, this.def.color, 0.25).setDepth(8);
   }
 
   update(dt) {
@@ -25,7 +25,7 @@ export class Pet {
     const tx = h.x - s.face * 22, ty = h.y - (fly ? 18 + Math.sin(s.bt / 260) * 4 : -4);
     if (!this.busy) { const k = 1 - Math.pow(0.88, dt / 16.7); this.x += (tx - this.x) * k; this.y += (ty - this.y) * k; }
     this.g.setPosition(this.x, this.y).setFlipX(s.face < 0);
-    if (this.def.id === 'fire') this.g.setScale(1.2 + Math.sin(s.bt / 90) * 0.15);
+    if (this.def.id === 'fire') this.g.setScale(1.6 + Math.sin(s.bt / 90) * 0.2);
     this.ring.setPosition(this.x, this.y + (fly ? 20 : 6)).setVisible(!fly || this.def.id === 'fire');
     this.t += dt;
     this[this.def.id](dt);
