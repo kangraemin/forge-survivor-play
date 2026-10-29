@@ -49,7 +49,7 @@ export class Battle extends Phaser.Scene {
     // 씬을 다시 쓰므로 콤보도 판마다 비운다(앞 판 처치 시각이 남아 다음 판 콤보가 424까지 이어졌다)
     this.combo = 0; this.lastKillT = -1e9;
     // 장면 인스턴스는 판끼리 재사용된다: 이벤트·축복·던전 고블린 상태를 비운다
-    this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
+    this.ultTip = null; this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
     // 보스 단계도 비운다(앞 판이 보스전으로 끝나면 다음 판이 웨이브 없이 영원히 이어졌다)
     this.bossPhase = false; this.midBoss = null; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.spawnAcc = 0;
     this.run = {
@@ -74,7 +74,8 @@ export class Battle extends Phaser.Scene {
     if (this.hard) this.mobDmgMul = D.hardDmg(this.c, this.s) * (1 - this.tv('def'));
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless && !this.hard && !this.dungeon;
-    if (this.easy) { this.mobDmgMul *= 0.55; this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
+    if (this.easy) { this.mobDmgMul *= 0.4;   // 0.55면 피해 다녀도 30초에 체력 54%(36차)
+      this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s) * (this.endless ? 1 : D.easeHp(this.c, this.s)) * spReq(this.endless ? sv.cleared : this.c * D.STAGES_PER_CHAPTER + this.s);
     if (this.hard) this.mobHpMul = D.hardHp(this.c, this.s);
     // 던전은 많이 잡는 판: 몹이 약하고 조금 덜 아프다
@@ -123,7 +124,7 @@ export class Battle extends Phaser.Scene {
       : sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s))) : null;   // 변종이 없는 판엔 '변종 소굴'은 빼고 뽑는다
     this.hordeKind = this.mod?.id === 'horde' ? this.ch.mobs[R(0, 2)] : null;
     // 깜짝 이벤트: 보스·무한의 탑·처음 판·던전이 아니면 판 중간에 하나(보물 고블린·황금 박쥐 떼·축복의 제단)
-    this.eventAt = !this.easy && !this.isBoss && !this.endless && !this.dungeon && Math.random() < D.EVENTS.chance ? RF(0.3, 0.7) : null;
+    this.eventAt = !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
     this.eventKind = Phaser.Utils.Array.GetRandom(D.EVENTS.kinds);
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
     for (let i = 0; i < (this.easy ? 18 : 40); i++) this.spawn(true);
@@ -833,6 +834,8 @@ export class Battle extends Phaser.Scene {
   ult() {
     if (this.paused || this.over || this.run.mana < D.MANA_MAX) return;
     this.run.mana = 0;
+    if (!this.sv.tut.ult) { this.sv.tut.ult = true; save(); }
+    if (this.ultTip) { this.tweens.killTweensOf(this.ultTip); this.ultTip.destroy(); }
     this.log('ult_use', { boss: !!this.boss, mobs: this.mobs.countActive() });
     this.blast(9, false);
   }
@@ -915,7 +918,7 @@ export class Battle extends Phaser.Scene {
       const early = !this.endless && this.s === 0 && this.bt < 20000 ? 2 : 0;
       this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 3 * f) * (this.dungeon ? 1.6 : 1) / 1000;   // 던전은 잡을 몹이 많아야 한다
       // 화면에 70마리가 넘으면 더 내보내지 않는다(3장에서 89마리까지 쌓여 저사양 폰이 버거웠다)
-      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? 35 : 70)) this.spawn(); }
+      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 25 : 35) : 70)) this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
       if (this.eventAt != null && !this.eventDone && this.progress() >= this.eventAt) { this.eventDone = true; this.surprise(this.eventKind); }
@@ -1102,7 +1105,7 @@ export class Battle extends Phaser.Scene {
     if (this.bossPhase) { this.timeTxt.setText('보스'); this.waveTxt.setText(''); }
     else {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));
-      this.timeTxt.setText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
+      this.timeTxt.setText(`남은 ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);   // 경과 시간으로 읽혔다
       this.timeTxt.setColor(left <= 5 ? '#ffd75e' : '#ffffff');
       this.waveTxt.setText(this.endless ? `${this.wave + 1}층` : this.dungeon ? `처치 ${r.kills} / ${D.DUNGEON.killNeed}` : `${this.hard ? '어려움 · ' : ''}웨이브 ${Math.min(this.wave + 1, this.waveCount)}/${this.waveCount}`);
       if (this.dungeon) this.waveTxt.setColor(r.kills >= D.DUNGEON.killNeed ? '#5fdc6a' : '#c8bfe0');
@@ -1113,6 +1116,11 @@ export class Battle extends Phaser.Scene {
     this.ultFill.clear().lineStyle(3, full ? 0xffd75e : 0x6fd3ff, 1)
       .beginPath().arc(this.ultPos.x, this.ultPos.y, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * mf).strokePath();
     this.ultIcon.setAlpha(full ? 1 : 0.45).setScale((full ? 1 + Math.sin(time / 120) * 0.08 : 1) * (this.ultIcon.baseScale ||= this.ultIcon.scaleX));
+    // 궁극기를 한 번도 안 써 봤으면 처음 찼을 때 말풍선으로 짚어 준다
+    if (full && !this.sv.tut.ult && !this.ultTip) {
+      this.ultTip = this.add.text(this.ultPos.x + 20, this.ultPos.y - 40, '궁극기가 찼다! 눌러 봐 ▼', font(10, '#ffd75e')).setOrigin(1, 0.5).setBackgroundColor('#2a1e3a').setPadding(4, 2, 4, 2).setScrollFactor(0).setDepth(101);
+      this.tweens.add({ targets: this.ultTip, y: '-=4', duration: 400, yoyo: true, repeat: -1 });
+    }
     this.ultTxt.setText(full ? '눌러서 발동!' : `궁극기 ${Math.floor(mf * 100)}%`).setColor(full ? '#ffd75e' : '#c8bfe0');
     // 조명
     this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);

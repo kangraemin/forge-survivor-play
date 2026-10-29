@@ -136,7 +136,7 @@ export class Overlay {
       const glow = s.add.rectangle(W / 2, 172, 236, 76).setStrokeStyle(2, 0xffffff).setAlpha(0); c.add(glow);
       s.tweens.add({ targets: glow, alpha: 1, duration: 350, yoyo: true, repeat: -1, delay: 300 });
       // 세 장이 다 새 스킬이라 뭘 골라야 할지 몰랐다: 첫 장에 '추천'
-      c.add(s.add.text(47, 200, '추천', font(9, '#ffffff')).setOrigin(0.5).setBackgroundColor('#2f7a3a').setPadding(3, 1, 3, 1));
+      c.add(s.add.text(W / 2 + 100, 140, '추천', font(9, '#ffffff')).setOrigin(0.5).setBackgroundColor('#2f7a3a').setPadding(3, 1, 3, 1));
     }
     // 무료 → 은화 → 은화가 모자라면 보석
     const label = () => r.freeReroll > 0 ? '3장 모두 다시 뽑기 (무료)' : r.silver >= this.lvReroll() ? `3장 모두 다시 뽑기 · 은화 ${this.lvReroll()}` : `3장 모두 다시 뽑기 · 보석 ${D.REROLL_GEM}`;

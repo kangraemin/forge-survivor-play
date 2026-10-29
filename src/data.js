@@ -418,7 +418,7 @@ export const WEEKLY_ALL = { gem: 50, guard: 1 };
 // ── 깜짝 이벤트: 보스·탑·처음 두 판이 아니면 판마다 하나가 나올 수 있다 ──
 export const EVENTS = { chance: 0.55, kinds: ['goblin', 'bats', 'shrine'], shrineBuff: { dmg: 0.3, spd: 0.15, ms: 20000 }, shrineStand: 2000 };
 // 진 판이 이만큼 넘게 버텼으면 '조금만 더'를 띄운다
-export const CLOSE_LOSS = 0.7;
+export const CLOSE_LOSS = 0.6;
 
 // ── 진화: 액티브 5레벨 + 짝 패시브를 가지면 레벨업 카드에 진화가 뜬다 ──
 export const EVOS = {
