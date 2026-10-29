@@ -10,7 +10,9 @@ const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2'].flatMap(k => [0, 1, 
   .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'tile2', 'tile3', 'tile4', 'tile5']);
 // 코드로 그리던 작은 그림을 대신하는 PNG(assets/icon). 있으면 makeTextures가 건너뛴다
 const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'meat', 'silver',
-  'magnetItem', 'gem1', 'gem2', 'gem3', 'ebullet', 'fireball', 'ice'];
+  'magnetItem', 'gem1', 'gem2', 'gem3', 'ebullet', 'fireball', 'ice', 'hammer', 'wave', 'dagger', 'orb'];
+// 무기 그림 PNG(assets/weapon/<종류><등급>.png). 있으면 makeWeaponTextures가 건너뛴다
+const WEAPONS = ['sword', 'spear', 'axe', 'bow', 'gun', 'knuckle', 'staff'];
 
 export class Boot extends Phaser.Scene {
   constructor() { super('Boot'); }
@@ -24,6 +26,7 @@ export class Boot extends Phaser.Scene {
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
     for (const k of REQUIRED.concat(OPTIONAL)) this.load.image(k, `assets/${k}.png`);
     for (const k of ICONS) this.load.image(k, `assets/icon/${k}.png`);
+    for (const id of WEAPONS) for (let t = 0; t < 5; t++) this.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
   }
 
   sheet(key, frames = 4) {

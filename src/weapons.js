@@ -5,6 +5,8 @@ import { SKILLS, PASSIVE_LV3, SKINS, synOf, SYN_CD } from './data.js';
 import { cashW } from './gear.js';
 
 const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
+// 무기 기본 공격 투사체(각성 폭발 연쇄 대상)
+const BASIC = new Set(['arrow', 'gun', 'staff', 'awk']);
 
 export class Weapons {
   constructor(s) { this.s = s; this.cd = {}; this.orbs = []; this.patches = []; this.aura = null; }
@@ -69,6 +71,7 @@ export class Weapons {
     const wt0 = s.wtype.id;
     if (wt0 === 'bow' || wt0 === 'gun' || wt0 === 'staff') return this.shoot(lv, wt0);
     this.nb = (this.nb || 0) + 1;
+    const e = s.sv.enh;
     // 무기 세트 4개 효과: 검성은 세 번째 베기마다 검기, 용기사는 25% 투창, 무도가는 열 번째마다 충격파
     const fx4 = s.gear.fx;
     if (wt0 === 'sword' && fx4.has('sword4') && this.nb % 3 === 0) s.time.delayedCall(80, () => this.wave(3));
@@ -113,7 +116,7 @@ export class Weapons {
       fx.once('animationcomplete', () => fx.destroy());
       sfx('swing', 60);
       s.time.delayedCall(45, () => {
-        let hit = 0, boom = false;
+        let hit = 0, boom = false, chain = 0;
         s.mobs.getChildren().slice().forEach(m => {
           if (m.dead) return;
           const dx = m.x - h.x, dy = m.y - h.y, d = Math.hypot(dx, dy);
@@ -122,6 +125,8 @@ export class Weapons {
           if (d < reach && (off < (spear ? 0.45 : axe ? 2.6 : 1.9) || d < 18)) {
             if (s.hitMob(m, mult, { kb: axe ? 220 : 170, fx: 'big', tag })) {
               hit++; if (g.ember && hit <= 3) this.embers(m.x, m.y, g.tint);
+              // +10 각성: 벤 적이 죽으면 그 자리가 터진다(한 번 휘두를 때 두 번까지)
+              if (e >= 10 && m.dead && chain < 2) { chain++; const x = m.x, y = m.y; s.time.delayedCall(90 + chain * 70, () => !s.over && this.explode(x, y, e >= 15 ? 3 : 1)); }
               // 대장장이의 불꽃 4세트: 벤 적이 25% 확률로 터진다(한 번 휘두를 때 한 번까지)
               if (flame && !boom && Math.random() < 0.25) { boom = true; const x = m.x, y = m.y; s.time.delayedCall(80, () => this.explode(x, y, 1)); }
             }
@@ -135,9 +140,21 @@ export class Weapons {
     });
     slash(ang, 0);
     if (lv >= 3) slash(ang + Math.PI, 120);
+    // 강화 각성은 공격 모양을 바꾼다: +5 검기가 날아가고, +10 벤 적이 터지고, +15 세 번째마다 사방을 벤다
+    if (e >= 5) s.time.delayedCall(70, () => !s.over && this.enhWave(ang, e));
+    if (e >= 15 && this.nb % 3 === 0) {
+      slash(ang + Math.PI * 2 / 3, 90); slash(ang - Math.PI * 2 / 3, 150);
+      for (let i = 1; i < 6; i++) s.time.delayedCall(110, () => !s.over && this.enhWave(ang + i * Math.PI / 3, e));
+    }
     const slow = axe ? 1.35 : fist ? 0.4 : 1;
     if (evo) { slash(ang + Math.PI / 2, 60); slash(ang - Math.PI / 2, 180); return 460 * slow; }
     return (lv >= 5 ? 520 : 650) * slow;
+  }
+
+  // 각성 검기: 휘두른 쪽으로 강화 색의 칼바람이 날아간다(+10부터 관통)
+  enhWave(a, e) {
+    const s = this.s, h = s.hero, g = this.enhGlow();
+    this.bullet('wave', h.x, h.y - 4, a, 280, { mult: e >= 15 ? 1.2 : e >= 10 ? 0.9 : 0.6, pierce: e >= 10 ? 99 : 2, src: 'awk', life: 650, kb: 60, tag: 'ranged', tint: g.tint || 0x9ad8ff, scale: g.scale * 1.2, add: true });
   }
 
   // ── 회전 베기 ──
@@ -361,6 +378,10 @@ export class Weapons {
     h.setFlipX(s.face < 0).play('slash', true);
     h.once('animationcomplete-slash', () => h.play('idle'));
     const fx = s.gear.fx;
+    // 원거리도 각성하면 공격 모양이 바뀐다: +5 칼바람이 함께 날고, +15 세 번째마다 사방으로 퍼진다
+    const e = s.sv.enh; this.ns = (this.ns || 0) + 1;
+    if (e >= 5) s.time.delayedCall(60, () => !s.over && this.enhWave(ang, e));
+    if (e >= 15 && this.ns % 3 === 0) for (let i = 1; i < 6; i++) s.time.delayedCall(100, () => !s.over && this.enhWave(ang + i * Math.PI / 3, e));
     if (wt === 'bow') {
       // 활: 느리고 세게, 여러 마리를 꿰뚫는다. 사냥꾼 4세트는 세 번째 화살마다 터진다
       const n = evo ? 5 : lv >= 3 ? 2 : 1, mult = (evo ? 3.6 : [2.2, 2.7, 2.7, 2.7, 3.6][lv - 1]);
@@ -497,6 +518,8 @@ export class Weapons {
         b.seen.add(m);
         if (b.explode) { dead = true; break; }
         s.hitMob(m, b.mult, { kb: b.kb, from: b, tag: b.tag });
+        // +10 각성: 기본 공격(화살·총알·마력탄)으로 잡은 적이 터진다(너무 잦으면 화면이 덮여 간격 제한)
+        if (m.dead && BASIC.has(b.src) && s.sv.enh >= 10 && s.bt - (this.lastChain || 0) > 160) { this.lastChain = s.bt; const x = m.x, y = m.y; s.time.delayedCall(70, () => !s.over && this.explode(x, y, s.sv.enh >= 15 ? 3 : 1)); }
         // 지팡이 마력탄: 맞힌 자리 주변도 마력이 터진다
         if (b.splash) {
           const x = m.x, y = m.y, ring = s.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xc890ff).setScale(0.2).setDepth(31);

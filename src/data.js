@@ -100,6 +100,9 @@ const TIER_PRE = ['녹슨', '강철', '미스릴', '룬', '전설의'];
 export const tierName = (tier, w) => !w || w.id === 'sword' ? TIERS[tier].name : `${TIER_PRE[tier]} ${w.noun}`;
 // +5·+10·+15·+20을 넘을 때마다 칼이 한 번 더 깨어난다(×1.1). 한 단계 +10%만으론 강해진 게 안 느껴진다
 export const ENH_MILESTONE = 5, MILESTONE_MUL = 1.1;
+// 강화 각성(+5/+10/+15): 숫자만 오르지 않고 공격 모양이 바뀐다(weapons.js sword/shoot/enhWave)
+export const AWAKENINGS = [[5, '검기', '공격할 때 칼바람이 함께 날아간다'], [10, '불꽃 연쇄', '잡은 적이 터져 옆 적까지 쓸어버린다'], [15, '폭풍 베기', '세 번째 공격마다 사방을 베고 잔상이 남는다']];
+export const awakenText = enh => { const a = AWAKENINGS.filter(x => enh >= x[0]); return a.length ? [`+${a[a.length - 1][0]} 각성 · ${a.map(x => x[1]).join(' · ')}`, a[a.length - 1][2]] : null; };
 // +11부터는 한 단계마다 ×1.15: 더하기로는 단계가 오를수록 오름폭이 +10%→+8%로 줄어 파괴를 무릅쓸 이유가 없었다
 export const OVER10_MUL = 1.15;
 export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * Math.min(enh, 10)) * Math.pow(OVER10_MUL, Math.max(0, enh - 10)) * Math.pow(MILESTONE_MUL, Math.floor(enh / ENH_MILESTONE));

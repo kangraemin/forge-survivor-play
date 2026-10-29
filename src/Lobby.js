@@ -509,7 +509,9 @@ export class Lobby extends Phaser.Scene {
     // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
     if (!max) {
       const next = (Math.floor(enh / D.ENH_MILESTONE) + 1) * D.ENH_MILESTONE;
-      this.awakeTxt = this.add.text(W / 2, 88, next === enh + 1 ? `다음 강화에 각성! ×${D.MILESTONE_MUL}` : `+${next} 각성까지 ${next - enh}단계`, font(8, next === enh + 1 ? '#ffd75e' : '#a8a0c0', 2)).setOrigin(0.5);
+      // +15까지는 각성 때 무엇이 바뀌는지 이름을 보여 준다
+      const an = D.AWAKENINGS.find(x => x[0] === next), nm = an ? ` [${an[1]}]` : '';
+      this.awakeTxt = this.add.text(W / 2, 88, next === enh + 1 ? `다음 강화에 각성!${nm || ` ×${D.MILESTONE_MUL}`}` : `+${next} 각성${nm}까지 ${next - enh}단계`, font(8, next === enh + 1 ? '#ffd75e' : '#a8a0c0', 2)).setOrigin(0.5);
       b.add(this.awakeTxt);
     }
     // 모루 위의 칼
@@ -666,7 +668,8 @@ export class Lobby extends Phaser.Scene {
       this.sparks(W / 2, 168, 40, 0xffe08a);
       this.tweens.add({ targets: sw, scale: sw.scale * 1.25, duration: 160, yoyo: true });
       const awake = (from + 1) % D.ENH_MILESTONE === 0;
-      this.flashText(awake ? `칼이 각성했다!  +${from + 1}` : `강화 성공!  +${from + 1}`, '#ffd75e');
+      const an = D.AWAKENINGS.find(x => x[0] === from + 1);
+      this.flashText(awake ? `칼이 각성했다!  +${from + 1}${an ? ` ${an[1]}` : ''}` : `강화 성공!  +${from + 1}`, '#ffd75e');
       // +8부터와 각성(+5 단위)은 화면을 번쩍이고 오른 공격력을 크게 띄운다
       if (from + 1 >= 8 || awake) {
         const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));

@@ -149,6 +149,9 @@ export class Battle extends Phaser.Scene {
     if (this.mod) this.time.delayedCall(4200, () => !this.over && this.banner(`이번 판: ${this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : ''}${this.mod.name}`, this.mod.desc));
     // 이번 스테이지에 처음 나오는 변종을 알려 준다
     const nv = !this.endless && !this.isBoss && !this.dungeon && !this.hard && D.stageVariant(this.c, this.s);
+    // 각성한 무기는 판 시작 때 무엇이 달라졌는지 알려 준다
+    const aw = D.awakenText(sv.enh);
+    if (aw && !this.dungeon) this.time.delayedCall(this.mod ? 7600 : 3400, () => !this.over && this.banner(aw[0], aw[1]));
     if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(`새 몬스터: ${D.VARIANTS[nv[1]].pre} ${D.MOB_NAMES[this.ch.mobs[nv[0]]]}`, D.VARIANTS[nv[1]].desc));
     sv.stats.runs++; save();
     logCtx({ stage: this.endless ? 'tower' : this.dungeon ? 'dungeon' : `${this.hard ? 'H' : ''}${this.c + 1}-${this.s + 1}`, idx: this.endless || this.dungeon ? -1 : this.c * D.STAGES_PER_CHAPTER + this.s });
@@ -218,6 +221,11 @@ export class Battle extends Phaser.Scene {
     // 고리 색은 강화 단계를 따른다(+5 파랑, +10 주황, +15 보라). +10부터는 몸에도 빛이 돈다
     const rc = sv.enh >= 15 ? 0xd06bff : sv.enh >= 10 ? 0xff8a2a : sv.enh >= 5 ? 0x5fc8ff : 0x9ae6ff;
     this.heroRing = this.add.ellipse(0, 0, 24, 10, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(11.5);
+    // +10 각성부터 발밑에 강화 색 기운이 맥박친다(+15는 더 크고 잔상이 남는다)
+    if (sv.enh >= 10) {
+      this.heroAura = this.add.image(0, 0, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(rc).setDepth(9.5).setAlpha(0.5).setScale(sv.enh >= 15 ? 1.2 : 0.9, sv.enh >= 15 ? 0.55 : 0.42);
+      this.tweens.add({ targets: this.heroAura, alpha: 0.2, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    }
     // 몹 더미에 몸이 가려도 머리 위 작은 화살표로 어디 있는지 보인다
     this.heroMark = this.add.triangle(0, 0, 0, 0, 8, 0, 4, 5, rc).setStrokeStyle(1, 0x000000, 0.6).setDepth(12);
     // 영웅 스킨: 몸 색을 바꾼다
@@ -998,6 +1006,13 @@ export class Battle extends Phaser.Scene {
     h.setDepth(10 + h.y / WORLD);
     if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.height / 2 - 3); }
     this.heroRing.setPosition(h.x, h.y + h.height / 2 - 2);
+    if (this.heroAura) this.heroAura.setPosition(h.x, h.y + h.height / 2 - 2);
+    // +15 각성: 움직이면 강화 색 잔상이 남는다
+    if (moving && this.sv.enh >= 15 && this.bt - (this.lastGhost || 0) > 90) {
+      this.lastGhost = this.bt;
+      const gh = this.add.image(h.x, h.y, h.texture.key, h.frame.name).setFlipX(h.flipX).setScale(h.scaleX, h.scaleY).setTint(0xd06bff).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45).setDepth(h.depth - 0.01);
+      this.tweens.add({ targets: gh, alpha: 0, duration: 260, onComplete: () => gh.destroy() });
+    }
     this.heroMark.setPosition(h.x, h.y - h.height / 2 - 4 + Math.sin(this.bt / 160) * 1.5);
     this.heroShadow.setPosition(h.x, h.y + h.height / 2 - 2).setScale(1.6 * (1 - bob * 2), 1.4).setDepth(9);
     if (this.heroWeapon) {
@@ -1082,9 +1097,10 @@ export class Battle extends Phaser.Scene {
     const pick = D.PLAYER.pickup * (1 + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + this.lv3('magnet', 0.4) + r.bPick);
     this.gems.getChildren().slice().forEach(g => {
       const d = Phaser.Math.Distance.Between(g.x, g.y, h.x, h.y);
-      if (d < pick || g.pull) { g.pull = true; this.physics.moveToObject(g, h, 120 + (g.sp = (g.sp || 0) + dt * 0.5)); }
-      // 조금 먼 보석은 천천히 끌려온다: 몹에 둘러싸여 보석까지 못 가면 레벨이 멈췄다
-      else if (d < pick * 3) this.physics.moveToObject(g, h, 45);
+      // 끌리기 시작하면 빠르게 출발해 가속한다: 느릿하게 따라오면 흡수 쾌감이 없다
+      if (d < pick || g.pull) { g.pull = true; this.physics.moveToObject(g, h, Math.min(700, 220 + (g.sp = (g.sp || 0) + dt * 1.2))); }
+      // 조금 먼 보석도 플레이어 이동 속도(84)보다 빨리 끌려온다: 몹에 둘러싸여 보석까지 못 가면 레벨이 멈췄다
+      else if (d < pick * 3) this.physics.moveToObject(g, h, 110);
       else if (g.body.speed) g.setVelocity(0);
       if (d < 10) { this.gainXp(g.v); g.destroy(); }
     });
