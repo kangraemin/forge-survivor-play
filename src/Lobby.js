@@ -365,6 +365,13 @@ export class Lobby extends Phaser.Scene {
     b.add([go, sw]);
   }
 
+  // 보석이 모자라면 패키지 탭으로 보낸다(첫 구매 2배를 같이 알린다)
+  gemShort(need) {
+    const sv = this.sv, first = D.FIRST_BUY_X2.some(id => !sv.bought?.[id]);
+    this.shopPage = 'pack'; this.show('shop');
+    toast(this, `보석 ${need - sv.gem} 부족${first ? ' · 첫 구매는 2배' : ''}`, '#ff9a8a');
+  }
+
   // ── 무한의 탑 ──
   towerPage() {
     const sv = this.sv, b = this.body;
@@ -757,7 +764,7 @@ export class Lobby extends Phaser.Scene {
       const bt = button(this, x + 58, y + 56, 104, 18, label, () => {
         if (this.busy || on) return;
         if (!own) {
-          if (sv.gem < it.cost) { sfx('deny'); track('cosm_buy_fail', { item: it.id, kind: page, gem: sv.gem }); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          if (sv.gem < it.cost) { sfx('deny'); track('cosm_buy_fail', { item: it.id, kind: page, gem: sv.gem }); this.gemShort(it.cost); return; }
           sv.gem -= it.cost; track('cosm_buy', { item: it.id, kind: page, cost: it.cost }); sfx('buy'); toast(this, `${it.name} 얻음!`, '#ffd75e');
         } else sfx('click');
         onBuy(); save(); this.refreshTop(); this.show('shop');
@@ -804,7 +811,7 @@ export class Lobby extends Phaser.Scene {
       const bt = button(this, x + 58, y + 47, 104, 14, on ? '들고 간다' : own ? '끼기' : `   ${D.BOOK_GEM}`, () => {
         if (this.busy || on) return;
         if (!own) {
-          if (sv.gem < D.BOOK_GEM) { sfx('deny'); track('book_buy_fail', { skill: k, gem: sv.gem }); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          if (sv.gem < D.BOOK_GEM) { sfx('deny'); track('book_buy_fail', { skill: k, gem: sv.gem }); this.gemShort(D.BOOK_GEM); return; }
           sv.gem -= D.BOOK_GEM; (sv.books ||= {})[k] = true; track('book_buy', { skill: k, cost: D.BOOK_GEM }); sfx('buy'); toast(this, `${def.name} 비급 얻음!`, '#ffd75e');
         } else sfx('click');
         sv.book = k; save(); this.refreshTop(); this.show('shop');
@@ -844,7 +851,7 @@ export class Lobby extends Phaser.Scene {
         const z = this.add.zone(x, y, 116, 52).setOrigin(0).setInteractive({ useHandCursor: true }); b.add(z);
         z.on('pointerup', () => {
           if (this.busy) return;
-          if (sv.gem < it.cost) { sfx('deny'); track('gem_shop_fail', { item: it.id, gem: sv.gem }); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          if (sv.gem < it.cost) { sfx('deny'); track('gem_shop_fail', { item: it.id, gem: sv.gem }); this.gemShort(it.cost); return; }
           sv.gem -= it.cost; grant(sv, it.give); sfx('buy'); track('gem_shop_buy', { item: it.id, cost: it.cost, gem_left: sv.gem });
           after(`${it.name} 구매!`);
         });

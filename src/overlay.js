@@ -4,7 +4,7 @@ import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
-import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, SETS } from './gear.js';
+import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, ownsW, SETS } from './gear.js';
 import { itemBox } from './gearTab.js';
 
 const { W, H } = D;
@@ -14,6 +14,28 @@ export class Overlay {
   constructor(s) { this.s = s; this.open = null; this.pendingLv = 0; this.queue = []; }
 
   // 창을 열면 전투가 멈춘다. 닫으면 대기 중인 창(레벨업 등)을 이어서 연다
+  // 새 보스 펫 합류 창: 그림·이름·역할·잘 듣는 장, '데려가기'로 바로 낀다
+  petJoin(p) {
+    const s = this.s, sv = s.sv;
+    const c = fixedContainer(s).setDepth(DEPTH + 10);
+    const dim = s.add.rectangle(0, 0, W, 480, 0x000000, 0.7).setOrigin(0).setInteractive();
+    c.add([dim, panel(s, 30, 120, W - 60, 230, { fill: 0x1a1426, line: p.color })]);
+    c.add(s.add.text(W / 2, 142, '새 펫 합류!', font(15, '#ffd75e')).setOrigin(0.5));
+    c.add(s.add.image(W / 2, 192, 'disc').setScale(1.1).setTint(p.color).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD));
+    const fb = s.registry.get('fallback')?.[p.id];
+    const g = s.add.sprite(W / 2, 192, null).play(p.id).setScale(fb ? 1.4 : 0.7);
+    if (fb) g.setTint(p.color);
+    c.add(g);
+    c.add(s.add.text(W / 2, 236, p.name, font(14, '#ffffff')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 256, p.desc, font9(10, '#c8bfe0')).setOrigin(0.5));
+    const chN = i => `${i + 1}장`;
+    c.add(s.add.text(W / 2, 274, `잘 듣는 장: ${(p.good || []).map(chN).join(' · ') || '-'}`, font9(10, '#5fdc6a')).setOrigin(0.5));
+    const close = () => { s.tweens.killTweensOf(c); c.destroy(); };
+    c.add(button(s, W / 2 + 46, 320, 84, 28, '데려가기', () => { sv.pet = p.id; save(); sfx('buy'); s.log('pet_join_take', { pet: p.id }); close(); }, { size: 11, color: 0x2f6b3a }));
+    c.add(button(s, W / 2 - 50, 320, 76, 28, sv.pet === p.id ? '확인' : '나중에', () => { s.log('pet_join_later', { pet: p.id }); close(); }, { size: 10, color: 0x3a3846 }));
+    c.setAlpha(0); s.tweens.add({ targets: c, alpha: 1, duration: 250, delay: 600 });
+  }
+
   begin(name) {
     const s = this.s;
     this.open = name;
@@ -457,6 +479,8 @@ export class Overlay {
       sv.best[idx] = 1;
       // 새 무기: 보스를 처음 잡으면 확정, 처음 깬 판 20%, 다시 깬 판 5%. 어떤 무기인지는 무작위
       r.newW = grantWeapon(sv, first && s.isBoss ? 1 : first ? 0.2 : 0.05);
+      // 무기를 다 모았으면 보스 첫 처치 무기 보상은 강화석으로 바꿔 준다
+      if (!r.newW && first && s.isBoss && WTYPES.every(w => ownsW(sv, w.id))) { stone += D.DUP_W_STONE; r.dupW = true; }
       if (r.newW) s.log('weapon_get', { wtype: r.newW.id, first, boss: s.isBoss });
     } else {
       gold = Math.round(D.clearGold(s.c, s.s) * s.runProgress() * D.FAIL_GOLD_RATE);
@@ -561,10 +585,12 @@ export class Overlay {
     const egg = loot.find(it => it.egg), top = loot.reduce((a, it) => Math.max(a, it.r < 4 ? it.r : -1), -1);
     // 장 보스를 처음 잡으면 새 무기가 열린다(장마다 받는 큰 보상)
     const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
-    const head = wNew ? `새 무기 「${wNew.name}」 획득!` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
+    const head = wNew ? `새 무기 「${wNew.name}」 획득!` : s.run.dupW ? `무기를 다 모아 강화석 +${D.DUP_W_STONE}` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
     // 보스를 처음 잡으면 새 무기와 보스 펫이 같이 온다: 펫은 한 줄 위에 따로
     if (wNew && newPet) c.add(s.add.text(W / 2, 334, `새 펫 「${newPet.name}」 합류!`, font9(10, '#ffb050')).setOrigin(0.5));
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
+    // 보스 펫 합류는 결과 창 위에 따로 크게 띄운다(한 줄 글씨로는 못 보고 지나갔다)
+    if (newPet && !s.bot) this.petJoin(newPet);
     // 새 무기는 장비 아이콘 대신 무기 이름 칸으로 보여 준다(장비 그림이 나와 무엇을 얻었는지 헷갈렸다)
     if (wNew) {
       const st = { str: '힘', dex: '민첩', int: '지능' }[wNew.stat];
