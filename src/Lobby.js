@@ -5,10 +5,12 @@ import { sfx, setSound, unlock, playBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 import { track, logUser } from './log.js';
+import { GearTab } from './gearTab.js';
+import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree } from './gear.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
-const TABS = [['battle', '전투', 1], ['forge', '대장간', 13], ['train', '훈련', 14], ['shop', '상점', 12]];
+const TABS = [['battle', '전투', 1], ['forge', '대장간', 13], ['gear', '장비', 11], ['train', '훈련', 14], ['shop', '상점', 12]];
 
 // 스테이지별 권장 전투력(data.js recPower)
 export const recAtk = D.recPower;
@@ -183,6 +185,8 @@ export class Lobby extends Phaser.Scene {
       const locked = () => id !== 'battle' && this.sv.cleared === 0;
       if (locked()) { c.setAlpha(0.35); c.add(this.add.text(tw / 2 - 8, -20, '🔒', font(9)).setOrigin(1, 0)); }
       c.on('pointerup', () => { if (this.busy) return; if (locked()) { sfx('deny'); track('locked_tab_tap', { tab: id }); toast(this, '1-1을 깨면 열린다', '#ff9a8a'); return; } sfx('click'); this.show(id); });
+      // 장비 탭: 찍을 스탯이 남았으면 빨간 점
+      if (id === 'gear' && !locked() && spFree(this.sv) > 0) c.add(this.add.circle(tw / 2 - 10, -16, 4, 0xff5050));
       c.id = id; return c;
     });
   }
@@ -197,6 +201,7 @@ export class Lobby extends Phaser.Scene {
     this.body.removeAll(true); this.bg.removeAll(true);
     if (id === 'battle') this.battleTab();
     if (id === 'forge') this.forgeTab();
+    if (id === 'gear') this.gearTab();
     if (id === 'train') this.trainTab();
     if (id === 'shop') this.shopTab();
     this.body.setAlpha(0); this.tweens.add({ targets: this.body, alpha: 1, duration: 150 });
@@ -332,7 +337,10 @@ export class Lobby extends Phaser.Scene {
       const p = this.add.image(214 + R(-20, 20), 412 + R(-8, 8), 'silver').setTint(0xffd75e).setScale(2).setDepth(60);
       this.tweens.add({ targets: p, x: 18, y: 17, duration: 450, delay: i * 40, ease: 'Quad.In', onComplete: () => { p.destroy(); if (i === 9) { this.refreshTop(); this.bump(0); this.bump(1); this.bump(3); } } });
     }
-    toast(this, `금화 +${fmt(gold)}  강화석 +${stone}`, '#ffd75e');
+    // 소탕도 절반 확률로 장비 하나(대부분 일반)
+    const it = Math.random() < 0.5 ? makeItem(c, { rarity: Math.random() < 0.75 ? 0 : 1 }) : null;
+    if (it) { addItems(sv, [it]); save(); }
+    toast(this, `금화 +${fmt(gold)}  강화석 +${stone}${it ? `  ·  ${RARITY[it.r].name} ${it.n}` : ''}`, '#ffd75e');
     this.time.delayedCall(500, () => this.show('battle'));
   }
 
@@ -392,6 +400,13 @@ export class Lobby extends Phaser.Scene {
     this.tweens.add({ targets: this.sword, y: 162, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     this.hammer = this.add.image(W / 2 + 54, 130, 'hammer').setScale(2.2).setOrigin(0.5, 0.9).setAngle(30);
     b.add([halo, this.sword, this.hammer]);
+    // 이상한 돌멩이: 모루 위 칼을 스무 번 건드리면 떨어진다
+    this.sword.setInteractive().on('pointerup', () => {
+      if (this.busy || sv.eggs?.rock) return;
+      sv.taps = (sv.taps || 0) + 1; sfx('hit', 40);
+      this.tweens.add({ targets: this.sword, angle: { from: -6, to: 6 }, duration: 60, yoyo: true, onComplete: () => this.sword.setAngle(0) });
+      if (sv.taps >= 20 && grantEgg(sv, 'rock')) { save(); sfx('win'); toast(this, '칼 밑에서 「이상한 돌멩이」가 굴러 나왔다!', '#ff8ae0'); track('egg_found', { egg: 'rock' }); }
+    });
     if (!max) b.bringToTop(this.awakeTxt);
     this.swordAura(enh);
     // 강화 단계 표시(20칸)
@@ -405,7 +420,7 @@ export class Lobby extends Phaser.Scene {
     if (max) {
       b.add(this.add.text(W / 2, 300, '최대 강화', font(14, '#ffd75e')).setOrigin(0.5));
     } else {
-      const rate = Math.min(100, D.ENH_RATE[enh] + (this.useCharm ? D.CHARM_RATE : 0)), gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
+      const rate = Math.min(100, D.ENH_RATE[enh] + (this.useCharm ? D.CHARM_RATE : 0) + this.apron()), gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
       const danger = enh >= D.DESTROY_FROM;
       const row = (y, a, v, col) => { b.add(this.add.text(24, y, a, font9(10, '#a89cc8'))); b.add(this.add.text(W - 24, y, v, font(10, col)).setOrigin(1, 0)); };
       row(282, '성공 확률', rate + '%' + (this.useCharm ? ' (부적)' : ''), rate >= 70 ? '#5fdc6a' : rate >= 35 ? '#ffd75e' : '#ff7070');
@@ -457,6 +472,9 @@ export class Lobby extends Phaser.Scene {
     }
   }
 
+  // 대장장이 앞치마를 끼면 강화 성공 +5%p
+  apron() { return gearStats(this.sv).fx.has('apron') ? 5 : 0; }
+
   enhance() {
     const sv = this.sv, enh = sv.enh;
     // 망치질 중에 또 누르면 버리지 않고 끝난 뒤 이어서 한다(파괴 구간은 한 번씩만)
@@ -470,10 +488,14 @@ export class Lobby extends Phaser.Scene {
     if (guard) sv.guard--;
     const charm = this.useCharm;
     if (charm) sv.charm--;
-    const win = Math.random() * 100 < D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0);
+    const win = Math.random() * 100 < D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0) + this.apron();
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
     if (win) sv.enh++;
-    else if (outcome === 'shatter') { sv.enh = 0; sv.stats.destroyed++; }
+    else if (outcome === 'shatter') {
+      sv.enh = 0; sv.stats.destroyed++;
+      // 대장장이 앞치마: 칼을 세 번 부수면
+      if (sv.stats.destroyed >= 3 && grantEgg(sv, 'apron')) this.time.delayedCall(1800, () => toast(this, '숨겨진 장비 「대장장이 앞치마」를 얻었다!', '#ff8ae0'));
+    }
     track('enhance', { result: outcome, from: enh, tier: sv.tier, rate: D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0), guard, charm, gold_cost: gold, gold_left: sv.gold, stone_left: sv.stone, queued: !!this.enhQ });
     mission('enh'); sv.tut.forge = true;
     save();
@@ -735,3 +757,4 @@ export class Lobby extends Phaser.Scene {
 }
 
 const RF = Phaser.Math.FloatBetween;
+Object.assign(Lobby.prototype, GearTab);

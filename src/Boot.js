@@ -107,6 +107,19 @@ export class Boot extends Phaser.Scene {
       g.fillStyle(0xffd75e).fillRect(1, 4, 12, 2).fillRect(6, 3, 2, 5);
       g.fillStyle(0xb57a3a).fillRect(2, 1, 10, 2);
     });
+    // 정예가 떨어뜨리는 장비 꾸러미(빛나는 보따리)
+    tex('loot', 12, 12, g => {
+      g.fillStyle(0x0a0710).fillRect(1, 2, 10, 10);
+      g.fillStyle(0x6a4ab0).fillRect(2, 4, 8, 7);
+      g.fillStyle(0xc890ff).fillRect(3, 5, 3, 2);
+      g.fillStyle(0xffd75e).fillRect(4, 2, 4, 2).fillRect(5, 1, 2, 1);
+    });
+    // 검기: 초승달 모양
+    tex('wave', 10, 16, g => {
+      g.fillStyle(0xffffff, 0.5).fillEllipse(5, 8, 10, 16);
+      g.fillStyle(0xffffff).fillEllipse(6, 8, 6, 14);
+      g.fillStyle(0x000000, 1).fillEllipse(2, 8, 6, 12);
+    });
     tex('dagger', 12, 4, g => {
       g.fillStyle(0x0a0710).fillRect(0, 0, 12, 4);
       g.fillStyle(0xe8eef8).fillRect(4, 1, 7, 2);

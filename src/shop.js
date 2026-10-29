@@ -22,7 +22,7 @@ export function grant(sv, give) {
   save();
 }
 export const giveText = give => Object.entries(give).map(([k, v]) => ({
-  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, goldStage: `금화 ×${v}`, skin: D.SKINS.find(x => x.id === v)?.name,
+  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, spReset: `스탯 초기화권 ${v}`, goldStage: `금화 ×${v}`, skin: D.SKINS.find(x => x.id === v)?.name,
 }[k])).join(' · ');
 
 export const firstX2 = (sv, item) => D.FIRST_BUY_X2.includes(item.id) && !sv.bought[item.id];

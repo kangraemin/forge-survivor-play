@@ -23,7 +23,12 @@ const fresh = () => ({
   starterShown: false,
   endBest: 0,              // 무한의 탑 최고 층
   skins: {}, skin: '',     // 산 칼빛, 끼고 있는 칼빛
-  stats: { runs: 0, kills: 0, destroyed: 0, playMs: 0 },
+  stats: { runs: 0, kills: 0, destroyed: 0, playMs: 0, losses: 0 },
+  inv: [], eq: {},         // 가진 장비, 부위별로 낀 장비 uid
+  wtype: 'sword',          // 무기 종류
+  pet: '', pets: {},       // 데려가는 펫, 펫별 레벨
+  sp: { str: 0, dex: 0, int: 0, vit: 0 }, spReset: 1, // 찍은 스탯, 초기화권(처음 한 장은 공짜)
+  eggs: {}, taps: 0,       // 얻은 숨겨진 템, 대장간 칼 두드린 횟수
   sound: true,
 });
 

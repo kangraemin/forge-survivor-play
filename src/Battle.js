@@ -6,6 +6,8 @@ import { font, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX }
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
+import { gearStats, tagMul, wtypeOf, dropItem, makeItem, grantEgg, RARITY } from './gear.js';
+import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 
 const { W, H } = D;
@@ -31,8 +33,11 @@ export class Battle extends Phaser.Scene {
   // 가장 많이 때린 것(죽은 원인)
   topHit() { const e = Object.entries(this.run.dmgBy || {}).sort((a, b) => b[1] - a[1])[0]; return e ? e[0] : 'none'; }
 
-  // 훈련 효과(영구)
-  tv(id) { const t = D.TRAINING.find(x => x.id === id); return D.trainVal(t, this.sv.train[id] || 0); }
+  // 훈련 + 장비·스탯 효과(영구). 받는 피해 감소는 60%에서 멈춘다
+  tv(id) {
+    const t = D.TRAINING.find(x => x.id === id), v = D.trainVal(t, this.sv.train[id] || 0) + (this.gear?.[id] || 0);
+    return id === 'def' ? Math.min(0.6, v) : v;
+  }
 
   create() {
     const sv = this.sv;
@@ -45,6 +50,11 @@ export class Battle extends Phaser.Scene {
       bDmg: 0, bSpd: 0, bHp: 0, bPick: 0,
       revive: sv.train.revive ? 1 : 0, lastHeal: 0, dmgBy: {},
     };
+    // 장비·세트·스탯, 무기 종류. 스킬 태그(근접·원거리·마법)마다 피해 배율이 다르다
+    this.gear = gearStats(sv);
+    this.wtype = wtypeOf(sv);
+    this.tagM = { melee: tagMul(sv, 'melee'), ranged: tagMul(sv, 'ranged'), magic: tagMul(sv, 'magic'), pet: 1 };
+    this.run.loot = [];
     this.wave = 0;
     this.waveLen = this.endless ? D.ENDLESS.floorSec * 1000 : this.ch.dur * 1000 / D.WAVES;
     this.waveCount = this.endless ? Infinity : this.isBoss ? D.WAVES - 1 : D.WAVES;
@@ -66,7 +76,7 @@ export class Battle extends Phaser.Scene {
     this.pbullets = this.physics.add.group();
     this.physics.world.setBounds(0, 0, WORLD, WORLD);
     this.physics.add.collider(this.mobs, this.mobs, null, (a, b) => !a.float && !b.float && !a.dead && !b.dead);
-    this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
+    this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && !m.goblin && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
     this.physics.add.overlap(this.hero, this.ebullets, (h, b) => { this.hurt(b.dmg, 'shot'); b.destroy(); });
 
     // 왼쪽 위 기준 카메라라 주인공이 가운데 오도록 반 화면만큼 밀고, 경계도 그만큼 옮긴다(clampX는 가운데 기준 계산)
@@ -74,6 +84,7 @@ export class Battle extends Phaser.Scene {
     this.weapons = new Weapons(this);
     this.boss = null;
     this.ui = new Overlay(this);
+    this.pet = new Pet(this);
     this.makeHud();
     this.makeJoystick();
     this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE');
@@ -90,6 +101,8 @@ export class Battle extends Phaser.Scene {
     this.mod = !this.easy && !this.isBoss && !this.endless && sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE
       ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || this.s)) : null;   // x-1엔 변종이 없어 '변종 소굴'은 빼고 뽑는다
     this.hordeKind = this.mod?.id === 'horde' ? this.ch.mobs[R(0, 2)] : null;
+    // 보물 고블린: 보스·무한의 탑·처음 판이 아니면 45% 확률로 판 중간에 한 번 나와 도망친다
+    this.goblinAt = !this.easy && !this.isBoss && !this.endless && Math.random() < 0.45 ? RF(0.3, 0.7) : null;
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
     for (let i = 0; i < (this.easy ? 18 : 40); i++) this.spawn(true);
     if (!this.bot) playBgm('battle', this.c);
@@ -158,7 +171,7 @@ export class Battle extends Phaser.Scene {
 
   makeHero() {
     const sv = this.sv;
-    this.maxHp = D.PLAYER.hp * (1 + this.tv('hp')) * (1 + 0.15 * this.sv.tier);   // 무기 등급이 오르면 체력도 오른다
+    this.maxHp = D.PLAYER.hp * (1 + this.tv('hp')) * (1 + 0.15 * this.sv.tier);   // 무기 등급이 오르면 체력도 오른다(tv('hp')에 장비·스탯 체력도 들어 있다)
     this.hp = this.maxHp;
     this.hero = this.physics.add.sprite(WORLD / 2, WORLD / 2, 'hero2_r0s').play('idle');
     this.hero.body.setSize(this.hero.width * 0.45, this.hero.height * 0.35).setOffset(this.hero.width * 0.275, this.hero.height * 0.6);
@@ -409,23 +422,24 @@ export class Battle extends Phaser.Scene {
   }
 
   // ── 피해 ──
-  dmgCalc(mult) {
+  dmgCalc(mult, tag) {
     const r = this.run, crit = Math.random() < 0.08 + this.tv('luck');
-    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0) + this.lv3('might', 0.1)) * RF(0.9, 1.1);
+    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0) + this.lv3('might', 0.1)) * (this.tagM[tag] || 1) * RF(0.9, 1.1);
     return { dmg: Math.round(base * (crit ? 2 : 1)), crit };
   }
 
   // src: 같은 무기가 같은 몹을 너무 자주 때리지 않게 하는 키. kb: 밀려나는 세기
-  hitMob(m, mult, { src = 'x', cd = 0, kb = 60, fx = 'small', from } = {}) {
+  // tag: 스킬 갈래(근접·원거리·마법·펫). 스탯 힘·민첩·지능이 갈래별 피해를 올린다
+  hitMob(m, mult, { src = 'x', cd = 0, kb = 60, fx = 'small', from, tag } = {}) {
     if (!m.active || m.dead) return false;
     if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
     m.hitBy[src] = this.bt;
-    const { dmg, crit } = this.dmgCalc(mult);
+    const { dmg, crit } = this.dmgCalc(mult, tag);
     m.hp -= dmg;
     // 흰 번쩍임 + 찌그러짐
     m.setTintFill(0xffffff);
     this.time.delayedCall(60, () => { if (m.active && !m.dead) { m.clearTint(); if (m.baseTint !== 0xffffff) m.setTint(m.baseTint); } });
-    if (!m.isBoss) {
+    if (!m.isBoss && !m.goblin) {
       const ox = from ? from.x : this.hero.x, oy = from ? from.y : this.hero.y;
       const ang = Phaser.Math.Angle.Between(ox, oy, m.x, m.y), k = kb * (crit ? 1.5 : 1) * m.kbRes;
       if (k > 0) { m.setVelocity(Math.cos(ang) * k, Math.sin(ang) * k); m.kb = 120; }
@@ -498,6 +512,7 @@ export class Battle extends Phaser.Scene {
     if (m.variant === 'burst') this.burst(m.x, m.y, m.dmg);
     const sm = this.add.sprite(m.x, m.y - 2, 'fx1_r2s').setBlendMode(Phaser.BlendModes.ADD).setDepth(30).setAlpha(0.35).setScale(m.elite ? 1 : 0.5).setTint(m.color).play('fxSmoke');
     sm.once('animationcomplete', () => sm.destroy());
+    if (m.goblin) this.goblinDown(m);
     this.drop(m);
     this.tweens.killTweensOf(m);   // 폭탄 변종의 반복 맥박이 지운 몹을 붙잡지 않게
     m.destroy();
@@ -524,10 +539,12 @@ export class Battle extends Phaser.Scene {
       const n = R(...P.eliteSilver);
       for (let i = 0; i < 6; i++) this.addItem(m.x + R(-10, 10), m.y + R(-10, 10), 'silver', Math.ceil(n / 6));
       this.addItem(m.x, m.y, 'chest');
+      // 정예는 다섯에 한 번 장비 꾸러미도 떨어뜨린다
+      if (Math.random() < 0.2) this.addItem(m.x + 8, m.y, 'loot');
       r.stones += R(1, 2);
       return;
     }
-    if (Math.random() < P.silver * (1 + this.tv('luck'))) this.addItem(m.x + R(-4, 4), m.y + R(-4, 4), 'silver', 1);
+    if (Math.random() < P.silver * (1 + this.tv('luck')) * (this.sv.pet === 'bat' ? 1.3 : 1)) this.addItem(m.x + R(-4, 4), m.y + R(-4, 4), 'silver', 1);
     // 회복: 기본 1.5%, 체력이 낮을수록 확률 가산, 90초 동안 안 나오면 확정
     const f = this.hp / this.maxHp;
     let ph = P.heal + (f < 0.4 ? P.healLow : 0) + (f < 0.3 ? P.healCrit : 0);
@@ -552,7 +569,8 @@ export class Battle extends Phaser.Scene {
     const it = this.items.create(x, y, kind).setDepth(8);
     it.kind = kind; it.v = v;
     this.tweens.add({ targets: it, y: y - 8, duration: 160, yoyo: true, ease: 'Quad.Out' });
-    if (kind === 'chest' || kind === 'meat') this.tweens.add({ targets: it, scale: 1.15, duration: 400, yoyo: true, repeat: -1 });
+    if (kind === 'loot') it.preFX?.addGlow(0xc890ff, 2, 0, false, 0.1, 6);
+    if (kind === 'chest' || kind === 'meat' || kind === 'loot') this.tweens.add({ targets: it, scale: 1.15, duration: 400, yoyo: true, repeat: -1 });
     return it;
   }
 
@@ -562,7 +580,37 @@ export class Battle extends Phaser.Scene {
     else if (it.kind === 'meat') { this.heal(this.maxHp * D.HEAL_PCT); }
     else if (it.kind === 'magnetItem') { this.gems.getChildren().forEach(g => g.pull = true); sfx('level'); }
     else if (it.kind === 'chest') { r.chests++; this.ui.chest(); }
+    else if (it.kind === 'loot') this.gotLoot(dropItem(this.sv, this.c));
     it.destroy();
+  }
+
+  // 판에서 얻은 장비: 판이 끝나면 가방에 들어간다(져도 남는다)
+  gotLoot(item) {
+    this.run.loot.push(item);
+    const rr = RARITY[item.r];
+    const t = this.add.text(this.hero.x, this.hero.y - 34, `${rr.name} ${item.n}`, font(10, rr.css)).setOrigin(0.5).setDepth(40);
+    this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, delay: 600, duration: 700, onComplete: () => t.destroy() });
+    sfx(item.r >= 2 ? 'level' : 'coin');
+    this.log('loot', { rarity: item.r, slot: item.s, egg: item.egg || 'none' });
+  }
+
+  // 보물 고블린: 금빛, 단단하고 도망친다. 12초 안에 잡으면 은화와 희귀 이상 장비
+  spawnGoblin() {
+    const m = this.spawn(true, this.ch.mobs[0], { force: true });
+    if (!m) return;
+    m.goblin = true; m.goblinT = 12000; m.maxHp = m.hp = m.hp * 6; m.spd = 62; m.kbRes = 0.25; m.dmg = 0;
+    m.setTint(0xffd75e); m.baseTint = 0xffd75e; m.bs *= 1.25; m.setScale(m.bs);
+    m.preFX?.addGlow(0xffd75e, 4, 0, false, 0.1, 10);
+    this.banner('보물 고블린!', '도망치기 전에 잡아라');
+    sfx('warn', 300);
+    this.log('goblin_spawn');
+  }
+  goblinDown(m) {
+    for (let i = 0; i < 8; i++) this.addItem(m.x + R(-14, 14), m.y + R(-14, 14), 'silver', 5);
+    this.gotLoot(makeItem(this.c, { rarity: R(1, 10) > 8 ? 2 : 1 }));
+    if (Math.random() < 0.1) { const e = grantEgg(this.sv, 'cat', false); if (e) this.gotLoot(e); }
+    this.cameras.main.flash(120, 255, 220, 120);
+    this.log('goblin_kill');
   }
 
   heal(n) {
@@ -600,6 +648,15 @@ export class Battle extends Phaser.Scene {
     this.hurtUntil = this.bt + 160; this.hero.play('hurtPose');
     const t = this.add.text(this.hero.x, this.hero.y - 26, '-' + d, font(10, '#ff5050')).setOrigin(0.5).setDepth(40);
     this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 600, onComplete: () => t.destroy() });
+    // 서리 수호자 4세트: 맞으면 주변 적을 얼린다(6초마다)
+    if (this.gear.fx.has('frost4') && this.bt - (this.frostT || -1e9) > 6000) {
+      this.frostT = this.bt;
+      const ring = this.add.image(this.hero.x, this.hero.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9ae8ff).setScale(0.3).setDepth(30);
+      this.tweens.add({ targets: ring, scale: 2, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
+      this.mobs.getChildren().forEach(m => { if (!m.dead && !m.isBoss && Phaser.Math.Distance.Between(m.x, m.y, this.hero.x, this.hero.y) < 60) { m.freeze = 2000; m.setTint(0x9ae8ff); this.time.delayedCall(2000, () => m.active && !m.dead && m.setTint(m.baseTint)); } });
+    }
+    // 고무 오리: 꽥!
+    if (this.gear.fx.has('duck')) { const q = this.add.text(this.hero.x + 10, this.hero.y - 30, '꽥!', font(10, '#ffe066')).setOrigin(0.5).setDepth(40); this.tweens.add({ targets: q, y: q.y - 12, alpha: 0, duration: 600, onComplete: () => q.destroy() }); }
     if (this.hp <= 0) this.die();
   }
 
@@ -721,6 +778,7 @@ export class Battle extends Phaser.Scene {
       while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
+      if (this.goblinAt != null && !this.goblinDone && this.progress() >= this.goblinAt) { this.goblinDone = true; this.spawnGoblin(); }
       if (this.wave >= 1 && !this.ringDone && this.waveT > this.waveLen * 0.25) { this.ringDone = true; this.encircle(); }
       if (this.waveT < dt * 2) { this.eliteDone = false; this.ringDone = false; }
       // 15초마다 한쪽에서 대열이 밀려온다(그냥 몰려오기만 하지 않게). 처음 판의 1-1은 뺀다
@@ -747,6 +805,7 @@ export class Battle extends Phaser.Scene {
 
     this.moveHero(time, dt);
     this.weapons.update(dt);
+    this.pet.update(dt);
     this.updateMobs(dt);
     this.updatePickups(dt);
     this.updateHud(time);
@@ -812,6 +871,15 @@ export class Battle extends Phaser.Scene {
       if (m.kb > 0) { m.kb -= dt; m.body.velocity.scale(0.86); return; }
       const spd = m.spd * (m.slow > 0 ? 0.5 : 1);
       const dx = h.x - m.x, dy = h.y - m.y, d = Math.hypot(dx, dy) || 1;
+      // 보물 고블린은 반대로 달아나다 12초가 지나면 사라진다
+      if (m.goblin) {
+        m.goblinT -= dt;
+        if (m.goblinT <= 0) { m.dead = true; m.body.enable = false; this.tweens.add({ targets: m, alpha: 0, scale: 0.2, duration: 300, onComplete: () => m.destroy() }); this.banner('고블린이 도망쳤다', '다음엔 빨리 잡자'); this.log('goblin_escape'); return; }
+        const wob = Math.sin(m.t / 300 + m.phase) * 0.8;
+        m.setVelocity((-dx / d - dy / d * wob) * spd, (-dy / d + dx / d * wob) * spd);
+        if (m.x < 30 || m.y < 30 || m.x > WORLD - 30 || m.y > WORLD - 30) m.setVelocity((WORLD / 2 - m.x) * 0.3, (WORLD / 2 - m.y) * 0.3);
+        return;
+      }
       // 너무 멀어진 몹은 플레이어 근처로 다시 데려온다
       if (d > 420) { const p = this.spawnPoint(); m.setPosition(p.x, p.y); return; }
       if (m.ai === 'swarm') {

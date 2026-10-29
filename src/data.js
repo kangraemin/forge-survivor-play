@@ -1,3 +1,4 @@
+import { gearStats, tagMul, wtypeOf, SP_RESET_GEM } from './gear.js';
 // 게임 데이터와 밸런스 수치. 숫자는 전부 여기서만 바꾼다. 근거는 docs/DESIGN.md
 export const W = 270, H = 480;
 
@@ -65,7 +66,7 @@ export const BOSSES = {
 };
 
 // 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다. 4~5장 벽이 너무 높아 조금 낮췄다
-export const chapterHp = c => Math.pow(2.05, c);           // c는 0부터
+export const chapterHp = c => Math.pow(2.05, c) * GEAR_HP(c);           // c는 0부터
 export const chapterDmg = c => 0.65 * Math.pow(1.18, c);   // 1.25면 3장부터 무기 등급 체력 보너스를 앞질러 30초 만에 녹았다
 // 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
 // s는 0~5. 1-2에서 바로 벽을 느끼게 크게 뛰고, 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
@@ -120,20 +121,25 @@ export const TRAINING = [
 export const TRAIN_MILE = 5, TRAIN_MILE_BONUS = 1;
 export const trainVal = (t, lv) => (lv + (t.max >= TRAIN_MILE ? Math.floor(lv / TRAIN_MILE) * TRAIN_MILE_BONUS : 0)) * t.v;
 // 전투력: 무기 공격력에 훈련(근력·체력·갑옷)을 합친 값. 권장 전투력과 비교한다(훈련만 올려도 숫자가 오른다)
+// 장비(능력치·세트)와 무기 종류의 주 스탯(검·도끼 힘, 창 민첩)도 넣는다
 export const powerOf = sv => {
   const tv = id => trainVal(TRAINING.find(t => t.id === id), sv.train?.[id] || 0);
-  return Math.round(weaponAtk(sv.tier, sv.enh) * (1 + tv('atk')) * (1 + tv('hp') * 0.25 + tv('def') * 0.5));
+  const g = gearStats(sv);
+  return Math.round(weaponAtk(sv.tier, sv.enh) * (1 + tv('atk') + g.atk) * tagMul(sv, wtypeOf(sv).tag) * (1 + (tv('hp') + g.hp) * 0.25 + Math.min(0.6, tv('def') + g.def) * 0.5));
 };
 // 스테이지별 권장 전투력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
 // 보스 판은 봇 실측에서 권장 100~130%로도 졌다: 권장을 올려 화면이 '충분'이라고 속이지 않게 한다
-export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * (s === 5 && c > 0 ? 1.25 : 1));
+export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * (s === 5 ? 1.25 : 1) * GEAR_HP(c));
+// 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). sim에서 완주 5.5h → 5.4h로 맞춘 값
+export const GEAR_HP = c => 1 + 0.2 * c;
 export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
 
 // ── 판 안 성장 ──
 export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 46 };
 // 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 40% 줄여 한 판 안에 진화까지 닿게 한다
-// 2~5레벨은 빨리 올라 첫 판 2분 안에 빌드가 잡힌다(17차 평가: 150초에 Lv5)
-export const xpNeed = lv => lv === 1 ? 5 : lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6)) : 8 + (lv - 1) * 7;
+// 2~3레벨은 바로 오르고 4~5레벨은 간격을 벌린다(17차 150초에 Lv5 → 18차 20초에 카드 4연타, 둘 다 나빴다)
+const XP_EARLY = [0, 5, 14, 28, 42, 50];
+export const xpNeed = lv => lv <= 5 ? XP_EARLY[lv] : Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6));
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 
@@ -146,6 +152,10 @@ export const SKILLS = {
   holy: { name: '성역', type: 'active', icon: 7, desc: ['발밑의 빛이 계속 태운다', '범위 +20%', '피해 +30%', '적을 느리게 한다', '범위 +30%'] },
   fireball: { name: '화염구', type: 'active', icon: 8, desc: ['터지는 불덩이를 쏜다', '피해 +30%', '폭발 범위 +30%', '불덩이 +1', '바닥에 불이 남는다'] },
   ice: { name: '얼음 파편', type: 'active', icon: 9, desc: ['꿰뚫는 얼음을 쏜다', '파편 +1', '적을 얼린다', '피해 +40%', '파편 +2'] },
+  // 무기 전용 스킬: 그 무기를 든 판에서만 레벨업 카드에 나온다(진화 없음)
+  wave: { name: '검기', type: 'active', icon: 0, tint: 0x9ad8ff, own: 'sword', desc: ['베는 방향으로 검기를 날린다', '피해 +30%', '검기 +1', '꿰뚫는다', '검기 +2, 커진다'] },
+  javelin: { name: '투창', type: 'active', icon: 5, tint: 0xa8ffb0, own: 'spear', desc: ['가장 먼 적에게 창을 던진다', '피해 +30%', '창 +1', '맞은 적을 밀친다', '창 +2'] },
+  quake: { name: '지진', type: 'active', icon: 4, tint: 0xffb050, own: 'axe', desc: ['발밑에서 충격파가 퍼진다', '범위 +20%', '피해 +40%', '더 자주 쓴다', '두 번 퍼진다'] },
   orb: { name: '수호 구슬', type: 'active', icon: 11, tint: 0x9ad0ff, desc: ['구슬이 몸 주위를 돈다', '구슬 +1', '피해 +30%', '구슬 +1', '구슬 +1, 빨라진다'] },
   might: { name: '숫돌', type: 'passive', icon: 0, tint: 0xff9a5a, desc: ['피해 +10%'], bonus: '피해 +10% 더' },
   haste: { name: '신속 물약', type: 'passive', icon: 10, desc: ['이동 속도 +8%'], bonus: '이동 속도 +8% 더' },
@@ -229,6 +239,7 @@ export const GEM_SHOP = [
   { id: 'sweep', name: '소탕권 5장', icon: 15, cost: 40, give: { sweep: 5 } },
   { id: 'stone', name: '강화석 40개', icon: 13, cost: 60, give: { stone: 40 } },
   { id: 'gold', name: '금화 꾸러미', icon: 12, cost: 100, give: { goldStage: 3 } },
+  { id: 'spReset', name: '스탯 초기화권', icon: 14, cost: SP_RESET_GEM, give: { spReset: 1 } },
 ];
 // 보상형 광고: 하루 횟수 제한
 export const ADS = {
