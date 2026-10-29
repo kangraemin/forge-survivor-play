@@ -220,6 +220,9 @@ export class Battle extends Phaser.Scene {
     // 영웅 스킨: 몸 색을 바꾼다
     if (heroSkin(sv).id) skinFx(this.hero, heroSkin(sv));
     if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
+    // 주인공 그림은 검을 들고 있다: 다른 무기면 손에 그 무기 그림을 겹쳐 든다
+    const wk = `w_${this.wtype.id}${sv.tier}`;
+    this.heroWeapon = this.wtype.id !== 'sword' && this.textures.exists(wk) ? this.add.image(0, 0, wk) : null;
     this.face = 1; this.walkT = 0; this.iframe = 0;
     this.atk = D.weaponAtk(sv.tier, sv.enh);
   }
@@ -812,6 +815,7 @@ export class Battle extends Phaser.Scene {
     this.hero.play('hurtPose');
     this.time.timeScale = 1;
     this.tweens.add({ targets: this.hero, angle: 90 * this.face, alpha: 0.4, duration: 500 });
+    if (this.heroWeapon) this.tweens.add({ targets: this.heroWeapon, alpha: 0, duration: 300 });
     this.cameras.main.flash(300, 120, 0, 0);
     this.time.delayedCall(900, () => this.ui.result(false));
   }
@@ -991,6 +995,13 @@ export class Battle extends Phaser.Scene {
     this.heroRing.setPosition(h.x, h.y + h.height / 2 - 2);
     this.heroMark.setPosition(h.x, h.y - h.height / 2 - 4 + Math.sin(this.bt / 160) * 1.5);
     this.heroShadow.setPosition(h.x, h.y + h.height / 2 - 2).setScale(1.6 * (1 - bob * 2), 1.4).setDepth(9);
+    if (this.heroWeapon) {
+      // 손 자리: 앞모습은 왼쪽 아래, 뒷모습은 오른쪽(몸 뒤), 옆모습·서 있기는 바라보는 쪽, 휘두를 땐 앞으로 뻗는다
+      const k = h.anims.currentAnim?.key, f = h.flipX ? -1 : 1;
+      const [ox, oy, ang] = k === 'walkFront' ? [-9, 6, -20] : k === 'walkUp' ? [9, 5, 20] : k === 'slash' ? [13 * f, 0, 40 * f] : [6 * f, 7, 10 * f];
+      this.heroWeapon.setPosition(h.x + ox, h.y + oy - bob * h.height).setFlipX(f < 0).setAngle(ang + h.angle)
+        .setDepth(h.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(h.alpha);
+    }
     this.moveV = v;
   }
 

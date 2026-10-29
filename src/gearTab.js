@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { save } from './save.js';
 import { sfx } from './sfx.js';
-import { font, font9, panel, button, fmt, COLOR, toast } from './ui.js';
+import { font, font9, panel, button, fmt, COLOR, toast, weaponIcon } from './ui.js';
 import { track } from './log.js';
 import {
   SLOTS, slotOf, RARITY, STATS, statText, SETS, EGGS, WTYPES, PETS, PET_MAX, petCost, petPow, SP, SP_RESET_GEM, SKILL_TAG, TAG_NAME,
@@ -49,19 +49,20 @@ export const GearTab = {
   // ── 장비 ──
   equipPage() {
     const sv = this.sv, b = this.body, g = gearStats(sv);
-    // 무기 종류
+    // 무기 종류: 버튼이 좁아 이름 대신 그림을 넣고, 고른 무기 이름은 아래 줄에 적는다
     WTYPES.forEach((w, i) => {
       const open = ownsW(sv, w.id), on = sv.wtype === w.id;
-      const bt = button(this, 22 + i * 37.6, 82, 35, 22, open ? w.name : '?', () => {
+      const bt = button(this, 22 + i * 37.6, 82, 35, 22, open ? '' : '?', () => {
         if (this.busy) return;
         if (!open) { sfx('deny'); toast(this, '보스를 처음 잡거나 판을 깨면 무작위로 얻는다', '#ff9a8a'); return; }
         sv.wtype = w.id; save(); sfx('buy'); track('wtype_set', { wtype: w.id }); this.show('gear');
         toast(this, `${w.name}: ${w.desc}`, '#ffd75e');
-      }, { size: w.name.length > 2 ? 9 : 10, color: on ? 0x5a3f8a : open ? 0x2a2440 : 0x1a1726 });
+      }, { size: 10, color: on ? 0x5a3f8a : open ? 0x2a2440 : 0x1a1726 });
+      if (open) bt.add(weaponIcon(this, 0, 0, w.id, sv.tier, 18).setAlpha(on ? 1 : 0.7));
       b.add(bt);
     });
     const wt = WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
-    b.add(this.add.text(W / 2, 101, `${SP.find(p => p.id === wt.stat).name}을 따른다 · 전용 스킬 「${D.SKILLS[wt.own].name}」`, font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 101, `${wt.name} · ${SP.find(p => p.id === wt.stat).name}을 따른다 · 전용 스킬 「${D.SKILLS[wt.own].name}」`, font9(10, '#a89cc8')).setOrigin(0.5));
     // 낀 장비 5칸
     SLOTS.forEach((sl, i) => {
       const x = 31 + i * 52, y = 132, u = sv.eq?.[sl.id], it = u && sv.inv.find(v => v.u === u);

@@ -1,6 +1,7 @@
 // 에셋 로딩, 애니메이션 등록, 코드로 그리는 작은 텍스처 생성
 import { W, H, MOBS, BOSSES } from './data.js';
 import { font, hiCam } from './ui.js';
+import { makeWeaponTextures } from './wart.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
@@ -171,6 +172,8 @@ export class Boot extends Phaser.Scene {
     tex('ring', 64, 64, g => { g.lineStyle(3, 0xffffff, 1).strokeCircle(32, 32, 30); });
     tex('disc', 64, 64, g => { for (let r = 32; r > 0; r -= 2) { g.fillStyle(0xffffff, 0.05); g.fillCircle(32, 32, r); } });
     tex('shadow', 16, 6, g => g.fillStyle(0x000000, 0.35).fillEllipse(8, 3, 16, 6));
+    // 무기 종류별 그림(종류 7 × 등급 5)
+    makeWeaponTextures(g);
     // 조명 구멍(어두운 화면에서 지울 원)
     g.clear();
     for (let r = 150; r > 0; r -= 6) { g.fillStyle(0xffffff, 0.06); g.fillCircle(150, 150, r); }

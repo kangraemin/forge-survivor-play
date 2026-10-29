@@ -221,7 +221,7 @@ export class Overlay {
     const shine = s.add.rectangle(0, 0, 230, 70, 0xffd75e, 0.18); c.add(shine);
     s.tweens.add({ targets: shine, alpha: 0.02, duration: 500, yoyo: true, repeat: -1 });
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(2, 0xffd75e));
-    c.add(icon(s, -88, 0, D.SKILLS[base].icon, 32));
+    c.add(skillIcon(s, -88, 0, D.SKILLS[base], 32));
     c.add(s.add.text(-60, -24, e.name, font(12, '#ffd75e')));
     c.add(s.add.text(108, -24, '진화!', font(11, '#ff9a3a')).setOrigin(1, 0));
     c.add(s.add.text(-60, -6, e.desc, { ...font9(11, '#fff2c8'), wordWrap: { width: 165 } }));

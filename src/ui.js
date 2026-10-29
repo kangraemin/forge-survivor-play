@@ -1,5 +1,6 @@
 // 공통 UI: 글자 스타일, 패널, 누르는 버튼, 아이콘
 import { sfx } from './sfx.js';
+import { TIERS, SKILLS } from './data.js';
 
 // 그리는 배율. 카메라를 왼쪽 위 기준으로 PX배 당겨 게임 좌표(270x480)를 그대로 쓴다
 // 기기 실제 픽셀에 맞춘다(1080 폭 폰이면 4배): 화면에 맞추며 정수배가 아니게 늘리거나 줄이면 글자 획이 들쭉날쭉해진다
@@ -103,8 +104,17 @@ export function skinFx(sprite, sk) {
   return sprite;
 }
 
+// 무기 그림: 검은 아이콘 시트의 등급 그림, 나머지 종류는 Boot에서 그린 w_<종류><등급>
+export function weaponIcon(scene, x, y, wid, tier = 0, size = 22) {
+  const key = `w_${wid}${tier}`;
+  if (wid === 'sword' && scene.textures.exists('icons_r0s') || !scene.textures.exists(key)) return icon(scene, x, y, TIERS[tier].icon, size);
+  return scene.add.image(x, y, key).setScale(size / 16);
+}
+
 // 스킬 아이콘: 아이콘 칸이 모자라 같은 그림을 쓰는 스킬은 색으로 구분한다
+// 기본 공격은 든 무기 그림을 쓴다(전투 화면은 scene.wtype이 있다)
 export function skillIcon(scene, x, y, def, size) {
+  if (def === SKILLS.sword && scene.wtype && scene.wtype.id !== 'sword') return weaponIcon(scene, x, y, scene.wtype.id, scene.sv?.tier || 0, size);
   const im = icon(scene, x, y, def.icon, size);
   if (def.tint) im.setTint(def.tint);
   return im;

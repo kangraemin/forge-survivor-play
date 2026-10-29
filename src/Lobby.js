@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
@@ -487,10 +487,12 @@ export class Lobby extends Phaser.Scene {
     }
     // 모루 위의 칼
     const halo = this.halo = this.add.image(W / 2, 170, 'disc').setScale(1.6).setTint(enh >= 10 ? 0xffd75e : 0x9ad8ff).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD);
-    // 강화할수록 칼이 커지고 빛깔이 물든다(+5 푸른, +10 주황, +15 보라)
-    this.sword = icon(this, W / 2, 168, t.icon, 72 * (1 + Math.min(enh, 20) * 0.012));
+    // 강화할수록 칼이 커지고 빛깔이 물든다(+5 푸른, +10 주황, +15 보라). 그림은 든 무기 종류를 따른다
+    const wid = wtypeOf(sv).id;
+    this.sword = weaponIcon(this, W / 2, 168, wid, sv.tier, 72 * (1 + Math.min(enh, 20) * 0.012));
     const et = enh >= 15 ? 0xf0c0ff : enh >= 10 ? 0xffc088 : enh >= 5 ? 0xb8e4ff : 0;
-    if (t.tint) this.sword.setTint?.(t.tint); else if (et) this.sword.setTint?.(et);
+    // 룬 등급 색(t.tint)은 검 시트 그림용: 다른 종류는 등급 색을 그림에 이미 칠해 뒀다
+    if (t.tint && wid === 'sword') this.sword.setTint?.(t.tint); else if (et) this.sword.setTint?.(et);
     this.tweens.add({ targets: this.sword, y: 162, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     this.hammer = this.add.image(W / 2 + 54, 130, 'hammer').setScale(2.2).setOrigin(0.5, 0.9).setAngle(30);
     b.add([halo, this.sword, this.hammer]);
