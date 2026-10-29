@@ -113,7 +113,7 @@ export class Lobby extends Phaser.Scene {
         const g = { ...D.LOGIN_REWARDS[day] };
         if (g.skin && sv.skins?.[g.skin]) delete g.skin;   // 이미 가진 칼빛은 다시 주지 않는다
         sv.loginGot = true; track('login_reward', { day }); grant(sv, g); sfx('win'); this.refreshTop();
-        toast(this, `출석 보상 ${giveText(g)}`, '#ffd75e'); draw();
+        toast(this, `출석 보상 ${giveText(g, sv)}`, '#ffd75e'); draw();
       }, { size: 11, color: 0x2f6b3a });
       lb.setEnabled(!sv.loginGot); body.add(lb);
       body.add(button(this, W / 2, 404, 110, 24, '닫기', () => c.close(), { size: 10, color: 0x3b2f5c }));
@@ -448,7 +448,7 @@ export class Lobby extends Phaser.Scene {
         b.add(ck);
       }
       const ok = sv.gold >= gold && sv.stone >= stone;
-      const eb = button(this, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 82 : W / 2, 410, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 130 : 180, 38, ok ? '강화' : sv.gold < gold ? `금화 ${fmt(gold - sv.gold)} 부족` : `강화석 ${stone - sv.stone} 부족`, () => this.enhance(), { size: ok ? 15 : 11, color: danger ? 0x8a3a2a : 0x7a5a1a });
+      const eb = button(this, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 82 : W / 2, 410, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 130 : 180, 38, ok ? '강화' : sv.gold < gold ? `금화 ${fmt(gold - sv.gold)} 부족` : `강화석 ${stone - sv.stone} 부족`, () => this.enhance(), { size: ok ? 15 : 11, color: danger ? 0x8a3a2a : 0x7a5a1a, onDeny: () => this.enhance() });
       eb.setEnabled(ok); b.add(eb);
       // 처음 하는 사람: 강화 버튼을 가리킨다
       this.forgeArrow = sv.cleared >= 1 && !sv.tut.forge && ok;
@@ -708,7 +708,7 @@ export class Lobby extends Phaser.Scene {
         c.add(panel(this, 0, 0, 116, 52));
         c.add(icon(this, 18, 22, it.icon, 22));
         c.add(this.add.text(34, 5, it.name, font(10)));
-        c.add(this.add.text(34, 20, giveText(it.give), font9(10, '#c8bfe0')));
+        c.add(this.add.text(34, 20, giveText(it.give, this.sv), font9(10, '#c8bfe0')));
         const ok = sv.gem >= it.cost;
         c.add(gemIcon(this, 40, 41, 10));
         c.add(this.add.text(50, 34, String(it.cost), font(10, ok ? '#ff9ad0' : '#7a5a6a')));

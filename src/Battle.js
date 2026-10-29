@@ -353,6 +353,13 @@ export class Battle extends Phaser.Scene {
     if (this.mobs.countActive() >= 75 && !opt.force) return null;
     let vk = opt.variant;
     if (!kind) { const rv = this.rollVariant(); if (rv) { kind = rv.kind; vk = rv.v; } else kind = this.pickKind(); }
+    // 탱커(골렘·설인)는 느리고 단단해 쌓이면 화면을 막는다: 동시에 일정 수를 넘으면 다른 몹으로 바꾼다(보스전은 더 적게)
+    if (!opt.force && !vk && D.MOBS[kind].ai === 'tank') {
+      const cap = this.boss ? 6 : 12;
+      if (this.mobs.getChildren().filter(m => m.active && !m.dead && m.ai === 'tank').length >= cap) {
+        for (let i = 0; i < 4 && D.MOBS[kind].ai === 'tank'; i++) kind = this.pickKind();
+      }
+    }
     const m0 = D.MOBS[kind], v = vk ? D.VARIANTS[vk] : null;
     const p = opt.at || (near ? this.spawnPoint(110, 230) : this.spawnPoint());
     const m = this.mobs.create(p.x, p.y, null);

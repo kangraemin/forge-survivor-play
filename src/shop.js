@@ -12,17 +12,18 @@ const devpay = () => { try { return new URLSearchParams(location.search).has('de
 export const won = n => n.toLocaleString('ko-KR') + '원';
 
 // 보상 지급. goldStage는 지금 도전 중인 스테이지 클리어 금화의 배수
+const stageGold = sv => { const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1); return D.clearGold(Math.floor(top / 6), top % 6); };
 export function grant(sv, give) {
-  const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
   for (const [k, v] of Object.entries(give)) {
-    if (k === 'goldStage') sv.gold += D.clearGold(Math.floor(top / 6), top % 6) * v;
+    if (k === 'goldStage') sv.gold += stageGold(sv) * v;
     else if (k === 'skin') (sv.skins ||= {})[v] = true;
     else sv[k] = (sv[k] || 0) + v;
   }
   save();
 }
-export const giveText = give => Object.entries(give).map(([k, v]) => ({
-  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, spReset: `스탯 초기화권 ${v}`, goldStage: `금화 ×${v}`, skin: D.SKINS.find(x => x.id === v)?.name,
+// sv를 넘기면 goldStage를 '금화 ×2' 대신 실제 받을 금화로 보여 준다
+export const giveText = (give, sv) => Object.entries(give).map(([k, v]) => ({
+  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, spReset: `스탯 초기화권 ${v}`, goldStage: sv ? `금화 ${(stageGold(sv) * v).toLocaleString()}` : `금화 ×${v}`, skin: D.SKINS.find(x => x.id === v)?.name,
 }[k])).join(' · ');
 
 export const firstX2 = (sv, item) => D.FIRST_BUY_X2.includes(item.id) && !sv.bought[item.id];

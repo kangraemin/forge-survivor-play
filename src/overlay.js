@@ -291,7 +291,7 @@ export class Overlay {
       r.silver -= cost; rerolls++; sfx('buy'); roll(); draw();
       s.log('run_shop_reroll', { round, n: rerolls, cost });
     }, { size: 9 });
-    const go = button(s, 200, 410, 100, 28, '출발', () => { if (c !== this.c) return; s.log('run_shop_leave', { round, silver: r.silver, bought: stock.filter(it => it.sold).length }); r.shopRound++; this.end(c); onDone?.(); }, { size: 12, color: 0x2f6b3a });
+    const go = button(s, 200, 410, 100, 28, '출발 ▶', () => { if (c !== this.c) return; s.log('run_shop_leave', { round, silver: r.silver, bought: stock.filter(it => it.sold).length }); r.shopRound++; this.end(c); onDone?.(); }, { size: 12, color: 0x2f6b3a });
     c.add([rb, go]);
     roll(); draw();
     if (s.bot) s.time.delayedCall(200, () => {

@@ -29,12 +29,13 @@ export class BossAI {
   }
 
   makeBar() {
-    const s = this.s, y = 62;
+    // 스킬 아이콘 줄(최대 2줄, y 46~78) 아래에 둬 겹치지 않게 한다
+    const s = this.s, y = 92;
     this.bar = [
-      s.add.rectangle(s.scale.width / 2, y, 200, 9, 0x1a0a10).setStrokeStyle(1, 0x000000),
+      s.add.rectangle(D.W / 2, y, 200, 9, 0x1a0a10).setStrokeStyle(1, 0x000000),
       s.add.rectangle(35, y, 200, 7, 0xffffff).setOrigin(0, 0.5),
       s.add.rectangle(35, y, 200, 7, 0xe8343a).setOrigin(0, 0.5),
-      s.add.text(s.scale.width / 2, y - 11, this.b.name, font(9, '#ffd75e')).setOrigin(0.5),
+      s.add.text(D.W / 2, y - 11, this.b.name, font(9, '#ffd75e')).setOrigin(0.5),
     ];
     this.bar.forEach(o => o.setScrollFactor(0).setDepth(100));
   }
