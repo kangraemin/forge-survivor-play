@@ -1,5 +1,6 @@
 // 진행 저장(localStorage). 접근이 막힌 브라우저에서도 게임은 돌아가게 메모리로 대체한다
 import { SWEEP_DAILY, SWEEP_MAX, GEM_FREE, PASS_DAILY } from './data.js';
+import { track } from './log.js';
 
 const dayNo = d => Math.floor((d - d.getTimezoneOffset() * 60000) / 86400000); // 기기 시간대 기준 날짜 번호
 
@@ -40,7 +41,8 @@ export function load() {
     const n = dayNo(d);
     if (!mem.streak || n - mem.dayN === 1) mem.streak++;
     mem.dayN = n; mem.loginGot = false;
-    if (mem.passLeft > 0) { mem.passLeft--; mem.gem += PASS_DAILY.gem; mem.sweep += PASS_DAILY.sweep; }
+    if (mem.passLeft > 0) { mem.passLeft--; mem.gem += PASS_DAILY.gem; mem.sweep += PASS_DAILY.sweep; track('pass_daily', { left: mem.passLeft }); }
+    track('daily_reset', { streak: mem.streak, returning: !!mem.day, gem: mem.gem });
     mem.day = today;
   }
   save();

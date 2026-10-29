@@ -77,6 +77,7 @@ export class Overlay {
     if (this.open && !fromQueue) { this.pendingLv++; return; }
     const s = this.s;
     sfx('level');
+    s.log('levelup_show', { first: s.sv.stats.runs <= 1 && s.run.lv === 2 });
     const c = this.begin('level');
     // 주인공 머리 위로 빛기둥
     const pil = s.add.sprite(s.hero.x, s.hero.y + 20, 'fx2_r2s').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH - 1).setTint(0x9ad8ff).play('fxPillar');
@@ -107,6 +108,7 @@ export class Overlay {
       if (r.freeReroll > 0) r.freeReroll--;
       else if (r.silver >= this.lvReroll()) { r.silver -= this.lvReroll(); r.lvRerolls = (r.lvRerolls || 0) + 1; }
       else return;
+      s.log('levelup_reroll', { n: r.lvRerolls || 0, silver: r.silver });
       sfx('buy'); draw(); rb.label.setText(label()); rb.setEnabled(r.freeReroll > 0 || r.silver >= this.lvReroll());
     }, { size: 10, color: 0x3b2f5c });
     rb.setEnabled(r.freeReroll > 0 || r.silver >= this.lvReroll());
@@ -184,6 +186,7 @@ export class Overlay {
     if (!k || this.picking) return;
     this.picking = true;
     const s = this.s, r = s.run;
+    s.log('skill_pick', { skill: k, skill_lv: k.startsWith('_') ? undefined : (r.skills[k] || 0) + 1, evo: k.startsWith('_evo_'), skills: Object.keys(r.skills).length });
     if (k.startsWith('_evo_')) {
       const base = k.slice(5);
       r.evo[base] = true; s.refreshSkillRow();
@@ -218,6 +221,7 @@ export class Overlay {
       const pil = s.add.sprite(W / 2, 240, 'fx2_r2s').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setScrollFactor(0).setScale(1.6).play('fxPillar');
       c.add(pil);
       box.setVisible(false);
+      s.log('chest_open', { skill: k || '_silver' });
       if (k) {
         sk[k]++;
         if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
@@ -236,6 +240,7 @@ export class Overlay {
     const s = this.s, r = s.run;
     const c = this.begin('shop');
     const round = r.shopRound;
+    s.log('run_shop_open', { round, silver: r.silver });
     let rerolls = 0;
     c.add(panel(s, 10, 60, W - 20, 380, { fill: 0x1a1426 }));
     c.add(s.add.text(W / 2, 78, '떠돌이 상인', font(15, '#ffd75e')).setOrigin(0.5));
@@ -263,6 +268,7 @@ export class Overlay {
           if (it.sold) return;
           if (r.silver < it.price) { sfx('deny'); s.tweens.add({ targets: g, x: x + 3, duration: 40, yoyo: true, repeat: 2 }); return; }
           r.silver -= it.price; it.sold = true; sfx('buy');
+          s.log('run_shop_buy', { item: it.id, price: it.price, round, silver: r.silver });
           this.apply(it.id);
           draw();
         });
@@ -275,8 +281,9 @@ export class Overlay {
       const cost = D.rerollCost(round, rerolls);
       if (r.silver < cost) return;
       r.silver -= cost; rerolls++; sfx('buy'); roll(); draw();
+      s.log('run_shop_reroll', { round, n: rerolls, cost });
     }, { size: 9 });
-    const go = button(s, 200, 410, 100, 28, '출발', () => { if (c !== this.c) return; r.shopRound++; this.end(c); onDone?.(); }, { size: 12, color: 0x2f6b3a });
+    const go = button(s, 200, 410, 100, 28, '출발', () => { if (c !== this.c) return; s.log('run_shop_leave', { round, silver: r.silver, bought: stock.filter(it => it.sold).length }); r.shopRound++; this.end(c); onDone?.(); }, { size: 12, color: 0x2f6b3a });
     c.add([rb, go]);
     roll(); draw();
     if (s.bot) s.time.delayedCall(200, () => {
@@ -308,18 +315,20 @@ export class Overlay {
     if (this.open || this.s.over) return;
     const s = this.s;
     const c = this.begin('pause');
+    s.log('pause_open');
     c.add(panel(s, 45, 150, 180, 170));
     c.add(s.add.text(W / 2, 172, '일시정지', font(14)).setOrigin(0.5));
     const sk = Object.entries(s.run.skills).map(([k, lv]) => `${D.SKILLS[k].name} ${lv}`).join('\n');
     c.add(s.add.text(W / 2, 192, sk, { ...font9(10), align: 'center' }).setOrigin(0.5, 0).setLineSpacing(1));
     c.add(button(s, W / 2, 268, 130, 26, '계속하기', () => this.end(c), { color: 0x2f6b3a }));
-    c.add(button(s, W / 2, 300, 130, 24, '포기하기', () => { if (c !== this.c) return; this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x6b2f3a }));
+    c.add(button(s, W / 2, 300, 130, 24, '포기하기', () => { if (c !== this.c) return; s.log('give_up', { wave: s.wave, progress: Math.round(s.runProgress() * 100) }); this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x6b2f3a }));
   }
 
   // ── 쓰러졌을 때 부활 제안(판당 1번): 광고 또는 보석 ──
   revive() {
     const s = this.s, sv = s.sv;
     const c = this.begin('revive');
+    s.log('revive_offer', { gem: sv.gem, can_gem: sv.gem >= D.REVIVE_GEM, no_ads: !!sv.noAds });
     c.add(panel(s, 30, 150, W - 60, 190, { fill: 0x1a1426, line: 0x7a3a4a }));
     c.add(s.add.text(W / 2, 176, '쓰러졌다…', font(16, '#ff7070')).setOrigin(0.5));
     c.add(s.add.text(W / 2, 194, '체력 절반으로 일어나 이어서 싸울까?', font9(10, '#e8e2f8')).setOrigin(0.5));
@@ -331,17 +340,19 @@ export class Overlay {
       if (busy || c !== this.c) return; busy = true;
       const ok = await showAd(s, sv, 'revive');
       busy = false;
+      s.log('revive_choice', { via: 'ad', ok });
       if (ok && c === this.c) up();
     }, { size: 11, color: 0x2f5a7a });
     const gm = button(s, W / 2, 268, 170, 28, `보석 ${D.REVIVE_GEM}으로 부활`, () => {
       if (busy || c !== this.c || sv.gem < D.REVIVE_GEM) return;
-      sv.gem -= D.REVIVE_GEM; save(); up();
+      sv.gem -= D.REVIVE_GEM; save(); s.log('revive_choice', { via: 'gem', ok: true, gem_left: sv.gem }); up();
     }, { size: 11, color: 0x8a2f6a });
     gm.setEnabled(sv.gem >= D.REVIVE_GEM);
     c.add([ad, gm, gemIcon(s, W / 2 - 62, 268, 12)]);
     c.add(s.add.text(W / 2 + 70, 288, `보유 ${sv.gem}`, font9(10, '#ff9ad0')).setOrigin(1, 0));
     c.add(button(s, W / 2, 316, 120, 24, '포기', () => {
       if (busy || c !== this.c) return;
+      s.log('revive_choice', { via: 'giveup' });
       this.end(c); s.die(true);
     }, { size: 10, color: 0x4a3a4a }));
   }
@@ -374,6 +385,7 @@ export class Overlay {
     gold = Math.round(gold);
     sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem;
     save();
+    s.log('battle_end', { win, first, progress: Math.round((win ? 1 : s.runProgress()) * 100), wave: s.wave, floors: s.endless ? floors : undefined, kills: r.kills, gold, stone, gem, power: D.powerOf(sv), rec: s.endless ? undefined : D.recPower(s.c, s.s), top_dmg: s.topHit(), revived: !!r.revived, cleared: sv.cleared, skills: Object.entries(r.skills).map(([k, v]) => k + v).join(',').slice(0, 100) });
     stopBgm();
     sfx(win ? 'win' : 'fail');
     // 열린 창이 있으면 닫고 결과만 띄운다
@@ -416,6 +428,7 @@ export class Overlay {
       const db = button(s, W / 2, 330, 190, 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
+        s.log('double_reward', { ok, gold, stone });
         if (!ok || !s.scene.isActive()) { db.used = false; db.setEnabled(true); return; }
         sv.ads.double = (sv.ads.double || 0) + 1;
         sv.gold += gold; sv.stone += stone; save();
@@ -426,8 +439,9 @@ export class Overlay {
       c.add(db);
     }
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
-    c.add(button(s, 85, 360, 110, 30, win || s.endless ? '로비' : '대장간으로', () => s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }), { color: 0x3b2f5c }));
+    c.add(button(s, 85, 360, 110, 30, win || s.endless ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3b2f5c }));
     c.add(button(s, 190, 360, 100, 30, win ? '다음' : '다시', () => {
+      s.log('result_action', { act: win ? 'next' : 'retry', win });
       if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });
       const n = win ? nextIdx : idx;
       s.scene.start('Battle', { chapter: Math.floor(n / D.STAGES_PER_CHAPTER), stage: n % D.STAGES_PER_CHAPTER, bot: s.bot });

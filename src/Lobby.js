@@ -4,6 +4,7 @@ import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
+import { track, logUser } from './log.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -38,6 +39,8 @@ export class Lobby extends Phaser.Scene {
     this.body = this.add.container(0, 0);
     this.makeTop();
     this.makeTabs();
+    logUser({ cleared: sv.cleared, tier: sv.tier, enh: sv.enh, payer: !!sv.paidTotal, paid_total: sv.paidTotal || 0, no_ads: !!sv.noAds, pass: sv.passLeft > 0 });
+    track('lobby_enter', { tab: this.tab, cleared: sv.cleared, tier: sv.tier, enh: sv.enh, power: D.powerOf(sv), gold: sv.gold, stone: sv.stone, gem: sv.gem, runs: sv.stats.runs, guard: sv.guard, sweep: sv.sweep });
     this.show(this.tab);
     this.cameras.main.fadeIn(200);
     if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e'));
@@ -76,14 +79,14 @@ export class Lobby extends Phaser.Scene {
         body.add(this.add.text(36, y + 19, `${have}/${m.need} · 보석 ${D.MISSION_GIVE.gem} 강화석 ${D.MISSION_GIVE.stone}`, font9(10, done ? '#5fdc6a' : '#a89cc8')));
         const bt = button(this, W - 60, y + 17, 52, 24, got ? '완료' : '받기', () => {
           if (got || !done) return;
-          sv.misGot[m.id] = true; grant(sv, D.MISSION_GIVE); sfx('coin'); this.refreshTop(); draw();
+          sv.misGot[m.id] = true; track('mission_claim', { mission: m.id }); grant(sv, D.MISSION_GIVE); sfx('coin'); this.refreshTop(); draw();
         }, { size: 10, color: 0x7a5a1a });
         bt.setEnabled(done && !got); body.add(bt);
       });
       const allDone = D.MISSIONS.every(m => sv.misGot[m.id]);
       const ab = button(this, W / 2, 236, 190, 24, sv.misGot.all ? '모두 완료 보너스 받음' : `3개 모두 하면 보석 +${D.MISSION_ALL.gem}`, () => {
         if (!allDone || sv.misGot.all) return;
-        sv.misGot.all = true; grant(sv, D.MISSION_ALL); sfx('win'); this.refreshTop(); draw();
+        sv.misGot.all = true; track('mission_claim', { mission: 'all' }); grant(sv, D.MISSION_ALL); sfx('win'); this.refreshTop(); draw();
       }, { size: 10, color: 0x8a2f6a });
       ab.setEnabled(allDone && !sv.misGot.all); body.add(ab);
       // 출석 7일
@@ -105,7 +108,7 @@ export class Lobby extends Phaser.Scene {
         if (sv.loginGot) return;
         const g = { ...D.LOGIN_REWARDS[day] };
         if (g.skin && sv.skins?.[g.skin]) delete g.skin;   // 이미 가진 칼빛은 다시 주지 않는다
-        sv.loginGot = true; grant(sv, g); sfx('win'); this.refreshTop();
+        sv.loginGot = true; track('login_reward', { day }); grant(sv, g); sfx('win'); this.refreshTop();
         toast(this, `출석 보상 ${giveText(g)}`, '#ffd75e'); draw();
       }, { size: 11, color: 0x2f6b3a });
       lb.setEnabled(!sv.loginGot); body.add(lb);
@@ -117,15 +120,16 @@ export class Lobby extends Phaser.Scene {
   // 1-3을 깬 뒤 한 번만: 첫 결제 꾸러미
   starterWin() {
     const sv = this.sv, it = D.IAP.find(x => x.id === 'starter'), c = this.modal();
-    sv.starterShown = true; save();
+    sv.starterShown = true; save(); track('starter_offer_show', { cleared: sv.cleared });
     c.add(panel(this, 24, 130, W - 48, 210, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(this.add.text(W / 2, 152, '처음 온 대장장이에게만', font9(10, '#ff9ad0')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 172, it.name, font(14, '#ffd75e')).setOrigin(0.5));
     c.add(gemIcon(this, W / 2, 204, 26));
     c.add(this.add.text(W / 2, 230, giveText(it.give), { ...font9(10, '#e8e2f8'), align: 'center', wordWrap: { width: W - 80 } }).setOrigin(0.5, 0));
     c.add(this.add.text(W / 2, 268, `${it.tag}  ·  ${won(it.price)}`, font(11, '#ffd75e')).setOrigin(0.5));
-    c.add(button(this, 88, 310, 96, 28, '다음에', () => c.close(), { size: 11, color: 0x3b2f5c }));
+    c.add(button(this, 88, 310, 96, 28, '다음에', () => { track('starter_offer_close'); c.close(); }, { size: 11, color: 0x3b2f5c }));
     c.add(button(this, 186, 310, 100, 28, '사기', async () => {
+      track('starter_offer_click');
       const ok = await buy(this, sv, it);
       if (ok) toast(this, `${it.name} 구매 완료!`, '#ffd75e');
       c.close();
@@ -159,7 +163,7 @@ export class Lobby extends Phaser.Scene {
     });
     // 소리 켜고 끄기
     const snd = this.add.text(W - 8, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
-    snd.on('pointerup', () => { sv.sound = !sv.sound; setSound(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
+    snd.on('pointerup', () => { sv.sound = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
     this.refreshTop();
   }
   refreshTop() { this.topTxt.forEach(t => t.setText(t.get())); }
@@ -176,12 +180,13 @@ export class Lobby extends Phaser.Scene {
       // 처음엔 전투만: 1-1을 깨면 나머지 탭이 열린다
       const locked = () => id !== 'battle' && this.sv.cleared === 0;
       if (locked()) { c.setAlpha(0.35); c.add(this.add.text(tw / 2 - 8, -20, '🔒', font(9)).setOrigin(1, 0)); }
-      c.on('pointerup', () => { if (this.busy) return; if (locked()) { sfx('deny'); toast(this, '1-1을 깨면 열린다', '#ff9a8a'); return; } sfx('click'); this.show(id); });
+      c.on('pointerup', () => { if (this.busy) return; if (locked()) { sfx('deny'); track('locked_tab_tap', { tab: id }); toast(this, '1-1을 깨면 열린다', '#ff9a8a'); return; } sfx('click'); this.show(id); });
       c.id = id; return c;
     });
   }
 
   show(id) {
+    if (id !== this.lastTab) { track('tab_view', { tab: id, page: id === 'shop' ? this.shopPage : undefined }); this.lastTab = id; }
     this.tab = id;
     this.tabBtns.forEach(b => b.hl.setVisible(b.id === id));
     // 탭 안 오브젝트의 트윈만 끊는다(토스트·결과 글씨·날아가는 동전은 끝까지 돈다)
@@ -212,7 +217,7 @@ export class Lobby extends Phaser.Scene {
     // 마지막 챕터 오른쪽은 무한의 탑(1장 보스를 깨면 열림)
     if (c === unlockedC && sv.cleared >= D.ENDLESS.unlock) {
       const t = this.add.text(W - 22, 56, '∞▶', font(13, '#c8a0ff')).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      t.on('pointerup', () => { sfx('click'); this.tower = true; this.show('battle'); });
+      t.on('pointerup', () => { sfx('click'); this.tower = true; track('tower_open', { best: sv.endBest || 0 }); this.show('battle'); });
       b.add(t);
     } else arrow(W - 22, 1, c < unlockedC);
     // 지역 미리보기: 몹 세 마리와 보스
@@ -238,7 +243,7 @@ export class Lobby extends Phaser.Scene {
       g.add(this.add.text(0, 10, locked ? '잠김' : boss ? '보스' : s === 2 ? '중간 보스' : done ? '클리어' : '도전', font9(10, locked ? '#4a4060' : boss ? '#ff8090' : done ? '#5fdc6a' : '#ffd75e')).setOrigin(0.5));
       if (done) g.add(this.add.text(33, -17, '★', font(9, '#ffd75e')).setOrigin(1, 0));
       g.setSize(76, 44).setInteractive({ useHandCursor: true });
-      g.on('pointerup', () => { if (locked) { sfx('deny'); toast(this, '앞 스테이지를 먼저 깨야 한다', '#ff9090'); return; } sfx('click'); this.selS = s; this.show('battle'); });
+      g.on('pointerup', () => { if (locked) { sfx('deny'); track('locked_stage_tap', { stage: `${c + 1}-${s + 1}` }); toast(this, '앞 스테이지를 먼저 깨야 한다', '#ff9090'); return; } sfx('click'); this.selS = s; track('stage_select', { stage: `${c + 1}-${s + 1}` }); this.show('battle'); });
       b.add(g);
     }
     // 오늘의 임무 막대(받을 게 있으면 빨간 점)
@@ -269,7 +274,7 @@ export class Lobby extends Phaser.Scene {
     });
     // 권장에 못 미치면 바로 대장간으로 보낸다(글자만 있으면 그냥 지나친다)
     if (atk < rec) {
-      const fb = button(this, W / 2, 381, 230, 18, '전투력이 모자라다  대장간으로 →', () => this.show('forge'), { size: 10, color: 0x7a3a2a, textColor: '#ffd0b0' });
+      const fb = button(this, W / 2, 381, 230, 18, '전투력이 모자라다  대장간으로 →', () => { track('to_forge_click', { from: 'battle_tab', power: atk, rec, stage: `${c + 1}-${s + 1}` }); this.show('forge'); }, { size: 10, color: 0x7a3a2a, textColor: '#ffd0b0' });
       b.add(fb);
       this.tweens.add({ targets: fb, alpha: 0.7, duration: 500, yoyo: true, repeat: -1 });
     }
@@ -307,6 +312,8 @@ export class Lobby extends Phaser.Scene {
 
   startBattle(c, s, endless = false) {
     if (this.busy) return; this.busy = true;
+    const sv = this.sv, rec = D.recPower(c, s), pw = D.powerOf(sv);
+    track('battle_start_click', { stage: endless ? 'tower' : `${c + 1}-${s + 1}`, idx: c * 6 + s, power: pw, rec, ratio: Math.round(pw / rec * 100) / 100, replay: c * 6 + s < sv.cleared, tier: sv.tier, enh: sv.enh });
     sfx('bossIn');
     this.cameras.main.fadeOut(250);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Battle', { chapter: c, stage: s, endless }));
@@ -317,6 +324,7 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, gold = D.clearGold(c, s), stone = D.clearStone(c, s);
     if (sv.sweep <= 0) return;
     sv.sweep--; sv.gold += gold; sv.stone += stone; mission('clear'); save();
+    track('sweep', { stage: `${c + 1}-${s + 1}`, gold, stone, left: sv.sweep });
     sfx('coin');
     for (let i = 0; i < 10; i++) {
       const p = this.add.image(214 + R(-20, 20), 412 + R(-8, 8), 'silver').setTint(0xffd75e).setScale(2).setDepth(60);
@@ -405,7 +413,7 @@ export class Lobby extends Phaser.Scene {
         if (this.useGuard) chk.add(this.add.text(6, 0, '✓', font(10, '#9ae0ff')).setOrigin(0.5));
         chk.add(this.add.text(18, 0, `파괴 방지권 쓰기 (${sv.guard}장)`, font9(10, sv.guard ? '#e8e2f8' : '#5a5070')).setOrigin(0, 0.5));
         chk.setSize(200, 18).setInteractive({ useHandCursor: true });
-        chk.on('pointerup', () => { if (this.busy) return; if (!sv.guard) { sfx('deny'); return; } sfx('click'); this.guardOff = !this.guardOff; this.show('forge'); });
+        chk.on('pointerup', () => { if (this.busy) return; if (!sv.guard) { sfx('deny'); track('guard_toggle_fail'); return; } sfx('click'); this.guardOff = !this.guardOff; track('guard_toggle', { on: !this.guardOff, guard: sv.guard }); this.show('forge'); });
         b.add(chk);
       }
       // 행운 부적: 가지고 있을 때만 보인다(기본으로 켜짐)
@@ -451,7 +459,7 @@ export class Lobby extends Phaser.Scene {
     if (this.busy) { if (enh < D.DESTROY_FROM) this.enhQ = true; return; }
     if (enh >= D.ENH_MAX) return;
     const gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
-    if (sv.gold < gold || sv.stone < stone) return;
+    if (sv.gold < gold || sv.stone < stone) { track('enhance_blocked', { from: enh, tier: sv.tier, gold_short: Math.max(0, gold - sv.gold), stone_short: Math.max(0, stone - sv.stone) }); return; }
     this.busy = true;
     sv.gold -= gold; sv.stone -= stone;
     const danger = enh >= D.DESTROY_FROM, guard = danger && this.useGuard && sv.guard > 0;
@@ -462,6 +470,7 @@ export class Lobby extends Phaser.Scene {
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
     if (win) sv.enh++;
     else if (outcome === 'shatter') { sv.enh = 0; sv.stats.destroyed++; }
+    track('enhance', { result: outcome, from: enh, tier: sv.tier, rate: D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0), guard, charm, gold_cost: gold, gold_left: sv.gold, stone_left: sv.stone, queued: !!this.enhQ });
     mission('enh'); sv.tut.forge = true;
     save();
     this.refreshTop();
@@ -535,22 +544,25 @@ export class Lobby extends Phaser.Scene {
   // 부서진 직후: 방지권이 있었다면 지켰다는 걸 보여 주고 바로 살 수 있게
   shatterWin(from) {
     const sv = this.sv, c = this.modal(), cost = D.GEM_SHOP.find(x => x.id === 'guard').cost, back = D.restoreGem(from);
+    track('shatter_offer_show', { from, gem: sv.gem, restore_cost: back });
     c.add(panel(this, 24, 140, W - 48, 210, { fill: 0x1a0e12, line: 0xff5050 }));
     c.add(this.add.text(W / 2, 164, `+${from} 칼이 부서졌다`, font(15, '#ff5050')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 188, sv.guard > 0 ? '방지권을 켜 두면 지킬 수 있었다' : '파괴 방지권이 있었다면 지켰다', font9(11, '#e8e2f8')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 206, `다음 +10 강화부터는 꼭 쓰자 (보유 ${sv.guard}장)`, font9(10, '#a89cc8')).setOrigin(0.5));
     // 부서진 바로 그 자리에서만 되살릴 수 있다(창을 닫으면 끝)
     const rb = button(this, W / 2, 240, 190, 30, `+${from}으로 되살리기  보석 ${back}`, () => {
+      track('shatter_restore_click', { from, enough: sv.gem >= back });
       if (sv.gem < back) { c.close(); this.shopPage = 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
       sv.gem -= back; sv.enh = from; sv.stats.destroyed--; save(); sfx('win'); c.close(); this.refreshTop(); this.show('forge'); toast(this, `+${from} 칼이 돌아왔다!`, '#ffd75e');
     }, { size: 11, color: 0x8a5a1a });
     c.add([rb, gemIcon(this, W / 2 - 80, 240, 12)]);
     const bt = button(this, W / 2, 280, 190, 28, `방지권 사기  보석 ${cost}`, () => {
+      track('shatter_guard_click', { enough: sv.gem >= cost });
       if (sv.gem < cost) { c.close(); this.shopPage = 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
       sv.gem -= cost; sv.guard++; save(); sfx('buy'); c.close(); toast(this, '파괴 방지권 +1', '#9ae0ff');
     }, { size: 11, color: 0x8a2f6a });
     c.add([bt, gemIcon(this, W / 2 - 80, 280, 12)]);
-    c.add(button(this, W / 2, 322, 110, 24, '그냥 닫기', () => c.close(), { size: 10, color: 0x3b2f5c }));
+    c.add(button(this, W / 2, 322, 110, 24, '그냥 닫기', () => { track('shatter_offer_close', { from }); c.close(); }, { size: 10, color: 0x3b2f5c }));
   }
 
   promote() {
@@ -558,6 +570,7 @@ export class Lobby extends Phaser.Scene {
     if (this.busy || sv.gold < cost || sv.cleared < (sv.tier + 1) * 6) return;
     this.busy = true;
     sv.gold -= cost; sv.tier++; sv.enh = 0; save(); this.refreshTop();
+    track('promote', { tier: sv.tier, cost, cleared: sv.cleared });
     sfx('win');
     this.cameras.main.flash(400, 200, 160, 255);
     const p = this.add.sprite(W / 2, 214, 'fx2_r2s').setOrigin(0.5, 1).setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setTint(0xc8a0ff).play('fxPillar');
@@ -600,6 +613,7 @@ export class Lobby extends Phaser.Scene {
       const btn = button(this, W - 52, y + 18, 70, 26, max ? '최대' : fmt(cost), () => {
         if (sv.gold < cost || max) return;
         sv.gold -= cost; sv.train[t.id] = lv + 1; save();
+        track('train', { stat: t.id, lv: lv + 1, cost, power: D.powerOf(sv) });
         sfx('buy'); this.refreshTop(); this.bump(0);
         this.show('train');
       }, { size: 10, color: 0x7a5a1a });
@@ -629,10 +643,11 @@ export class Lobby extends Phaser.Scene {
       const bt = button(this, W - 60, y + 28, 76, 26, label, () => {
         if (this.busy || on) return;
         if (!own) {
-          if (sv.gem < sk.cost) { sfx('deny'); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          if (sv.gem < sk.cost) { sfx('deny'); track('skin_buy_fail', { skin: sk.id, gem: sv.gem }); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          track('skin_buy', { skin: sk.id, cost: sk.cost });
           sv.gem -= sk.cost; (sv.skins ||= {})[sk.id] = true; sfx('buy'); toast(this, `${sk.name} 얻음!`, '#ffd75e');
         } else sfx('click');
-        sv.skin = sk.id; save(); this.refreshTop(); this.show('shop');
+        sv.skin = sk.id; save(); track('skin_equip', { skin: sk.id || 'none' }); this.refreshTop(); this.show('shop');
       }, { size: 10, color: on ? 0x3b2f5c : own ? 0x2f6b3a : 0x8a2f6a });
       b.add(bt);
       if (!own) b.add(gemIcon(this, W - 78, y + 28, 10));
@@ -643,7 +658,7 @@ export class Lobby extends Phaser.Scene {
   shopTab() {
     const sv = this.sv, b = this.body, page = this.shopPage || 'gem';
     const sub = (x, id, name) => {
-      const bt = button(this, x, 54, 82, 24, name, () => { this.shopPage = id; this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : 0x2a2440 });
+      const bt = button(this, x, 54, 82, 24, name, () => { this.shopPage = id; track('shop_page', { page: id, gem: sv.gem }); this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : 0x2a2440 });
       b.add(bt);
     };
     sub(50, 'gem', '보석 상점'); sub(135, 'skin', '칼빛'); sub(220, 'pack', '패키지');
@@ -664,8 +679,8 @@ export class Lobby extends Phaser.Scene {
         const z = this.add.zone(x, y, 116, 52).setOrigin(0).setInteractive({ useHandCursor: true }); b.add(z);
         z.on('pointerup', () => {
           if (this.busy) return;
-          if (sv.gem < it.cost) { sfx('deny'); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
-          sv.gem -= it.cost; grant(sv, it.give); sfx('buy');
+          if (sv.gem < it.cost) { sfx('deny'); track('gem_shop_fail', { item: it.id, gem: sv.gem }); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          sv.gem -= it.cost; grant(sv, it.give); sfx('buy'); track('gem_shop_buy', { item: it.id, cost: it.cost, gem_left: sv.gem });
           after(`${it.name} 구매!`);
         });
       });
@@ -682,6 +697,7 @@ export class Lobby extends Phaser.Scene {
           this.busy = false;
           if (!ok || !this.scene.isActive()) return;
           sv.ads[k] = (sv.ads[k] || 0) + 1; grant(sv, ad.give);
+          track('ad_reward', { kind: k, n: sv.ads[k] });
           after(`${ad.name} 받았다`);
         }, { size: 10, color: 0x2f5a7a });
         bt.setEnabled(left > 0); b.add(bt);
@@ -692,6 +708,7 @@ export class Lobby extends Phaser.Scene {
       return;
     }
     // 패키지
+    track('view_item_list', { item_list_id: 'pack', items: D.IAP.filter(it => !(it.once && sv.bought[it.id])).map(it => it.id).join(','), gem: sv.gem });
     D.IAP.forEach((it, i) => {
       const y = 76 + i * 56, sold = it.once && sv.bought[it.id];
       const hot = it.id === 'starter' || it.id === 'pass';

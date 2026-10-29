@@ -6,6 +6,7 @@ import { font, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX }
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
+import { track, logCtx } from './log.js';
 
 const { W, H } = D;
 const WORLD = 1600;
@@ -24,6 +25,11 @@ export class Battle extends Phaser.Scene {
     this.bot = !!data.bot || q.has('bot');
     this.speed = +(q.get('speed') || 1);   // 자동 검증용 배속
   }
+
+  // 행동 로그(자동 검증 봇은 남기지 않는다)
+  log(name, p = {}) { if (!this.bot) track(name, { t: Math.round(this.bt / 1000), lv: this.run?.lv, hp_pct: this.maxHp ? Math.round(this.hp / this.maxHp * 100) : undefined, ...p }); }
+  // 가장 많이 때린 것(죽은 원인)
+  topHit() { const e = Object.entries(this.run.dmgBy || {}).sort((a, b) => b[1] - a[1])[0]; return e ? e[0] : 'none'; }
 
   // 훈련 효과(영구)
   tv(id) { const t = D.TRAINING.find(x => x.id === id); return D.trainVal(t, this.sv.train[id] || 0); }
@@ -96,6 +102,8 @@ export class Battle extends Phaser.Scene {
     const nv = !this.endless && D.STAGE_VARIANT[this.s];
     if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(`새 몬스터: ${D.VARIANTS[nv[1]].pre} ${D.MOB_NAMES[this.ch.mobs[nv[0]]]}`, D.VARIANTS[nv[1]].desc));
     sv.stats.runs++; save();
+    logCtx({ stage: this.endless ? 'tower' : `${this.c + 1}-${this.s + 1}`, idx: this.endless ? -1 : this.c * 6 + this.s });
+    this.log('battle_start', { power: D.powerOf(sv), rec: this.endless ? undefined : D.recPower(this.c, this.s), tier: sv.tier, enh: sv.enh, mod: this.mod?.id || 'none', easy: this.easy, runs: sv.stats.runs, replay: !this.endless && this.c * 6 + this.s < sv.cleared, boss_stage: this.isBoss });
   }
 
   // ── 지도 ──
@@ -558,6 +566,7 @@ export class Battle extends Phaser.Scene {
     sfx('gem', 35);
     if (r.xp >= D.xpNeed(r.lv)) {
       r.xp -= D.xpNeed(r.lv); r.lv++;
+      this.log('level_up', { wave: this.wave });
       this.lvTxt.setText('Lv ' + r.lv);
       this.ui.levelUp();
     }
@@ -584,11 +593,14 @@ export class Battle extends Phaser.Scene {
   die(final = false) {
     if (!final && this.run.revive > 0) {
       this.run.revive--;
+      this.log('revive_done', { via: 'train' });
       this.hp = this.maxHp * 0.5;
       this.blast(6, true);
       this.banner('부활!', '한 번 더 싸운다');
       return;
     }
+    // 부활을 포기해 다시 불린 것(final)은 이미 남겼다
+    if (!final) this.log('death', { by: this.topHit(), wave: this.wave, kills: this.run.kills, final, progress: Math.round(this.runProgress() * 100), boss: !!this.bossPhase, boss_hp_pct: this.boss?.m ? Math.round(this.boss.m.hp / this.boss.m.maxHp * 100) : undefined });
     // 판당 한 번: 광고·보석으로 부활할 기회
     if (!final && !this.bot && !this.run.offered) { this.run.offered = true; this.hp = 0; this.ui.revive(); return; }
     this.over = true;
@@ -602,6 +614,8 @@ export class Battle extends Phaser.Scene {
   }
 
   reviveNow() {
+    this.run.revived = true;
+    this.log('revive_done', { via: 'offer' });
     this.hp = this.maxHp * 0.5;
     this.iframe = this.bt + 2000;
     this.blast(6, true);
@@ -612,6 +626,7 @@ export class Battle extends Phaser.Scene {
   ult() {
     if (this.paused || this.over || this.run.mana < D.MANA_MAX) return;
     this.run.mana = 0;
+    this.log('ult_use', { boss: !!this.boss, mobs: this.mobs.countActive() });
     this.blast(9, false);
   }
 
@@ -635,6 +650,7 @@ export class Battle extends Phaser.Scene {
   // ── 웨이브 ──
   endWave() {
     this.wave++;
+    this.log('wave_clear', { wave: this.wave, of: this.endless ? undefined : this.waveCount, kills: this.run.kills, silver: this.run.silver });
     // 남은 몹은 흩어지고 보석은 다 끌려온다(브로타토식 자동 수거)
     this.mobs.getChildren().slice().forEach(m => {
       if (m.isBoss || m.dead) return;
@@ -656,6 +672,7 @@ export class Battle extends Phaser.Scene {
 
   startBoss() {
     this.bossPhase = true;
+    this.log('boss_start', { boss: this.ch.boss });
     sfx('bossIn');
     this.cameras.main.shake(800, 0.006);
     const b = D.BOSSES[this.ch.boss];

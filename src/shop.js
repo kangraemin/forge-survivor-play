@@ -1,6 +1,7 @@
 // 과금: 결제·광고는 플랫폼마다 다르니 여기 한 곳에서 갈아 끼운다
 // 웹판: 광고는 체험용 카운트다운, 결제는 열리지 않는다(?devpay를 붙이면 테스트 결제)
 // 앱판(구글플레이·앱인토스)에서는 window.forgePlatform = { buy(id), showAd(kind), haptic(ms) } 를 넣어 진짜 SDK로 잇는다
+import { track, logUser } from './log.js';
 import * as D from './data.js';
 import { save } from './save.js';
 import { sfx } from './sfx.js';
@@ -35,7 +36,7 @@ function modal(scene) {
 }
 
 // 보상형 광고. 끝까지 보면 true. 광고 제거를 샀으면 바로 true
-export function showAd(scene, sv, kind) {
+function showAdRaw(scene, sv, kind) {
   return new Promise(res => {
     if (sv.noAds) return res(true);
     if (window.forgePlatform?.showAd) return window.forgePlatform.showAd(kind).then(res, () => res(false));
@@ -57,7 +58,7 @@ export function showAd(scene, sv, kind) {
 }
 
 // 결제. 성공하면 상품을 지급하고 true
-export function buy(scene, sv, item) {
+function buyRaw(scene, sv, item) {
   return new Promise(res => {
     const done = ok => {
       if (ok) {
@@ -85,5 +86,26 @@ export function buy(scene, sv, item) {
     c.add(scene.add.text(W / 2, 248, `테스트 결제  ${won(item.price)}`, font(11)).setOrigin(0.5));
     c.add(button(scene, 85, 292, 100, 28, '취소', () => { c.destroy(); done(false); }));
     c.add(button(scene, 190, 292, 100, 28, '결제', () => { c.destroy(); done(true); }, { color: 0x2f6b3a }));
+  });
+}
+
+// 광고·결제는 요청과 결과를 모두 남긴다(어디서 눌렀는지·끝까지 봤는지·결제했는지)
+export function showAd(scene, sv, kind) {
+  const t0 = Date.now();
+  track('ad_request', { kind, no_ads: !!sv.noAds, scene: scene.scene.key });
+  return showAdRaw(scene, sv, kind).then(ok => { track('ad_result', { kind, ok, sec: Math.round((Date.now() - t0) / 1000) }); return ok; });
+}
+export function buy(scene, sv, item) {
+  const t0 = Date.now(), first = !sv.paidTotal;
+  track('iap_click', { item: item.id, price: item.price, scene: scene.scene.key, first_purchase: first, gem: sv.gem, cleared: sv.cleared, platform: window.forgePlatform?.buy ? 'app' : devpay() ? 'devpay' : 'web' });
+  track('begin_checkout', { currency: 'KRW', value: item.price, item_id: item.id });
+  return buyRaw(scene, sv, item).then(ok => {
+    const sec = Math.round((Date.now() - t0) / 1000);
+    track(ok ? 'iap_success' : 'iap_cancel', { item: item.id, price: item.price, sec, first_purchase: first });
+    if (ok) {
+      track('purchase', { currency: 'KRW', value: item.price, transaction_id: `${item.id}-${Date.now()}`, item_id: item.id, first_purchase: first });
+      logUser({ payer: true, paid_total: (sv.paidTotal = (sv.paidTotal || 0) + item.price) }); save();
+    }
+    return ok;
   });
 }

@@ -1,5 +1,6 @@
 // 게임 시작점: 270x480 세로 화면, 픽셀아트, 화면에 맞춰 늘림
 // 그리는 판은 두 배(540x960)로 두고 카메라를 2배로 당긴다: 좌표는 그대로 270x480이지만 움직임이 반 픽셀 단위로 매끄러워진다
+import './log.js';
 import { W, H } from './data.js';
 import { PX } from './ui.js';
 import { Boot } from './Boot.js';
