@@ -17,6 +17,9 @@ const TABS = [['battle', '전투', 1], ['forge', '대장간', 13], ['gear', '장
 // 스테이지별 권장 전투력(data.js recPower)
 export const recAtk = D.recPower;
 
+// 비급 칸은 좁아 설명 첫 줄만 남기면 문장이 중간에서 잘렸다: 한 줄에 들어가는 짧은 설명
+const BOOK_SHORT = { spin: '주변 한 바퀴 베기', dagger: '가까운 적에 단검', bolt: '무작위 적에 벼락', holy: '발밑을 태우는 빛', fireball: '터지는 불덩이', ice: '꿰뚫는 얼음', orb: '몸을 도는 구슬' };
+
 export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
@@ -235,14 +238,15 @@ export class Lobby extends Phaser.Scene {
   }
 
   makeTextures() {
-    if (this.textures.exists('hammer')) return;
     const g = this.make.graphics({ add: false });
-    g.fillStyle(0x0a0710).fillRect(9, 0, 4, 22).fillRect(0, 0, 22, 9);
+    // 망치 그림이 로드돼도 불티(spark)는 따로 만든다(같이 건너뛰면 강화 불꽃이 깨진다)
+    if (!this.textures.exists('spark')) g.fillStyle(0xffffff).fillRect(0, 0, 2, 2).generateTexture('spark', 2, 2);
+    if (this.textures.exists('hammer')) return g.destroy();
+    g.clear().fillStyle(0x0a0710).fillRect(9, 0, 4, 22).fillRect(0, 0, 22, 9);
     g.fillStyle(0x7a4a22).fillRect(10, 8, 2, 13);
     g.fillStyle(0x9aa4b8).fillRect(1, 1, 20, 7);
     g.fillStyle(0xd8e0f0).fillRect(1, 1, 20, 2);
     g.generateTexture('hammer', 22, 22);
-    g.clear().fillStyle(0xffffff).fillRect(0, 0, 2, 2).generateTexture('spark', 2, 2);
     g.destroy();
   }
 
@@ -712,7 +716,7 @@ export class Lobby extends Phaser.Scene {
     track('shatter_offer_show', { from, gem: sv.gem, restore_cost: back });
     c.add(panel(this, 24, 140, W - 48, 210, { fill: 0x1a0e12, line: 0xff5050 }));
     c.add(this.add.text(W / 2, 164, `칼이 부서졌다  +${from} → +${D.shatterTo(from)}`, font(14, '#ff5050')).setOrigin(0.5));
-    c.add(this.add.text(W / 2, 188, sv.guard > 0 ? '방지권을 켜 두면 지킬 수 있었다' : '파괴 방지권이 있었다면 지켰다', font9(11, '#e8e2f8')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 188, sv.guard > 0 ? '다음엔 방지권을 켜면 단계를 지킨다' : '방지권이 있으면 단계를 지킬 수 있다', font9(11, '#e8e2f8')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 206, `다음 +10 강화부터는 꼭 쓰자 (보유 ${sv.guard}장)`, font9(10, '#a89cc8')).setOrigin(0.5));
     // 부서진 바로 그 자리에서만 되살릴 수 있다(창을 닫으면 끝)
     const rb = button(this, W / 2, 240, 190, 30, `+${from}으로 되살리기  보석 ${back}`, () => {
@@ -864,7 +868,7 @@ export class Lobby extends Phaser.Scene {
       c.add(this.add.text(34, 5, def.name, font(10)));
       // 산 비급은 판 시작 Lv, 안 산 건 설명 한 줄
       c.add(own ? this.add.text(34, 21, `시작 Lv${D.bookSkillLv(lv)} (${lv}/${D.BOOK_MAX})`, font9(9, max ? '#ffd75e' : '#9ae0ff'))
-        : (dt => dt.setText(dt.getWrappedText()[0]))(this.add.text(34, 21, def.desc[0], { ...font9(9, '#c8bfe0'), wordWrap: { width: 80 } })));
+        : this.add.text(34, 21, BOOK_SHORT[k] || def.desc[0], font9(9, '#c8bfe0')));
       const buyLv = async cost => {
         if (sv.gem < cost) { sfx('deny'); track('book_buy_fail', { skill: k, lv: lv + 1, gem: sv.gem }); this.gemShort(cost); return false; }
         sv.gem -= cost; (sv.books ||= {})[k] = lv + 1; track(own ? 'book_up' : 'book_buy', { skill: k, lv: lv + 1, cost }); sfx('buy');

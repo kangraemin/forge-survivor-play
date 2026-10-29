@@ -96,7 +96,8 @@ export class Battle extends Phaser.Scene {
     this.physics.add.overlap(this.hero, this.ebullets, (h, b) => { this.hurt(b.dmg, 'shot'); b.destroy(); });
 
     // 왼쪽 위 기준 카메라라 주인공이 가운데 오도록 반 화면만큼 밀고, 경계도 그만큼 옮긴다(clampX는 가운데 기준 계산)
-    hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(W / 2, H / 2).setBounds(W / 2, H / 2, WORLD, WORLD).setRoundPixels(true);
+    // 위·아래 끝에서는 HUD(위 64px)·궁극기 버튼(아래 56px)에 주인공이 가리지 않게 경계를 그만큼 넓힌다
+    hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(W / 2, H / 2).setBounds(W / 2, H / 2 - 64, WORLD, WORLD + 64 + 56).setRoundPixels(true);
     // 화면 흔들림: 공격·피격마다 흔들려 머리가 아팠다. 작은 흔들림은 없애고 큰 것(보스·엘리트)만 약하고 짧게
     const cam = this.cameras.main, shake = Phaser.Cameras.Scene2D.Camera.prototype.shake;
     cam.shake = (d, i = 0.005, ...r) => i <= 0.005 ? cam : shake.call(cam, Math.min(d, 250), i * 0.4, ...r);
@@ -344,7 +345,7 @@ export class Battle extends Phaser.Scene {
 
   // 처음 두 판: 이동 방법을 3초 보여 준다
   dragHint() {
-    const t = this.add.text(W / 2, H - 120, '화면을 누른 채로 끌면 이동', font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
+    const t = this.add.text(W / 2, H - 120, '끌어서 이동 · 공격은 자동', font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
     const hand = this.add.circle(W / 2 - 30, H - 90, 9, 0xffffff, 0.5).setStrokeStyle(2, 0xffffff).setScrollFactor(0).setDepth(120);
     this.tweens.add({ targets: hand, x: W / 2 + 30, duration: 700, yoyo: true, repeat: 2, ease: 'Sine.InOut' });
     this.hint = [t, hand];

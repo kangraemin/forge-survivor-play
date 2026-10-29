@@ -69,7 +69,7 @@ export class Overlay {
   }
 
   // ── 레벨업: 3장 중 하나 ──
-  choices() {
+  choices(skip) {
     const sk = this.s.run.skills;
     const act = Object.keys(sk).filter(k => D.SKILLS[k].type === 'active').length;
     const pas = Object.keys(sk).filter(k => D.SKILLS[k].type === 'passive').length;
@@ -77,7 +77,7 @@ export class Overlay {
     const pool = [];
     for (const [k, def] of Object.entries(D.SKILLS)) {
       const lv = sk[k] || 0;
-      if (lv >= D.SKILL_MAX || this.s.run.banned?.[k]) continue;
+      if (lv >= D.SKILL_MAX || this.s.run.banned?.[k] || skip?.has(k)) continue;
       if (!lv && (def.type === 'active' ? act >= D.ACTIVE_SLOTS : pas >= D.PASSIVE_SLOTS)) continue;
       // 처음 하는 사람의 첫 레벨업은 바로 눈에 보이는 공격 스킬만 보여 준다
       if (first && def.type !== 'active') continue;
@@ -94,7 +94,7 @@ export class Overlay {
     const out = [];
     // 진화할 수 있으면 첫 칸에 반드시 띄운다
     for (const [k, e] of Object.entries(D.EVOS)) {
-      if (out.length < 2 && sk[k] >= D.SKILL_MAX && sk[e.need] && !this.s.run.evo[k]) out.push('_evo_' + k);
+      if (out.length < 2 && sk[k] >= D.SKILL_MAX && sk[e.need] && !this.s.run.evo[k] && !skip?.has('_evo_' + k)) out.push('_evo_' + k);
     }
     while (out.length < 3 && pool.length) {
       let r = Math.random() * pool.reduce((a, b) => a + b.w, 0), i = 0;
@@ -119,11 +119,20 @@ export class Overlay {
     const firstLv = s.sv.stats.runs <= 1 && s.run.lv === 2;
     c.add(s.add.text(W / 2, 122, firstLv ? '▼ 아래 카드 하나를 눌러 고르세요' : '스킬 하나를 고르세요', font9(11, firstLv ? '#ffffff' : '#c8bfe0')).setOrigin(0.5));
     const cards = s.add.container(0, 0); c.add(cards);
+    // 다시 뽑기와 헷갈렸다: 카드의 '빼기'는 그 카드만 바꾼다고 짧게 적는다(긴 설명은 화면 밖으로 넘쳤다)
+    const banInfo = () => banTxt.setText(r.banLeft > 0 ? `빼기는 그 카드만 바꾼다 · 남은 ${r.banLeft}번` : `빼기는 그 카드만 바꾼다 · 보석 ${D.BAN_GEM}`);
     const draw = () => {
       cards.removeAll(true);
       this.choices().forEach((k, i) => cards.add(this.card(k, W / 2, 172 + i * 78, i)));
-      // 다시 뽑기와 헷갈렸다: 카드의 '빼기'는 그 카드만 바꾼다고 짧게 적는다(긴 설명은 화면 밖으로 넘쳤다)
-      banTxt.setText(r.banLeft > 0 ? `빼기는 그 카드만 바꾼다 · 남은 ${r.banLeft}번` : `빼기는 그 카드만 바꾼다 · 보석 ${D.BAN_GEM}`);
+      banInfo();
+    };
+    // 빼기는 그 자리 한 장만 새로 뽑는다(나머지 두 장은 그대로: 원하던 카드까지 사라져 억울했다)
+    this.banSlot = k => {
+      const i = cards.list.findIndex(o => o.key === k); if (i < 0) return draw();
+      const nk = this.choices(new Set(cards.list.map(o => o.key)))[0];
+      cards.list[i].destroy();
+      if (nk) cards.addAt(this.card(nk, W / 2, 172 + i * 78, 0), i);
+      banInfo();
     };
     const r = s.run;
     if (r.banLeft === undefined) r.banLeft = D.BANISH_PER_RUN;
@@ -145,7 +154,11 @@ export class Overlay {
       let gem = false;
       if (r.freeReroll > 0) r.freeReroll--;
       else if (r.silver >= this.lvReroll()) { r.silver -= this.lvReroll(); r.lvRerolls = (r.lvRerolls || 0) + 1; }
-      else if (s.sv.gem >= D.REROLL_GEM) { s.sv.gem -= D.REROLL_GEM; save(); gem = true; }
+      else if (s.sv.gem >= D.REROLL_GEM) {
+        // 무료를 연달아 누르던 손이 그대로 보석을 쓰지 않게, 이번 판 첫 보석 사용은 한 번 더 눌러 확인한다
+        if (!r.gemRerollOk) { r.gemRerollOk = true; sfx('deny'); rb.label.setText(`한 번 더 누르면 보석 ${D.REROLL_GEM} 사용`); return; }
+        s.sv.gem -= D.REROLL_GEM; save(); gem = true;
+      }
       else return;
       s.log('levelup_reroll', { n: r.lvRerolls || 0, silver: r.silver, gem });
       sfx('buy'); draw(); rb.label.setText(label()); rb.setEnabled(can()); own.setText(ownTxt());
@@ -204,7 +217,7 @@ export class Overlay {
         if (s.run.banLeft > 0) s.run.banLeft--;
         else if (s.sv.gem >= D.BAN_GEM) { s.sv.gem -= D.BAN_GEM; save(); s.log('banish_gem'); }
         else return;
-        (s.run.banned ||= {})[k] = true; sfx('deny'); this.redraw?.(); this.lvOwn?.();
+        (s.run.banned ||= {})[k] = true; sfx('deny'); this.banSlot ? this.banSlot(k) : this.redraw?.(); this.lvOwn?.();
       });
       c.add(x);
     }
@@ -365,6 +378,8 @@ export class Overlay {
           r.silver -= it.price; it.sold = true; sfx('buy');
           s.log('run_shop_buy', { item: it.id, price: it.price, round, silver: r.silver });
           if (it.item) s.gotLoot(it.item); else this.apply(it.id);
+          // 멈춘 동안에도 뒤 HUD(은화·체력)를 바로 맞춘다(가운데와 위 숫자가 달라 보였다)
+          s.updateHud(s.time.now); s.hpLag.width = s.hpBar.width;
           draw();
         });
         grid.add(g);
@@ -375,7 +390,7 @@ export class Overlay {
     const rb = button(s, 80, 410, 120, 28, '', () => {
       const cost = D.rerollCost(round, rerolls);
       if (r.silver < cost) return;
-      r.silver -= cost; rerolls++; sfx('buy'); roll(); draw();
+      r.silver -= cost; rerolls++; sfx('buy'); roll(); draw(); s.updateHud(s.time.now);
       s.log('run_shop_reroll', { round, n: rerolls, cost });
     }, { size: 9 });
     const go = button(s, 200, 410, 100, 28, '출발 ▶', () => { if (c !== this.c) return; s.log('run_shop_leave', { round, silver: r.silver, bought: stock.filter(it => it.sold).length }); r.shopRound++; this.end(c); onDone?.(); }, { size: 12, color: 0x2f6b3a });

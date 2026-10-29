@@ -95,6 +95,9 @@ export class BossAI {
     });
   }
 
+  // 예고 원은 납작한 타원(가로 r, 세로 0.75r)이라 판정도 같은 타원으로 한다(원으로 재면 선 밖 위아래에서 맞았다)
+  inWarn(x, y, r) { const h = this.s.hero, dx = (h.x - x) / r, dy = (h.y - y) / (r * 0.75); return dx * dx + dy * dy <= 1; }
+
   thud(x, y, r) {
     const s = this.s;
     s.cameras.main.shake(220, 0.01);
@@ -102,7 +105,7 @@ export class BossAI {
     const ring = s.add.image(x, y, 'ring').setScale(0.3, 0.22).setTint(0xffe0c0).setDepth(9).setAlpha(0.9);
     s.tweens.add({ targets: ring, scaleX: (r || 40) / 28, scaleY: (r || 40) / 38, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
     s.dust.explode(20, x, y);
-    if (r && Phaser.Math.Distance.Between(s.hero.x, s.hero.y, x, y) < r) s.hurt(this.m.dmg * 1.6);
+    if (r && this.inWarn(x, y, r)) s.hurt(this.m.dmg * 1.6);
   }
 
   // 점프: 플레이어 자리에 예고 원 → 뛰어올라 내려찍기
@@ -224,7 +227,7 @@ export class BossAI {
         s.time.addEvent({ delay: 400, repeat: 9, callback: () => {
           if (!g.active) return;
           left -= 400; g.setAlpha(Math.max(0.2, left / 4000));
-          if (this.m.active && Phaser.Math.Distance.Between(s.hero.x, s.hero.y, x, y) < r * 0.85) s.hurt(this.m.dmg * 0.35);
+          if (this.m.active && this.inWarn(x, y, r * 0.85)) s.hurt(this.m.dmg * 0.35);
           if (left <= 0 || !this.m.active) g.destroy();
         } });
       }));
