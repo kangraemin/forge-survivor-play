@@ -52,7 +52,10 @@ export class BossAI {
       this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(`${this.b.name} · 지쳤다! 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}%`).setColor('#ff9a5a');
       s.banner('보스가 지쳤다!', `받는 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}% · 몰아붙여라`);
     }
-    if (enraged && !this.rage) { this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; s.cameras.main.shake(300, 0.005); sfx('bossIn'); }
+    if (enraged && !this.rage) {
+      this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; s.cameras.main.shake(300, 0.005); sfx('bossIn');
+      if (this.b.rage && !this.mid) s.banner(`${this.b.name}이 분노했다!`, this.b.rage === 'sweep' ? '새 공격: 휩쓰는 광선' : '새 공격: 남는 장판');
+    }
     m.setFlipX(h.x < m.x);
     m.setDepth(10 + m.y / 1600);
     this.shadow.setPosition(m.x, m.y + m.displayHeight * 0.42);
@@ -66,7 +69,8 @@ export class BossAI {
     m.setVelocity(Math.cos(ang) * this.b.spd, Math.sin(ang) * this.b.spd);
     this.t -= dt;
     if (this.t <= 0) {
-      const pat = this.b.pattern[this.pi++ % this.b.pattern.length];
+      const list = enraged && this.b.rage ? [...this.b.pattern, this.b.rage] : this.b.pattern;
+      const pat = list[this.pi++ % list.length];
       this.t = (enraged ? 2400 : 3200) + R(0, 600);
       this[pat](enraged);
     }
@@ -168,6 +172,53 @@ export class BossAI {
     for (let i = 0; i < (fast ? 5 : 3); i++) {
       const x = s.hero.x + (i ? R(-60, 60) : 0), y = s.hero.y + (i ? R(-60, 60) : 0);
       s.time.delayedCall(i * 200, () => this.m.active && this.warnCircle(x, y, 32, 900, () => this.m.active && this.thud(x, y, 32)));
+    }
+  }
+
+  // 광선: 휩쓸 부채꼴을 먼저 옅게 보여 준 뒤 굵은 선이 한쪽으로 쓸고 지나간다
+  sweep(fast) {
+    const s = this.s, m = this.m, len = 190, arc = 1.6, dir = Math.random() < 0.5 ? -1 : 1;
+    const a0 = Phaser.Math.Angle.Between(m.x, m.y, s.hero.x, s.hero.y) - dir * arc / 2;
+    this.busy = 2100; m.setVelocity(0, 0);
+    const g = s.add.graphics().setDepth(9), st = { a: a0 };
+    g.fillStyle(0xff2030, 0.16).slice(m.x, m.y, len, a0, a0 + dir * arc, dir < 0).fillPath()
+      .lineStyle(2, 0xff4050, 0.8).lineBetween(m.x, m.y, m.x + Math.cos(a0) * len, m.y + Math.sin(a0) * len);
+    sfx('warn');
+    s.time.delayedCall(fast ? 650 : 850, () => {
+      if (!m.active) { g.destroy(); return; }
+      const ox = m.x, oy = m.y;
+      let hit = false;
+      s.tweens.add({
+        targets: st, a: a0 + dir * arc, duration: fast ? 950 : 1150,
+        onUpdate: () => {
+          if (!m.active || !g.active) return;
+          const c = Math.cos(st.a), sn = Math.sin(st.a);
+          g.clear().lineStyle(7, 0xff3040, 0.5).lineBetween(ox, oy, ox + c * len, oy + sn * len).lineStyle(2, 0xffe0e0, 1).lineBetween(ox, oy, ox + c * len, oy + sn * len);
+          const dx = s.hero.x - ox, dy = s.hero.y - oy, along = dx * c + dy * sn;
+          if (!hit && along > 0 && along < len && Math.abs(dy * c - dx * sn) < 8) { hit = true; s.hurt(m.dmg * 1.2); }
+        },
+        onComplete: () => g.destroy(),
+      });
+    });
+  }
+
+  // 남는 장판: 예고 원이 터진 자리에 4초 동안 웅덩이가 남아 밟으면 계속 아프다
+  pools(fast) {
+    const s = this.s, r = 28;
+    this.busy = 500;
+    for (let i = 0; i < (fast ? 3 : 2); i++) {
+      const x = s.hero.x + (i ? R(-55, 55) : 0), y = s.hero.y + (i ? R(-55, 55) : 0);
+      s.time.delayedCall(i * 250, () => this.m.active && this.warnCircle(x, y, r, 850, () => {
+        if (!this.m.active) return;
+        const g = s.add.graphics().setDepth(8).fillStyle(this.b.color, 0.35).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(1, this.b.color, 0.9).strokeEllipse(x, y, r * 2, r * 1.5);
+        let left = 4000;
+        s.time.addEvent({ delay: 400, repeat: 9, callback: () => {
+          if (!g.active) return;
+          left -= 400; g.setAlpha(Math.max(0.2, left / 4000));
+          if (this.m.active && Phaser.Math.Distance.Between(s.hero.x, s.hero.y, x, y) < r * 0.85) s.hurt(this.m.dmg * 0.35);
+          if (left <= 0 || !this.m.active) g.destroy();
+        } });
+      }));
     }
   }
 

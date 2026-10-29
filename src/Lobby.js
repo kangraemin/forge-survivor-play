@@ -53,7 +53,7 @@ export class Lobby extends Phaser.Scene {
     else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e'));
     // 세 판을 하고 난 뒤부터(처음엔 창이 연달아 뜨지 않게): 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
     else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin()); }
-    else if (sv.cleared >= 3 && !sv.bought.starter && !sv.starterShown) this.time.delayedCall(250, () => this.starterWin());
+    else if (sv.cleared >= 3 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
   }
 
   // 로비 위에 뜨는 창
@@ -129,19 +129,20 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, ms = sv.idleMs || 0;
     sv.idleMs = 0;
     if (sv.cleared < 1 || ms < D.IDLE.minMin * 60000) return null;
-    const h = Math.min(D.IDLE.capH, ms / 3600000), top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
+    const raw = ms / 3600000, h = Math.min(D.IDLE.capH, raw), top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
     const c = Math.floor(top / 6), s = top % 6;
-    return { h, gold: Math.round(D.clearGold(c, s) * D.IDLE.perH * h), stone: Math.max(1, Math.round(D.clearStone(c, s) * D.IDLE.perH * h)), gem: ms >= D.IDLE.bonusH * 3600000 ? D.IDLE.bonusGem : 0 };
+    return { h, raw, gold: Math.round(D.clearGold(c, s) * D.IDLE.perH * h), stone: Math.max(1, Math.round(D.clearStone(c, s) * D.IDLE.perH * h)), gem: ms >= D.IDLE.bonusH * 3600000 ? D.IDLE.bonusGem : 0 };
   }
 
-  welcomeWin({ h, gold, stone, gem }) {
+  welcomeWin({ h, raw, gold, stone, gem }) {
     const sv = this.sv, c = this.modal();
     sv.gold += gold; sv.stone += stone; sv.gem += gem; save(); this.refreshTop();
     track('idle_reward', { hours: Math.round(h * 10) / 10, gold, stone, gem });
     c.add(panel(this, 24, 130, W - 48, 220, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(this.add.text(W / 2, 152, '돌아왔구나!', font(14, '#ffd75e')).setOrigin(0.5));
     const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
-    c.add(this.add.text(W / 2, 174, `${hh ? `${hh}시간 ` : ''}${mm}분 동안 견습생이 벌어 뒀다${h >= D.IDLE.capH ? ' (최대)' : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
+    // 최대보다 오래 비웠으면 실제로 비운 시간과 지급 상한을 따로 적는다(13시간 비웠는데 '8시간'이라 하면 이상했다)
+    c.add(this.add.text(W / 2, 174, raw > D.IDLE.capH ? `${Math.floor(raw)}시간 비움 · 최대 ${D.IDLE.capH}시간 몫을 벌어 뒀다` : `${hh ? `${hh}시간 ` : ''}${mm}분 동안 견습생이 벌어 뒀다`, font9(10, '#c8bfe0')).setOrigin(0.5));
     const tx = [];
     [[12, gold, '#ffd75e'], [13, stone, '#9ae0ff']].forEach(([ic, v, col], i) => {
       const x = W / 2 - 50 + i * 100;
@@ -284,7 +285,7 @@ export class Lobby extends Phaser.Scene {
     pv.add(bs);
     // 장 보스까지 몇 판 남았는지(처음 10분에 향할 곳)
     const bossLeft = c * 6 + 5 - sv.cleared;
-    pv.add(this.add.text(bossLeft > 0 ? W - 18 : W - 58, 136, bossLeft > 0 ? `${D.BOSSES[ch.boss].name} · ${bossLeft}스테이지 뒤` : bossLeft === 0 ? `${D.BOSSES[ch.boss].name} · 도전!` : `${D.BOSSES[ch.boss].name} 격파`, font(9, bossLeft < 0 ? '#5fdc6a' : '#ff9090')).setOrigin(bossLeft > 0 ? 1 : 0.5, 1));   // 글자가 길면 오른쪽 끝에 맞춰 판 밖으로 안 나가게
+    pv.add(this.add.text(bossLeft > 0 ? W - 18 : W - 58, 136, bossLeft > 0 ? `${D.BOSSES[ch.boss].name} · ${bossLeft}스테이지 뒤` : bossLeft === 0 ? `${D.BOSSES[ch.boss].name} · 도전!` : `${D.BOSSES[ch.boss].name} 격파`, font(10, bossLeft < 0 ? '#5fdc6a' : '#ff9090', 3)).setOrigin(bossLeft > 0 ? 1 : 0.5, 1));   // 글자가 길면 오른쪽 끝에 맞춰 판 밖으로 안 나가게
     // 스테이지 6칸
     for (let s = 0; s < 6; s++) {
       const idx = c * 6 + s, x = 50 + (s % 3) * 85, y = 172 + Math.floor(s / 3) * 54;
@@ -435,7 +436,7 @@ export class Lobby extends Phaser.Scene {
 
     const t = D.TIERS[sv.tier], enh = sv.enh, max = enh >= D.ENH_MAX;
     b.add(this.add.text(W / 2, 54, `+${enh} ${t.name}`, font(16, enh >= 15 ? '#ff9a3a' : enh >= 10 ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 74, `공격력 ${Math.round(D.weaponAtk(sv.tier, enh))}${max ? '' : `  →  ${Math.round(D.weaponAtk(sv.tier, enh + 1))}`}`, font(10, '#e8e2f8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 74, `공격력 ${Math.round(D.weaponAtk(sv.tier, enh))}${max ? '' : `  →  ${Math.round(D.weaponAtk(sv.tier, enh + 1))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1) / D.weaponAtk(sv.tier, enh) - 1) * 100)}%)`}`, font(10, '#e8e2f8')).setOrigin(0.5));
     // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
     if (!max) {
       const next = (Math.floor(enh / D.ENH_MILESTONE) + 1) * D.ENH_MILESTONE;
@@ -477,7 +478,7 @@ export class Lobby extends Phaser.Scene {
       const danger = enh >= D.DESTROY_FROM;
       const row = (y, a, v, col) => { b.add(this.add.text(24, y, a, font9(10, '#a89cc8'))); b.add(this.add.text(W - 24, y, v, font(10, col)).setOrigin(1, 0)); };
       row(282, '성공 확률', rate + '%' + (this.useCharm ? ' (부적)' : ''), rate >= 70 ? '#5fdc6a' : rate >= 35 ? '#ffd75e' : '#ff7070');
-      row(300, '실패하면', danger ? (this.useGuard ? '방지권으로 지킴' : '파괴 (+0으로)') : '그대로 유지', danger ? (this.useGuard ? '#9ae0ff' : '#ff5050') : '#e8e2f8');
+      row(300, '실패하면', danger ? (this.useGuard ? '방지권이 지킴 · 금화 30% 환급' : `파괴 → +${D.shatterTo(enh)} · 금화 30% 환급`) : '그대로 유지', danger ? (this.useGuard ? '#9ae0ff' : '#ff5050') : '#e8e2f8');
       row(318, '비용', `금화 ${fmt(gold)} · 강화석 ${stone}`, sv.gold >= gold && sv.stone >= stone ? '#ffd75e' : '#ff7070');
       if (danger) {
         const chk = this.add.container(24, 344);
@@ -536,9 +537,8 @@ export class Lobby extends Phaser.Scene {
     const gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
     if (sv.gold < gold || sv.stone < stone) {
       track('enhance_blocked', { from: enh, tier: sv.tier, gold_short: Math.max(0, gold - sv.gold), stone_short: Math.max(0, stone - sv.stone) });
-      // 막힌 자리에서 어디서 버는지 알려 주고 전투 탭으로 데려간다
-      sfx('deny'); toast(this, sv.sweep > 0 ? '소탕으로 금화·강화석을 바로 벌자' : '깬 스테이지에서 금화·강화석을 벌자', '#ffd75e');
-      this.time.delayedCall(700, () => !this.busy && this.tab === 'forge' && this.show('battle'));
+      // 탭을 멋대로 바꾸면 연타가 '전투 시작'에 떨어졌다: 알림만 띄우고 아래 탭으로 가게 둔다
+      sfx('deny'); toast(this, sv.sweep > 0 ? '전투 탭에서 소탕으로 벌자' : '전투 탭에서 금화·강화석을 벌자', '#ffd75e');
       return;
     }
     this.busy = true;
@@ -549,9 +549,10 @@ export class Lobby extends Phaser.Scene {
     if (charm) sv.charm--;
     const win = Math.random() * 100 < D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0) + this.apron();
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
+    if (!win && danger) sv.gold += Math.round(gold * D.FAIL_REFUND);
     if (win) sv.enh++;
     else if (outcome === 'shatter') {
-      sv.enh = 0; sv.stats.destroyed++;
+      sv.enh = D.shatterTo(enh); sv.stats.destroyed++;
       // 대장장이 앞치마: 칼을 세 번 부수면
       if (sv.stats.destroyed >= 3 && grantEgg(sv, 'apron')) this.time.delayedCall(1800, () => toast(this, '숨겨진 장비 「대장장이 앞치마」를 얻었다!', '#ff8ae0'));
     }
@@ -603,7 +604,7 @@ export class Lobby extends Phaser.Scene {
       sfx('fail');
       sw.setTint?.(0x6a6a7a); this.time.delayedCall(400, () => sw.clearTint?.());
       this.tweens.add({ targets: sw, x: W / 2 + 4, duration: 45, yoyo: true, repeat: 4 });
-      this.flashText(from >= D.DESTROY_FROM ? '실패… 방지권이 칼을 지켰다' : '강화 실패', '#a8a0c0');
+      this.flashText(from >= D.DESTROY_FROM ? '실패… 방지권이 지켰다 · 금화 30% 환급' : '강화 실패', '#a8a0c0');
     } else {
       sfx('shatter');
       this.cameras.main.shake(350, 0.02);
@@ -614,7 +615,7 @@ export class Lobby extends Phaser.Scene {
         this.tweens.add({ targets: sh, x: sh.x + R(-110, 110), y: sh.y + R(-60, 120), angle: R(-360, 360), alpha: 0, duration: R(600, 1000), ease: 'Quad.Out', onComplete: () => sh.destroy() });
       }
       sw.setVisible(false);
-      this.flashText(`파괴!  +${from} → +0`, '#ff5050');
+      this.flashText(`파괴!  +${from} → +${D.shatterTo(from)}`, '#ff5050');
     }
     // 낮은 단계 성공은 짧게 끊어 연타가 답답하지 않게
     const wait = outcome === 'shatter' ? 1500 : outcome === 'success' && from + 1 < 8 ? 450 : 900;
@@ -631,7 +632,7 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, c = this.modal(), cost = D.GEM_SHOP.find(x => x.id === 'guard').cost, back = D.restoreGem(from);
     track('shatter_offer_show', { from, gem: sv.gem, restore_cost: back });
     c.add(panel(this, 24, 140, W - 48, 210, { fill: 0x1a0e12, line: 0xff5050 }));
-    c.add(this.add.text(W / 2, 164, `+${from} 칼이 부서졌다`, font(15, '#ff5050')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 164, `칼이 부서졌다  +${from} → +${D.shatterTo(from)}`, font(14, '#ff5050')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 188, sv.guard > 0 ? '방지권을 켜 두면 지킬 수 있었다' : '파괴 방지권이 있었다면 지켰다', font9(11, '#e8e2f8')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 206, `다음 +10 강화부터는 꼭 쓰자 (보유 ${sv.guard}장)`, font9(10, '#a89cc8')).setOrigin(0.5));
     // 부서진 바로 그 자리에서만 되살릴 수 있다(창을 닫으면 끝)
