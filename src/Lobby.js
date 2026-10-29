@@ -227,8 +227,8 @@ export class Lobby extends Phaser.Scene {
       c.hl = hl; c.setSize(tw, 50).setInteractive({ useHandCursor: true });
       // 처음엔 전투만: 1-1을 깨면 나머지 탭이 열린다
       const locked = () => id !== 'battle' && this.sv.cleared === 0;
-      if (locked()) { c.setAlpha(0.35); c.add(this.add.text(tw / 2 - 8, -20, '🔒', font(9)).setOrigin(1, 0)); }
-      c.on('pointerup', () => { if (this.busy) return; if (locked()) { sfx('deny'); track('locked_tab_tap', { tab: id }); toast(this, '1-1을 깨면 열린다', '#ff9a8a'); return; } sfx('click'); this.show(id); });
+      if (locked()) { c.setAlpha(0.45); c.add(this.add.text(tw / 2 - 4, -22, '🔒1-1', font9(9, '#ffb070')).setOrigin(1, 0)); }
+      c.on('pointerup', () => { if (this.busy) return; if (locked()) { sfx('deny'); track('locked_tab_tap', { tab: id }); toast(this, `${name} · 1-1을 깨면 열린다`, '#ff9a8a'); return; } sfx('click'); this.show(id); });
       // 장비 탭: 찍을 스탯이 남았으면 빨간 점
       if (id === 'gear' && !locked() && spFree(this.sv) > 0) c.add(this.add.circle(tw / 2 - 10, -16, 4, 0xff5050));
       c.id = id; return c;
@@ -283,6 +283,8 @@ export class Lobby extends Phaser.Scene {
     const bs = this.add.sprite(W - 58, 108, null).play(ch.boss);
     bs.setScale((fb[ch.boss] ? 40 : 52) / bs.height); if (fb[ch.boss]) bs.setTint(D.BOSSES[ch.boss].color);
     pv.add(bs);
+    // 돌아올 이유: 자리를 비워도 견습생이 번다는 걸 늘 보여 준다
+    if (sv.cleared >= 1) pv.add(this.add.text(20, 76, `⏳ 견습생 작업 중 · 최대 ${D.IDLE.capH}시간`, font9(9, '#9ae0ff')));
     // 장 보스까지 몇 판 남았는지(처음 10분에 향할 곳)
     const bossLeft = c * 6 + 5 - sv.cleared;
     pv.add(this.add.text(bossLeft > 0 ? W - 18 : W - 58, 136, bossLeft > 0 ? `${D.BOSSES[ch.boss].name} · ${bossLeft}스테이지 뒤` : bossLeft === 0 ? `${D.BOSSES[ch.boss].name} · 도전!` : `${D.BOSSES[ch.boss].name} 격파`, font(10, bossLeft < 0 ? '#5fdc6a' : '#ff9090', 3)).setOrigin(bossLeft > 0 ? 1 : 0.5, 1));   // 글자가 길면 오른쪽 끝에 맞춰 판 밖으로 안 나가게

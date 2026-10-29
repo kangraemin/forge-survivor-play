@@ -500,8 +500,8 @@ export class Overlay {
     const brag = !s.bot && (win || (s.endless && floors > best));
     if (brag) {
       const gift = sv.shareDay !== sv.day;
-      // 광고 버튼 옆에서 묻혀 크고 밝게
-      const sb = button(s, 207, 330, 100, 24, gift ? `자랑하기 보석+${D.SHARE_GEM}` : '자랑하기', async () => {
+      // 광고 버튼 옆에서 묻혀서 한 줄을 통째로 쓰고 반짝인다
+      const sb = button(s, W / 2, 329, 190, 22, gift ? `자랑하기 보석+${D.SHARE_GEM}` : '자랑하기', async () => {
         const msg = s.endless ? `무한의 탑 ${floors}층 돌파!` : `${s.isBoss ? D.BOSSES[s.ch.boss].name + ' 격파! ' : ''}${s.c + 1}-${s.s + 1} 클리어`;
         const text = `${msg} 내 칼은 ${D.TIERS[sv.tier].name} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
         let ok = false;
@@ -511,12 +511,13 @@ export class Overlay {
         } catch { /* 공유 창을 닫았다 */ }
         s.log('share', { ok, boss: !!s.isBoss, endless: !!s.endless });
         if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += D.SHARE_GEM; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
-      }, { size: 10, color: 0xc0702a });
+      }, { size: 11, color: 0xc0702a });
       c.add(sb);
+      s.tweens.add({ targets: sb, scale: 1.05, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
-      const db = button(s, brag ? 88 : W / 2, 330, brag ? 132 : 190, brag ? 24 : 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
+      const db = button(s, W / 2, brag ? 306 : 330, 190, brag ? 18 : 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         s.log('double_reward', { ok, gold, stone });
@@ -542,8 +543,10 @@ export class Overlay {
     });
     if (loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 382, `+${loot.length - n}`, font(10, '#c8bfe0')).setOrigin(0, 0.5));
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
-    c.add(button(s, 85, 424, 110, 30, win || s.endless ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3b2f5c }));
-    c.add(button(s, 190, 424, 100, 30, win ? '다음' : '다시', () => {
+    // 이겼으면 다음 스테이지가 주인공(로비는 작게)
+    const fw = win || s.endless;
+    c.add(button(s, fw ? 52 : 85, 424, fw ? 72 : 110, fw ? 26 : 30, fw ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3b2f5c }));
+    c.add(button(s, fw ? 172 : 190, 424, fw ? 160 : 100, fw ? 34 : 30, win ? (s.endless ? '다시 도전' : '다음 스테이지 ▶') : '다시', () => {
       s.log('result_action', { act: win ? 'next' : 'retry', win });
       if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });
       const n = win ? nextIdx : idx;
