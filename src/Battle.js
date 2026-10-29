@@ -31,7 +31,7 @@ export class Battle extends Phaser.Scene {
   create() {
     const sv = this.sv;
     this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
-    this.paused = false; this.hitstop = 0; this.over = false; this.mv = null;
+    this.paused = false; this.hitstop = 0; this.over = false; this.mv = null; this.formT = 0;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -46,7 +46,7 @@ export class Battle extends Phaser.Scene {
     this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (1 - this.tv('def'));
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless;
-    if (this.easy) this.mobDmgMul *= 0.7;
+    if (this.easy) this.mobDmgMul *= 0.55;
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s);
 
     this.makeMap();
@@ -359,6 +359,24 @@ export class Battle extends Phaser.Scene {
   }
 
   // 뱀서식 포위: 떼거리가 원을 그리며 한꺼번에 몰려온다
+  // 대열: 화면 한쪽 가장자리를 붉게 깜빡여 알린 뒤 그쪽에서 줄·떼로 나온다. 그만큼 일반 스폰을 덜어 난이도는 그대로
+  formation() {
+    const a = R(0, 3) * Math.PI / 2 + RF(-0.3, 0.3), p = a + Math.PI / 2, type = R(0, 2);
+    const cx = this.hero.x + Math.cos(a) * 200, cy = this.hero.y + Math.sin(a) * 200;
+    const at = (u, v) => ({ x: Phaser.Math.Clamp(cx + Math.cos(p) * u + Math.cos(a) * v, 10, WORLD - 10), y: Phaser.Math.Clamp(cy + Math.sin(p) * u + Math.sin(a) * v, 10, WORLD - 10) });
+    const kind = Phaser.Utils.Array.GetRandom(this.ch.mobs), pts = [];
+    if (type === 0) for (let i = 0; i < 11; i++) pts.push(at((i - 5) * 15, 0));
+    else if (type === 1) for (let i = 0; i < 14; i++) pts.push(at(RF(-30, 30), RF(-20, 20)));
+    else for (let r = 0; r < 2; r++) for (let i = 0; i < 7; i++) pts.push(at((i - 3) * 16, r * 18));
+    pts.forEach(q => this.spawn(false, kind, { force: true, at: q }));
+    this.spawnAcc = (this.spawnAcc || 0) - pts.length * 0.7;
+    // 경고: 그쪽 화면 가장자리
+    const ex = Math.cos(a), ey = Math.sin(a), horiz = Math.abs(ex) > Math.abs(ey);
+    const bar = this.add.rectangle(horiz ? (ex > 0 ? W - 3 : 3) : W / 2, horiz ? H / 2 : (ey > 0 ? H - 3 : 3), horiz ? 6 : W, horiz ? H : 6, 0xff3030, 0.7).setScrollFactor(0).setDepth(60);
+    this.tweens.add({ targets: bar, alpha: 0, duration: 200, yoyo: true, repeat: 2, onComplete: () => bar.destroy() });
+    sfx('warn', 300);
+  }
+
   encircle() {
     const kind = this.ch.mobs[2], n = 18;
     for (let i = 0; i < n; i++) {
@@ -404,7 +422,7 @@ export class Battle extends Phaser.Scene {
         c2.once('animationcomplete', () => c2.destroy());
       }
       this.spark.explode(crit ? 12 : 5, m.x, m.y);
-    } else this.spark.explode(2, m.x, m.y);
+    } else this.spark.explode(3, m.x, m.y);
     this.popup(m.x, m.y - 12, dmg, crit, fx === 'big');
     sfx(crit ? 'crit' : 'hit', 45, 1 + 0.1 * Math.min(3, Math.floor(this.sv.enh / 5)));
     if (m.hp <= 0) this.kill(m);
@@ -671,6 +689,8 @@ export class Battle extends Phaser.Scene {
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
       if (this.wave >= 1 && !this.ringDone && this.waveT > this.waveLen * 0.25) { this.ringDone = true; this.encircle(); }
       if (this.waveT < dt * 2) { this.eliteDone = false; this.ringDone = false; }
+      // 15초마다 한쪽에서 대열이 밀려온다(그냥 몰려오기만 하지 않게). 처음 판의 1-1은 뺀다
+      if (!this.easy && (this.formT = (this.formT || 0) + dt) > 15000) { this.formT = 0; this.formation(); }
       // 3번째 스테이지는 마지막 웨이브에 해골 장군(중간 보스)
       const towerBoss = this.endless && this.wave % 3 === 2 && this.midWave !== this.wave && !this.midBoss;
       if ((towerBoss || this.s === 2 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
@@ -765,10 +785,18 @@ export class Battle extends Phaser.Scene {
         if (m.dash > 0) { m.dash -= dt; return; }
         if (m.wind > 0) {
           m.wind -= dt; m.setVelocity(0, 0); m.x += Math.sin(m.t) * 0.6;
-          if (m.wind <= 0) { m.dash = 450; m.setVelocity(dx / d * spd * 3, dy / d * spd * 3); m.setTint(m.baseTint); }
+          if (m.wind <= 0) { m.dash = 450; m.setVelocity(Math.cos(m.dashA) * spd * 3, Math.sin(m.dashA) * spd * 3); m.setTint(m.baseTint); }
           return;
         }
-        if (m.cd <= 0 && d < 140) { m.cd = 3200; m.wind = 600; m.setTint(0xff6060); return; }
+        if (m.cd <= 0 && d < 140) {
+          m.cd = 3200; m.wind = 600; m.setTint(0xff6060);
+          // 돌진할 방향을 바닥에 붉은 줄로 미리 그려 피할 수 있게 한다(그 방향 그대로 달린다)
+          m.dashA = Math.atan2(dy, dx);
+          const len = spd * 3 * 0.45, g = this.add.graphics().setDepth(7);
+          g.lineStyle(5, 0xff3030, 0.35).lineBetween(m.x, m.y, m.x + Math.cos(m.dashA) * len, m.y + Math.sin(m.dashA) * len);
+          this.tweens.add({ targets: g, alpha: { from: 0.3, to: 1 }, duration: 600, onComplete: () => this.tweens.add({ targets: g, alpha: 0, duration: 200, onComplete: () => g.destroy() }) });
+          return;
+        }
         m.setVelocity(dx / d * spd, dy / d * spd);
       } else if (m.ai === 'ranged') {
         const want = d > 120 ? 1 : d < 90 ? -0.6 : 0;

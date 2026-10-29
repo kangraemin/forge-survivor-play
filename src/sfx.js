@@ -75,6 +75,18 @@ export function sfx(name, gap = 40, p) {
   if (now - (last[name] || 0) < gap) return;
   last[name] = now;
   try { SOUNDS[name](c, c.currentTime, p); } catch { /* 오디오 실패는 무시 */ }
+  if (BUZZ[name]) buzz(BUZZ[name]);
+}
+
+// 폰 진동: 손에 오는 타격감. 소리를 끄면 같이 꺼진다. 너무 자주 울리면 저려서 간격을 둔다
+// 아이폰 사파리는 navigator.vibrate가 없다 → 앱판(앱인토스 triggerHaptic·네이티브 햅틱)은 forgePlatform.haptic(ms)로 넣는다
+const BUZZ = { crit: 12, hurt: 25, boom: 30, success: 40, shatter: 120, bossIn: 60 };
+let lastBuzz = 0;
+export function buzz(ms) {
+  const now = performance.now();
+  if (!on || now - lastBuzz < 90) return;
+  lastBuzz = now;
+  try { window.forgePlatform?.haptic ? window.forgePlatform.haptic(ms) : navigator.vibrate?.(ms); } catch { /* 지원 안 하면 무시 */ }
 }
 
 // ── 배경음: 파일 없이 짧은 마디를 합성해 반복한다 ──

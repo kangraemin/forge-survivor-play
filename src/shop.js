@@ -1,6 +1,6 @@
 // 과금: 결제·광고는 플랫폼마다 다르니 여기 한 곳에서 갈아 끼운다
 // 웹판: 광고는 체험용 카운트다운, 결제는 열리지 않는다(?devpay를 붙이면 테스트 결제)
-// 앱판(구글플레이·앱인토스)에서는 window.forgePlatform = { buy(id), showAd(kind) } 를 넣어 진짜 SDK로 잇는다
+// 앱판(구글플레이·앱인토스)에서는 window.forgePlatform = { buy(id), showAd(kind), haptic(ms) } 를 넣어 진짜 SDK로 잇는다
 import * as D from './data.js';
 import { save } from './save.js';
 import { sfx } from './sfx.js';
