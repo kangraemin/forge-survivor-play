@@ -193,7 +193,7 @@ export const GearTab = {
       }, { size: 10 });
       fbt.setEnabled(!max && sv.gold >= cost); b.add(fbt);
     });
-    b.add(this.add.text(W / 2, 392, `맞는 맵이면 효과 ×1.8 · 받는 피해 -20%  ·  펫 목걸이 +${Math.round(g.pet * 100)}%`, font9(9, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 392, `맞는 맵이면 효과 ×1.8 (장군·거신은 피해 -20%)  ·  목걸이 +${Math.round(g.pet * 100)}%`, font9(9, '#a89cc8')).setOrigin(0.5));
   },
 
   // ── 스탯: 스테이지를 처음 깰 때 점수를 받아 찍는다 ──

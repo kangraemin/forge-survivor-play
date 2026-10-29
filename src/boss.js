@@ -67,10 +67,13 @@ export class BossAI {
       this.bar[2].width = 200 * f;
       this.bar[1].width += (200 * f - this.bar[1].width) * 0.05;
     }
+    // 펫(서리 용·리치 왕)이 건 감속: 보스는 얼지 않고 걸음과 공격 준비가 느려진다
+    const sl = m.slow > 0 ? 0.5 : 1;
+    if (m.slow > 0) m.slow -= dt;
     if (this.busy > 0) { this.busy -= dt; return; }
     const ang = Phaser.Math.Angle.Between(m.x, m.y, h.x, h.y);
-    m.setVelocity(Math.cos(ang) * this.b.spd, Math.sin(ang) * this.b.spd);
-    this.t -= dt;
+    m.setVelocity(Math.cos(ang) * this.b.spd * sl, Math.sin(ang) * this.b.spd * sl);
+    this.t -= dt * (sl < 1 ? 0.7 : 1);
     if (this.t <= 0) {
       const list = enraged && this.b.rage ? [...this.b.pattern, this.b.rage] : this.b.pattern;
       const pat = list[this.pi++ % list.length];

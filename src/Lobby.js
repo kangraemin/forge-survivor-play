@@ -6,7 +6,7 @@ import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedCont
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
-import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf, PETS, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
+import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -52,7 +52,7 @@ export class Lobby extends Phaser.Scene {
     if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
     else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e'));
     // 세 판을 하고 난 뒤부터(처음엔 창이 연달아 뜨지 않게): 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
-    else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin()); }
+    else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin(true)); }
     else if (sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
   }
 
@@ -72,8 +72,18 @@ export class Lobby extends Phaser.Scene {
     const all = D.MISSIONS.every(m => sv.misGot[m.id]) && !sv.misGot.all;
     return n + (all ? 1 : 0) + (sv.loginGot ? 0 : 1);
   }
-  missionWin() {
+  // auto: 하루 첫 접속에 저절로 뜬 창이면 출석 보상을 바로 준다(누를 필요 없이)
+  missionWin(auto = false) {
     const sv = this.sv, c = this.modal();
+    const day = (sv.streak - 1) % 7;
+    const claim = () => {
+      if (sv.loginGot) return;
+      const g = { ...D.LOGIN_REWARDS[day] };
+      if (g.skin && sv.skins?.[g.skin]) delete g.skin;   // 이미 가진 칼빛은 다시 주지 않는다
+      sv.loginGot = true; track('login_reward', { day, auto }); grant(sv, g); sfx('win'); this.refreshTop();
+      toast(this, `출석 보상 ${giveText(g, sv)}`, '#ffd75e');
+    };
+    if (auto) claim();
     c.add(panel(this, 16, 60, W - 32, 370, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(this.add.text(W / 2, 80, '오늘의 임무', font(14, '#ffd75e')).setOrigin(0.5));
     const body = this.add.container(0, 0); c.add(body);
@@ -98,7 +108,7 @@ export class Lobby extends Phaser.Scene {
       ab.setEnabled(allDone && !sv.misGot.all); body.add(ab);
       // 출석 7일
       body.add(this.add.rectangle(W / 2, 258, W - 60, 1, 0x5b4f7a));
-      const day = (sv.streak - 1) % 7, top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);   // 금화는 지금 도전 중인 스테이지 기준
+      const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);   // 금화는 지금 도전 중인 스테이지 기준
       body.add(this.add.text(W / 2, 272, `출석 ${sv.streak}일째`, font(12, '#9ae0ff')).setOrigin(0.5));
       body.add(this.add.text(W / 2, 288, '하루 빠져도 처음으로 돌아가지 않는다', font9(10, '#a89cc8')).setOrigin(0.5));
       D.LOGIN_REWARDS.forEach((g, i) => {
@@ -111,15 +121,9 @@ export class Lobby extends Phaser.Scene {
         if (g.skin && !sv.skins?.[g.skin]) body.add(this.add.text(x, y + 20, '+칼빛', font9(9, '#ff9a5a')).setOrigin(0.5));
         if (past) { body.add(this.add.rectangle(x, y, 28, 50, 0x000000, 0.55)); body.add(this.add.text(x + 9, y - 15, '✓', font(11, '#5fdc6a')).setOrigin(0.5)); }
       });
-      const lb = button(this, W / 2, 368, 170, 26, sv.loginGot ? '오늘 출석 완료' : '출석 보상 받기', () => {
-        if (sv.loginGot) return;
-        const g = { ...D.LOGIN_REWARDS[day] };
-        if (g.skin && sv.skins?.[g.skin]) delete g.skin;   // 이미 가진 칼빛은 다시 주지 않는다
-        sv.loginGot = true; track('login_reward', { day }); grant(sv, g); sfx('win'); this.refreshTop();
-        toast(this, `출석 보상 ${giveText(g, sv)}`, '#ffd75e'); draw();
-      }, { size: 11, color: 0x2f6b3a });
+      const lb = button(this, W / 2, 380, 170, 26, sv.loginGot ? '오늘 출석 완료' : '출석 보상 받기', () => { claim(); draw(); }, { size: 11, color: 0x2f6b3a });
       lb.setEnabled(!sv.loginGot); body.add(lb);
-      body.add(button(this, W / 2, 404, 110, 24, '닫기', () => c.close(), { size: 10, color: 0x3a3846 }));
+      body.add(button(this, W - 38, 80, 26, 22, 'X', () => c.close(), { size: 11, color: 0x3a3846 }));
     };
     draw();
   }
@@ -321,14 +325,19 @@ export class Lobby extends Phaser.Scene {
     const head = boss ? `보스 ${D.BOSSES[ch.boss].name}` : s === 1 ? `${mod.name} 규칙 + 중간 보스` : vr ? `새 몬스터 ${D.VARIANTS[vr[1]].pre} ${D.MOB_NAMES[ch.mobs[vr[0]]]}` : '기본 몬스터';
     const sub = boss ? (idx >= D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1 ? '마지막 보스. 잡으면 끝이다' : `잡으면 ${c + 2}장과 새 무기가 열린다`) : s === 1 ? `${mod.desc}. 깨면 다음은 보스` : vr ? D.VARIANTS[vr[1]].desc : '2판 깨면 보스가 나온다';
     b.add(this.add.text(24, 254, `${c + 1}-${s + 1}  ${head}`, font(12, boss ? '#ff9090' : '#ffffff')));
-    // 이 맵에 잘 듣는 펫(데려가고 있으면 초록)
-    const rp = PETS.find(p => p.good?.includes(c));
-    if (rp) b.add(this.add.text(W - 22, 353, `추천 펫 ${sv.cleared >= rp.unlock ? rp.name : '???'}`, font9(9, sv.pet === rp.id ? '#5fdc6a' : '#ffd75e')).setOrigin(1, 0));
     b.add(this.add.text(24, 273, sub, { ...font9(10, '#a89cc8'), wordWrap: { width: W - 48 } }));
     // 전투력: 숫자 두 개보다 막대 하나가 빨리 읽힌다
     const pc = D.powerCol(atk, rec, s), ratio = Math.min(1, atk / rec);
-    b.add(this.add.text(24, 300, '전투력', font9(10, '#a89cc8')));
-    b.add(this.add.text(W - 24, 299, `${atk} / ${rec}`, font(11, pc)).setOrigin(1, 0));
+    const pl = this.add.text(24, 300, '전투력', font9(10, '#a89cc8')), pt = this.add.text(24 + pl.width + 6, 299, `${atk} / ${rec}`, font(11, pc));
+    b.add([pl, pt]);
+    // 이 맵에 잘 듣는 펫(데려가고 있으면 초록). 보상 줄과 겹치지 않게 전투력 줄 오른쪽에 둔다
+    const rps = recPets(sv, c);
+    if (rps.length) {
+      const nm = rps.map(p => sv.cleared >= p.unlock ? p.name : '???');
+      const rt = this.add.text(W - 24, 301, `추천 펫 ${nm.join(' / ')}`, font9(9, rps.some(p => p.id === sv.pet) ? '#5fdc6a' : '#ffd75e')).setOrigin(1, 0);
+      if (rt.x - rt.width < pt.x + pt.width + 8) rt.setText(`추천 펫 ${nm[0]}`);
+      b.add(rt);
+    }
     const bar = this.add.graphics();
     bar.fillStyle(0x2a2338, 1).fillRect(24, 316, W - 48, 6);
     bar.fillStyle(Phaser.Display.Color.HexStringToColor(pc).color, 1).fillRect(24, 316, Math.max(2, (W - 48) * ratio), 6);

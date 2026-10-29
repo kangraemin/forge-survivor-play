@@ -6,7 +6,7 @@ import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRec
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
-import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF, heroSkin } from './gear.js';
+import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF, recPets, heroSkin } from './gear.js';
 import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 
@@ -120,8 +120,8 @@ export class Battle extends Phaser.Scene {
     else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}  ·  ${this.s === 1 ? '깨면 다음은 보스!' : '2판 깨면 보스'}`);
     // 펫 상성: 잘 듣는 펫이면 알려 주고, 없으면 이 장에 맞는 펫을 알려 준다(가진 것만)
     if (!this.endless) {
-      const pf = this.pet.def && this.pet.fit, rec = PETS.find(p => p.good?.includes(this.c) && this.sv.cleared >= p.unlock);
-      const msg = pf > 1 ? ['펫 상성 좋음! 받는 피해 -20%', '#5fdc6a'] : pf < 1 ? [`${this.pet.def.name}은 이 맵에서 약하다${rec ? ` · 추천 ${rec.name}` : ''}`, '#ff9070'] : rec ? [`이 맵 추천 펫: ${rec.name}`, '#ffd75e'] : null;
+      const pf = this.pet.def && this.pet.fit, rs = recPets(this.sv, this.c).filter(p => this.sv.cleared >= p.unlock).map(p => p.name).join(' / ');
+      const msg = pf > 1 ? [`펫 상성 좋음! 효과 ×1.8${this.pet.def.tank ? ' · 받는 피해 -20%' : ''}`, '#5fdc6a'] : pf < 1 ? [`${this.pet.def.name}은 이 맵에서 약하다${rs ? ` · 추천 ${rs}` : ''}`, '#ff9070'] : rs ? [`이 맵 추천 펫: ${rs}`, '#ffd75e'] : null;
       if (msg) this.time.delayedCall(2600, () => !this.over && toast(this, msg[0], msg[1], 96));
     }
     if (this.mod) this.time.delayedCall(4200, () => !this.over && this.banner(`이번 판: ${this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : ''}${this.mod.name}`, this.mod.desc));
@@ -467,7 +467,7 @@ export class Battle extends Phaser.Scene {
     if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
     m.hitBy[src] = this.bt;
     const { dmg, crit } = this.dmgCalc(mult, tag);
-    m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.3 : 1);   // 지친 보스·리치 왕에게 저주받은 적은 더 아프게 맞는다
+    m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1);   // 지친 보스·리치 왕에게 저주받은 적은 더 아프게 맞는다
     // 흰 번쩍임 + 찌그러짐
     // 보스는 몸집이 커서 흰 번쩍임이 화면을 덮는다: 붉게만 물들인다
     if (m.isBoss) m.setTint(0xff8a8a); else m.setTintFill(0xffffff);
@@ -687,7 +687,7 @@ export class Battle extends Phaser.Scene {
     if (this.over || this.paused || this.bt < this.iframe) return;
     // 해골 장군 펫의 방패가 한 대를 막는다
     if (this.petShield) { this.iframe = this.bt + D.PLAYER.iframe; this.pet.block(); return; }
-    const d = Math.max(1, Math.round(dmg * (this.pet.fit > 1 ? 1 - PET_GOOD_DEF : 1)));
+    const d = Math.max(1, Math.round(dmg * (this.pet.fit > 1 && this.pet.def.tank ? 1 - PET_GOOD_DEF : 1)));
     const by = this.run.dmgBy; by[src] = (by[src] || 0) + d;
     this.hp -= d;
     this.iframe = this.bt + D.PLAYER.iframe;

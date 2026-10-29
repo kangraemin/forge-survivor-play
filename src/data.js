@@ -221,7 +221,7 @@ export const SHOP_ITEMS = [
 ];
 export const SHOP_SLOTS = 4;
 // 상인이 파는 장비 기본가(일반·희귀·영웅·전설). 장비 칸은 매번 하나 나온다
-export const SHOP_GEAR_PRICE = [26, 44, 80, 140];
+export const SHOP_GEAR_PRICE = [18, 30, 56, 98];   // 영구 장비라도 물약(18~22)과 견줘 비싸 보였다
 export const shopPrice = (base, round) => Math.floor((base + round * 3) * (1 + 0.1 * round));
 export const rerollCost = (round, n) => 3 + round + 2 * n;   // n: 이번 상점에서 리롤한 횟수
 

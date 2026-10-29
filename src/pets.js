@@ -17,7 +17,7 @@ export class Pet {
     this.pow = petPow(this.lv) * (1 + s.gear.pet) * this.fit;
     this.t = 0; this.t2 = 0; this.x = s.hero.x - 20; this.y = s.hero.y;
     const fb = s.registry.get('fallback')?.[this.def.id];
-    this.g = s.add.sprite(this.x, this.y, null).play(this.def.id).setScale(fb ? 0.9 : 0.42).setDepth(27);
+    this.g = s.add.sprite(this.x, this.y, null).play(this.def.id).setScale(fb ? 0.7 : 0.32).setDepth(10);
     if (fb) this.g.setTint(this.def.color);
     this.ring = s.add.ellipse(this.x, this.y, 20, 7, this.def.color, 0.3).setDepth(8);
   }
@@ -25,10 +25,10 @@ export class Pet {
   update(dt) {
     if (!this.def) return;
     const s = this.s, h = s.hero;
-    // 주인공 뒤쪽 비스듬히 따라온다
-    const tx = h.x - s.face * 24, ty = h.y - 2;
+    // 주인공 뒤쪽 아래로 비켜서 따라온다(주인공을 가리지 않게)
+    const tx = h.x - s.face * 34, ty = h.y + 10;
     if (!this.busy) { const k = 1 - Math.pow(0.88, dt / 16.7); this.x += (tx - this.x) * k; this.y += (ty - this.y) * k; }
-    this.g.setPosition(this.x, this.y - 6).setFlipX(s.face < 0);
+    this.g.setPosition(this.x, this.y - 6).setFlipX(s.face < 0).setDepth(h.depth - 0.01);
     this.ring.setPosition(this.x, this.y + 10);
     this.shieldFx?.setPosition(h.x, h.y);
     this.t += dt; this.t2 += dt;
@@ -49,7 +49,7 @@ export class Pet {
   // 해골 장군: 방패를 세워 다음 한 대를 막아 준다
   general() {
     const s = this.s;
-    if (s.petShield || this.t < 6000 / this.fit) return;
+    if (s.petShield || this.t < 8500 / this.fit) return;
     this.t = 0; s.petShield = true;
     if (!this.shieldFx) this.shieldFx = s.add.ellipse(0, 0, 34, 40).setStrokeStyle(2, 0xe8e2c8, 0.8).setDepth(29);
     this.shieldFx.setVisible(true);
@@ -77,15 +77,16 @@ export class Pet {
     if (this.t2 >= 5000) {
       this.t2 = 0;
       s.gems.getChildren().forEach(g => { if (D2(g, s.hero) < 140) g.pull = true; });
-      this.near(70).concat(this.near(70, 6)).forEach(m => s.hitMob(m, this.pow * 0.5, { kb: 160, tag: 'pet', src: 'pet', cd: 400 }));
+      this.near(70, 6).forEach(m => s.hitMob(m, this.pow * 0.5, { kb: 160, tag: 'pet', src: 'pet', cd: 400 }));
       this.pop(0x6fe36a, 2.2);
     }
   }
 
-  // 리치 왕: 가까운 적에게 저주. 저주받은 적은 30% 더 아프게 맞고 느려진다
+  // 리치 왕: 가까운 적에게 저주. 저주받은 적은 20% 더 아프게 맞고 느려진다
   lich() {
     if (this.t < 1800) return;
-    const s = this.s, ms = this.near(150, Math.round(2 + this.fit));
+    // 대상 수: 약한 맵 1, 보통 2, 잘 듣는 맵 3
+    const s = this.s, ms = this.near(150, this.fit > 1 ? 3 : this.fit < 1 ? 1 : 2);
     if (!ms.length) return;
     this.t = 0;
     ms.forEach(m => {
@@ -106,8 +107,9 @@ export class Pet {
     this.t = 0;
     const s = this.s;
     if (!this.lava) {
-      this.lava = s.add.ellipse(0, 0, 96, 40, 0xff6a2a, 0.18).setDepth(7);
-      s.tweens.add({ targets: this.lava, alpha: 0.32, duration: 500, yoyo: true, repeat: -1 });
+      // 설원에서도 보이게 진하게 + 테두리
+      this.lava = s.add.ellipse(0, 0, 96, 40, 0xff6a2a, 0.4).setStrokeStyle(2, 0xffb040, 0.9).setDepth(7);
+      s.tweens.add({ targets: this.lava, alpha: 0.6, duration: 500, yoyo: true, repeat: -1 });
     }
     this.lava.setPosition(s.hero.x, s.hero.y + 8);
     this.s.mobs.getChildren().slice().forEach(m => {
@@ -126,7 +128,7 @@ export class Pet {
     s.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 420, onComplete: () => puff.destroy() });
     ms.forEach(m => {
       if (m.isBoss) m.slow = 1500;
-      else { m.freeze = 1200; m.setTint(0x9ae8ff); s.time.delayedCall(1200, () => m.active && !m.dead && m.setTint(m.baseTint)); }
+      else { const fz = 1200 * Math.min(1, this.fit); m.freeze = fz; m.setTint(0x9ae8ff); s.time.delayedCall(fz, () => m.active && !m.dead && m.setTint(m.baseTint)); }
       s.hitMob(m, this.pow * 0.5, { kb: 0, tag: 'pet', src: 'pet' });
     });
     sfx('shoot', 140);
