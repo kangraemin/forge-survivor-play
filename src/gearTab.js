@@ -80,12 +80,16 @@ export const GearTab = {
     const pages = Math.max(1, Math.ceil(inv.length / PAGE));
     this.invPage = Math.min(this.invPage || 0, pages - 1);
     b.add(this.add.text(14, 206, `장비 가방 ${inv.length}/${INV_MAX}`, font(10, '#ffd75e')));
+    const toStat = () => { if (this.busy) return; sfx('click'); track('sp_hint_go'); this.gearPage = 'stat'; this.show('gear'); };
     if (!inv.length) {
-      b.add(this.add.text(W / 2, 262, '스테이지를 깨거나\n정예·보물 고블린을 잡으면 장비가 나온다\n빈 칸에는 자동으로 낀다', { ...font(11, '#c8bfe0'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
-      b.add(button(this, W / 2, 322, 170, 26, '장비 얻으러 전투하기 →', () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
+      b.add(this.add.text(W / 2, 252, '스테이지를 깨거나\n정예·보물 고블린을 잡으면 장비가 나온다\n빈 칸에는 자동으로 낀다', { ...font(11, '#c8bfe0'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
+      // 탭의 빨간 점 = 찍을 스탯 포인트. 비었을 땐 가운데 버튼으로 바로 보낸다
+      if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `● 스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x7a2f3a }));
+      b.add(button(this, W / 2, spFree(sv) > 0 ? 334 : 310, 170, 26, '장비 얻으러 전투하기 →', () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
+    } else if (spFree(sv) > 0) {
+      const t = this.add.text(W - 14, 207, `● 스탯 포인트 ${spFree(sv)} 찍기 →`, font9(10, '#ff8080')).setOrigin(1, 0);
+      t.setInteractive({ useHandCursor: true }).on('pointerup', toStat); b.add(t);
     }
-    // 탭의 빨간 점이 무슨 뜻인지 알려 준다
-    if (spFree(sv) > 0) b.add(this.add.text(W - 14, 207, `● 스탯 포인트 ${spFree(sv)} → 위 '스탯'`, font9(9, '#ff8080')).setOrigin(1, 0));
     inv.slice(this.invPage * PAGE, this.invPage * PAGE + PAGE).forEach((it, i) => {
       const x = 32 + (i % COLS) * CELL, y = 240 + Math.floor(i / COLS) * CELL;
       const box = itemBox(this, x, y, it, 34, on.has(it.u)); b.add(box);

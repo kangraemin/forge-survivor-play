@@ -180,7 +180,9 @@ export class Battle extends Phaser.Scene {
     // 몹 떼 속에서도 내 캐릭터가 바로 보이게 발밑에 밝은 고리
     // 고리 색은 강화 단계를 따른다(+5 파랑, +10 주황, +15 보라). +10부터는 몸에도 빛이 돈다
     const rc = sv.enh >= 15 ? 0xd06bff : sv.enh >= 10 ? 0xff8a2a : sv.enh >= 5 ? 0x5fc8ff : 0x9ae6ff;
-    this.heroRing = this.add.ellipse(0, 0, 24, 10, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(9);
+    this.heroRing = this.add.ellipse(0, 0, 24, 10, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(11.5);
+    // 몹 더미에 몸이 가려도 머리 위 작은 화살표로 어디 있는지 보인다
+    this.heroMark = this.add.triangle(0, 0, 0, 0, 8, 0, 4, 5, rc).setStrokeStyle(1, 0x000000, 0.6).setDepth(12);
     if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
     this.face = 1; this.walkT = 0; this.iframe = 0;
     this.atk = D.weaponAtk(sv.tier, sv.enh);
@@ -878,6 +880,7 @@ export class Battle extends Phaser.Scene {
     h.setDepth(10 + h.y / WORLD);
     if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.height / 2 - 3); }
     this.heroRing.setPosition(h.x, h.y + h.height / 2 - 2);
+    this.heroMark.setPosition(h.x, h.y - h.height / 2 - 4 + Math.sin(this.bt / 160) * 1.5);
     this.heroShadow.setPosition(h.x, h.y + h.height / 2 - 2).setScale(1.6 * (1 - bob * 2), 1.4).setDepth(9);
     this.moveV = v;
   }

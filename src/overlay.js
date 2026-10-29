@@ -238,7 +238,7 @@ export class Overlay {
     if (s.bot) { s.equipNow(item); return; }
     const c = this.begin('loot'), rr = RARITY[item.r], slot = SLOTS.find(x => x.id === item.s);
     c.add(panel(s, 24, 130, W - 48, 236, { fill: 0x1a1426, line: rr.color }));
-    c.add(s.add.text(W / 2, 150, `더 좋은 ${slot.name} 주웠다!`, font(13, '#ffd75e')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 150, cur ? `더 좋은 ${slot.name} 주웠다!` : `${slot.name} 획득!`, font(13, '#ffd75e')).setOrigin(0.5));
     // 왼쪽: 지금 낀 것, 오른쪽: 주운 것
     const side = (x, it, head, col) => {
       c.add(s.add.text(x, 172, head, font9(10, col)).setOrigin(0.5));
@@ -257,8 +257,9 @@ export class Overlay {
     side(W / 2 - 54, cur, '지금', '#a89cc8');
     side(W / 2 + 54, item, '주운 것', '#5fdc6a');
     c.add(s.add.text(W / 2, 200, '→', font(14, '#ffd75e')).setOrigin(0.5));
-    c.add(button(s, W / 2 - 52, 340, 92, 30, '가방에', () => { item.bag = true; s.log('loot_ask', { equip: false }); this.end(c); }, { size: 11, color: 0x3b2f5c }));
-    c.add(button(s, W / 2 + 52, 340, 92, 30, '바로 장착', () => { s.equipNow(item); sfx('level'); s.log('loot_ask', { equip: true }); this.end(c); }, { size: 11, color: 0x2f7a3a }));
+    // 끼는 쪽이 기본: 장착 버튼을 크게, 가방은 작게
+    c.add(button(s, W / 2 - 64, 340, 70, 26, '가방에', () => { item.bag = true; s.log('loot_ask', { equip: false }); this.end(c); }, { size: 10, color: 0x3b2f5c }));
+    c.add(button(s, W / 2 + 38, 340, 124, 32, '바로 장착', () => { s.equipNow(item); sfx('level'); s.log('loot_ask', { equip: true }); this.end(c); }, { size: 12, color: 0x2f7a3a }));
   }
 
   // ── 스킬 상자: 가진 스킬 중 하나가 무료로 오른다 ──
@@ -403,10 +404,13 @@ export class Overlay {
       if (busy || c !== this.c || sv.gem < D.REVIVE_GEM) return;
       sv.gem -= D.REVIVE_GEM; save(); s.log('revive_choice', { via: 'gem', ok: true, gem_left: sv.gem }); up();
     }, { size: 11, color: 0x8a2f6a });
-    gm.setEnabled(sv.gem >= D.REVIVE_GEM);
-    c.add([ad, gm, gemIcon(s, W / 2 - 62, 268, 12)]);
-    c.add(s.add.text(W / 2 + 70, 288, `보유 ${sv.gem}`, font9(10, '#ff9ad0')).setOrigin(1, 0));
-    c.add(button(s, W / 2, 316, 120, 24, '포기', () => {
+    // 보석이 모자라면 버튼 대신 작은 안내만(못 누르는 큰 버튼이 광고 부활을 가렸다)
+    if (sv.gem >= D.REVIVE_GEM) {
+      c.add([gm, gemIcon(s, W / 2 - 62, 268, 12)]);
+      c.add(s.add.text(W / 2 + 70, 288, `보유 ${sv.gem}`, font9(10, '#ff9ad0')).setOrigin(1, 0));
+    } else { gm.destroy(); c.add(s.add.text(W / 2, 266, `보석 부활은 ${D.REVIVE_GEM}개 필요 (보유 ${sv.gem})`, font9(10, '#8a80a0')).setOrigin(0.5)); }
+    c.add(ad);
+    c.add(button(s, W / 2, 316, 80, 20, '포기', () => {
       if (busy || c !== this.c) return;
       s.log('revive_choice', { via: 'giveup' });
       this.end(c); s.die(true);
@@ -483,7 +487,7 @@ export class Overlay {
     if (gem) rew.push([-1, '보석', gem]);
     const tx = [];
     rew.forEach(([ic, name, n], i) => {
-      const y = 232 + i * 18;
+      const y = 230 + i * 16;
       c.add(ic < 0 ? gemIcon(s, 58, y, 14) : icon(s, 58, y, ic, 18));
       c.add(s.add.text(74, y - 7, name, font(11)));
       const t = s.add.text(W - 50, y - 7, '+0', font(12, '#ffd75e')).setOrigin(1, 0); c.add(t); tx.push(t);
@@ -517,7 +521,7 @@ export class Overlay {
     }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
-      const db = button(s, W / 2, brag ? 306 : 330, 190, brag ? 18 : 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
+      const db = button(s, W / 2, brag ? 304 : 330, 190, brag ? 18 : 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         s.log('double_reward', { ok, gold, stone });

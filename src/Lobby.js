@@ -284,7 +284,8 @@ export class Lobby extends Phaser.Scene {
     bs.setScale((fb[ch.boss] ? 40 : 52) / bs.height); if (fb[ch.boss]) bs.setTint(D.BOSSES[ch.boss].color);
     pv.add(bs);
     // 돌아올 이유: 자리를 비워도 견습생이 번다는 걸 늘 보여 준다
-    if (sv.cleared >= 1) pv.add(this.add.text(20, 76, `⏳ 견습생 작업 중 · 최대 ${D.IDLE.capH}시간`, font9(9, '#9ae0ff')));
+    // 막연한 '작업 중'보다 비우면 받을 금화를 숫자로
+    if (sv.cleared >= 1) { const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1); pv.add(this.add.text(20, 76, `⏳ 견습생: 비우면 시간당 금화 +${fmt(Math.round(D.clearGold(Math.floor(top / 6), top % 6) * D.IDLE.perH))}`, font9(10, '#9ae0ff'))); }
     // 장 보스까지 몇 판 남았는지(처음 10분에 향할 곳)
     const bossLeft = c * 6 + 5 - sv.cleared;
     pv.add(this.add.text(bossLeft > 0 ? W - 18 : W - 58, 136, bossLeft > 0 ? `${D.BOSSES[ch.boss].name} · ${bossLeft}스테이지 뒤` : bossLeft === 0 ? `${D.BOSSES[ch.boss].name} · 도전!` : `${D.BOSSES[ch.boss].name} 격파`, font(10, bossLeft < 0 ? '#5fdc6a' : '#ff9090', 3)).setOrigin(bossLeft > 0 ? 1 : 0.5, 1));   // 글자가 길면 오른쪽 끝에 맞춰 판 밖으로 안 나가게
