@@ -66,7 +66,7 @@ export const BOSSES = {
 
 // 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다. 4~5장 벽이 너무 높아 조금 낮췄다
 export const chapterHp = c => Math.pow(2.05, c);           // c는 0부터
-export const chapterDmg = c => 0.65 * Math.pow(1.25, c);
+export const chapterDmg = c => 0.65 * Math.pow(1.18, c);   // 1.25면 3장부터 무기 등급 체력 보너스를 앞질러 30초 만에 녹았다
 // 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
 // s는 0~5. 1-2에서 바로 벽을 느끼게 크게 뛰고, 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
 const STAGE_HP = [1, 1.45, 1.7, 1.92, 2.12, 2.3];
@@ -130,7 +130,7 @@ export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)
 export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
 
 // ── 판 안 성장 ──
-export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 34 };
+export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 46 };
 // 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 40% 줄여 한 판 안에 진화까지 닿게 한다
 export const xpNeed = lv => lv === 1 ? 5 : lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6)) : 8 + (lv - 1) * 11;
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스

@@ -121,7 +121,8 @@ export class Battle extends Phaser.Scene {
     // 바깥 바닥을 전부 깔고, 광장 바닥은 경계에서 서서히 짙어지게 겹친다(경계 타일을 쓰면 계단식 사각 패치로 보였다)
     for (let y = 0; y < WORLD; y += T) for (let x = 0; x < WORLD; x += T) {
       const n = Math.random(), cx = x + T / 2, cy = y + T / 2;
-      stamp.setFrame(n < 0.85 ? Phaser.Math.RND.pick([0, 2]) : 3).setAngle(R(0, 3) * 90).setAlpha(1);
+      // 3번 그림(밝은 변종)은 3장부터 색을 입히면 사각으로 튄다
+      stamp.setFrame(n < 0.85 || this.c >= 2 ? Phaser.Math.RND.pick([0, 2]) : 3).setAngle(R(0, 3) * 90).setAlpha(1);
       rt.draw(stamp, cx, cy);
       const a = Phaser.Math.Clamp((inside(cx, cy) + T * 0.8) / (T * 2.4), 0, 1);
       if (a <= 0) continue;
@@ -329,7 +330,8 @@ export class Battle extends Phaser.Scene {
   }
 
   spawn(near = false, kind = null, opt = {}) {
-    if (this.mobs.countActive() >= 100 + this.c * 6 && !opt.force) return null;   // 저사양 폰을 위해 동시 몹 수 상한
+    // 동시 몹 수 상한: 저사양 폰, 그리고 3장부터 30초 만에 100마리가 쌓여 손쓸 틈 없이 포위됐다
+    if (this.mobs.countActive() >= 75 && !opt.force) return null;
     let vk = opt.variant;
     if (!kind) { const rv = this.rollVariant(); if (rv) { kind = rv.kind; vk = rv.v; } else kind = this.pickKind(); }
     const m0 = D.MOBS[kind], v = vk ? D.VARIANTS[vk] : null;
@@ -850,6 +852,9 @@ export class Battle extends Phaser.Scene {
     this.gems.getChildren().slice().forEach(g => {
       const d = Phaser.Math.Distance.Between(g.x, g.y, h.x, h.y);
       if (d < pick || g.pull) { g.pull = true; this.physics.moveToObject(g, h, 120 + (g.sp = (g.sp || 0) + dt * 0.5)); }
+      // 조금 먼 보석은 천천히 끌려온다: 몹에 둘러싸여 보석까지 못 가면 레벨이 멈췄다
+      else if (d < pick * 3) this.physics.moveToObject(g, h, 45);
+      else if (g.body.speed) g.setVelocity(0);
       if (d < 10) { this.gainXp(g.v); g.destroy(); }
     });
     this.items.getChildren().slice().forEach(it => {

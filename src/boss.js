@@ -14,7 +14,8 @@ export class BossAI {
     m.setScale(fb ? 2.6 : 1).setDepth(12);
     if (fb) m.setTint(this.b.color);
     m.isBoss = true; m.bossAI = this; m.kind = key; m.kbRes = 0; m.color = this.b.color; m.hitBy = {}; m.baseTint = m.tintTopLeft;
-    m.maxHp = m.hp = this.b.hp * hpMul;
+    // 3장부터 챕터 보스는 15% 덜 단단하게: 권장의 135%로도 체력 1~16%를 남기고 졌다
+    m.maxHp = m.hp = this.b.hp * hpMul * (!mid && s.c >= 2 && !s.endless ? 0.85 : 1);
     m.dmg = this.b.dmg * s.mobDmgMul;
     m.body.setSize(m.width * 0.6, m.height * 0.55).setOffset(m.width * 0.2, m.height * 0.4);
     m.setImmovable(true);
