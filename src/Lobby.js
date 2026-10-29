@@ -10,7 +10,7 @@ const R = Phaser.Math.Between;
 const TABS = [['battle', '전투', 1], ['forge', '대장간', 13], ['train', '훈련', 14], ['shop', '상점', 12]];
 
 // 스테이지별 권장 공격력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
-export const recAtk = (c, s) => Math.round(D.TIERS[Math.min(c, D.TIERS.length - 1)].atk * (1 + 0.1 * Math.min(10, s * 1.9)));
+export const recAtk = (c, s) => Math.round(D.TIERS[Math.min(c, D.TIERS.length - 1)].atk * D.stageMul(s));
 
 export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }

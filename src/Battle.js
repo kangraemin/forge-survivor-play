@@ -274,8 +274,10 @@ export class Battle extends Phaser.Scene {
     const f = Math.min(1, this.progress()), [a, b, c] = this.ch.mobs;
     const r = Math.random();
     if (this.hordeKind && r < 0.6) return this.hordeKind;
-    if (r < 0.15 + 0.25 * f) return b;
-    if (r < 0.35 + 0.3 * f) return c;
+    // 뒤 스테이지일수록 처음부터 단단한 놈·떼거리가 섞인다
+    const st = this.endless ? 0 : this.s * 0.06;
+    if (r < 0.15 + st + 0.25 * f) return b;
+    if (r < 0.35 + 2 * st + 0.3 * f) return c;
     return a;
   }
 
@@ -683,9 +685,9 @@ export class Battle extends Phaser.Scene {
       if (this.waveT >= this.waveLen) { this.waveT = 0; this.endWave(); return; }
       // 스폰: 초당 2.5 → 끝날 즈음 5.5마리(초반 몹은 약하고 많게)
       const f = this.progress();
-      // 판 시작 20초는 초당 2마리를 더 내보낸다: 첫 판 초반 화면이 비어 지루했다
-      const early = !this.endless && this.bt < 20000 ? 2 : 0;
-      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + 3 * f) / 1000;
+      // x-1은 판 시작 20초에 초당 2마리를 더 내보낸다: 첫 판 초반 화면이 비어 지루했다(뒤 스테이지는 원래 많다)
+      const early = !this.endless && this.s === 0 && this.bt < 20000 ? 2 : 0;
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 3 * f) / 1000;
       while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }

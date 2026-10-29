@@ -67,8 +67,10 @@ export const BOSSES = {
 // 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다
 export const chapterHp = c => Math.pow(2.1, c);           // c는 0부터
 export const chapterDmg = c => 0.65 * Math.pow(1.25, c);
-export const stageMul = s => 1 + 0.1 * s;                // s는 0~5
-export const stageDmg = s => 1 + 0.05 * s;               // 피해는 공격력으로 못 막으니 체력보다 완만하게
+// 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
+export const stageMul = s => 1 + 0.36 * s - 0.02 * s * s; // s는 0~5. 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
+export const stageDmg = s => 1 + 0.1 * s;                // 피해는 공격력으로 못 막으니 체력보다 완만하게
+export const stageSpawn = s => 0.35 * s;                 // 초당 더 나오는 몹 수
 // 판 안 시간에 따른 체력 상승(처음 0.75배 → 끝날 즈음 1.7배)
 export const timeHp = f => 0.75 + 0.95 * f;          // 초반 몹은 약하고 많게
 
