@@ -218,6 +218,8 @@ export function gearStats(sv) {
   const sp = sv.sp || {};
   out.hp += 0.04 * (sp.vit || 0) + SP_MILE_HP * Math.floor((sp.vit || 0) / SP_MILE); out.regen += 0.02 * (sp.vit || 0);
   out.spd += 0.003 * (sp.dex || 0); out.cd += 0.003 * (sp.int || 0);
+  // 도감 보너스(codex.js dexRefresh가 계산해 둔 값)
+  out.hp += sv.dexB?.hp || 0; out.atk += sv.dexB?.atk || 0;
   return out;
 }
 
@@ -230,6 +232,7 @@ export function addItems(sv, items) {
     if (it.egg) { if (sv.eggs?.[it.egg]) continue; (sv.eggs ||= {})[it.egg] = true; }
     if (sv.inv.some(x => x.u === it.u)) continue;   // 판 안에서 이미 끼운 장비
     sv.inv.push(it);
+    if (it.set) ((sv.dex ||= {}).s ||= {})[it.set] = 1;   // 도감: 세트 한 부위라도 얻었다
     // 빈 부위는 바로 낀다(장비 탭을 안 열어도 새 장비가 전투에 들어가게)
     if (!sv.eq[it.s] && !it.bag) sv.eq[it.s] = it.u;   // 판에서 '가방에'를 고른 건 끼지 않는다
     if (sv.inv.length > INV_MAX) {

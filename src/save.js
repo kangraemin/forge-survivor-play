@@ -2,6 +2,7 @@
 import { SWEEP_DAILY, SWEEP_MAX, GEM_FREE, PASS_DAILY } from './data.js';
 import { track } from './log.js';
 import { PET_OLD } from './gear.js';
+import { dexRefresh } from './codex.js';
 
 const dayNo = d => Math.floor((d - d.getTimezoneOffset() * 60000) / 86400000); // 기기 시간대 기준 날짜 번호
 
@@ -32,6 +33,12 @@ const fresh = () => ({
   sp: { str: 0, dex: 0, int: 0, vit: 0 }, spReset: 1, // 찍은 스탯, 초기화권(처음 한 장은 공짜)
   eggs: {}, taps: 0,       // 얻은 숨겨진 템, 대장간 칼 두드린 횟수
   sound: true,
+  // 콘텐츠 확장(없던 저장도 이 값으로 채운다)
+  hardCleared: 0, hardOn: false, // 어려움 깬 판 수, 전투 탭이 어려움을 보고 있나
+  dunN: 0,                 // 오늘 일일 던전 들어간 횟수
+  wk: { id: 0, mis: {}, got: {} }, // 이번 주 번호, 주간 도전 진행·받은 것
+  dex: { m: {}, s: {} },   // 도감: 몬스터별 처치 수, 얻은 세트
+  ach: {}, title: '',      // 받은 업적, 낀 칭호
 });
 
 let mem = null;
@@ -48,6 +55,13 @@ export function load() {
   if (PET_OLD[mem.pet]) mem.pet = PET_OLD[mem.pet];
   mem.petV = 2;
   if (!mem.spV) { mem.sp = { str: 0, dex: 0, int: 0, vit: 0 }; mem.spV = 2; }
+  // 콘텐츠 확장 전 저장: 묶음 값이 없거나 비면 채운다. 도감 세트는 가방의 장비로 채운다
+  mem.stats = { runs: 0, kills: 0, destroyed: 0, playMs: 0, losses: 0, ...mem.stats };
+  mem.dex = { m: {}, s: {}, ...mem.dex }; mem.dex.m ||= {}; mem.dex.s ||= {};
+  for (const it of mem.inv || []) if (it.set) mem.dex.s[it.set] = 1;
+  mem.ach ||= {};
+  if (!mem.wk?.mis) mem.wk = { id: 0, mis: {}, got: {} };
+  mem.stats.maxEnh = Math.max(mem.stats.maxEnh || 0, mem.enh || 0);
   // 마지막으로 저장한 뒤 얼마나 비웠나(자리 비움 보상). 로비가 읽고 0으로 돌린다
   if (mem.seenAt) mem.idleMs = Math.max(mem.idleMs || 0, Date.now() - mem.seenAt);
   // 하루가 바뀌면 소탕권 충전, 파괴 방지권 1장
@@ -55,7 +69,7 @@ export function load() {
   if (mem.day !== today) {
     if (mem.day) { mem.sweep = Math.min(SWEEP_MAX, mem.sweep + SWEEP_DAILY); mem.guard += 1; }
     // 출석 보석, 월정액은 남은 날이 있으면 매일 지급
-    mem.gem += GEM_FREE.daily; mem.ads = {}; mem.mis = {}; mem.misGot = {};
+    mem.gem += GEM_FREE.daily; mem.ads = {}; mem.mis = {}; mem.misGot = {}; mem.dunN = 0;
     // 출석: 어제 왔으면 하루 늘고, 며칠 빠졌으면 늘지 않는다(처음으로 돌아가지는 않는다)
     const n = dayNo(d);
     if (!mem.streak || n - mem.dayN === 1) mem.streak++;
@@ -64,6 +78,10 @@ export function load() {
     track('daily_reset', { streak: mem.streak, returning: !!mem.day, gem: mem.gem });
     mem.day = today;
   }
+  // 주간 도전: 월요일 0시에 새 주(날짜 번호 0은 1970-01-01 목요일)
+  const wk = Math.floor((dayNo(d) + 3) / 7);
+  if (mem.wk.id !== wk) { mem.wk = { id: wk, mis: {}, got: {} }; track('weekly_reset', { wk }); }
+  dexRefresh(mem);
   save();
   return mem;
 }
@@ -73,4 +91,5 @@ export function save() {
 }
 export function reset() { mem = fresh(); save(); return mem; }
 // 오늘 임무 진행
-export function mission(id, n = 1) { if (!mem) return; mem.mis[id] = (mem.mis[id] || 0) + n; }
+// 주간 도전도 같은 id로 함께 센다
+export function mission(id, n = 1) { if (!mem) return; mem.mis[id] = (mem.mis[id] || 0) + n; mem.wk.mis[id] = (mem.wk.mis[id] || 0) + n; }

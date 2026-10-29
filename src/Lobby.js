@@ -6,6 +6,8 @@ import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedCont
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
+import { ContentTab } from './contentTab.js';
+import { dexRefresh } from './codex.js';
 import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 
 const { W, H } = D;
@@ -34,9 +36,11 @@ export class Lobby extends Phaser.Scene {
     playBgm('lobby');
     // 1-1을 처음 깨고 오면 대장간으로 안내한다
     if (sv.cleared >= 1 && !sv.tut.forgeShown) { sv.tut.forgeShown = true; this.tab = 'forge'; save(); }
+    // 어려움은 마왕을 잡은 뒤에만. 전투 탭이 보던 난이도를 기억한다
+    this.hard = !!sv.hardOn && sv.cleared >= D.HARD.unlock;
+    dexRefresh(sv);
     // 처음 고를 챕터는 지금 도전할 곳
-    const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
-    if (this.selC === undefined) { this.selC = Math.floor(top / D.STAGES_PER_CHAPTER); this.selS = top % D.STAGES_PER_CHAPTER; }
+    if (this.selC === undefined) this.selTop();
     this.makeTextures();
     hiCam(this).setBackgroundColor('#0d0a14');
     this.bg = this.add.container(0, 0);
@@ -56,6 +60,10 @@ export class Lobby extends Phaser.Scene {
     else if (sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
   }
 
+  // 지금 난이도에서 깬 판 수, 그 다음 도전할 판을 고른다
+  get prog() { return this.hard ? this.sv.hardCleared || 0 : this.sv.cleared; }
+  selTop() { const top = Math.min(this.prog, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1); this.selC = Math.floor(top / D.STAGES_PER_CHAPTER); this.selS = top % D.STAGES_PER_CHAPTER; }
+
   // 로비 위에 뜨는 창
   modal() {
     const c = fixedContainer(this).setDepth(2000);
@@ -70,25 +78,39 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv;
     const n = D.MISSIONS.filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length;
     const all = D.MISSIONS.every(m => sv.misGot[m.id]) && !sv.misGot.all;
-    return n + (all ? 1 : 0) + (sv.loginGot ? 0 : 1);
+    return n + (all ? 1 : 0) + (sv.loginGot ? 0 : 1) + this.weeklyReady();
   }
   // auto: 하루 첫 접속에 저절로 뜬 창이면 출석 보상을 바로 준다(누를 필요 없이)
-  missionWin(auto = false) {
+  missionWin(auto = false, page = 'day') {
     const sv = this.sv, c = this.modal();
-    const day = (sv.streak - 1) % 7;
+    const day = (sv.streak - 1) % 7, mul = D.loginMul(sv.streak);
+    // 7일을 돌 때마다 보상이 커진다(칼빛은 그대로 한 번)
+    const scaled = g0 => Object.fromEntries(Object.entries(g0).map(([k, v]) => [k, typeof v === 'number' && k !== 'goldStage' ? Math.round(v * mul) : k === 'goldStage' ? v * mul : v]));
     const claim = () => {
       if (sv.loginGot) return;
-      const g = { ...D.LOGIN_REWARDS[day] };
+      const g = scaled(D.LOGIN_REWARDS[day]);
       if (g.skin && sv.skins?.[g.skin]) delete g.skin;   // 이미 가진 칼빛은 다시 주지 않는다
       sv.loginGot = true; track('login_reward', { day, auto }); grant(sv, g); sfx('win'); this.refreshTop();
       toast(this, `출석 보상 ${giveText(g, sv)}`, '#ffd75e');
     };
     if (auto) claim();
     c.add(panel(this, 16, 60, W - 32, 370, { fill: 0x1a1426, line: 0xffd75e }));
-    c.add(this.add.text(W / 2, 80, '오늘의 임무', font(14, '#ffd75e')).setOrigin(0.5));
     const body = this.add.container(0, 0); c.add(body);
+    this.misPage = page;
     const draw = () => {
       body.removeAll(true);
+      // 위: 오늘 / 이번 주 두 칸
+      [['day', '오늘의 임무'], ['week', '이번 주 도전']].forEach(([id, name], i) => {
+        const x = 74 + i * 92, on = this.misPage === id;
+        body.add(this.add.text(x, 80, name, font(on ? 13 : 11, on ? '#ffd75e' : '#8a80a0')).setOrigin(0.5));
+        if (on) body.add(this.add.rectangle(x, 92, 70, 2, 0xffd75e));
+        if (id === 'week' && this.weeklyReady()) body.add(this.add.circle(x + 44, 74, 3.5, 0xff3a3a));
+        const hit = this.add.rectangle(x, 80, 92, 24, 0, 0).setInteractive({ useHandCursor: true });
+        hit.on('pointerup', () => { if (this.misPage === id) return; sfx('click'); this.misPage = id; draw(); });
+        body.add(hit);
+      });
+      body.add(button(this, W - 38, 80, 26, 22, 'X', () => c.close(), { size: 11, color: 0x3a3846 }));
+      if (this.misPage === 'week') return this.weeklyDraw(body, draw);
       D.MISSIONS.forEach((m, i) => {
         const y = 102 + i * 40, have = Math.min(m.need, sv.mis[m.id] || 0), done = have >= m.need, got = sv.misGot[m.id];
         body.add(panel(this, 26, y, W - 52, 34, { fill: got ? 0x141018 : 0x221c33 }));
@@ -108,22 +130,20 @@ export class Lobby extends Phaser.Scene {
       ab.setEnabled(allDone && !sv.misGot.all); body.add(ab);
       // 출석 7일
       body.add(this.add.rectangle(W / 2, 258, W - 60, 1, 0x5b4f7a));
-      const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);   // 금화는 지금 도전 중인 스테이지 기준
       body.add(this.add.text(W / 2, 272, `출석 ${sv.streak}일째`, font(12, '#9ae0ff')).setOrigin(0.5));
-      body.add(this.add.text(W / 2, 288, '하루 빠져도 처음으로 돌아가지 않는다', font9(10, '#a89cc8')).setOrigin(0.5));
-      D.LOGIN_REWARDS.forEach((g, i) => {
+      body.add(this.add.text(W / 2, 288, mul > 1 ? `${Math.floor((sv.streak - 1) / 7) + 1}바퀴째라 보상 ×${mul}` : '7일을 돌 때마다 보상이 25%씩 오른다', font9(10, mul > 1 ? '#ffd75e' : '#a89cc8')).setOrigin(0.5));
+      D.LOGIN_REWARDS.map(scaled).forEach((g, i) => {
         const x = W / 2 + (i - 3) * 31, y = 324, past = i < day || (i === day && sv.loginGot), today = i === day;
         body.add(this.add.rectangle(x, y, 28, 50, today ? 0x3b2f5c : 0x15111f).setStrokeStyle(1, today ? 0xffd75e : 0x3a3450));
         body.add(this.add.text(x, y - 16, `${i + 1}일`, font9(10, today ? '#ffd75e' : '#8a80a0')).setOrigin(0.5).setPadding(0, 2));
         const [k, v] = Object.entries(g)[0];
         body.add(k === 'gem' ? gemIcon(this, x, y - 3, 12) : icon(this, x, y - 3, { goldStage: 12, stone: 13, guard: 11, sweep: 15 }[k], 14));
-        body.add(this.add.text(x, y + 10, k === 'goldStage' ? fmt(D.clearGold(Math.floor(top / D.STAGES_PER_CHAPTER), top % D.STAGES_PER_CHAPTER) * v) : String(v), font9(10, '#ffffff')).setOrigin(0.5));
+        body.add(this.add.text(x, y + 10, k === 'goldStage' ? fmt(Math.round(D.dunBase(sv).gold * v)) : String(v), font9(10, '#ffffff')).setOrigin(0.5));
         if (g.skin && !sv.skins?.[g.skin]) body.add(this.add.text(x, y + 20, '+칼빛', font9(9, '#ff9a5a')).setOrigin(0.5));
         if (past) { body.add(this.add.rectangle(x, y, 28, 50, 0x000000, 0.55)); body.add(this.add.text(x + 9, y - 15, '✓', font(11, '#5fdc6a')).setOrigin(0.5)); }
       });
       const lb = button(this, W / 2, 380, 170, 26, sv.loginGot ? '오늘 출석 완료' : '출석 보상 받기', () => { claim(); draw(); }, { size: 11, color: 0x2f6b3a });
       lb.setEnabled(!sv.loginGot); body.add(lb);
-      body.add(button(this, W - 38, 80, 26, 22, 'X', () => c.close(), { size: 11, color: 0x3a3846 }));
     };
     draw();
   }
@@ -133,9 +153,8 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, ms = sv.idleMs || 0;
     sv.idleMs = 0;
     if (sv.cleared < 1 || ms < D.IDLE.minMin * 60000) return null;
-    const raw = ms / 3600000, h = Math.min(D.IDLE.capH, raw), top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
-    const c = Math.floor(top / D.STAGES_PER_CHAPTER), s = top % D.STAGES_PER_CHAPTER;
-    return { h, raw, gold: Math.round(D.clearGold(c, s) * D.IDLE.perH * h), stone: Math.max(1, Math.round(D.clearStone(c, s) * D.IDLE.perH * h)), gem: ms >= D.IDLE.bonusH * 3600000 ? D.IDLE.bonusGem : 0 };
+    const raw = ms / 3600000, h = Math.min(D.IDLE.capH, raw), base = D.dunBase(sv);   // 어려움을 시작했으면 어려움 판 기준
+    return { h, raw, gold: Math.round(base.gold * D.IDLE.perH * h), stone: Math.max(1, Math.round(base.stone * D.IDLE.perH * h)), gem: ms >= D.IDLE.bonusH * 3600000 ? D.IDLE.bonusGem : 0 };
   }
 
   welcomeWin({ h, raw, gold, stone, gem }) {
@@ -258,14 +277,14 @@ export class Lobby extends Phaser.Scene {
   // ── 전투 탭 ──
   battleTab() {
     if (this.tower) return this.towerPage();
-    const sv = this.sv, b = this.body, c = this.selC, ch = D.CHAPTERS[c];
+    const sv = this.sv, b = this.body, c = this.selC, ch = D.CHAPTERS[c], hard = this.hard, prog = this.prog;
     const atk = D.powerOf(sv);
-    // 챕터 제목과 화살표
-    b.add(this.add.text(W / 2, 56, `${c + 1}장  ${ch.name}`, font(15, '#ffd75e')).setOrigin(0.5));
-    const unlockedC = Math.floor(Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1) / D.STAGES_PER_CHAPTER);
+    // 챕터 제목과 화살표(어려움은 붉게)
+    b.add(this.add.text(W / 2, 56, `${hard ? '어려움 ' : ''}${c + 1}장  ${ch.name}`, font(15, hard ? '#ff7070' : '#ffd75e')).setOrigin(0.5));
+    const unlockedC = Math.floor(Math.min(prog, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1) / D.STAGES_PER_CHAPTER);
     const arrow = (x, d, ok) => {
       const t = this.add.text(x, 56, d < 0 ? '◀' : '▶', font(14, ok ? '#ffffff' : '#3a3450')).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      t.on('pointerup', () => { if (!ok) return; sfx('click'); this.selC += d; this.selS = Math.min(this.selS, this.selC < unlockedC ? D.STAGES_PER_CHAPTER - 1 : sv.cleared % D.STAGES_PER_CHAPTER); if (this.selC === unlockedC) this.selS = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1) % D.STAGES_PER_CHAPTER; this.show('battle'); });
+      t.on('pointerup', () => { if (!ok) return; sfx('click'); this.selC += d; this.selS = Math.min(this.selS, this.selC < unlockedC ? D.STAGES_PER_CHAPTER - 1 : prog % D.STAGES_PER_CHAPTER); if (this.selC === unlockedC) this.selS = Math.min(prog, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1) % D.STAGES_PER_CHAPTER; this.show('battle'); });
       b.add(t);
     };
     arrow(22, -1, c > 0);
@@ -287,17 +306,18 @@ export class Lobby extends Phaser.Scene {
     const bs = this.add.sprite(W - 56, 100, null).play(ch.boss);
     bs.setScale((fb[ch.boss] ? 38 : 50) / bs.height); if (fb[ch.boss]) bs.setTint(D.BOSSES[ch.boss].color);
     pv.add(bs);
-    const bossLeft = c * D.STAGES_PER_CHAPTER + D.STAGES_PER_CHAPTER - 1 - sv.cleared;
+    const bossLeft = c * D.STAGES_PER_CHAPTER + D.STAGES_PER_CHAPTER - 1 - prog;
+    if (sv.title) pv.add(this.add.text(22, 120, `칭호 「${sv.title}」`, font9(10, '#ffb050')));
     pv.add(this.add.text(W - 56, 129, bossLeft > 0 ? `보스까지 ${bossLeft}판` : bossLeft === 0 ? '보스 도전!' : '보스 격파', font(10, bossLeft < 0 ? '#8a80a0' : '#ff9090', 3)).setOrigin(0.5, 1));
     // 돌아올 이유: 자리를 비워도 견습생이 번다(조용한 한 줄)
-    if (sv.cleared >= 1) { const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1); pv.add(this.add.text(22, 76, `견습생이 시간당 금화 ${fmt(Math.round(D.clearGold(Math.floor(top / D.STAGES_PER_CHAPTER), top % D.STAGES_PER_CHAPTER) * D.IDLE.perH))}를 번다`, font9(10, '#8a80a0'))); }
+    if (sv.cleared >= 1) pv.add(this.add.text(22, 76, `견습생이 시간당 금화 ${fmt(Math.round(D.dunBase(sv).gold * D.IDLE.perH))}를 번다`, font9(10, '#8a80a0')));
     // 스테이지 3칸: 번호와 한 줄(무엇이 다른지)만. 자세한 건 아래 정보판에
     const twistOf = s => D.isBossS(s) ? D.BOSSES[ch.boss].name : s === 1 ? '중간 보스' : (vr => vr ? `${D.VARIANTS[vr[1]].pre} ${D.MOB_NAMES[ch.mobs[vr[0]]]}` : '기본 몬스터')(D.stageVariant(c, s));
     for (let s = 0; s < D.STAGES_PER_CHAPTER; s++) {
       const idx = c * D.STAGES_PER_CHAPTER + s, x = 47 + s * 88, y = 172;
-      const locked = idx > sv.cleared, done = idx < sv.cleared, sel = s === this.selS, boss = D.isBossS(s);
+      const locked = idx > prog, done = idx < prog, sel = s === this.selS, boss = D.isBossS(s);
       const g = this.add.container(x, y);
-      g.add(panel(this, -40, -30, 80, 60, { fill: locked ? 0x100d16 : sel ? 0x2e2548 : 0x1c1729, line: sel ? 0xffd75e : boss && !locked ? 0xa03848 : 0x3a3150 }));
+      g.add(panel(this, -40, -30, 80, 60, { fill: locked ? 0x100d16 : sel ? (hard ? 0x3a1a24 : 0x2e2548) : hard ? 0x22121a : 0x1c1729, line: sel ? 0xffd75e : boss && !locked ? 0xa03848 : 0x3a3150 }));
       g.add(this.add.text(0, -12, `${c + 1}-${s + 1}`, font(14, locked ? '#4a4060' : '#ffffff')).setOrigin(0.5));
       g.add(this.add.text(0, 13, locked ? '잠김' : twistOf(s), font9(10, locked ? '#4a4060' : boss ? '#ff9090' : '#c8bfe0')).setOrigin(0.5));
       if (done) g.add(this.add.text(36, -26, '★', font(9, '#ffd75e')).setOrigin(1, 0));
@@ -305,29 +325,20 @@ export class Lobby extends Phaser.Scene {
       g.on('pointerup', () => { if (locked) { sfx('deny'); track('locked_stage_tap', { stage: `${c + 1}-${s + 1}` }); toast(this, '앞 스테이지를 먼저 깨야 한다', '#ff9090'); return; } sfx('click'); this.selS = s; track('stage_select', { stage: `${c + 1}-${s + 1}` }); this.show('battle'); });
       b.add(g);
     }
-    // 오늘의 임무 막대(받을 게 있으면 빨간 점)
-    if (sv.stats.runs > 0) {
-      const ready = this.missionReady(), doneN = D.MISSIONS.filter(m => sv.misGot[m.id]).length;
-      const mb = this.add.container(0, 0); b.add(mb);
-      mb.add(panel(this, 12, 210, W - 24, 26, { fill: 0x15111f, line: ready ? 0xffd75e : 0x3a3150 }));
-      mb.add(icon(this, 26, 223, 15, 14));
-      mb.add(this.add.text(38, 217, `오늘의 임무 ${doneN}/3`, font9(10, '#e8e2f8')));
-      mb.add(this.add.text(W - 22, 217, ready ? '보상 받기' : `출석 ${sv.streak}일째`, font(10, ready ? '#ffd75e' : '#8a80a0')).setOrigin(1, 0));
-      if (ready) { const dot = this.add.circle(W - 14, 212, 4, 0xff3a3a); mb.add(dot); }
-      const z = this.add.zone(12, 210, W - 24, 26).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerup', () => { if (this.busy) return; sfx('click'); this.missionWin(); });
-      mb.add(z);
-    }
+    // 메뉴 줄: 임무·던전·기록·난이도(받을 게 있으면 빨간 점)
+    if (sv.stats.runs > 0) this.menuRow(b);
     // 선택한 스테이지 정보판: 무엇이 다른지 → 전투력 막대 → 보상
-    const s = this.selS, idx = c * D.STAGES_PER_CHAPTER + s, done = idx < sv.cleared, rec = recAtk(c, s), boss = D.isBossS(s);
+    const s = this.selS, idx = c * D.STAGES_PER_CHAPTER + s, done = idx < prog, rec = D.recOf(c, s, hard), boss = D.isBossS(s);
     b.add(panel(this, 12, 244, W - 24, 132, { fill: 0x15111f }));   // 아래 버튼이 탭 바에 붙지 않게 짧게
     const vr = D.stageVariant(c, s), mod = D.stageMod(c);
     const head = boss ? `보스 ${D.BOSSES[ch.boss].name}` : s === 1 ? `${mod.name} 규칙 + 중간 보스` : vr ? `새 몬스터 ${D.VARIANTS[vr[1]].pre} ${D.MOB_NAMES[ch.mobs[vr[0]]]}` : '기본 몬스터';
-    const sub = boss ? (idx >= D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1 ? '마지막 보스. 잡으면 끝이다' : `잡으면 ${c + 2}장과 새 무기가 열린다`) : s === 1 ? `${mod.desc}. 깨면 다음은 보스` : vr ? D.VARIANTS[vr[1]].desc : '2판 깨면 보스가 나온다';
-    b.add(this.add.text(24, 254, `${c + 1}-${s + 1}  ${head}`, font(12, boss ? '#ff9090' : '#ffffff')));
+    const last = idx >= D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1;
+    const sub = hard ? (boss ? (last ? '어려움 마지막 보스다' : `잡으면 어려움 ${c + 2}장이 열린다`) : '몹이 훨씬 세고 보상이 크다')
+      : boss ? (last ? '마지막 보스. 잡으면 어려움이 열린다' : `잡으면 ${c + 2}장과 새 무기가 열린다`) : s === 1 ? `${mod.desc}. 깨면 다음은 보스` : vr ? D.VARIANTS[vr[1]].desc : '2판 깨면 보스가 나온다';
+    b.add(this.add.text(24, 254, `${hard ? '어려움 ' : ''}${c + 1}-${s + 1}  ${head}`, font(12, boss || hard ? '#ff9090' : '#ffffff')));
     b.add(this.add.text(24, 273, sub, { ...font9(10, '#a89cc8'), wordWrap: { width: W - 48 } }));
     // 전투력: 숫자 두 개보다 막대 하나가 빨리 읽힌다
-    const pc = D.powerCol(atk, rec, s), ratio = Math.min(1, atk / rec);
+    const pc = D.powerCol(atk, rec, s), ratio = Math.min(1, atk / rec);   // rec는 난이도에 맞춘 권장
     const pl = this.add.text(24, 300, '전투력', font9(10, '#a89cc8')), pt = this.add.text(24 + pl.width + 6, 299, `${atk} / ${rec}`, font(11, pc));
     b.add([pl, pt]);
     // 이 맵에 잘 듣는 펫(데려가고 있으면 초록). 보상 줄과 겹치지 않게 전투력 줄 오른쪽에 둔다
@@ -351,15 +362,16 @@ export class Lobby extends Phaser.Scene {
     b.add(this.add.rectangle(W / 2, 344, W - 48, 1, 0x2e2740));
     b.add(this.add.text(24, 352, done ? '보상' : '첫 보상', font9(10, '#a89cc8')));
     const wNew = boss && WTYPES.some(w => !ownsW(sv, w.id));   // 보스를 처음 잡으면 아직 없는 무기 하나를 무작위로 준다
-    const rw = [[12, fmt(Math.round(D.clearGold(c, s) * (done ? 1 : D.FIRST_CLEAR_MUL)))], [13, `${D.clearStone(c, s)}`]];
-    if (!done) rw.push(boss ? [11, wNew ? '새 무기(무작위)' : '방지권'] : [7, '행운 부적']);
+    const rw = [[12, fmt(Math.round(D.goldOf(c, s, hard) * (done ? 1 : D.FIRST_CLEAR_MUL)))], [13, `${D.stoneOf(c, s, hard)}`]];
+    if (!done && hard) rw.push(boss ? [11, '방지권'] : [7, '부적'], [-1, String(boss ? D.HARD.bossGem : D.HARD.firstGem)]);
+    else if (!done) rw.push(boss ? [11, wNew ? '새 무기(무작위)' : '방지권'] : [7, '행운 부적']);
     let rx = 78;
     rw.forEach(([ic, v]) => {
-      b.add(icon(this, rx, 359, ic, 14));
+      b.add(ic < 0 ? gemIcon(this, rx, 359, 11) : icon(this, rx, 359, ic, 14));
       const t = this.add.text(rx + 10, 352, v, font(10, '#ffffff')); b.add(t);
       rx += 10 + t.width + 14;
     });
-    const go = button(this, 95, 398, 150, 32, boss ? '보스 도전' : '전투 시작', () => this.startBattle(c, s), { size: 14, color: boss ? 0x8a2a3a : 0x2f6b3a });
+    const go = button(this, 95, 398, 150, 32, boss ? '보스 도전' : '전투 시작', () => this.startBattle(c, s, false, hard), { size: 14, color: boss || hard ? 0x8a2a3a : 0x2f6b3a });
     const sw = button(this, 214, 398, 76, 32, `소탕 ${sv.sweep}`, () => this.sweep(c, s), { size: 11, color: 0x3a3846 });
     sw.setEnabled(done && sv.sweep > 0);
     b.add([go, sw]);
@@ -397,28 +409,28 @@ export class Lobby extends Phaser.Scene {
 
   tv(id) { const t = D.TRAINING.find(x => x.id === id); return D.trainVal(t, this.sv.train[id] || 0); }
 
-  startBattle(c, s, endless = false) {
+  startBattle(c, s, endless = false, hard = false, dungeon = null) {
     if (this.busy) return; this.busy = true;
-    const sv = this.sv, rec = D.recPower(c, s), pw = D.powerOf(sv);
-    track('battle_start_click', { stage: endless ? 'tower' : `${c + 1}-${s + 1}`, idx: c * D.STAGES_PER_CHAPTER + s, power: pw, rec, ratio: Math.round(pw / rec * 100) / 100, replay: c * D.STAGES_PER_CHAPTER + s < sv.cleared, tier: sv.tier, enh: sv.enh });
+    const sv = this.sv, rec = D.recOf(c, s, hard), pw = D.powerOf(sv);
+    track('battle_start_click', { stage: endless ? 'tower' : dungeon ? 'dungeon' : `${hard ? 'H' : ''}${c + 1}-${s + 1}`, idx: c * D.STAGES_PER_CHAPTER + s, power: pw, rec, ratio: Math.round(pw / rec * 100) / 100, replay: c * D.STAGES_PER_CHAPTER + s < (hard ? sv.hardCleared : sv.cleared), tier: sv.tier, enh: sv.enh, hard, dungeon: dungeon || 'none' });
     sfx('bossIn');
     this.cameras.main.fadeOut(250);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Battle', { chapter: c, stage: s, endless }));
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Battle', { chapter: c, stage: s, endless, hard, dungeon }));
   }
 
   // 소탕: 깬 스테이지 보상을 바로 받는다(하루 5장)
   sweep(c, s) {
-    const sv = this.sv, gold = D.clearGold(c, s), stone = D.clearStone(c, s);
+    const sv = this.sv, gold = D.goldOf(c, s, this.hard), stone = D.stoneOf(c, s, this.hard);
     if (sv.sweep <= 0) return;
     sv.sweep--; sv.gold += gold; sv.stone += stone; mission('clear'); save();
-    track('sweep', { stage: `${c + 1}-${s + 1}`, gold, stone, left: sv.sweep });
+    track('sweep', { stage: `${this.hard ? 'H' : ''}${c + 1}-${s + 1}`, gold, stone, left: sv.sweep });
     sfx('coin');
     for (let i = 0; i < 10; i++) {
       const p = this.add.image(214 + R(-20, 20), 412 + R(-8, 8), 'silver').setTint(0xffd75e).setScale(2).setDepth(60);
       this.tweens.add({ targets: p, x: 18, y: 17, duration: 450, delay: i * 40, ease: 'Quad.In', onComplete: () => { p.destroy(); if (i === 9) { this.refreshTop(); this.bump(0); this.bump(1); this.bump(3); } } });
     }
     // 소탕도 절반 확률로 장비 하나(대부분 일반)
-    const it = Math.random() < 0.5 ? makeItem(c, { rarity: Math.random() < 0.75 ? 0 : 1 }) : null;
+    const it = Math.random() < 0.5 ? makeItem(this.hard ? D.CHAPTERS.length - 1 : c, { rarity: Math.random() < 0.75 ? 0 : 1 }) : null;
     if (it) { addItems(sv, [it]); save(); }
     toast(this, `금화 +${fmt(gold)}  강화석 +${stone}${it ? `  ·  ${RARITY[it.r].name} ${it.n}` : ''}`, '#ffd75e');
     this.time.delayedCall(500, () => this.show('battle'));
@@ -581,7 +593,7 @@ export class Lobby extends Phaser.Scene {
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
     if (guard && !win) sv.guard--;   // 방지권은 칼을 지켜 냈을 때만 쓴다(성공해도 사라지면 아까워서 안 켰다)
     if (!win && danger) sv.gold += Math.round(gold * D.FAIL_REFUND);
-    if (win) sv.enh++;
+    if (win) { sv.enh++; sv.stats.maxEnh = Math.max(sv.stats.maxEnh || 0, sv.enh); }
     else if (outcome === 'shatter') {
       sv.enh = D.shatterTo(enh); sv.stats.destroyed++;
       // 대장장이 앞치마: 칼을 세 번 부수면
@@ -903,4 +915,4 @@ export class Lobby extends Phaser.Scene {
 }
 
 const RF = Phaser.Math.FloatBetween;
-Object.assign(Lobby.prototype, GearTab);
+Object.assign(Lobby.prototype, GearTab, ContentTab);

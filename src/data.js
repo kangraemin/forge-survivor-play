@@ -331,6 +331,68 @@ export const LOGIN_REWARDS = [
   { goldStage: 1 }, { stone: 20 }, { guard: 1 }, { goldStage: 2 }, { sweep: 3 }, { stone: 40 }, { gem: 100, skin: 'flame' },  // 7일째: 처음 한 번은 불꽃 칼빛까지
 ];
 
+// 출석은 7일을 한 바퀴 돌 때마다 보상이 25%씩 늘어난다(최대 2배)
+export const loginMul = streak => 1 + 0.25 * Math.min(4, Math.floor(Math.max(0, streak - 1) / 7));
+
+// ── 어려움: 마왕을 잡으면 같은 15판을 센 몹·큰 보상으로 다시 돈다. 근거는 docs/CONTENT_PLAN.md ──
+// k는 5-3 권장(약 3,100) 대비 배율. 판마다 14%씩(끝 판 약 21,900), 장 첫 판은 조금 낮추고 보스 판은 높인다
+export const HARD = { unlock: 15, start: 1, grow: 1.14, dmg: 1.05, dmgGrow: 1.03, firstGem: 10, bossGem: 80 };
+const LAST_C = 4, LAST_S = 2;
+export const hardK = (c, s) => HARD.start * Math.pow(HARD.grow, c * STAGES_PER_CHAPTER + s) * (isBossS(s) ? 1.12 : c > 0 && s === 0 ? 0.92 : 1);
+export const hardRec = (c, s) => Math.round(recPower(LAST_C, LAST_S) * hardK(c, s));
+// 몹 체력: 5-3 몹 체력 × k(보스 판이 아니면 권장의 보스 가산 1.25를 뺀다)
+export const hardHp = (c, s) => chapterHp(LAST_C) * stageMul(LAST_S) * spReq(LAST_C * STAGES_PER_CHAPTER + LAST_S) * hardK(c, s) * (isBossS(s) ? 1 : 1.25);
+export const hardDmg = (c, s) => chapterDmg(LAST_C) * stageDmg(LAST_S) * LATE_DMG * HARD.dmg * Math.pow(HARD.dmgGrow, c * STAGES_PER_CHAPTER + s);
+// 보상은 5-3의 1.2배에서 판마다 +8%p, 강화석은 판마다 +2(sim 어려움 완주 중앙 약 2.5h 더)
+export const hardGold = (c, s) => Math.round(clearGold(LAST_C, LAST_S) * (1.2 + 0.08 * (c * STAGES_PER_CHAPTER + s)) / 5) * 5;
+export const hardStone = (c, s) => clearStone(LAST_C, LAST_S) + 2 * (c * STAGES_PER_CHAPTER + s);
+// 난이도에 따라 고른다(로비·결과·소탕이 같이 쓴다)
+export const recOf = (c, s, hard) => hard ? hardRec(c, s) : recPower(c, s);
+export const goldOf = (c, s, hard) => hard ? hardGold(c, s) : clearGold(c, s);
+export const stoneOf = (c, s, hard) => hard ? hardStone(c, s) : clearStone(c, s);
+
+// ── 일일 던전: 하루 2번, 60초. 요일마다 보상이 다르다(0 일요일) ──
+export const DUNGEON = { unlock: 3, daily: 2, sec: 60, killNeed: 150, minPay: 0.2, hp: 0.55, goblinSec: 15 };
+export const DUN_TYPES = {
+  gold: { name: '황금 금고', desc: '금화를 많이 준다', tint: 0xffd75e, css: '#ffd75e' },
+  stone: { name: '강화석 광맥', desc: '강화석을 많이 준다', tint: 0x9ae0ff, css: '#9ae0ff' },
+  gear: { name: '장비 보물고', desc: '좋은 장비를 준다', tint: 0xc890ff, css: '#c890ff' },
+  gem: { name: '보석 광산', desc: '보석과 강화석을 준다', tint: 0xff9ad0, css: '#ff9ad0' },
+};
+export const DUN_WEEK = ['gem', 'gold', 'stone', 'gear', 'gold', 'stone', 'gear'];
+export const dunToday = (d = new Date()) => DUN_WEEK[d.getDay()];
+// 보상 기준: 지금 도전 중인 판(어려움을 시작했으면 어려움 판)의 클리어 보상
+export const dunBase = sv => {
+  const hard = (sv.hardCleared || 0) > 0, n = Math.min(hard ? sv.hardCleared : sv.cleared, CHAPTERS.length * STAGES_PER_CHAPTER - 1);
+  const c = Math.floor(n / STAGES_PER_CHAPTER), s = n % STAGES_PER_CHAPTER;
+  return { c, s, hard, gold: goldOf(c, s, hard), stone: stoneOf(c, s, hard) };
+};
+// f: 채운 비율(0~1). 장비는 개수가 늘고 한 등급 위로 나온다
+// main: 그날 주 보상(클리어 보상의 몇 배), side: 곁들이. 4배·1배일 땐 일반 완주가 5.7h → 4.5h로 줄었다
+const D_MUL = { main: 1.6, side: 0.4 };
+export const dunReward = (type, base, f) => {
+  const k = Math.max(DUNGEON.minPay, Math.min(1, f));
+  if (type === 'gold') return { gold: Math.round(base.gold * D_MUL.main * k), stone: Math.round(base.stone * D_MUL.side * k) };
+  if (type === 'stone') return { gold: Math.round(base.gold * D_MUL.side * k), stone: Math.round(base.stone * D_MUL.main * k) };
+  if (type === 'gear') return { gold: Math.round(base.gold * D_MUL.side * k), stone: Math.round(base.stone * D_MUL.side * k), items: 1 + Math.round(2 * k) };
+  return { gold: Math.round(base.gold * D_MUL.side * k), stone: Math.round(base.stone * D_MUL.main * 0.5 * k), gem: Math.round(30 * k) };
+};
+
+// ── 주간 도전: 월요일에 새로 연다 ──
+export const WEEKLY = [
+  { id: 'kill', name: '몬스터 3,000마리 처치', need: 3000 },
+  { id: 'clear', name: '클리어·소탕 15번', need: 15 },
+  { id: 'enh', name: '강화 10번', need: 10 },
+  { id: 'dun', name: '일일 던전 4번', need: 4 },
+];
+export const WEEKLY_GIVE = { gem: 20, stone: 10 };
+export const WEEKLY_ALL = { gem: 50, guard: 1 };
+
+// ── 깜짝 이벤트: 보스·탑·처음 두 판이 아니면 판마다 하나가 나올 수 있다 ──
+export const EVENTS = { chance: 0.55, kinds: ['goblin', 'bats', 'shrine'], shrineBuff: { dmg: 0.3, spd: 0.15, ms: 20000 }, shrineStand: 2000 };
+// 진 판이 이만큼 넘게 버텼으면 '조금만 더'를 띄운다
+export const CLOSE_LOSS = 0.7;
+
 // ── 진화: 액티브 5레벨 + 짝 패시브를 가지면 레벨업 카드에 진화가 뜬다 ──
 export const EVOS = {
   sword: { need: 'might', name: '폭풍검', desc: '사방을 베고 피해 2배' },
