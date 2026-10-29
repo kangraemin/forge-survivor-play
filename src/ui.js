@@ -7,6 +7,12 @@ export const font9 = (size, color = '#d8d2e8') => ({ fontFamily: 'G9', fontSize:
 
 export const COLOR = { panel: 0x15121f, panel2: 0x221c33, line: 0x5b4f7a, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
 
+// 그리는 배율. 카메라를 왼쪽 위 기준으로 PX배 당겨 게임 좌표(270x480)를 그대로 쓴다
+export const PX = 2;
+export const hiCam = scene => scene.cameras.main.setOrigin(0).setZoom(PX);
+// 카메라 기준점을 왼쪽 위로 옮겨 Phaser의 worldView(가운데 기준 계산)가 어긋난다 → 보이는 영역은 이걸로 구한다
+export const viewRect = scene => { const c = scene.cameras.main; return new Phaser.Geom.Rectangle(c.scrollX, c.scrollY, c.width / c.zoom, c.height / c.zoom); };
+
 // 상단 바 칸이 좁아 4글자 안팎으로 자른다(반올림하면 99999가 100.0k가 되니 버림)
 export const fmt = n => n >= 1e6 ? Math.floor(n / 1e5) / 10 + 'M' : n >= 10000 ? Math.floor(n / 1000) + 'k' : String(Math.floor(n));
 

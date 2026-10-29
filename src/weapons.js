@@ -1,6 +1,6 @@
 // 액티브 스킬 8종. 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
 import { sfx } from './sfx.js';
-import { skinFx } from './ui.js';
+import { skinFx, viewRect } from './ui.js';
 import { SKILLS, PASSIVE_LV3, SKINS } from './data.js';
 
 const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
@@ -23,7 +23,7 @@ export class Weapons {
     return best;
   }
   onScreen() {
-    const v = this.s.cameras.main.worldView;
+    const v = viewRect(this.s);
     return this.s.mobs.getChildren().filter(m => !m.dead && Phaser.Geom.Rectangle.Contains(v, m.x, m.y));
   }
 

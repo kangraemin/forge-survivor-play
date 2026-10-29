@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, playBgm, stopBgm } from './sfx.js';
-import { font, panel, button, icon, skillIcon, fmt, COLOR } from './ui.js';
+import { font, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
@@ -63,7 +63,8 @@ export class Battle extends Phaser.Scene {
     this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
     this.physics.add.overlap(this.hero, this.ebullets, (h, b) => { this.hurt(b.dmg, 'shot'); b.destroy(); });
 
-    this.cameras.main.startFollow(this.hero, true, 1, 1).setBounds(0, 0, WORLD, WORLD).setRoundPixels(true);
+    // 왼쪽 위 기준 카메라라 주인공이 가운데 오도록 반 화면만큼 밀고, 경계도 그만큼 옮긴다(clampX는 가운데 기준 계산)
+    hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(W / 2, H / 2).setBounds(W / 2, H / 2, WORLD, WORLD).setRoundPixels(true);
     this.weapons = new Weapons(this);
     this.boss = null;
     this.ui = new Overlay(this);
@@ -76,13 +77,21 @@ export class Battle extends Phaser.Scene {
       this.physics.world.timeScale = 1 / this.speed; this.time.timeScale = this.speed;
       this.tweens.timeScale = this.speed; this.anims.globalTimeScale = this.speed;
     }
+    // 판 규칙(처음 두 판·보스·무한의 탑 제외)
+    this.mod = !this.easy && !this.isBoss && !this.endless && sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE
+      ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || this.s)) : null;   // x-1엔 변종이 없어 '변종 소굴'은 빼고 뽑는다
+    this.hordeKind = this.mod?.id === 'horde' ? this.ch.mobs[R(0, 2)] : null;
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
     for (let i = 0; i < (this.easy ? 18 : 40); i++) this.spawn(true);
     if (!this.bot) playBgm('battle', this.c);
     this.events.once('shutdown', stopBgm);
+    // 앱을 내리거나 화면이 꺼지면 일시정지 창을 띄워 둔다(돌아왔을 때 이미 맞고 있지 않게)
+    const onHide = () => { if (!this.over && !this.paused && !this.bot) this.ui.pauseMenu(); };
+    this.game.events.on('hidden', onHide); this.events.once('shutdown', () => this.game.events.off('hidden', onHide));
     if (sv.stats.runs < 2 && !this.bot) this.dragHint();
     if (this.endless) this.banner('무한의 탑', `1층  ·  최고 ${sv.endBest}층`);
     else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}`);
+    if (this.mod) this.time.delayedCall(4200, () => !this.over && this.banner(`이번 판: ${this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : ''}${this.mod.name}`, this.mod.desc));
     // 이번 스테이지에 처음 나오는 변종을 알려 준다
     const nv = !this.endless && D.STAGE_VARIANT[this.s];
     if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(`새 몬스터: ${D.VARIANTS[nv[1]].pre} ${D.MOB_NAMES[this.ch.mobs[nv[0]]]}`, D.VARIANTS[nv[1]].desc));
@@ -216,12 +225,14 @@ export class Battle extends Phaser.Scene {
     };
     this.input.on('pointerdown', (p, over) => {
       if (over.length || this.paused) return;
-      this.joy.o = { x: p.x, y: p.y, id: p.id };
-      this.joy.base.setPosition(p.x, p.y).setVisible(true); this.joy.knob.setPosition(p.x, p.y).setVisible(true);
+      // p.x는 그리는 판(PX배) 좌표라 게임 좌표로 나눈다
+      const x = p.x / PX, y = p.y / PX;
+      this.joy.o = { x, y, id: p.id };
+      this.joy.base.setPosition(x, y).setVisible(true); this.joy.knob.setPosition(x, y).setVisible(true);
     });
     this.input.on('pointermove', p => {
       if (!this.joy.o || !p.isDown || p.id !== this.joy.o.id) return;
-      const v = new Phaser.Math.Vector2(p.x - this.joy.o.x, p.y - this.joy.o.y).limit(28);
+      const v = new Phaser.Math.Vector2(p.x / PX - this.joy.o.x, p.y / PX - this.joy.o.y).limit(28);
       this.joy.knob.setPosition(this.joy.o.x + v.x, this.joy.o.y + v.y);
       this.joy.v.copy(v).scale(1 / 28);
     });
@@ -262,6 +273,7 @@ export class Battle extends Phaser.Scene {
   pickKind() {
     const f = Math.min(1, this.progress()), [a, b, c] = this.ch.mobs;
     const r = Math.random();
+    if (this.hordeKind && r < 0.6) return this.hordeKind;
     if (r < 0.15 + 0.25 * f) return b;
     if (r < 0.35 + 0.3 * f) return c;
     return a;
@@ -292,7 +304,8 @@ export class Battle extends Phaser.Scene {
     }
     if (!this.s) return null;
     let r = Math.random();
-    for (const [st, rate] of [[this.s, D.VARIANT_RATE], [this.s - 1, D.VARIANT_OLD_RATE]]) {
+    const vm = this.mod?.id === 'mutant' ? 2 : 1;
+    for (const [st, rate] of [[this.s, D.VARIANT_RATE * vm], [this.s - 1, D.VARIANT_OLD_RATE * vm]]) {
       const sv = D.STAGE_VARIANT[st];
       if (sv && r < rate) return r < rate * (sv[1] === 'giant' ? 0.35 : 1) ? { kind: this.ch.mobs[sv[0]], v: sv[1] } : null;
       r -= rate;
@@ -301,7 +314,7 @@ export class Battle extends Phaser.Scene {
   }
 
   spawn(near = false, kind = null, opt = {}) {
-    if (this.mobs.countActive() >= 120 + this.c * 10 && !opt.force) return null;
+    if (this.mobs.countActive() >= 100 + this.c * 6 && !opt.force) return null;   // 저사양 폰을 위해 동시 몹 수 상한
     let vk = opt.variant;
     if (!kind) { const rv = this.rollVariant(); if (rv) { kind = rv.kind; vk = rv.v; } else kind = this.pickKind(); }
     const m0 = D.MOBS[kind], v = vk ? D.VARIANTS[vk] : null;
@@ -313,9 +326,9 @@ export class Battle extends Phaser.Scene {
     m.elite = elite;
     // 무한의 탑은 층마다 몹이 곱으로 세져 언젠가는 반드시 쓰러진다
     const tower = this.endless ? [Math.pow(D.ENDLESS.hpGrow, this.wave), Math.pow(D.ENDLESS.dmgGrow, this.wave)] : [1, 1];
-    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1) * tower[0] * (v?.hp || 1) * (opt.mini ? 0.35 : 1);
+    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1) * tower[0] * (v?.hp || 1) * (opt.mini ? 0.35 : 1) * (this.mod?.hp || 1);
     m.dmg = m0.dmg * this.mobDmgMul * (elite ? 1.2 : 1) * tower[1];
-    m.spd = m0.spd * (1 + 0.04 * this.c) * RF(0.9, 1.1) * (v?.spd || 1) * (opt.mini ? 1.2 : 1);
+    m.spd = m0.spd * (1 + 0.04 * this.c) * RF(0.9, 1.1) * (v?.spd || 1) * (opt.mini ? 1.2 : 1) * (this.mod?.spd || 1);
     if (v?.ai) m.ai = v.ai;
     m.kbRes = v?.kb ?? (m.ai === 'tank' ? 0.45 : elite ? 0.3 : 1);
     m.variant = opt.mini ? null : vk; m.bs = (elite ? 1.5 : 1) * (v?.scale || 1) * (opt.mini ? 0.65 : 1);
@@ -564,7 +577,7 @@ export class Battle extends Phaser.Scene {
     this.hero.play('hurtPose');
     this.time.timeScale = 1;
     this.tweens.add({ targets: this.hero, angle: 90 * this.face, alpha: 0.4, duration: 500 });
-    this.cameras.main.zoomTo(1.3, 600);
+    this.cameras.main.flash(300, 120, 0, 0);
     this.time.delayedCall(900, () => this.ui.result(false));
   }
 
@@ -591,7 +604,7 @@ export class Battle extends Phaser.Scene {
     const sp = this.add.sprite(this.hero.x, this.hero.y, 'fx2_r1s').setBlendMode(Phaser.BlendModes.ADD).setDepth(32).setScale(1).play('fxSpin');
     this.tweens.add({ targets: sp, scale: 4, duration: 500, ease: 'Quad.Out' });
     sp.once('animationcomplete', () => sp.destroy());
-    const cam = this.cameras.main.worldView;
+    const cam = viewRect(this);
     this.mobs.getChildren().slice().forEach(m => {
       if (!Phaser.Geom.Rectangle.Contains(cam, m.x, m.y)) return;
       this.hitMob(m, m.isBoss ? mult / 2 : mult, { kb: 260, fx: 'big' });

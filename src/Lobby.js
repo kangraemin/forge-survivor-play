@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 
 const { W, H } = D;
@@ -33,7 +33,7 @@ export class Lobby extends Phaser.Scene {
     const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
     if (this.selC === undefined) { this.selC = Math.floor(top / D.STAGES_PER_CHAPTER); this.selS = top % D.STAGES_PER_CHAPTER; }
     this.makeTextures();
-    this.cameras.main.setBackgroundColor('#0d0a14');
+    hiCam(this).setBackgroundColor('#0d0a14');
     this.bg = this.add.container(0, 0);
     this.body = this.add.container(0, 0);
     this.makeTop();
@@ -437,8 +437,8 @@ export class Lobby extends Phaser.Scene {
           sw.setTintFill?.(0xffffff); this.time.delayedCall(50, () => sw.clearTint?.());
           // 파괴 구간 마지막 한 방 전: 붉게 달아오르고 숨을 고른다
           const last = i === hits - 2, tense = danger && last;
-          if (tense) { sfx('warn'); this.time.delayedCall(60, () => sw.setTint?.(0xff5a3a)); this.cameras.main.zoomTo(1.12, 500); }
-          this.tweens.add({ targets: h, angle: 30, x: W / 2 + 54, y: 130, duration: 220, ease: 'Quad.Out', onComplete: () => i + 1 < hits ? this.time.delayedCall(tense ? 750 : last ? 320 : 60, () => strike(i + 1)) : (this.cameras.main.zoomTo(1, 150), this.reveal(outcome, enh, guard)) });
+          if (tense) { sfx('warn'); this.time.delayedCall(60, () => sw.setTint?.(0xff5a3a)); this.tweens.add({ targets: sw, scale: sw.scale * 1.12, duration: 500, ease: 'Quad.Out' }); }
+          this.tweens.add({ targets: h, angle: 30, x: W / 2 + 54, y: 130, duration: 220, ease: 'Quad.Out', onComplete: () => i + 1 < hits ? this.time.delayedCall(tense ? 750 : last ? 320 : 60, () => strike(i + 1)) : (this.reveal(outcome, enh, guard)) });
         },
       });
     };

@@ -46,6 +46,13 @@ export const VARIANTS = {
 // 스테이지 s(1~5)에 새로 나오는 변종: [챕터 몹 번호, 변종]. 0번 스테이지는 기본 몹만
 export const STAGE_VARIANT = [null, [0, 'split'], [2, 'swift'], [1, 'armor'], [0, 'burst'], [2, 'giant']];
 export const VARIANT_RATE = 0.22, VARIANT_OLD_RATE = 0.1;   // 이번 변종 / 앞 스테이지 변종이 섞이는 비율
+// 판 규칙: 같은 스테이지도 판마다 다르게 흘러가도록 시작할 때 하나를 뽑는다(안 뽑힐 수도 있다)
+export const RUN_MODS = [
+  { id: 'horde', name: '떼', desc: '한 종류가 몰려온다' },
+  { id: 'mutant', name: '변종 소굴', desc: '변종이 두 배로 나온다' },
+  { id: 'rush', name: '질풍', desc: '몹이 빠르지만 약하다', spd: 1.2, hp: 0.85 },
+];
+export const RUN_MOD_CHANCE = 0.6;
 
 // 보스: sheet/row는 2프레임 시트. hp는 1챕터 배율 기준 값(챕터 배율이 곱해진다)
 export const BOSSES = {

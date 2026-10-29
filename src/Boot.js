@@ -1,6 +1,6 @@
 // 에셋 로딩, 애니메이션 등록, 코드로 그리는 작은 텍스처 생성
 import { W, H, MOBS, BOSSES } from './data.js';
-import { font } from './ui.js';
+import { font, hiCam } from './ui.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
@@ -12,6 +12,7 @@ export class Boot extends Phaser.Scene {
   constructor() { super('Boot'); }
 
   preload() {
+    hiCam(this);
     const bar = this.add.rectangle(W / 2 - 80, H / 2, 0, 6, 0xffd75e).setOrigin(0, 0.5);
     this.add.rectangle(W / 2, H / 2, 164, 10).setStrokeStyle(1, 0x5b4f7a);
     this.add.text(W / 2, H / 2 - 20, '대장간 서바이버', font(16, '#ffd75e')).setOrigin(0.5);
