@@ -39,6 +39,8 @@ const fresh = () => ({
   wk: { id: 0, mis: {}, got: {} }, // 이번 주 번호, 주간 도전 진행·받은 것
   dex: { m: {}, s: {} },   // 도감: 몬스터별 처치 수, 얻은 세트
   ach: {}, title: '',      // 받은 업적, 낀 칭호
+  // 한정 판매: 오늘의 특가 { day, id, off, got }, 성장 꾸러미 { c, at, shown }
+  deal: null, grow: null,
 });
 
 let mem = null;
@@ -55,6 +57,8 @@ export function load() {
   if (PET_OLD[mem.pet]) mem.pet = PET_OLD[mem.pet];
   mem.petV = 2;
   if (!mem.spV) { mem.sp = { str: 0, dex: 0, int: 0, vit: 0 }; mem.spV = 2; }
+  // 캐시 무기를 사면 해금(wOwn)까지 켜던 저장: 산 무기는 cw로만 남겨 보스 무기 보상이 다시 그 칸을 열 수 있게 한다(든 무기는 그대로 든다)
+  if (!mem.cwV) { for (const k in mem.cw || {}) if (mem.cw[k] && k !== 'sword' && mem.wOwn) delete mem.wOwn[k]; mem.cwV = 1; }
   // 콘텐츠 확장 전 저장: 묶음 값이 없거나 비면 채운다. 도감 세트는 가방의 장비로 채운다
   mem.stats = { runs: 0, kills: 0, destroyed: 0, playMs: 0, losses: 0, ...mem.stats };
   mem.dex = { m: {}, s: {}, ...mem.dex }; mem.dex.m ||= {}; mem.dex.s ||= {};

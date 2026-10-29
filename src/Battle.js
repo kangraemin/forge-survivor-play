@@ -60,7 +60,7 @@ export class Battle extends Phaser.Scene {
       revive: sv.train.revive ? 1 : 0, lastHeal: 0, dmgBy: {},
     };
     // 비급: 산 스킬 한 권을 판 시작부터 들고 들어간다
-    if (sv.book && sv.books?.[sv.book]) this.run.skills[sv.book] = D.BOOK_LV;
+    if (sv.book && D.bookLv(sv, sv.book)) this.run.skills[sv.book] = D.bookSkillLv(D.bookLv(sv, sv.book));
     // 장비·세트·스탯, 무기 종류. 든 무기가 따르는 스탯만 피해를 올린다
     this.gear = gearStats(sv);
     this.wtype = wtypeOf(sv);

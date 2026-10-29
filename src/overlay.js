@@ -4,7 +4,7 @@ import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
-import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, ownsW, SETS } from './gear.js';
+import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW, SETS } from './gear.js';
 import { itemBox } from './gearTab.js';
 import { dexRefresh, DEX_HP } from './codex.js';
 
@@ -489,7 +489,9 @@ export class Overlay {
       // 새 무기: 보스를 처음 잡으면 확정, 처음 깬 판 20%, 다시 깬 판 5%. 어떤 무기인지는 무작위
       r.newW = grantWeapon(sv, first && s.isBoss ? 1 : first ? 0.2 : 0.05);
       // 무기를 다 모았으면 보스 첫 처치 무기 보상은 강화석으로 바꿔 준다
-      if (!r.newW && first && s.isBoss && WTYPES.every(w => ownsW(sv, w.id))) { stone += D.DUP_W_STONE; r.dupW = true; }
+      if (!r.newW && first && s.isBoss && WTYPES.every(w => hasW(sv, w.id))) { stone += D.DUP_W_STONE; r.dupW = true; }
+      // 장 보스를 처음 잡으면 24시간 성장 꾸러미(그 장에 맞는 강화석·방지권)
+      if (first && !hard && s.isBoss && !s.bot) { sv.grow = { c: s.c, at: Date.now() }; s.log('grow_offer', { c: s.c }); }
       if (r.newW) s.log('weapon_get', { wtype: r.newW.id, first, boss: s.isBoss });
     } else {
       gold = Math.round(D.goldOf(s.c, s.s, hard) * s.runProgress() * D.FAIL_GOLD_RATE);

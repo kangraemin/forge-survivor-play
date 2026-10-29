@@ -3,12 +3,12 @@ import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon } from './ui.js';
-import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
+import { showAd, buy, grant, giveText, adsLeft, won, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, dayKey } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
 import { ContentTab } from './contentTab.js';
 import { dexRefresh } from './codex.js';
-import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
+import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, hasW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -59,6 +59,8 @@ export class Lobby extends Phaser.Scene {
     else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e'));
     // 세 판을 하고 난 뒤부터(처음엔 창이 연달아 뜨지 않게): 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
     else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin(true)); }
+    // 장 보스를 처음 잡고 오면 24시간 성장 꾸러미를 한 번 띄운다
+    else if (growOffer(sv) && !sv.grow.shown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && !this.busy && this.growWin());
     else if (sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
   }
 
@@ -209,6 +211,29 @@ export class Lobby extends Phaser.Scene {
     }, { size: 12, color: 0x2f6b3a }));
   }
 
+  // 장 보스 첫 처치 뒤 한 번: 24시간 성장 꾸러미
+  growWin() {
+    const sv = this.sv, it = growOffer(sv);
+    if (!it) return;
+    const c = this.modal();
+    sv.grow.shown = true; save(); track('grow_offer_show', { c: it.c });
+    c.add(panel(this, 24, 130, W - 48, 210, { fill: 0x1a1426, line: 0xffd75e }));
+    c.add(this.add.text(W / 2, 152, `${it.c + 1}장 보스 격파 축하!`, font9(10, '#ff9ad0')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 172, it.name, font(13, '#ffd75e')).setOrigin(0.5));
+    c.add(icon(this, W / 2, 202, 13, 24));
+    c.add(this.add.text(W / 2, 222, giveText(it.give, sv), { ...font9(10, '#e8e2f8'), align: 'center', wordWrap: { width: W - 80 } }).setOrigin(0.5, 0));
+    c.add(this.add.text(W / 2, 256, `다음 장 강화에 맞춘 꾸러미 · ${won(it.price)}`, font(10, '#ffd75e')).setOrigin(0.5));
+    const lt = this.add.text(W / 2, 274, '', font9(10, '#ff9a8a')).setOrigin(0.5); c.add(lt);
+    const tick = () => { if (!lt.active) return; lt.setText(`24시간 한정 · 남은 ${leftText(growLeft(sv))}`); this.time.delayedCall(1000, tick); }; tick();
+    c.add(button(this, 88, 310, 96, 28, '다음에', () => { track('grow_offer_close'); c.close(); }, { size: 11, color: 0x3a3846 }));
+    c.add(button(this, 186, 310, 100, 28, '사기', async () => {
+      track('grow_offer_click');
+      const ok = await buy(this, sv, it);
+      if (ok) toast(this, `${it.name} 구매 완료!`, '#ffd75e');
+      c.close();
+    }, { size: 12, color: 0x2f6b3a }));
+  }
+
   makeTextures() {
     if (this.textures.exists('hammer')) return;
     const g = this.make.graphics({ add: false });
@@ -256,13 +281,15 @@ export class Lobby extends Phaser.Scene {
       c.on('pointerup', () => { if (this.busy) return; if (locked()) { sfx('deny'); track('locked_tab_tap', { tab: id }); toast(this, `${name} · 1-1을 깨면 열린다`, '#ff9a8a'); return; } sfx('click'); this.show(id); });
       // 장비 탭: 찍을 스탯이 남았으면 빨간 점
       if (id === 'gear' && !locked() && spFree(this.sv) > 0) c.add(this.add.circle(tw / 2 - 10, -16, 4, 0xff5050));
+      // 상점 탭: 성장 꾸러미(24시간 한정)가 열려 있으면 빨간 점
+      if (id === 'shop' && !locked() && growOffer(this.sv)) c.add(this.add.circle(tw / 2 - 10, -16, 4, 0xff5050));
       c.id = id; return c;
     });
   }
 
   show(id) {
     if (id !== this.lastTab) { track('tab_view', { tab: id, page: id === 'shop' ? this.shopPage : undefined }); this.lastTab = id; }
-    this.tab = id;
+    this.tab = id; this.ticks = [];
     this.tabBtns.forEach(b => b.hl.setVisible(b.id === id));
     // 탭 안 오브젝트의 트윈만 끊는다(토스트·결과 글씨·날아가는 동전은 끝까지 돈다)
     const kill = o => { this.tweens.killTweensOf(o); o.list?.forEach(kill); };
@@ -363,7 +390,7 @@ export class Lobby extends Phaser.Scene {
     // 보상: 아이콘 + 숫자
     b.add(this.add.rectangle(W / 2, 344, W - 48, 1, 0x2e2740));
     b.add(this.add.text(24, 352, done ? '보상' : '첫 보상', font9(10, '#a89cc8')));
-    const wNew = boss && WTYPES.some(w => !ownsW(sv, w.id));   // 보스를 처음 잡으면 아직 없는 무기 하나를 무작위로 준다
+    const wNew = boss && WTYPES.some(w => !hasW(sv, w.id));   // 보스를 처음 잡으면 아직 해금 안 된 무기 하나를 무작위로 준다(캐시 무기와 따로 센다)
     const rw = [[12, fmt(Math.round(D.goldOf(c, s, hard) * (done ? 1 : D.FIRST_CLEAR_MUL)))], [13, `${D.stoneOf(c, s, hard)}`]];
     if (!done && hard) rw.push(boss ? [11, '방지권'] : [7, '부적'], [-1, String(boss ? D.HARD.bossGem : D.HARD.firstGem)]);
     else if (!done) rw.push(boss ? [11, wNew ? '새 무기(무작위)' : '방지권'] : [7, '행운 부적']);
@@ -756,7 +783,14 @@ export class Lobby extends Phaser.Scene {
     });
   }
 
-  update() { if (this.topTxt) this.topTxt.forEach(t => { const v = t.get(); if (t.text !== String(v)) t.setText(v); }); }
+  update() {
+    if (this.topTxt) this.topTxt.forEach(t => { const v = t.get(); if (t.text !== String(v)) t.setText(v); });
+    // 남은 시간 글자(특가·성장 꾸러미). 날이 바뀌거나 꾸러미가 끝나면 칸을 다시 그린다
+    for (const k of this.ticks || []) {
+      if (k.redraw?.()) { if (!this.busy) this.show(this.tab); return; }
+      const v = k.f?.(); if (k.t && k.t.text !== v) k.t.setText(v);
+    }
+  }
 
   // ── 꾸미기: 칼빛·영웅 스킨·캐시 무기를 보석으로 사고 골라 낀다 ──
   skinPage() {
@@ -807,46 +841,127 @@ export class Lobby extends Phaser.Scene {
       WTYPES.forEach((w, i) => {
         const cw = CASH_W[w.id], own = !!sv.cw?.[w.id], on = own && sv.wtype === w.id;
         const it = { id: w.id, name: cw.name, desc: `${w.name} 피해 +${CASH_W_DMG * 100}%`, cost: CASH_W_GEM };
-        // 산 무기를 누르면 그 무기 종류로 바꿔 든다(아직 없는 무기 종류도 함께 열린다)
-        cell(i, it, own, on, slash(cw), () => { (sv.cw ||= {})[w.id] = true; (sv.wOwn ||= {})[w.id] = 1; sv.wtype = w.id; track('cashw_equip', { w: w.id }); });
+        // 산 무기를 누르면 그 무기 종류로 바꿔 든다(해금 안 된 종류도 들 수 있다. 보스 무기 해금 보상은 따로 남는다)
+        cell(i, it, own, on, slash(cw), () => { (sv.cw ||= {})[w.id] = true; sv.wtype = w.id; track('cashw_equip', { w: w.id, unlocked: hasW(sv, w.id) }); });
       });
     }
   }
 
-  // ── 비급: 스킬을 사서 판 시작부터 들고 간다. 짝 스킬끼리는 시너지 ──
+  // ── 비급: 스킬을 사서 판 시작부터 들고 간다. 보석으로 비급 Lv을 올리면 시작 Lv도 오른다. 짝 스킬끼리는 시너지 ──
   bookPage() {
     const sv = this.sv, b = this.body;
-    b.add(this.add.text(16, 76, `산 비급 한 권을 판 시작부터 Lv${D.BOOK_LV}로 들고 간다`, font9(10, '#a89cc8')));
+    b.add(this.add.text(16, 76, `낀 비급 스킬을 판 시작부터 Lv${D.bookSkillLv(1)}~${D.bookSkillLv(D.BOOK_MAX)}로 들고 간다`, font9(10, '#a89cc8')));
     D.BOOKS.forEach((k, i) => {
-      const def = D.SKILLS[k], own = !!sv.books?.[k], on = own && sv.book === k;
+      const def = D.SKILLS[k], lv = D.bookLv(sv, k), own = lv > 0, on = own && sv.book === k, max = lv >= D.BOOK_MAX;
       const x = 16 + (i % 2) * 122, y = 92 + Math.floor(i / 2) * 60, c = this.add.container(x, y); b.add(c);
       c.add(panel(this, 0, 0, 116, 56, { fill: on ? 0x2e2448 : COLOR.panel, line: on ? 0xffd75e : COLOR.line }));
       c.add(skillIcon(this, 18, 18, def, 22));
       c.add(this.add.text(34, 5, def.name, font(10)));
-      const dt = this.add.text(34, 17, def.desc[0], { ...font9(9, '#c8bfe0'), wordWrap: { width: 80 } }); c.add(dt.setText(dt.getWrappedText().slice(0, 2).join('\n')));   // 두 줄 넘으면 버튼에 겹친다
-      const bt = button(this, x + 58, y + 47, 104, 14, on ? '들고 간다' : own ? '끼기' : `   ${D.BOOK_GEM}`, () => {
+      // 산 비급은 판 시작 Lv, 안 산 건 설명 한 줄
+      c.add(own ? this.add.text(34, 21, `시작 Lv${D.bookSkillLv(lv)} (${lv}/${D.BOOK_MAX})`, font9(9, max ? '#ffd75e' : '#9ae0ff'))
+        : (dt => dt.setText(dt.getWrappedText()[0]))(this.add.text(34, 21, def.desc[0], { ...font9(9, '#c8bfe0'), wordWrap: { width: 80 } })));
+      const buyLv = async cost => {
+        if (sv.gem < cost) { sfx('deny'); track('book_buy_fail', { skill: k, lv: lv + 1, gem: sv.gem }); this.gemShort(cost); return false; }
+        sv.gem -= cost; (sv.books ||= {})[k] = lv + 1; track(own ? 'book_up' : 'book_buy', { skill: k, lv: lv + 1, cost }); sfx('buy');
+        toast(this, own ? `${def.name} 비급 Lv${lv + 1} · 시작 Lv${D.bookSkillLv(lv + 1)}` : `${def.name} 비급 얻음!`, '#ffd75e');
+        return true;
+      };
+      if (!own) {
+        b.add(button(this, x + 58, y + 44, 104, 16, `   ${D.BOOK_COST[0]}`, async () => {
+          if (this.busy || !(await buyLv(D.BOOK_COST[0]))) return;
+          sv.book = k; save(); this.refreshTop(); this.show('shop');
+        }, { size: 9, color: 0x8a2f6a }));
+        b.add(gemIcon(this, x + 40, y + 44, 8));
+        return;
+      }
+      // 산 비급: 왼쪽 끼기, 오른쪽 비급 Lv 올리기
+      b.add(button(this, x + 28, y + 44, 48, 16, on ? '끼는 중' : '끼기', () => {
         if (this.busy || on) return;
-        if (!own) {
-          if (sv.gem < D.BOOK_GEM) { sfx('deny'); track('book_buy_fail', { skill: k, gem: sv.gem }); this.gemShort(D.BOOK_GEM); return; }
-          sv.gem -= D.BOOK_GEM; (sv.books ||= {})[k] = true; track('book_buy', { skill: k, cost: D.BOOK_GEM }); sfx('buy'); toast(this, `${def.name} 비급 얻음!`, '#ffd75e');
-        } else sfx('click');
-        sv.book = k; save(); this.refreshTop(); this.show('shop');
-      }, { size: 9, color: on ? 0x3b2f5c : own ? 0x2f6b3a : 0x8a2f6a });
-      b.add(bt);
-      if (!own) b.add(gemIcon(this, x + 40, y + 47, 8));
+        sfx('click'); sv.book = k; save(); this.show('shop');
+      }, { size: 9, color: on ? 0x3b2f5c : 0x2f6b3a }));
+      const cost = D.BOOK_COST[lv];
+      const up = button(this, x + 85, y + 44, 54, 16, max ? '최대' : `  ${cost}`, async () => {
+        if (this.busy || max || !(await buyLv(cost))) return;
+        save(); this.refreshTop(); this.show('shop');
+      }, { size: 9, color: 0x8a2f6a });
+      up.setEnabled(!max); b.add(up);
+      if (!max) b.add(gemIcon(this, x + 70, y + 44, 8));
     });
     b.add(this.add.text(16, 338, '시너지 · 둘 다 가지면 두 스킬이 더 자주 나간다', font(10, '#ffb050')));
     D.SYNERGY.forEach((x, i) => b.add(this.add.text(16 + (i % 2) * 122, 356 + Math.floor(i / 2) * 15, `${x.name}: ${D.SKILLS[x.a].name}+${D.SKILLS[x.b].name}`, font9(9, '#c8bfe0'))));
   }
 
+  // ── 특가: 오늘의 특가(하루 한 번 무작위 할인) · 성장 꾸러미(장 보스 첫 처치 뒤 24시간) · 큰 꾸러미(달마다 한 번) ──
+  dealPage() {
+    const sv = this.sv, b = this.body, deal = todayDeal(sv), grow = growOffer(sv);
+    const after = it => { this.refreshTop(); this.bump(4); toast(this, `${it.name} 구매 완료!`, '#ffd75e'); this.show('shop'); };
+    const buyBtn = (x, y, it, sold) => {
+      const bt = button(this, x, y, 64, 26, sold ? '구매함' : won(it.price), async () => {
+        if (this.busy || sold) return;
+        this.busy = true;
+        const ok = await buy(this, sv, it);
+        this.busy = false;
+        if (ok && this.scene.isActive()) after(it);
+      }, { size: 10, color: 0x2f6b3a });
+      bt.setEnabled(!sold); b.add(bt);
+    };
+    // 줄바꿈이 '금화 / 1,580'처럼 항목 안에서 끊기지 않게 항목 안 띄어쓰기는 붙인다
+    const nb = t => t.split(' · ').map(x => x.replace(/ /g, '\u00a0')).join(' · ');
+    const timer = (y, f) => { const t = this.add.text(W - 16, y, f(), font9(10, '#ff9a8a')).setOrigin(1, 0); b.add(t); this.ticks.push({ t, f }); };
+    // 오늘의 특가
+    track('view_item_list', { item_list_id: 'deal', items: [deal.id, grow?.id].filter(Boolean).join(','), gem: sv.gem });
+    b.add(this.add.text(16, 74, '오늘의 특가', font(12, '#ffd75e')));
+    timer(77, () => `남은 ${leftText(msToMidnight())}`);
+    const day = sv.deal.day; this.ticks.push({ redraw: () => dayKey() !== day });
+    b.add(panel(this, 12, 92, W - 24, 78, { fill: 0x2a1a30, line: deal.got ? COLOR.line : 0xffd75e }));
+    b.add(this.add.rectangle(42, 131, 48, 48, 0x8a2f3a).setStrokeStyle(1, 0xff9a8a));
+    b.add(this.add.text(42, 124, `-${deal.off}%`, font(13, '#ffffff')).setOrigin(0.5));
+    b.add(this.add.text(42, 140, '할인', font9(10, '#ffd0d0')).setOrigin(0.5));
+    b.add(this.add.text(76, 98, deal.name, font(12, '#ffffff')));
+    b.add(this.add.text(76, 116, nb(giveText(deal.give, sv)), { ...font9(10, '#e8e2f8'), wordWrap: { width: W - 100 } }));
+    const was = this.add.text(76, 150, won(deal.base), font9(10, '#8a80a0')); b.add(was);
+    b.add(this.add.rectangle(76, 157, was.width, 1, 0xa89cc8).setOrigin(0, 0.5));
+    b.add(this.add.text(82 + was.width, 150, '하루 1번', font9(10, '#ff9ad0')));
+    buyBtn(W - 52, 154, deal, deal.got);
+    // 성장 꾸러미
+    b.add(this.add.text(16, 180, '성장 꾸러미', font(12, '#9ae0ff')));
+    if (grow) {
+      timer(183, () => `남은 ${leftText(growLeft(sv))}`);
+      this.ticks.push({ redraw: () => growLeft(sv) <= 0 });
+      b.add(panel(this, 12, 198, W - 24, 52, { line: 0x9ae0ff }));
+      b.add(icon(this, 30, 224, 13, 20));
+      b.add(this.add.text(46, 203, grow.name, font(11, '#9ae0ff')));
+      b.add(this.add.text(46, 219, nb(giveText(grow.give, sv)), { ...font9(9, '#e8e2f8'), wordWrap: { width: W - 136 } }));
+      buyBtn(W - 52, 224, grow, false);
+    } else {
+      b.add(panel(this, 12, 198, W - 24, 52, { fill: 0x100d16 }));
+      b.add(this.add.text(W / 2, 224, '장 보스를 처음 잡으면 24시간 동안\n그 장에 맞는 강화석·방지권 꾸러미가 열린다', { ...font9(10, '#8a80a0'), align: 'center' }).setOrigin(0.5));
+    }
+    // 큰 꾸러미(달마다 한 번)
+    b.add(this.add.text(16, 262, '큰 꾸러미', font(12, '#ffb050')));
+    b.add(this.add.text(W - 16, 265, '보석 첫 구매 2배와 따로', font9(9, '#8a80a0')).setOrigin(1, 0));
+    D.BIG_PACKS.forEach((it, i) => {
+      const y = 280 + i * 70, sold = soldOut(sv, it);
+      b.add(panel(this, 12, y, W - 24, 66, { line: sold ? COLOR.line : 0xffb050 }));
+      b.add(gemIcon(this, 30, y + 33, 18));
+      b.add(this.add.text(46, y + 4, it.name, font(11, '#ffb050')));
+      const dt = this.add.text(46, y + 19, nb(it.desc), { ...font9(9, '#e8e2f8'), wordWrap: { width: W - 136 } }); b.add(dt);
+      b.add(this.add.text(46, y + 21 + dt.height, sold ? '이번 달은 샀다' : it.tag, font9(9, '#ff9ad0')));
+      buyBtn(W - 52, y + 33, it, sold);
+    });
+  }
+
   // ── 상점 탭: 보석으로 사기·광고 보상 / 패키지(결제) ──
   shopTab() {
-    const sv = this.sv, b = this.body, page = this.shopPage || 'gem';
+    const sv = this.sv, b = this.body, page = this.shopPage || 'deal';   // 맨 앞 칸은 특가
     const sub = (x, id, name) => {
-      const bt = button(this, x, 54, 62, 24, name, () => { this.shopPage = id; track('shop_page', { page: id, gem: sv.gem }); this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : 0x2a2440 });
+      const bt = button(this, x, 54, 50, 24, name, () => { this.shopPage = id; track('shop_page', { page: id, gem: sv.gem }); this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : id === 'deal' ? 0x5a2a3a : 0x2a2440 });
       b.add(bt);
+      // 특가 칸: 오늘 특가를 안 샀거나 성장 꾸러미가 열려 있으면 빨간 점
+      if (id === 'deal' && (growOffer(sv) || !todayDeal(sv).got)) b.add(this.add.circle(x + 21, 45, 3.5, 0xff3a3a));
     };
-    sub(36, 'gem', '보석'); sub(102, 'skin', '꾸미기'); sub(168, 'book', '비급'); sub(234, 'pack', '패키지');
+    [['deal', '특가'], ['gem', '보석'], ['skin', '꾸미기'], ['book', '비급'], ['pack', '패키지']].forEach(([id, name], i) => sub(32 + i * 51.5, id, name));
+    if (page === 'deal') return this.dealPage();
     if (page === 'skin') return this.skinPage();
     if (page === 'book') return this.bookPage();
     const after = msg => { this.refreshTop(); this.bump(4); toast(this, msg, '#ffd75e'); this.show('shop'); };
@@ -896,9 +1011,9 @@ export class Lobby extends Phaser.Scene {
       return;
     }
     // 패키지
-    track('view_item_list', { item_list_id: 'pack', items: D.IAP.filter(it => !(it.once && sv.bought[it.id])).map(it => it.id).join(','), gem: sv.gem });
+    track('view_item_list', { item_list_id: 'pack', items: D.IAP.filter(it => !soldOut(sv, it)).map(it => it.id).join(','), gem: sv.gem });
     D.IAP.forEach((it, i) => {
-      const y = 76 + i * 50, sold = it.once && sv.bought[it.id];
+      const y = 76 + i * 50, sold = soldOut(sv, it);
       const hot = it.id === 'starter' || it.id === 'pass' || it.id === 'cosm';
       b.add(panel(this, 12, y, W - 24, 46, { line: hot && !sold ? 0xffd75e : COLOR.line }));
       b.add(gemIcon(this, 30, y + 23, 18));

@@ -32,6 +32,31 @@ export const giveText = (give, sv) => Object.entries(give).map(([k, v]) => ({
 export const firstX2 = (sv, item) => D.FIRST_BUY_X2.includes(item.id) && !sv.bought[item.id];
 export const adsLeft = (sv, kind) => D.ADS[kind].daily - (sv.ads[kind] || 0);
 
+// ── 한정 판매 ──
+// 날짜는 그때그때 기기 시계로 본다(저장의 day는 앱을 다시 열 때만 바뀐다: 켜 둔 채 자정을 넘겨도 특가가 바뀌게)
+export const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+const monthKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}`;
+export const msToMidnight = () => { const d = new Date(), m = new Date(d); m.setHours(24, 0, 0, 0); return m - d; };
+export const leftText = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, '0')).join(':'); };
+// 오늘의 특가: 하루에 한 번 꾸러미·할인율을 뽑아 저장한다. 산 날은 got
+export function todayDeal(sv) {
+  const day = dayKey();
+  if (sv.deal?.day !== day) { sv.deal = { day, id: D.DEALS[Math.floor(Math.random() * D.DEALS.length)].id, off: D.DEAL_OFF[Math.floor(Math.random() * D.DEAL_OFF.length)] }; save(); track('deal_roll', { id: sv.deal.id, off: sv.deal.off }); }
+  const d = D.DEALS.find(x => x.id === sv.deal.id) || D.DEALS[0];
+  // 결제 상품 id는 꾸러미·할인율마다 따로(앱 스토어에 가격별로 등록)
+  return { ...d, id: `deal_${d.id}_${sv.deal.off}`, base: d.price, off: sv.deal.off, price: D.dealPrice(d, sv.deal.off), got: !!sv.deal.got, onBuy: sv => { sv.deal.got = true; } };
+}
+// 성장 꾸러미: 장 보스 첫 처치 뒤 24시간, 장마다 한 번
+export const growLeft = sv => sv.grow ? sv.grow.at + D.GROW.ms - Date.now() : 0;
+export function growOffer(sv) {
+  if (growLeft(sv) <= 0) return null;
+  const c = sv.grow.c, id = `grow${c + 1}`;
+  if (sv.bought[id]) return null;
+  return { id, name: `${c + 1}장 돌파 성장 꾸러미`, price: D.GROW.price[Math.min(c, D.GROW.price.length - 1)], once: true, c, give: D.growGive(c) };
+}
+// 큰 꾸러미는 달마다 한 번
+export const soldOut = (sv, item) => item.month ? sv.bought[item.id] === monthKey() : !!(item.once && sv.bought[item.id]);
+
 // 화면 위에 뜨는 작은 창(장면이 무엇이든 맨 위)
 function modal(scene) {
   const c = fixedContainer(scene).setDepth(3000);
@@ -67,6 +92,8 @@ function buyRaw(scene, sv, item) {
     const done = ok => {
       if (ok) {
         if (item.once) sv.bought[item.id] = true;
+        if (item.month) sv.bought[item.id] = monthKey();
+        item.onBuy?.(sv);
         if (item.passDays) sv.passLeft = (sv.passLeft || 0) + item.passDays;
         if (item.noAds) sv.noAds = true;
         // 보석 묶음 첫 구매는 보석 2배
@@ -81,7 +108,7 @@ function buyRaw(scene, sv, item) {
     const c = modal(scene);
     c.add(panel(scene, 24, 160, W - 48, 160, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(scene.add.text(W / 2, 186, item.name, font(13, '#ffd75e')).setOrigin(0.5));
-    c.add(scene.add.text(W / 2, 210, giveText(item.give) + (item.passDays ? ` · ${item.passDays}일` : ''), { ...font9(10, '#e8e2f8'), wordWrap: { width: W - 70 }, align: 'center' }).setOrigin(0.5, 0));
+    c.add(scene.add.text(W / 2, 210, (item.month ? item.desc + (item.give.skin ? ` · ${D.SKINS.find(x => x.id === item.give.skin)?.name}` : '') : giveText(item.give, sv)) + (item.passDays ? ` · ${item.passDays}일` : ''), { ...font9(10, '#e8e2f8'), wordWrap: { width: W - 70 }, align: 'center' }).setOrigin(0.5, 0));
     if (!devpay()) {
       c.add(scene.add.text(W / 2, 248, '웹 체험판에서는 결제가 열리지 않는다\n앱에서 구매할 수 있다', { ...font9(10, '#ff9a8a'), align: 'center' }).setOrigin(0.5));
       c.add(button(scene, W / 2, 292, 120, 28, '닫기', () => { c.destroy(); done(false); }));

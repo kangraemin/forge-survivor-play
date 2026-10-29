@@ -99,12 +99,16 @@ export const CASH_W = {
 export const CASH_W_GEM = 900, CASH_W_DMG = 0.12;
 export const heroSkin = sv => HERO_SKINS.find(x => x.id === (sv.hskin || '')) || HERO_SKINS[0];
 export const cashW = sv => sv.cw?.[wtypeOf(sv).id] ? CASH_W[wtypeOf(sv).id] : null;
-export const ownsW = (sv, id) => id === 'sword' || !!sv.wOwn?.[id];
-// 아직 없는 무기 하나를 무작위로 준다(없으면 null). chance: 얻을 확률
+// 무기 해금(wOwn)은 보스·판 보상으로만 열린다. 캐시 무기(cw)는 따로 세고, 산 무기 종류는 해금 없이도 든다
+// (캐시 무기를 사면 해금된 걸로 쳐서 보스 무기 보상이 줄던 문제)
+export const hasW = (sv, id) => id === 'sword' || !!sv.wOwn?.[id];
+export const ownsW = (sv, id) => hasW(sv, id) || !!sv.cw?.[id];
+// 아직 해금 안 된 무기 하나를 무작위로 준다(없으면 null). 캐시 무기로도 못 드는 종류를 먼저. chance: 얻을 확률
 export function grantWeapon(sv, chance = 1) {
-  const left = WTYPES.filter(w => !ownsW(sv, w.id));
+  const left = WTYPES.filter(w => !hasW(sv, w.id));
   if (!left.length || Math.random() >= chance) return null;
-  const w = pick(left);
+  const fresh = left.filter(w => !ownsW(sv, w.id));
+  const w = pick(fresh.length ? fresh : left);
   (sv.wOwn ||= {})[w.id] = true;
   return w;
 }

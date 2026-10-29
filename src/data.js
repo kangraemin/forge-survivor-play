@@ -258,13 +258,34 @@ export const IAP = [
   // 1,200원과 4,900원 사이가 비어 있었다: 꾸미기 둘을 한 번에(보석으로 사면 1,400)
   { id: 'cosm', name: '꾸미기 세트', price: 3900, once: true, tag: '1회 한정 · 가치 4배', desc: '서리 칼빛 · 비취 수도승 스킨 · 보석100', give: { skin: 'frost', hskin: 'jade', gem: 100 } },
   { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '총 보석 2,700 · 매일 소탕권 +3', give: { gem: 300 }, passDays: 30 },
-  { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '광고 없이 바로 보상', give: { gem: 100 }, noAds: true },
+  // 광고 제거: 보석이 아닌 현금 상품. 광고 버튼(보석·소탕권·보상 2배·부활)이 광고 없이 바로 보상을 준다
+  { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '1회 · 광고 버튼이 바로 보상', desc: '광고 없이 바로 보상 · 보석 100 덤', give: { gem: 100 }, noAds: true },
   { id: 'gem1', name: '보석 한 줌', price: 1200, give: { gem: 120 } },
   { id: 'gem2', name: '보석 주머니', price: 5900, tag: '인기 · +10%', give: { gem: 650 } },
   { id: 'gem3', name: '보석 상자', price: 12000, tag: '+17%', give: { gem: 1400 } },
 ];
-// 보석 묶음은 처음 살 때 보석 2배
+// 보석 묶음은 처음 살 때 보석 2배(특가·성장 꾸러미·큰 꾸러미는 해당 없음)
 export const FIRST_BUY_X2 = ['gem1', 'gem2', 'gem3'];
+
+// ── 한정 판매(상점 '특가' 칸) ──
+// 오늘의 특가: 하루 한 번 아래 꾸러미 하나를 무작위 할인율로 판다. 기기 시간 자정에 바뀐다
+export const DEALS = [
+  { id: 'dstone', name: '강화석 꾸러미', price: 3900, give: { stone: 200, guard: 2 } },
+  { id: 'dguard', name: '안전 꾸러미', price: 5900, give: { guard: 5, charm: 2 } },
+  { id: 'dgem', name: '보석 꾸러미', price: 5900, give: { gem: 600, sweep: 10 } },
+  { id: 'dgold', name: '금화 꾸러미', price: 3900, give: { goldStage: 10, stone: 80 } },
+  { id: 'dluck', name: '행운 꾸러미', price: 6900, give: { charm: 5, gem: 150 } },
+];
+export const DEAL_OFF = [30, 40, 50];   // 할인율(%)
+export const dealPrice = (d, off) => Math.round(d.price * (100 - off) / 10000) * 100;
+// 성장 꾸러미: 장 보스를 처음 잡은 뒤 24시간. 다음 등급 +0→+10에 드는 강화석(30 + 10×등급)의 2배와 방지권
+export const GROW = { ms: 24 * 3600000, price: [2900, 3900, 4900, 5900, 6900] };
+export const growGive = c => { const t = Math.min(c + 1, TIERS.length - 1); return { stone: 2 * (30 + 10 * t), guard: 3 + c, goldStage: 4 }; };
+// 큰 꾸러미: 달마다 한 번(보석 상자보다 보석당 값이 싸고 방지권·부적이 붙는다)
+export const BIG_PACKS = [
+  { id: 'big1', name: '대장장이 금고', price: 33000, month: true, tag: '달마다 1번 · 보석 +20%', desc: '보석 4,000 · 방지권 10 · 행운 부적 5 · 강화석 300', give: { gem: 4000, guard: 10, charm: 5, stone: 300 } },
+  { id: 'big2', name: '전설의 대장간', price: 55000, month: true, tag: '달마다 1번 · 보석 +27% · 칼빛 덤', desc: '보석 7,000 · 방지권 20 · 행운 부적 10 · 강화석 600', give: { gem: 7000, guard: 20, charm: 10, stone: 600, skin: 'void' } },
+];
 export const PASS_DAILY = { gem: 80, sweep: 3 };
 // 보석으로 사는 것. gold 꾸러미는 지금 도전 중인 스테이지 클리어 금화의 3배
 // 행운 부적: 강화 한 번 성공 확률 +5%p(1회 소모). 부서진 칼 되살리기: 보석 30 + 단계×10
@@ -288,9 +309,12 @@ export const SKINS = [
   { id: 'void', name: '공허 칼빛', desc: '보랏빛 틈 + 불티', hue: 100, tint: 0xb07aff, cost: 1200, ember: true },
   { id: 'sakura', name: '벚꽃 칼빛', desc: '분홍 꽃잎 + 불티', hue: 60, tint: 0xff6ad0, cost: 1500, ember: true },
 ];
-// 비급: 보석으로 산 스킬은 판을 시작할 때부터 Lv2로 들고 들어간다(한 권만 낀다)
+// 비급: 보석으로 산 스킬은 판을 시작할 때부터 높은 Lv로 들고 들어간다(한 권만 낀다)
+// 비급 Lv1(사기) 400 → Lv2 600 → Lv3 900(×1.5씩). 판 시작 스킬 Lv = 비급 Lv + 1(최대 Lv4, 스킬 최대 5는 판 안에서 올린다)
 export const BOOKS = ['spin', 'dagger', 'bolt', 'holy', 'fireball', 'ice', 'orb'];
-export const BOOK_GEM = 400, BOOK_LV = 2;
+export const BOOK_COST = [400, 600, 900], BOOK_MAX = BOOK_COST.length, BOOK_GEM = BOOK_COST[0];
+export const bookLv = (sv, k) => sv.books?.[k] === true ? 1 : sv.books?.[k] || 0;   // 예전 저장은 true(=Lv1)
+export const bookSkillLv = lv => lv + 1;
 // 무기를 다 모은 뒤 보스를 처음 잡으면 무기 대신 주는 강화석
 export const DUP_W_STONE = 40;
 // 시너지: 짝 스킬을 둘 다 가지면 두 스킬 모두 더 자주 나간다
