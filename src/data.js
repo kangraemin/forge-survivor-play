@@ -68,7 +68,9 @@ export const BOSSES = {
 export const chapterHp = c => Math.pow(2.1, c);           // c는 0부터
 export const chapterDmg = c => 0.65 * Math.pow(1.25, c);
 // 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
-export const stageMul = s => 1 + 0.36 * s - 0.02 * s * s; // s는 0~5. 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
+// s는 0~5. 1-2에서 바로 벽을 느끼게 크게 뛰고, 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
+const STAGE_HP = [1, 1.45, 1.7, 1.92, 2.12, 2.3];
+export const stageMul = s => STAGE_HP[s] ?? 1;
 export const stageDmg = s => 1 + 0.1 * s;                // 피해는 공격력으로 못 막으니 체력보다 완만하게
 export const stageSpawn = s => 0.35 * s;                 // 초당 더 나오는 몹 수
 // 판 안 시간에 따른 체력 상승(처음 0.75배 → 끝날 즈음 1.7배)

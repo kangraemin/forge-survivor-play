@@ -267,7 +267,11 @@ export class Lobby extends Phaser.Scene {
       b.add(this.add.text(24, 296 + i * 19, a, font9(10, '#a89cc8')));
       b.add(this.add.text(W - 24, 296 + i * 19, v, font(10, col)).setOrigin(1, 0));
     });
-    if (atk < rec) b.add(this.add.text(W / 2, 384, '대장간에서 강화하면 훨씬 쉬워진다', font9(10, '#ff9a8a')).setOrigin(0.5, 0));
+    // 권장에 못 미치면 바로 대장간으로 보낸다(글자만 있으면 그냥 지나친다)
+    if (atk < rec) {
+      const fb = button(this, W / 2, 386, 180, 14, '공격력이 모자라다  대장간으로 →', () => this.show('forge'), { size: 8, color: 0x6a3a2a, textColor: '#ffd0b0' });
+      b.add(fb);
+    }
     const go = button(this, 95, 412, 150, 34, s === 5 ? '보스 도전' : '전투 시작', () => this.startBattle(c, s), { size: 14, color: s === 5 ? 0x8a2a3a : 0x2f6b3a });
     const sw = button(this, 214, 412, 76, 34, `소탕 ${sv.sweep}`, () => this.sweep(c, s), { size: 11, color: 0x3b4f7a });
     sw.setEnabled(done && sv.sweep > 0);
@@ -432,7 +436,11 @@ export class Lobby extends Phaser.Scene {
       pb.setEnabled(okBoss && sv.gold >= cost); b.add(pb);
       if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }
       else if (!okBoss) b.add(this.add.text(W / 2, 384, `승급하려면 ${sv.tier + 1}장 보스를 쓰러뜨려야 한다`, font9(10, '#ff9a8a')).setOrigin(0.5, 0));
-      else b.add(this.add.text(W / 2, 384, `다음: ${D.TIERS[sv.tier + 1].name} (공격력 ${D.TIERS[sv.tier + 1].atk})`, font9(10, '#c8a0ff')).setOrigin(0.5, 0));
+      else {
+        // 승급하면 강화가 +0으로 돌아가니 지금 공격력과 견줘 보여 준다
+        const now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = D.TIERS[sv.tier + 1].atk;
+        b.add(this.add.text(W / 2, 384, `${D.TIERS[sv.tier + 1].name}: 공격력 ${now} → ${next} (+0부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
+      }
     }
   }
 
