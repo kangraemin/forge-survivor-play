@@ -389,6 +389,7 @@ export class Overlay {
       sv.best[idx] = 1;
     } else {
       gold = Math.round(D.clearGold(s.c, s.s) * s.runProgress() * D.FAIL_GOLD_RATE);
+      stone += Math.floor(D.clearStone(s.c, s.s) * s.runProgress() * D.FAIL_STONE_RATE);
     }
     gold = Math.round(gold);
     // 장비: 이기면 1개(보스는 2개, 한 등급 위로), 무한의 탑은 3층부터 1개. 판에서 주운 것은 져도 남는다

@@ -36,6 +36,8 @@ let mem = null;
 export function load() {
   if (mem) return mem;
   try { mem = { ...fresh(), ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { mem = fresh(); }
+  // 마지막으로 저장한 뒤 얼마나 비웠나(자리 비움 보상). 로비가 읽고 0으로 돌린다
+  if (mem.seenAt) mem.idleMs = Math.max(mem.idleMs || 0, Date.now() - mem.seenAt);
   // 하루가 바뀌면 소탕권 충전, 파괴 방지권 1장
   const d = new Date(), today = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; // 기기 시간대 기준 자정에 바뀐다
   if (mem.day !== today) {
@@ -54,6 +56,7 @@ export function load() {
   return mem;
 }
 export function save() {
+  if (mem) mem.seenAt = Date.now();
   try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch { /* 저장 불가 환경 */ }
 }
 export function reset() { mem = fresh(); save(); return mem; }

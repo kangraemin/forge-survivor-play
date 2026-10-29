@@ -102,6 +102,11 @@ export const promoteGold = tier => Math.round(600 * TIER_COST[tier + 1] / 50) * 
 export const clearGold = (c, s) => Math.round(75 * TIER_COST[c] * (1 + 0.2 * s) / 5) * 5;
 export const FIRST_CLEAR_MUL = 2.5;
 export const clearStone = (c, s) => 3 + s + c * 2;
+export const FAIL_STONE_RATE = 0.5;                        // 져도 강화석을 같은 식으로 조금 준다(0개면 허탈했다)
+// 자리를 비운 동안 견습생이 번다: 30분 넘게 비우면, 최대 8시간까지 시간당 지금 스테이지 클리어 보상의 25%
+export const IDLE = { minMin: 30, capH: 8, perH: 0.25 };
+// 보스가 이 시간(ms) 넘게 버티면 지쳐서 받는 피해가 늘어난다(보스전이 늘어지지 않게)
+export const BOSS_TIRED = { ms: 75000, mul: 1.5 };
 export const FAIL_GOLD_RATE = 0.5;                         // 실패해도 버틴 시간 비율 × 클리어 금화의 50%를 준다
 // 은화는 판이 끝나면 사라진다(아껴 두지 말고 상점에서 바로 쓰게)
 export const SWEEP_DAILY = 5, SWEEP_MAX = 12;

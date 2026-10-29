@@ -47,7 +47,10 @@ export class Lobby extends Phaser.Scene {
     track('lobby_enter', { tab: this.tab, cleared: sv.cleared, tier: sv.tier, enh: sv.enh, power: D.powerOf(sv), gold: sv.gold, stone: sv.stone, gem: sv.gem, runs: sv.stats.runs, guard: sv.guard, sweep: sv.sweep });
     this.show(this.tab);
     this.cameras.main.fadeIn(200);
-    if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e'));
+    // 자리를 비웠다 돌아오면 견습생이 번 것을 먼저 준다(다른 창보다 앞)
+    const idle = this.idleReward();
+    if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
+    else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e'));
     // 세 판을 하고 난 뒤부터(처음엔 창이 연달아 뜨지 않게): 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
     else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin()); }
     else if (sv.cleared >= 3 && !sv.bought.starter && !sv.starterShown) this.time.delayedCall(250, () => this.starterWin());
@@ -119,6 +122,46 @@ export class Lobby extends Phaser.Scene {
       body.add(button(this, W / 2, 404, 110, 24, '닫기', () => c.close(), { size: 10, color: 0x3b2f5c }));
     };
     draw();
+  }
+
+  // 자리 비움 보상: 비운 시간(최대 8시간) × 지금 스테이지 클리어 보상의 일부
+  idleReward() {
+    const sv = this.sv, ms = sv.idleMs || 0;
+    sv.idleMs = 0;
+    if (sv.cleared < 1 || ms < D.IDLE.minMin * 60000) return null;
+    const h = Math.min(D.IDLE.capH, ms / 3600000), top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
+    const c = Math.floor(top / 6), s = top % 6;
+    return { h, gold: Math.round(D.clearGold(c, s) * D.IDLE.perH * h), stone: Math.max(1, Math.round(D.clearStone(c, s) * D.IDLE.perH * h)) };
+  }
+
+  welcomeWin({ h, gold, stone }) {
+    const sv = this.sv, c = this.modal();
+    sv.gold += gold; sv.stone += stone; save(); this.refreshTop();
+    track('idle_reward', { hours: Math.round(h * 10) / 10, gold, stone });
+    c.add(panel(this, 24, 130, W - 48, 220, { fill: 0x1a1426, line: 0xffd75e }));
+    c.add(this.add.text(W / 2, 152, '돌아왔구나!', font(14, '#ffd75e')).setOrigin(0.5));
+    const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+    c.add(this.add.text(W / 2, 174, `${hh ? `${hh}시간 ` : ''}${mm}분 동안 견습생이 벌어 뒀다${h >= D.IDLE.capH ? ' (최대)' : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
+    const tx = [];
+    [[12, gold, '#ffd75e'], [13, stone, '#9ae0ff']].forEach(([ic, v, col], i) => {
+      const x = W / 2 - 50 + i * 100;
+      c.add(icon(this, x, 214, ic, 26));
+      const t = this.add.text(x, 242, '+' + fmt(v), font(13, col)).setOrigin(0.5); c.add(t); tx.push(t);
+    });
+    c.add(this.add.text(W / 2, 268, `최대 ${D.IDLE.capH}시간까지 쌓인다`, font9(9, '#8a80a0')).setOrigin(0.5));
+    if (adsLeft(sv, 'double') > 0) {
+      const db = button(this, W / 2, 296, 180, 24, sv.noAds ? '2배 받기' : '광고 보고 2배 ▶', async () => {
+        if (db.used) return; db.used = true; db.setEnabled(false);
+        const ok = await showAd(this, sv, 'double');
+        if (!ok || !this.scene.isActive()) { db.used = false; db.setEnabled(true); return; }
+        sv.ads.double = (sv.ads.double || 0) + 1;
+        sv.gold += gold; sv.stone += stone; save(); this.refreshTop();
+        tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
+        sfx('coin'); db.label.setText('2배 받았다!'); track('idle_double', { gold, stone });
+      }, { size: 10, color: 0x2f5a7a });
+      c.add(db);
+    }
+    c.add(button(this, W / 2, 330, 110, 26, '좋아', () => c.close(), { size: 11, color: 0x2f6b3a }));
   }
 
   // 1-3을 깬 뒤 한 번만: 첫 결제 꾸러미
@@ -284,6 +327,12 @@ export class Lobby extends Phaser.Scene {
       const fb = button(this, W / 2, 381, 230, 18, '전투력이 모자라다  대장간으로 →', () => { track('to_forge_click', { from: 'battle_tab', power: atk, rec, stage: `${c + 1}-${s + 1}` }); this.show('forge'); }, { size: 10, color: 0x7a3a2a, textColor: '#ffd0b0' });
       b.add(fb);
       this.tweens.add({ targets: fb, alpha: 0.7, duration: 500, yoyo: true, repeat: -1 });
+    }
+    else {
+      // 권장을 넘었으면 다음 목표를 한 줄로 보여 준다(무엇을 향해 가는지)
+      const last = idx >= D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1;
+      const goal = done ? '깬 곳 · 소탕으로 금화·강화석을 모으자' : s === 5 ? (last ? '마지막 보스! 잡으면 끝이다' : `보스를 잡으면 ${c + 2}장이 열린다`) : `${c + 1}-6 보스까지 ${5 - s}스테이지`;
+      b.add(this.add.text(W / 2, 386, `다음 목표 · ${goal}`, font9(10, '#ffd75e')).setOrigin(0.5));
     }
     const go = button(this, 95, 412, 150, 34, s === 5 ? '보스 도전' : '전투 시작', () => this.startBattle(c, s), { size: 14, color: s === 5 ? 0x8a2a3a : 0x2f6b3a });
     const sw = button(this, 214, 412, 76, 34, `소탕 ${sv.sweep}`, () => this.sweep(c, s), { size: 11, color: 0x3b4f7a });

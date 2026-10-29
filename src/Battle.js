@@ -236,7 +236,7 @@ export class Battle extends Phaser.Scene {
     this.ultBase.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.ult());
     this.ultPos = { x: ux, y: uy };
     this.showUlt = v => [this.ultBase, this.ultFill, this.ultIcon, this.ultTxt].forEach(o => o.setVisible(v));
-    this.bossBar = null;
+    this.bossBar = null; this.bannerObjs = null;
     this.refreshSkillRow();
   }
 
@@ -275,12 +275,15 @@ export class Battle extends Phaser.Scene {
 
   banner(big, small) {
     const y = 150;
+    // 앞 배너가 아직 떠 있으면 지우고 띄운다(두 줄이 겹쳐 읽을 수 없었다)
+    if (this.bannerObjs) this.bannerObjs.forEach(o => { this.tweens.killTweensOf(o); o.destroy(); });
     const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.35).setScrollFactor(0).setDepth(110).setScale(1, 0);
     const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     const t2 = this.add.text(W / 2, y + 12, small, font(9, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     this.tweens.add({ targets: b, scaleY: 1, duration: 160, ease: 'Back.Out' });
     this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 220, delay: 80 });
-    this.tweens.add({ targets: [b, t1, t2], alpha: 0, delay: 1500, duration: 300, onComplete: () => [b, t1, t2].forEach(o => o.destroy()) });
+    this.bannerObjs = [b, t1, t2];
+    this.tweens.add({ targets: [b, t1, t2], alpha: 0, delay: 1500, duration: 300, onComplete: () => { [b, t1, t2].forEach(o => o.destroy()); if (this.bannerObjs?.[0] === b) this.bannerObjs = null; } });
   }
 
   // 처음 두 판: 이동 방법을 3초 보여 준다
@@ -442,7 +445,7 @@ export class Battle extends Phaser.Scene {
     if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
     m.hitBy[src] = this.bt;
     const { dmg, crit } = this.dmgCalc(mult, tag);
-    m.hp -= dmg;
+    m.hp -= dmg * (m.weak || 1);   // 지친 보스는 더 아프게 맞는다
     // 흰 번쩍임 + 찌그러짐
     // 보스는 몸집이 커서 흰 번쩍임이 화면을 덮는다: 붉게만 물들인다
     if (m.isBoss) m.setTint(0xff8a8a); else m.setTintFill(0xffffff);

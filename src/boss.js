@@ -37,13 +37,21 @@ export class BossAI {
       s.add.rectangle(35, y, 200, 7, 0xe8343a).setOrigin(0, 0.5),
       s.add.text(D.W / 2, y - 11, this.b.name, font(9, '#ffd75e')).setOrigin(0.5),
     ];
-    this.bar.forEach(o => o.setScrollFactor(0).setDepth(100));
+    // 등장 배너(1.5초)가 사라진 뒤에 떠서 글자끼리 겹치지 않는다
+    this.bar.forEach(o => o.setScrollFactor(0).setDepth(100).setAlpha(0));
+    s.tweens.add({ targets: this.bar, alpha: 1, delay: 1700, duration: 250 });
   }
 
   update(dt) {
     const s = this.s, m = this.m;
     if (!m.active || m.dead) return;
     const h = s.hero, enraged = m.hp < m.maxHp * 0.5;
+    // 오래 버티면 지친다: 받는 피해 증가(보스전이 3분 가까이 늘어졌다)
+    this.age = (this.age || 0) + dt;
+    if (this.bar && !this.tired && this.age > D.BOSS_TIRED.ms) {
+      this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(`${this.b.name} · 지쳤다! 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}%`).setColor('#ff9a5a');
+      s.banner('보스가 지쳤다!', `받는 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}% · 몰아붙여라`);
+    }
     if (enraged && !this.rage) { this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; s.cameras.main.shake(300, 0.005); sfx('bossIn'); }
     m.setFlipX(h.x < m.x);
     m.setDepth(10 + m.y / 1600);
