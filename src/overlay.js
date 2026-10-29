@@ -44,7 +44,7 @@ export class Overlay {
     // 이동 안내가 창 뒤로 비치지 않게 바로 지운다
     s.hint?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.hint = null;
     // 떠 있던 배너(웨이브·보스 이름)도 지운다: 창 제목과 겹쳐 읽을 수 없었다
-    s.bannerObjs?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.bannerObjs = null;
+    s.bannerObjs?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.bannerObjs = null; s.bannerQ = [];
     s.joy.o = null; s.joy.v.reset(); s.joy.base.setVisible(false); s.joy.knob.setVisible(false);
     s.showUlt?.(false);   // 창 아래 안내 글과 겹치지 않게 궁극기 버튼을 숨긴다
     const c = fixedContainer(s).setDepth(DEPTH);
@@ -590,9 +590,9 @@ export class Overlay {
     // 자랑하기: 이겼거나 탑 기록을 넘으면 공유(친구가 들어올 길이 없었다). 하루 한 번 보석
     const brag = !s.bot && !dun && (win || (s.endless && floors > best));
     if (brag) {
-      const gift = sv.shareDay !== sv.day;
+      const gift = sv.shareDay !== sv.day, shareGem = sv.shared ? D.SHARE_GEM : D.SHARE_GEM_FIRST;
       // 광고 버튼 아래 한 줄. 강조색은 주 버튼 하나만 쓴다(주황·파랑·초록이 한 창에 다 있었다)
-      const sb = button(s, W / 2, 316, 190, 24, gift ? `자랑하기 보석+${D.SHARE_GEM}` : '자랑하기', async () => {
+      const sb = button(s, W / 2, 316, 190, 24, gift ? `자랑하기 보석+${shareGem}` : '자랑하기', async () => {
         const msg = s.endless ? `무한의 탑 ${floors}층 돌파!` : `${s.isBoss ? D.BOSSES[s.ch.boss].name + ' 격파! ' : ''}${s.c + 1}-${s.s + 1} 클리어`;
         const text = `${sv.title ? `[${sv.title}] ` : ''}${hard ? '어려움 ' : ''}${msg} 내 무기는 ${D.tierName(sv.tier, s.wtype)} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
         let ok = false;
@@ -601,7 +601,7 @@ export class Overlay {
           else { await navigator.clipboard.writeText(`${text} ${url}`); ok = true; toast(s, '링크를 복사했다 · 친구에게 붙여 넣자', '#9ae0ff'); }
         } catch { /* 공유 창을 닫았다 */ }
         s.log('share', { ok, boss: !!s.isBoss, endless: !!s.endless });
-        if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += D.SHARE_GEM; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
+        if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += sv.shared ? D.SHARE_GEM : D.SHARE_GEM_FIRST; sv.shared = true; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
       }, { size: 11, color: 0x3a3846 });
       c.add(sb);
     }

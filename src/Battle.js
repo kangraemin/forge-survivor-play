@@ -76,6 +76,8 @@ export class Battle extends Phaser.Scene {
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless && !this.hard && !this.dungeon;
     if (this.easy) { this.mobDmgMul *= 0.4;   // 0.55면 피해 다녀도 30초에 체력 54%(36차)
       this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
+    // 쉬운 판이 끝나도 1장은 한 번에 ×1로 뛰지 않게 3·4판째는 0.6·0.8(39차: 3판째 절벽)
+    else if (this.c === 0 && !this.endless && !this.hard && !this.dungeon && this.sv.stats.runs < 4) this.mobDmgMul *= this.sv.stats.runs < 3 ? 0.6 : 0.8;
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s) * (this.endless ? 1 : D.easeHp(this.c, this.s)) * spReq(this.endless ? sv.cleared : this.c * D.STAGES_PER_CHAPTER + this.s);
     if (this.hard) this.mobHpMul = D.hardHp(this.c, this.s);
     // 던전은 많이 잡는 판: 몹이 약하고 조금 덜 아프다
@@ -293,7 +295,7 @@ export class Battle extends Phaser.Scene {
     this.ultBase.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.ult());
     this.ultPos = { x: ux, y: uy };
     this.showUlt = v => [this.ultBase, this.ultFill, this.ultIcon, this.ultTxt, this.ultTip, this.ultTip?.ring].forEach(o => o?.setVisible(v));
-    this.bossBar = null; this.bannerObjs = null;
+    this.bossBar = null; this.bannerObjs = null; this.bannerQ = [];
     this.refreshSkillRow();
   }
 
@@ -331,16 +333,16 @@ export class Battle extends Phaser.Scene {
   }
 
   banner(big, small) {
+    // 앞 배너가 떠 있으면 줄을 세워 하나씩 띄운다(39차: 맵·변종·각성 배너가 겹쳐 덮였다)
+    if (this.bannerObjs) { if ((this.bannerQ ||= []).length < 3) this.bannerQ.push([big, small]); return; }
     const y = 150;
-    // 앞 배너가 아직 떠 있으면 지우고 띄운다(두 줄이 겹쳐 읽을 수 없었다)
-    if (this.bannerObjs) this.bannerObjs.forEach(o => { this.tweens.killTweensOf(o); o.destroy(); });
     const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.7).setScrollFactor(0).setDepth(110).setScale(1, 0);
     const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e', 4)).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     const t2 = this.add.text(W / 2, y + 12, small, font9(11, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     this.tweens.add({ targets: b, scaleY: 1, duration: 160, ease: 'Back.Out' });
     this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 220, delay: 80 });
     this.bannerObjs = [b, t1, t2];
-    this.tweens.add({ targets: [b, t1, t2], alpha: 0, delay: 1500, duration: 300, onComplete: () => { [b, t1, t2].forEach(o => o.destroy()); if (this.bannerObjs?.[0] === b) this.bannerObjs = null; } });
+    this.tweens.add({ targets: [b, t1, t2], alpha: 0, delay: 1500, duration: 300, onComplete: () => { [b, t1, t2].forEach(o => o.destroy()); if (this.bannerObjs?.[0] === b) this.bannerObjs = null; const n = this.bannerQ?.shift(); if (n && !this.over) this.banner(...n); } });
   }
 
   // 처음 두 판: 이동 방법을 3초 보여 준다
@@ -931,7 +933,7 @@ export class Battle extends Phaser.Scene {
       const early = !this.endless && this.s === 0 && this.bt < 20000 ? 2 : 0;
       this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 5 * f) * (this.dungeon ? 1.6 : 1) / 1000;   // 던전은 잡을 몹이 많아야 한다
       // 화면에 70마리가 넘으면 더 내보내지 않는다(3장에서 89마리까지 쌓여 저사양 폰이 버거웠다)
-      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 25 : 42) : 70)) this.spawn(); }
+      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 30 : 42) : 70)) this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
       if (this.eventAt != null && !this.eventDone && this.progress() >= this.eventAt) { this.eventDone = true; this.surprise(this.eventKind); }

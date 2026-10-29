@@ -253,7 +253,7 @@ export class Lobby extends Phaser.Scene {
   // ── 상단: 재화 ──
   makeTop() {
     const sv = this.sv;
-    this.add.rectangle(0, 0, W, 34, 0x07050c, 0.9).setOrigin(0).setDepth(50);
+    this.add.rectangle(0, 0, W, 34, 0x0b111a, 0.96).setOrigin(0).setDepth(50);
     this.add.rectangle(0, 34, W, 1, COLOR.line).setOrigin(0).setDepth(50);
     const items = [[12, () => fmt(sv.gold)], [13, () => fmt(sv.stone)], [11, () => sv.guard], [15, () => `${sv.sweep}`], [-1, () => fmt(sv.gem)]];
     this.topTxt = items.map(([ic, get], i) => {
@@ -272,13 +272,14 @@ export class Lobby extends Phaser.Scene {
   bump(i) { const t = this.topTxt[i]; this.tweens.add({ targets: t, scale: 1.3, duration: 90, yoyo: true }); }
 
   makeTabs() {
-    this.add.rectangle(0, H - 50, W, 50, 0x07050c, 0.95).setOrigin(0).setDepth(50);
+    this.add.rectangle(0, H - 50, W, 50, 0x0b111a, 0.97).setOrigin(0).setDepth(50);
     this.add.rectangle(0, H - 50, W, 1, COLOR.line).setOrigin(0).setDepth(50);
     this.tabBtns = TABS.map(([id, name, ic], i) => {
       const tw = W / TABS.length, x = tw / 2 + i * tw, c = this.add.container(x, H - 25).setDepth(51);
-      const hl = this.add.rectangle(0, 0, tw - 6, 44, 0xffd75e, 0.12).setStrokeStyle(1, 0xffd75e, 0.5);
-      c.add([hl, icon(this, 0, -7, ic, 18), this.add.text(0, 12, name, font(10)).setOrigin(0.5)]);
-      c.hl = hl; c.setSize(tw, 50).setInteractive({ useHandCursor: true });
+      // 고른 탭은 아래 주황 줄(45×2) + 주황 이름(디자인 인계 하단 탭 규격)
+      const hl = this.add.rectangle(0, 23, 45, 2, 0xffb85c), lb = this.add.text(0, 12, name, font(10)).setOrigin(0.5);
+      c.add([hl, icon(this, 0, -7, ic, 18), lb]);
+      c.hl = hl; c.lb = lb; c.setSize(tw, 50).setInteractive({ useHandCursor: true });
       // 처음엔 전투만: 1-1을 깨면 나머지 탭이 열린다
       const locked = () => id !== 'battle' && this.sv.cleared === 0;
       if (locked()) { c.setAlpha(0.45); c.add(this.add.text(tw / 2 - 4, -22, '🔒1-1', font9(9, '#ffb070')).setOrigin(1, 0)); }
@@ -294,7 +295,7 @@ export class Lobby extends Phaser.Scene {
   show(id) {
     if (id !== this.lastTab) { track('tab_view', { tab: id, page: id === 'shop' ? this.shopPage : undefined }); this.lastTab = id; }
     this.tab = id; this.ticks = [];
-    this.tabBtns.forEach(b => b.hl.setVisible(b.id === id));
+    this.tabBtns.forEach(b => { b.hl.setVisible(b.id === id); b.lb.setColor(b.id === id ? '#ffb85c' : '#a1b2b6'); });
     // 탭 안 오브젝트의 트윈만 끊는다(토스트·결과 글씨·날아가는 동전은 끝까지 돈다)
     const kill = o => { this.tweens.killTweensOf(o); o.list?.forEach(kill); };
     [this.body, this.bg].forEach(kill);

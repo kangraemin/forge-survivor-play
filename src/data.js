@@ -111,6 +111,8 @@ export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * Math.min(en
 export const ENH_RATE = [100, 95, 85, 75, 70, 65, 60, 55, 50, 45, 45, 40, 36, 32, 28, 22, 18, 15, 12, 10];
 export const ENH_MAX = 20;
 // 결과 창 자랑하기: 하루 한 번 보석
+// 처음 한 번 자랑은 크게(30) 줘서 공유를 한 번은 해 보게 한다(39차: 공유 루프가 약하다)
+export const SHARE_GEM_FIRST = 30;
 export const SHARE_GEM = 5, SHARE_URL = 'https://kangraemin.github.io/forge-survivor-play/';
 // 천장: +15부터 실패할 때마다 다음 확률 +3%(성공하면 0으로). +19→+20(10%)에 운이 없으면 끝없이 갈렸다
 export const PITY_FROM = 15, PITY_STEP = 3;
@@ -344,7 +346,7 @@ export const GEM_SHOP = [
 ];
 // 보상형 광고: 하루 횟수 제한
 export const ADS = {
-  gem: { name: '보석 +10', daily: 3, give: { gem: 10 } },   // 월정액(하루 80)이 광고 보석보다 확실히 낫게
+  gem: { name: '보석 +20', daily: 3, give: { gem: 20 } },   // 하루 60: 월정액(하루 80)보다 적게 두되 볼 맛은 나게(39차: +10은 볼 이유가 없다)
   sweep: { name: '소탕권 +2', daily: 2, give: { sweep: 2 } },
   double: { daily: 10 },   // 클리어 보상 2배
 };

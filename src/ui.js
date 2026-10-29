@@ -12,7 +12,7 @@ export const font = (size, color = '#ffffff', stroke = 3) =>
   ({ fontFamily: 'G11', fontSize: size + 'px', color, stroke: '#0a0710', strokeThickness: stroke, resolution: PX });
 export const font9 = (size, color = '#d8d2e8') => ({ fontFamily: 'G9', fontSize: size + 'px', color, resolution: PX });
 
-export const COLOR = { panel: 0x15121f, panel2: 0x221c33, line: 0x5b4f7a, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
+export const COLOR = { panel: 0x1c2935, panel2: 0x293845, line: 0x475c66, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
 
 export const hiCam = scene => scene.cameras.main.setOrigin(0).setZoom(PX);
 // 카메라 기준점을 왼쪽 위로 옮겨 Phaser의 worldView(가운데 기준 계산)가 어긋난다 → 보이는 영역은 이걸로 구한다
@@ -21,33 +21,36 @@ export const viewRect = scene => { const c = scene.cameras.main; return new Phas
 // 상단 바 칸이 좁아 4글자 안팎으로 자른다(반올림하면 99999가 100.0k가 되니 버림)
 export const fmt = n => n >= 1e6 ? Math.floor(n / 1e5) / 10 + 'M' : n >= 10000 ? Math.floor(n / 1000) + 'k' : String(Math.floor(n));
 
+// 패널·버튼은 디자인 인계(잿불 성채 style_guide) 규격: 직각 면 + 1px 선, 그림자·광택 없음
 export function panel(scene, x, y, w, h, { fill = COLOR.panel, line = COLOR.line, alpha = 0.94 } = {}) {
   const g = scene.add.graphics();
-  g.fillStyle(0x000000, 0.45).fillRoundedRect(x + 2, y + 3, w, h, 6);
-  g.fillStyle(fill, alpha).fillRoundedRect(x, y, w, h, 6);
-  g.lineStyle(1, line, 1).strokeRoundedRect(x + 0.5, y + 0.5, w - 1, h - 1, 6);
-  g.lineStyle(1, 0xffffff, 0.08).lineBetween(x + 5, y + 2, x + w - 5, y + 2);
+  g.fillStyle(fill, alpha).fillRect(x, y, w, h);
+  g.lineStyle(1, line, 1).strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   g.box = { x, y, w, h };   // 배치 검사용(버튼이 패널 밖으로 나갔는지)
   return g;
 }
 
 // 버튼: 누르면 살짝 눌렸다 튀어 오르고 소리. disabled면 회색에 거절음
 // 색은 셋만 쓴다: 주 행동 초록 0x2f6b3a, 위험(분해·포기·초기화) 빨강 0x8a2f3a, 그 밖은 기본 회색 0x3a3846
+// 그리는 색은 디자인 인계 토큰으로 바꿔 칠한다: 주 행동 = 불빛 주황(ink 글자), 기본 = iron 면 + line 테두리
+const BTN_FILL = { 0x2f6b3a: 0xffb85c, 0x3a3846: 0x293845 };
 export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size = 12, textColor = '#ffffff', onDeny } = {}) {
   const c = scene.add.container(x, y);
   const g = scene.add.graphics();
   const draw = (col, down) => {
     g.clear();
-    g.fillStyle(0x000000, 0.5).fillRoundedRect(-w / 2, -h / 2 + 3, w, h, 6);
-    g.fillStyle(col, 1).fillRoundedRect(-w / 2, -h / 2 + (down ? 2 : 0), w, h, 6);
-    g.fillStyle(0xffffff, 0.14).fillRoundedRect(-w / 2 + 2, -h / 2 + 2 + (down ? 2 : 0), w - 4, h / 2 - 2, 4);
-    g.lineStyle(1, 0x000000, 0.6).strokeRoundedRect(-w / 2 + 0.5, -h / 2 + 0.5 + (down ? 2 : 0), w - 1, h - 1, 6);
+    const f = BTN_FILL[col] ?? col, oy = down ? 1 : 0;
+    g.fillStyle(f, 1).fillRect(-w / 2, -h / 2 + oy, w, h);
+    g.lineStyle(1, f === 0xffb85c ? 0x111923 : 0x475c66, 1).strokeRect(-w / 2 + 0.5, -h / 2 + 0.5 + oy, w - 1, h - 1);
   };
-  const t = scene.add.text(0, 0, label, font(size, textColor)).setOrigin(0.5);
+  const primary = color === 0x2f6b3a && textColor === '#ffffff';
+  const t = scene.add.text(0, 0, label, font(size, primary ? '#111923' : textColor, primary ? 0 : 3)).setOrigin(0.5);
   c.add([g, t]); c.setSize(w, h).setInteractive({ useHandCursor: true });
   c.label = t; c.enabled = true; c.col = color; c.isBtn = true;
   c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x221f2a, false); t.setAlpha(v ? 1 : 0.45); return c; };
-  c.setColor = col => { c.col = col; draw(col, false); return c; };
+  // 주 행동 색(주황)일 때만 글자를 진한 잉크로, 아니면 흰 글자 + 외곽선
+  const ink = col => { if (textColor !== '#ffffff') return; const p = col === 0x2f6b3a; t.setColor(p ? '#111923' : '#ffffff').setStroke('#0a0710', p ? 0 : 3); };
+  c.setColor = col => { c.col = col; ink(col); draw(col, false); return c; };
   draw(color, false);
   c.on('pointerdown', (p, lx, ly, ev) => { ev?.stopPropagation?.(); c.armed = true; draw(c.enabled ? c.col : 0x3a3a44, true); t.y = 2; });
   c.on('pointerout', () => { c.armed = false; draw(c.enabled ? c.col : 0x3a3a44, false); t.y = 0; });
