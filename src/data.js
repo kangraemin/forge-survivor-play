@@ -64,8 +64,8 @@ export const BOSSES = {
   general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon'] },
 };
 
-// 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다
-export const chapterHp = c => Math.pow(2.1, c);           // c는 0부터
+// 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다. 4~5장 벽이 너무 높아 조금 낮췄다
+export const chapterHp = c => Math.pow(2.05, c);           // c는 0부터
 export const chapterDmg = c => 0.65 * Math.pow(1.25, c);
 // 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
 // s는 0~5. 1-2에서 바로 벽을 느끼게 크게 뛰고, 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히

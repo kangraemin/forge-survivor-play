@@ -256,7 +256,7 @@ export class Lobby extends Phaser.Scene {
     }
     // 선택한 스테이지 정보
     const s = this.selS, idx = c * 6 + s, done = idx < sv.cleared, rec = recAtk(c, s);
-    b.add(panel(this, 12, 286, W - 24, 92, { fill: 0x15111f }));
+    b.add(panel(this, 12, 286, W - 24, atk < rec ? 84 : 92, { fill: 0x15111f }));
     const lines = [
       ['내 공격력', `${atk}`, atk >= rec ? '#5fdc6a' : '#ff8070'],
       ['권장 공격력', `${rec}`, '#e8e2f8'],
@@ -269,8 +269,9 @@ export class Lobby extends Phaser.Scene {
     });
     // 권장에 못 미치면 바로 대장간으로 보낸다(글자만 있으면 그냥 지나친다)
     if (atk < rec) {
-      const fb = button(this, W / 2, 386, 180, 14, '공격력이 모자라다  대장간으로 →', () => this.show('forge'), { size: 8, color: 0x6a3a2a, textColor: '#ffd0b0' });
+      const fb = button(this, W / 2, 381, 230, 18, '공격력이 모자라다  대장간으로 →', () => this.show('forge'), { size: 10, color: 0x7a3a2a, textColor: '#ffd0b0' });
       b.add(fb);
+      this.tweens.add({ targets: fb, alpha: 0.7, duration: 500, yoyo: true, repeat: -1 });
     }
     const go = button(this, 95, 412, 150, 34, s === 5 ? '보스 도전' : '전투 시작', () => this.startBattle(c, s), { size: 14, color: s === 5 ? 0x8a2a3a : 0x2f6b3a });
     const sw = button(this, 214, 412, 76, 34, `소탕 ${sv.sweep}`, () => this.sweep(c, s), { size: 11, color: 0x3b4f7a });
