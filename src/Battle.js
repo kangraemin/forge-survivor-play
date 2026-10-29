@@ -83,6 +83,9 @@ export class Battle extends Phaser.Scene {
 
     // 왼쪽 위 기준 카메라라 주인공이 가운데 오도록 반 화면만큼 밀고, 경계도 그만큼 옮긴다(clampX는 가운데 기준 계산)
     hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(W / 2, H / 2).setBounds(W / 2, H / 2, WORLD, WORLD).setRoundPixels(true);
+    // 화면 흔들림: 공격·피격마다 흔들려 머리가 아팠다. 작은 흔들림은 없애고 큰 것(보스·엘리트)만 약하고 짧게
+    const cam = this.cameras.main, shake = Phaser.Cameras.Scene2D.Camera.prototype.shake;
+    cam.shake = (d, i = 0.005, ...r) => i <= 0.005 ? cam : shake.call(cam, Math.min(d, 250), i * 0.4, ...r);
     this.weapons = new Weapons(this);
     this.boss = null;
     this.ui = new Overlay(this);
