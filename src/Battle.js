@@ -6,7 +6,7 @@ import { font, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX }
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
-import { gearStats, tagMul, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore } from './gear.js';
+import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore } from './gear.js';
 import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 
@@ -50,10 +50,10 @@ export class Battle extends Phaser.Scene {
       bDmg: 0, bSpd: 0, bHp: 0, bPick: 0,
       revive: sv.train.revive ? 1 : 0, lastHeal: 0, dmgBy: {},
     };
-    // 장비·세트·스탯, 무기 종류. 스킬 태그(근접·원거리·마법)마다 피해 배율이 다르다
+    // 장비·세트·스탯, 무기 종류. 든 무기가 따르는 스탯만 피해를 올린다
     this.gear = gearStats(sv);
     this.wtype = wtypeOf(sv);
-    this.tagM = { melee: tagMul(sv, 'melee'), ranged: tagMul(sv, 'ranged'), magic: tagMul(sv, 'magic'), pet: 1 };
+    this.wM = wMul(sv);
     this.run.loot = []; eggsSettled();
     this.wave = 0;
     this.waveLen = this.endless ? D.ENDLESS.floorSec * 1000 : this.ch.dur * 1000 / D.WAVES;
@@ -63,7 +63,7 @@ export class Battle extends Phaser.Scene {
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless;
     if (this.easy) { this.mobDmgMul *= 0.55; this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
-    this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s) * (this.endless ? 1 : D.easeHp(this.c, this.s));
+    this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s) * (this.endless ? 1 : D.easeHp(this.c, this.s)) * spReq(this.endless ? sv.cleared : this.c * D.STAGES_PER_CHAPTER + this.s);
 
     this.makeMap();
     this.makeHero();
@@ -442,7 +442,7 @@ export class Battle extends Phaser.Scene {
   // ── 피해 ──
   dmgCalc(mult, tag) {
     const r = this.run, crit = Math.random() < 0.08 + this.tv('luck');
-    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0) + this.lv3('might', 0.1)) * (this.tagM[tag] || 1) * RF(0.9, 1.1);
+    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0) + this.lv3('might', 0.1)) * (tag === 'pet' ? 1 : this.wM) * (this.wtype.id === 'axe' && this.gear.fx.has('axe4') && this.hp < this.maxHp / 2 ? 1.3 : 1) * RF(0.9, 1.1);
     return { dmg: Math.round(base * (crit ? 2 : 1)), crit };
   }
 
@@ -595,7 +595,7 @@ export class Battle extends Phaser.Scene {
 
   pickup(it) {
     const r = this.run;
-    if (it.kind === 'silver') { r.silver += it.v; sfx('coin', 60); }
+    if (it.kind === 'silver') { r.silver += this.gear.fx.has('gold4') ? Math.ceil(it.v * 1.5) : it.v; sfx('coin', 60); }
     else if (it.kind === 'meat') { this.heal(this.maxHp * D.HEAL_PCT); }
     else if (it.kind === 'magnetItem') { this.gems.getChildren().forEach(g => g.pull = true); sfx('level'); }
     else if (it.kind === 'chest') { r.chests++; this.ui.chest(); }
@@ -642,7 +642,7 @@ export class Battle extends Phaser.Scene {
   }
   goblinDown(m) {
     for (let i = 0; i < 8; i++) this.addItem(m.x + R(-14, 14), m.y + R(-14, 14), 'silver', 5);
-    this.gotLoot(makeItem(this.c, { rarity: R(1, 10) > 8 ? 2 : 1 }));
+    this.gotLoot(makeItem(this.c, { rarity: R(1, 10) > 8 ? 2 : 1, w: this.sv.wtype }));
     if (Math.random() < 0.1) { const e = grantEgg(this.sv, 'cat', false); if (e) this.gotLoot(e); }
     this.cameras.main.flash(120, 255, 220, 120);
     this.log('goblin_kill');
@@ -690,6 +690,8 @@ export class Battle extends Phaser.Scene {
       this.tweens.add({ targets: ring, scale: 2, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
       this.mobs.getChildren().forEach(m => { if (!m.dead && !m.isBoss && Phaser.Math.Distance.Between(m.x, m.y, this.hero.x, this.hero.y) < 60) { m.freeze = 2000; m.setTint(0x9ae8ff); this.time.delayedCall(2000, () => m.active && !m.dead && m.setTint(m.baseTint)); } });
     }
+    // 가시 덩굴 4세트: 맞으면 주변 적에게 가시가 박힌다
+    if (this.gear.fx.has('thorn4')) this.mobs.getChildren().slice().forEach(m => { if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, this.hero.x, this.hero.y) < 56) this.hitMob(m, 1.5, { kb: 120, src: 'thorn', cd: 300 }); });
     // 고무 오리: 꽥!
     if (this.gear.fx.has('duck')) { const q = this.add.text(this.hero.x + 10, this.hero.y - 30, '꽥!', font(10, '#ffe066')).setOrigin(0.5).setDepth(40); this.tweens.add({ targets: q, y: q.y - 12, alpha: 0, duration: 600, onComplete: () => q.destroy() }); }
     if (this.hp <= 0) this.die();

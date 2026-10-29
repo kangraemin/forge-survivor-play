@@ -1,4 +1,4 @@
-// 액티브 스킬 8종 + 무기 전용 3종(검기·투창·지진). 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
+// 액티브 스킬 8종 + 무기 전용 7종(검기·투창·지진·화살비·수류탄·기공파·유도 마탄). 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
 import { sfx } from './sfx.js';
 import { skinFx, viewRect } from './ui.js';
 import { SKILLS, PASSIVE_LV3, SKINS } from './data.js';
@@ -32,7 +32,11 @@ export class Weapons {
     for (const [k, lv] of Object.entries(this.sk)) {
       if (SKILLS[k].type !== 'active') continue;
       this.cd[k] = (this.cd[k] ?? 300) - dt;
-      if (this.cd[k] <= 0) this.cd[k] = this[k](lv) * this.cdMul();
+      if (this.cd[k] <= 0) {
+        this.cd[k] = this[k](lv) * this.cdMul();
+        // 대마법사 4세트: 기본 공격 말고 스킬이 10% 확률로 한 번 더 나간다
+        if (k !== 'sword' && k !== 'orb' && k !== 'holy' && this.s.wtype.id === 'staff' && this.s.gear.fx.has('staff4') && Math.random() < 0.1) this.s.time.delayedCall(150, () => !this.s.over && this[k](lv));
+      }
     }
     this.updateOrbs(dt);
     this.updateAura(dt);
@@ -60,6 +64,14 @@ export class Weapons {
   // ── 검 휘두르기: 가장 가까운 적 쪽으로 내딛으며 벤다. 판정은 궤적이 가장 꽉 찬 순간 ──
   sword(lv) {
     const s = this.s, h = s.hero;
+    const wt0 = s.wtype.id;
+    if (wt0 === 'bow' || wt0 === 'gun' || wt0 === 'staff') return this.shoot(lv, wt0);
+    this.nb = (this.nb || 0) + 1;
+    // 무기 세트 4개 효과: 검성은 세 번째 베기마다 검기, 용기사는 25% 투창, 무도가는 열 번째마다 충격파
+    const fx4 = s.gear.fx;
+    if (wt0 === 'sword' && fx4.has('sword4') && this.nb % 3 === 0) s.time.delayedCall(80, () => this.wave(3));
+    if (wt0 === 'spear' && fx4.has('spear4') && Math.random() < 0.25) s.time.delayedCall(80, () => this.javelin(2));
+    if (wt0 === 'knuckle' && fx4.has('knuckle4') && this.nb % 10 === 0) this.quake(2);
     const target = this.nearest(90);
     const ang = target ? Phaser.Math.Angle.Between(h.x, h.y, target.x, target.y) : (s.face > 0 ? 0 : Math.PI);
     const dir = Math.cos(ang) >= 0 ? 1 : -1;
@@ -70,11 +82,12 @@ export class Weapons {
     s.tweens.add({ targets: h, scaleX: hs * 1.18, scaleY: hs * 0.86, duration: 60, yoyo: true, ease: 'Quad.Out', onComplete: () => h.setScale(hs) });
     h.once('animationcomplete-slash', () => h.play('idle'));
     // 무기 종류: 창은 좁고 길게 찌르고, 도끼는 느리지만 사방을 크게 찍는다
-    const wt = s.wtype.id, spear = wt === 'spear', axe = wt === 'axe';
-    s.lunge = { x: Math.cos(ang) * (spear ? 70 : 40), y: Math.sin(ang) * (spear ? 70 : 40), t: 50 };
+    const wt = s.wtype.id, spear = wt === 'spear', axe = wt === 'axe', fist = wt === 'knuckle';
+    s.lunge = { x: Math.cos(ang) * (spear ? 70 : fist ? 26 : 40), y: Math.sin(ang) * (spear ? 70 : fist ? 26 : 40), t: 50 };
     const evo = this.evo('sword');
-    const area = this.area() * (lv >= 4 ? 1.2 : 1) * (evo ? 1.35 : 1) * (axe ? 1.12 : 1);
-    const mult = (evo ? 4 : [1.6, 2, 2, 2, 2.8][lv - 1]) * (spear ? 1.1 : axe ? 1.45 : 1);
+    const area = this.area() * (lv >= 4 ? 1.2 : 1) * (evo ? 1.35 : 1) * (axe ? 1.12 : fist ? 0.75 : 1);
+    // 너클은 범위가 좁고 한 방이 약하지만 2.5배 빠르게 친다
+    const mult = (evo ? 4 : [1.6, 2, 2, 2, 2.8][lv - 1]) * (spear ? 1.4 : axe ? 1.45 : fist ? 0.5 : 1);
     const tag = s.wtype.tag, flame = s.gear.fx.has('flame4');
     const slash = (a, delay) => s.time.delayedCall(delay, () => {
       // 강화 단계가 판 안에서도 보이게: +5 파랑, +10 불꽃, +15 보라로 궤적이 커지고 물든다
@@ -120,7 +133,7 @@ export class Weapons {
     });
     slash(ang, 0);
     if (lv >= 3) slash(ang + Math.PI, 120);
-    const slow = axe ? 1.35 : 1;
+    const slow = axe ? 1.35 : fist ? 0.4 : 1;
     if (evo) { slash(ang + Math.PI / 2, 60); slash(ang - Math.PI / 2, 180); return 460 * slow; }
     return (lv >= 5 ? 520 : 650) * slow;
   }
@@ -337,6 +350,101 @@ export class Weapons {
     return lv >= 4 ? 2200 : 2800;
   }
 
+  // ── 활·총·지팡이 기본 공격: 가장 가까운 적에게 쏜다 ──
+  shoot(lv, wt) {
+    const s = this.s, h = s.hero, evo = this.evo('sword');
+    const t = this.nearest(wt === 'gun' ? 200 : 260);
+    const ang = t ? Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) : (s.face > 0 ? 0 : Math.PI);
+    s.face = Math.cos(ang) >= 0 ? 1 : -1;
+    h.setFlipX(s.face < 0).play('slash', true);
+    h.once('animationcomplete-slash', () => h.play('idle'));
+    const fx = s.gear.fx;
+    if (wt === 'bow') {
+      // 활: 느리고 세게, 여러 마리를 꿰뚫는다. 사냥꾼 4세트는 세 번째 화살마다 터진다
+      const n = evo ? 5 : lv >= 3 ? 2 : 1, mult = (evo ? 3.6 : [2.2, 2.7, 2.7, 2.7, 3.6][lv - 1]);
+      this.nb = (this.nb || 0) + 1;
+      const boom = fx.has('bow4') && this.nb % 3 === 0;
+      for (let i = 0; i < n; i++) {
+        const a = ang + (i - (n - 1) / 2) * 0.14;
+        this.bullet('dagger', h.x, h.y - 4, a, 400, { mult, pierce: lv >= 4 ? 4 : 2, src: 'arrow', life: 800, kb: 90, tag: 'ranged', tint: 0xffe0a0, scale: 1.5, boomOnHit: boom });
+      }
+      sfx('shoot', 50);
+      return (evo ? 600 : lv >= 5 ? 720 : 900);
+    }
+    if (wt === 'gun') {
+      // 총: 약한 총알을 빠르게 연달아 쏜다. 총잡이 4세트는 다섯 번째 총알마다 피해 2배
+      const n = evo ? 6 : lv >= 3 ? 4 : 3, mult = (evo ? 1 : [0.62, 0.78, 0.78, 0.78, 1][lv - 1]);
+      for (let i = 0; i < n; i++) s.time.delayedCall(i * 55, () => {
+        if (s.over) return;
+        this.nb = (this.nb || 0) + 1;
+        const dbl = fx.has('gun4') && this.nb % 5 === 0;
+        const t2 = this.nearest(220), a = (t2 ? Phaser.Math.Angle.Between(h.x, h.y, t2.x, t2.y) : ang) + RF(-0.08, 0.08);
+        this.bullet('dagger', h.x, h.y - 4, a, 460, { mult: mult * (dbl ? 2 : 1), pierce: lv >= 4 ? 1 : 0, src: 'gun', life: 520, kb: 40, tag: 'ranged', tint: dbl ? 0xff6a2a : 0xffd75e, scale: dbl ? 1.1 : 0.8 });
+        sfx('shoot', 30);
+      });
+      return (evo ? 520 : lv >= 5 ? 560 : 720);
+    }
+    // 지팡이: 적을 따라가는 마력탄
+    const n = evo ? 4 : lv >= 3 ? 2 : 1, mult = (evo ? 4.4 : [2.8, 3.3, 3.3, 3.3, 4.4][lv - 1]);
+    for (let i = 0; i < n; i++) {
+      const a = ang + (i - (n - 1) / 2) * 0.5;
+      this.bullet('orb', h.x, h.y - 6, a, 190, { mult, pierce: lv >= 4 ? 1 : 0, src: 'staff', life: 1500, kb: 60, tag: 'magic', tint: 0xc890ff, scale: 1.2, add: true, home: true, splash: lv >= 5 || evo ? 38 : 30 });
+    }
+    sfx('zap', 40);
+    return (evo ? 500 : lv >= 5 ? 580 : 700);
+  }
+
+  // ── 화살비(활 전용): 화면의 적 위로 화살이 떨어진다 ──
+  volley(lv) {
+    const s = this.s, n = [3, 4, 4, 6, 9][lv - 1], mult = 1.1 * (lv >= 3 ? 1.3 : 1);
+    const list = Phaser.Utils.Array.Shuffle(this.onScreen()).slice(0, n);
+    if (!list.length) return 500;
+    list.forEach((m, i) => s.time.delayedCall(i * 60, () => {
+      const x = m.x, y = m.y;
+      const ar = s.add.image(x, y - 90, 'dagger').setTint(0xffe0a0).setScale(1.4).setRotation(Math.PI / 2).setDepth(30);
+      s.tweens.add({ targets: ar, y, duration: 180, ease: 'Quad.In', onComplete: () => {
+        ar.destroy();
+        s.mobs.getChildren().slice().forEach(o => { if (!o.dead && Phaser.Math.Distance.Between(o.x, o.y, x, y) < 16 + (o.isBoss ? 20 : 0)) s.hitMob(o, mult, { kb: 40, tag: 'ranged' }); });
+      } });
+    }));
+    sfx('shoot', 50);
+    return lv >= 5 ? 1300 : 1700;
+  }
+
+  // ── 수류탄(총 전용): 적이 가장 많은 곳에 던진다 ──
+  grenade(lv) {
+    const s = this.s, h = s.hero, list = this.onScreen();
+    if (!list.length) return 500;
+    const n = lv >= 4 ? 2 : 1;
+    for (let i = 0; i < n; i++) {
+      const t = Phaser.Utils.Array.GetRandom(list), x = t.x, y = t.y;
+      const g = s.add.circle(h.x, h.y - 4, 3, 0x6a7a4a).setDepth(30);
+      s.tweens.add({ targets: g, x, y, duration: 420, ease: 'Sine.Out', onComplete: () => { g.destroy(); this.explode(x, y, Math.min(5, lv + 1)); } });
+      s.tweens.add({ targets: g, scale: 1.8, duration: 210, yoyo: true });
+    }
+    return 2000;
+  }
+
+  // ── 기공파(너클 전용): 앞으로 큰 기운을 내지른다 ──
+  palm(lv) {
+    const s = this.s, h = s.hero, t = this.nearest(200);
+    const a = t ? Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) : (s.face > 0 ? 0 : Math.PI);
+    const mult = 2 * (lv >= 2 ? 1.3 : 1), sc = 2 * (lv >= 3 ? 1.4 : 1);
+    const once = () => this.bullet('wave', h.x, h.y - 4, a, 230, { mult, pierce: lv >= 4 ? 99 : 3, src: 'palm', life: 700, kb: 200, tag: 'melee', tint: 0xffe070, scale: sc, add: true });
+    once(); if (lv >= 5) s.time.delayedCall(200, once);
+    s.cameras.main.shake(50, 0.002);
+    sfx('swing', 60);
+    return 2000;
+  }
+
+  // ── 유도 마탄(지팡이 전용): 적을 쫓는 마탄을 여럿 쏜다 ──
+  missile(lv) {
+    const s = this.s, h = s.hero, n = [3, 4, 4, 6, 9][lv - 1], mult = 0.9 * (lv >= 3 ? 1.3 : 1);
+    for (let i = 0; i < n; i++) this.bullet('orb', h.x, h.y - 6, i * Math.PI * 2 / n, lv >= 5 ? 220 : 170, { mult, pierce: 0, src: 'mis', life: 1800, kb: 40, tag: 'magic', tint: 0xe0a0ff, scale: 0.9, add: true, home: true });
+    sfx('zap', 40);
+    return 1900;
+  }
+
   // ── 수호 구슬 ──
   orb() { return 99999; }
   updateOrbs(dt) {
@@ -372,12 +480,28 @@ export class Weapons {
     s.pbullets.getChildren().slice().forEach(b => {
       b.life -= dt;
       let dead = b.life <= 0;
+      // 유도탄: 가까운 적 쪽으로 조금씩 꺾는다
+      if (b.home && !dead) {
+        const t = this.nearest(200, b);
+        if (t) {
+          const cur = Math.atan2(b.body.velocity.y, b.body.velocity.x), want = Phaser.Math.Angle.Between(b.x, b.y, t.x, t.y);
+          const na = Phaser.Math.Angle.RotateTo(cur, want, 0.008 * dt), sp = Math.hypot(b.body.velocity.x, b.body.velocity.y);
+          b.setVelocity(Math.cos(na) * sp, Math.sin(na) * sp).setRotation(na);
+        }
+      }
       if (!dead) for (const m of s.mobs.getChildren()) {
         if (m.dead || b.seen.has(m)) continue;
         if (Phaser.Math.Distance.Between(m.x, m.y, b.x, b.y) > 10 + (m.isBoss ? 22 : m.displayWidth * 0.25)) continue;
         b.seen.add(m);
         if (b.explode) { dead = true; break; }
         s.hitMob(m, b.mult, { kb: b.kb, from: b, tag: b.tag });
+        // 지팡이 마력탄: 맞힌 자리 주변도 마력이 터진다
+        if (b.splash) {
+          const x = m.x, y = m.y, ring = s.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xc890ff).setScale(0.2).setDepth(31);
+          s.tweens.add({ targets: ring, scale: b.splash / 30, alpha: 0, duration: 200, onComplete: () => ring.destroy() });
+          s.mobs.getChildren().slice().forEach(o => { if (o !== m && !o.dead && Phaser.Math.Distance.Between(o.x, o.y, x, y) < b.splash) s.hitMob(o, b.mult * 0.7, { kb: 50, from: { x, y }, tag: 'magic' }); });
+        }
+        if (b.boomOnHit) { b.boomOnHit = false; const x = m.x, y = m.y; s.time.delayedCall(40, () => this.explode(x, y, 2)); }
         if (b.freeze && Math.random() < 0.3) { m.freeze = 600; m.setTint(0x9ae8ff); s.time.delayedCall(600, () => m.active && !m.dead && m.clearTint()); }
         if (++b.hits > b.pierce) { dead = true; break; }
       }

@@ -25,7 +25,7 @@ const fresh = () => ({
   skins: {}, skin: '',     // 산 칼빛, 끼고 있는 칼빛
   stats: { runs: 0, kills: 0, destroyed: 0, playMs: 0, losses: 0 },
   inv: [], eq: {},         // 가진 장비, 부위별로 낀 장비 uid
-  wtype: 'sword',          // 무기 종류
+  wtype: 'sword',          // 든 무기 종류(가진 무기 wOwn·스탯 버전 spV는 load에서 채운다)
   pet: '', pets: {},       // 데려가는 펫, 펫별 레벨
   sp: { str: 0, dex: 0, int: 0, vit: 0 }, spReset: 1, // 찍은 스탯, 초기화권(처음 한 장은 공짜)
   eggs: {}, taps: 0,       // 얻은 숨겨진 템, 대장간 칼 두드린 횟수
@@ -39,6 +39,9 @@ export function load() {
   // 장당 6판 → 3판으로 바뀌기 전 저장: 깬 수를 새 번호로 옮긴다(x-1·x-4까지 깼으면 x-1·x-2, 보스를 잡았으면 다음 장)
   // 스탯 총점 식도 바뀌어 찍은 점수가 총점을 넘을 수 있다: 돌려주고 다시 찍게 한다
   if (!mem.st3) { const o = mem.cleared || 0, k = o % 6; mem.cleared = Math.floor(o / 6) * 3 + (k >= 1) + (k >= 4); mem.best = {}; mem.sp = {}; mem.st3 = true; }
+  // 무기 7종으로 바뀌기 전 저장: 예전에 깬 만큼 창·도끼를 준다. 스탯 규칙(무기 스탯 1점 +10%)이 바뀌어 찍은 점수를 한 번 돌려준다
+  if (!mem.wOwn) { mem.wOwn = { sword: true }; if (mem.cleared >= 3) mem.wOwn.spear = true; if (mem.cleared >= 6) mem.wOwn.axe = true; }
+  if (!mem.spV) { mem.sp = { str: 0, dex: 0, int: 0, vit: 0 }; mem.spV = 2; }
   // 마지막으로 저장한 뒤 얼마나 비웠나(자리 비움 보상). 로비가 읽고 0으로 돌린다
   if (mem.seenAt) mem.idleMs = Math.max(mem.idleMs || 0, Date.now() - mem.seenAt);
   // 하루가 바뀌면 소탕권 충전, 파괴 방지권 1장

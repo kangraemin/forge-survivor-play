@@ -4,7 +4,7 @@ import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
-import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES } from './gear.js';
+import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, SETS } from './gear.js';
 import { itemBox } from './gearTab.js';
 
 const { W, H } = D;
@@ -149,7 +149,7 @@ export class Overlay {
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4));
     c.add(special ? icon(s, -88, 0, k === '_heal' ? 14 : 12, 32) : skillIcon(s, -88, 0, def, 32));
     // 기본 공격 이름은 든 무기를 따른다(창 찌르기·도끼 찍기)
-    const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : k === 'sword' ? { sword: def.name, spear: '창 찌르기', axe: '도끼 찍기' }[s.wtype.id] : def.name;
+    const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : k === 'sword' ? { sword: def.name, spear: '창 찌르기', axe: '도끼 찍기', bow: '활 쏘기', gun: '사격', knuckle: '주먹 연타', staff: '마력탄' }[s.wtype.id] : def.name;
     const nm = s.add.text(-60, -24, name, font(12, '#ffffff')); c.add(nm);
     if (!special) c.add(s.add.text(-60 + nm.width + 5, -23, lv ? `Lv ${lv}→${lv + 1}` : isAct ? '공격' : '보조', font9(10, '#a89cc8')));
     let desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
@@ -306,7 +306,15 @@ export class Overlay {
     const hpTxt = s.add.text(W / 2, 132, '', font9(10, '#ff9090')).setOrigin(0.5); c.add(hpTxt);
     const grid = s.add.container(0, 0); c.add(grid);
     let stock = [];
-    const roll = () => { stock = Phaser.Utils.Array.Shuffle(D.SHOP_ITEMS.slice()).slice(0, D.SHOP_SLOTS).map(it => ({ ...it, price: D.shopPrice(it.price, round), sold: false })); };
+    // 황금 상인 4세트: 20% 할인
+    const off = s.gear.fx.has('gold4') ? 0.8 : 1;
+    // 한 칸은 늘 장비다(세트가 잘 나온다). 나머지 세 칸은 물약·강화
+    const gearCard = () => {
+      const item = makeItem(s.c, { boost: round >= 1 ? 1 : 0, w: s.wtype.id, setP: 0.6 });
+      const set = item.set && SETS[item.set];
+      return { id: 'gear', item, name: item.n, desc: `${statText(...Object.entries(item.st)[0])}${set ? `\n${set.name} 세트` : ''}`, price: Math.floor(D.shopPrice(D.SHOP_GEAR_PRICE[item.r], round) * off), sold: false };
+    };
+    const roll = () => { stock = [gearCard(), ...Phaser.Utils.Array.Shuffle(D.SHOP_ITEMS.slice()).slice(0, D.SHOP_SLOTS - 1).map(it => ({ ...it, price: Math.floor(D.shopPrice(it.price, round) * off), sold: false }))]; };
     const draw = () => {
       grid.removeAll(true);
       silverTxt.setText(`보유 은화 ${r.silver}`);
@@ -316,8 +324,8 @@ export class Overlay {
         const can = !it.sold && r.silver >= it.price;
         const g = s.add.container(x, y);
         g.add(panel(s, -56, -46, 112, 92, { fill: it.sold ? 0x141018 : 0x261f3a, line: can ? 0xffd75e : 0x4a4060 }));
-        g.add(icon(s, 0, -26, it.icon, 26).setAlpha(it.sold ? 0.3 : 1));
-        g.add(s.add.text(0, -8, it.name, font(10, it.sold ? '#666' : '#ffffff')).setOrigin(0.5));
+        g.add((it.item ? itemBox(s, 0, -26, it.item, 26) : icon(s, 0, -26, it.icon, 26)).setAlpha(it.sold ? 0.3 : 1));
+        g.add(s.add.text(0, -8, it.name, font(10, it.sold ? '#666' : it.item ? RARITY[it.item.r].css : '#ffffff')).setOrigin(0.5));
         g.add(s.add.text(0, 7, it.desc, { ...font9(10, '#c8bfe0'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0).setLineSpacing(-1));
         g.add(s.add.text(0, 37, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
         g.setSize(112, 92).setInteractive({ useHandCursor: true });
@@ -326,7 +334,7 @@ export class Overlay {
           if (r.silver < it.price) { sfx('deny'); s.tweens.add({ targets: g, x: x + 3, duration: 40, yoyo: true, repeat: 2 }); return; }
           r.silver -= it.price; it.sold = true; sfx('buy');
           s.log('run_shop_buy', { item: it.id, price: it.price, round, silver: r.silver });
-          this.apply(it.id);
+          if (it.item) s.gotLoot(it.item); else this.apply(it.id);
           draw();
         });
         grid.add(g);
@@ -347,7 +355,7 @@ export class Overlay {
       // 봇: 체력이 낮으면 고기, 아니면 살 수 있는 것 중 비싼 것부터
       stock.sort((a, b) => b.price - a.price);
       if (s.hp < s.maxHp * 0.5) stock.sort((a, b) => (b.id === 'meat') - (a.id === 'meat'));
-      stock.forEach(it => { if (!it.sold && r.silver >= it.price) { r.silver -= it.price; it.sold = true; this.apply(it.id); } });
+      stock.forEach(it => { if (!it.sold && r.silver >= it.price) { r.silver -= it.price; it.sold = true; if (it.item) s.gotLoot(it.item); else this.apply(it.id); } });
       if (c !== this.c) return;
       r.shopRound++; this.end(c); onDone?.();
     });
@@ -440,6 +448,9 @@ export class Overlay {
       mission('clear');
       if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; else charm = 1; gem = s.isBoss ? D.GEM_FREE.bossFirst : D.GEM_FREE.stageFirst; }   // 일반 판 첫 클리어: 강화 성공률을 올리는 행운 부적
       sv.best[idx] = 1;
+      // 새 무기: 보스를 처음 잡으면 확정, 처음 깬 판 20%, 다시 깬 판 5%. 어떤 무기인지는 무작위
+      r.newW = grantWeapon(sv, first && s.isBoss ? 1 : first ? 0.2 : 0.05);
+      if (r.newW) s.log('weapon_get', { wtype: r.newW.id, first, boss: s.isBoss });
     } else {
       gold = Math.round(D.clearGold(s.c, s.s) * s.runProgress() * D.FAIL_GOLD_RATE);
       // 초반 스테이지는 내림하면 0개가 된다: 1/4 넘게 버텼으면 최소 1개
@@ -512,7 +523,7 @@ export class Overlay {
       // 광고 버튼 아래 한 줄. 강조색은 주 버튼 하나만 쓴다(주황·파랑·초록이 한 창에 다 있었다)
       const sb = button(s, W / 2, 316, 190, 24, gift ? `자랑하기 보석+${D.SHARE_GEM}` : '자랑하기', async () => {
         const msg = s.endless ? `무한의 탑 ${floors}층 돌파!` : `${s.isBoss ? D.BOSSES[s.ch.boss].name + ' 격파! ' : ''}${s.c + 1}-${s.s + 1} 클리어`;
-        const text = `${msg} 내 칼은 ${D.TIERS[sv.tier].name} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
+        const text = `${msg} 내 무기는 ${D.tierName(sv.tier, s.wtype)} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
         let ok = false;
         try {
           if (navigator.share) { await navigator.share({ title: '강화 서바이버', text, url }); ok = true; }
@@ -542,7 +553,7 @@ export class Overlay {
     c.add(s.add.rectangle(W / 2, 336, W - 80, 1, 0x3a3450));
     const egg = loot.find(it => it.egg), top = loot.reduce((a, it) => Math.max(a, it.r < 4 ? it.r : -1), -1);
     // 장 보스를 처음 잡으면 새 무기가 열린다(장마다 받는 큰 보상)
-    const wNew = first && s.isBoss && WTYPES.find(w => w.unlock === sv.cleared);
+    const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
     const head = wNew ? `새 무기 「${wNew.name}」 획득!` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
     const n = Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);

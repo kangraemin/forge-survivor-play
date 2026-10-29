@@ -40,9 +40,19 @@ export const statText = (k, v) => STATS[k].pct ? `${STATS[k].name} +${(v * 100).
 
 // 세트: 2개 효과는 능력치, 4개 효과는 전투 중 특수 효과(Battle·weapons에서 fx 이름으로 확인)
 export const SETS = {
-  flame: { name: '대장장이의 불꽃', pre: '불꽃 대장장이의', css: '#ff8a4a', two: { atk: 0.1 }, twoTxt: '모든 피해 +10%', fourTxt: '베인 적이 25% 확률로 폭발한다', minC: 0 },
+  flame: { name: '대장장이의 불꽃', pre: '불꽃 대장장이의', css: '#ff8a4a', two: { atk: 0.1 }, twoTxt: '모든 피해 +10%', fourTxt: '맞힌 적이 25% 확률로 폭발한다', minC: 0 },
   frost: { name: '서리 수호자', pre: '서리 수호자의', css: '#9ae8ff', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '맞으면 주변 적을 2초 얼린다(6초마다)', minC: 1 },
   wind: { name: '바람 사냥꾼', pre: '바람 사냥꾼의', css: '#a8ffb0', two: { spd: 0.12 }, twoTxt: '이동 속도 +12%', fourTxt: '모든 스킬 재사용 대기 -18%', minC: 2 },
+  thorn: { name: '가시 덩굴', pre: '가시 덩굴', css: '#7fd06a', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '맞으면 주변 적에게 가시가 박힌다', minC: 0 },
+  gold: { name: '황금 상인', pre: '황금 상인의', css: '#ffd75e', two: { mag: 0.3 }, twoTxt: '줍는 거리 +30%', fourTxt: '은화 +50%, 상인 물건 20% 할인', minC: 1 },
+  // 무기 전용 세트: 그 무기를 들고 싸울 때만 나온다(상인도 판다)
+  sword: { w: 'sword', name: '검성', pre: '검성의', css: '#9ad8ff', two: { atk: 0.1 }, twoTxt: '모든 피해 +10%', fourTxt: '세 번 벨 때마다 검기가 날아간다', minC: 0 },
+  spear: { w: 'spear', name: '용기사', pre: '용기사의', css: '#a8ffb0', two: { luck: 0.06 }, twoTxt: '치명·은화 +6%', fourTxt: '찌를 때 25% 확률로 투창을 던진다', minC: 0 },
+  axe: { w: 'axe', name: '광전사', pre: '광전사의', css: '#ff7a5a', two: { hp: 0.12 }, twoTxt: '최대 체력 +12%', fourTxt: '체력이 절반 아래면 피해 +30%', minC: 0 },
+  bow: { w: 'bow', name: '사냥꾼', pre: '사냥꾼의', css: '#e8d08a', two: { cd: 0.08 }, twoTxt: '재사용 대기 -8%', fourTxt: '세 번째 화살마다 터진다', minC: 0 },
+  gun: { w: 'gun', name: '총잡이', pre: '총잡이의', css: '#ffb050', two: { spd: 0.1 }, twoTxt: '이동 속도 +10%', fourTxt: '다섯 번째 총알은 피해 2배', minC: 0 },
+  knuckle: { w: 'knuckle', name: '무도가', pre: '무도가의', css: '#ffe070', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '열 번 칠 때마다 충격파가 퍼진다', minC: 0 },
+  staff: { w: 'staff', name: '대마법사', pre: '대마법사의', css: '#c890ff', two: { cd: 0.1 }, twoTxt: '재사용 대기 -10%', fourTxt: '스킬이 10% 확률로 한 번 더 나간다', minC: 0 },
 };
 
 // 숨겨진 템: 한 번만 얻는다. 얻는 조건은 hint로 흐릿하게만 알려 준다
@@ -54,13 +64,26 @@ export const EGGS = {
   rock: { slot: 'collar', name: '이상한 돌멩이', st: { pet: 1.0 }, desc: '펫이 이걸 아주 좋아한다', hint: '대장간에서 칼을 자꾸 건드리면' },
 };
 
-// ── 무기 종류: 기본 공격 모양과 레벨업에 잘 나오는 스킬이 달라진다 ──
+// ── 무기 종류: 기본 공격·전용 스킬·잘 나오는 스킬·따르는 스탯이 다르다. 검 말고는 보스·정예를 잡거나 판을 깨면 무작위로 얻는다 ──
 export const WTYPES = [
-  { id: 'sword', name: '검', desc: '앞쪽을 넓게 벤다 · 힘', tag: 'melee', unlock: 0, fav: ['spin', 'orb', 'wave', 'might'], own: 'wave' },
-  { id: 'spear', name: '창', desc: '좁고 길게 꿰뚫는다 · 민첩', tag: 'ranged', unlock: 3, hint: '1장 보스를 잡으면', fav: ['dagger', 'ice', 'javelin', 'haste'], own: 'javelin' },
-  { id: 'axe', name: '도끼', desc: '느리지만 사방을 크게 찍는다 · 힘', tag: 'melee', unlock: 6, hint: '2장 보스를 잡으면', fav: ['fireball', 'holy', 'quake', 'vigor'], own: 'quake' },
+  { id: 'sword', name: '검', noun: '검', desc: '앞쪽을 넓게 벤다', stat: 'str', tag: 'melee', fav: ['spin', 'orb', 'wave', 'might'], own: 'wave' },
+  { id: 'spear', name: '창', noun: '창', desc: '좁고 길게 꿰뚫는다', stat: 'dex', tag: 'ranged', fav: ['dagger', 'ice', 'javelin', 'haste'], own: 'javelin' },
+  { id: 'axe', name: '도끼', noun: '도끼', desc: '느리지만 사방을 크게 찍는다', stat: 'str', tag: 'melee', fav: ['fireball', 'holy', 'quake', 'vigor'], own: 'quake' },
+  { id: 'bow', name: '활', noun: '활', desc: '멀리서 꿰뚫는 화살을 쏜다', stat: 'dex', tag: 'ranged', fav: ['dagger', 'ice', 'volley', 'haste'], own: 'volley' },
+  { id: 'gun', name: '총', noun: '총', desc: '총알을 연달아 쏜다', stat: 'dex', tag: 'ranged', fav: ['bolt', 'dagger', 'grenade', 'focus'], own: 'grenade' },
+  { id: 'knuckle', name: '너클', noun: '너클', desc: '붙어서 아주 빠르게 친다', stat: 'str', tag: 'melee', fav: ['spin', 'orb', 'palm', 'vigor'], own: 'palm' },
+  { id: 'staff', name: '지팡이', noun: '지팡이', desc: '적을 따라가는 마력탄을 쏜다', stat: 'int', tag: 'magic', fav: ['bolt', 'fireball', 'holy', 'missile'], own: 'missile' },
 ];
 export const wtypeOf = sv => WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
+export const ownsW = (sv, id) => id === 'sword' || !!sv.wOwn?.[id];
+// 아직 없는 무기 하나를 무작위로 준다(없으면 null). chance: 얻을 확률
+export function grantWeapon(sv, chance = 1) {
+  const left = WTYPES.filter(w => !ownsW(sv, w.id));
+  if (!left.length || Math.random() >= chance) return null;
+  const w = pick(left);
+  (sv.wOwn ||= {})[w.id] = true;
+  return w;
+}
 // 무기 전용 스킬: 그 무기를 든 판에서만 나온다
 export const OWN_SKILLS = WTYPES.map(w => w.own);
 // 진행할수록 레벨업 카드에 새 스킬이 섞여 나온다(깬 스테이지 수)
@@ -68,23 +91,28 @@ export const SKILL_UNLOCK = { holy: 1, bolt: 2, fireball: 3, ice: 5 };
 
 // ── 스탯: 스테이지를 처음 깰 때 1점, 보스는 2점 더(끝까지 40점) ──
 export const SP = [
-  { id: 'str', name: '힘', desc: '근접 스킬 피해 +2%', tag: 'melee', css: '#ff9a7a' },
-  { id: 'dex', name: '민첩', desc: '원거리 스킬 피해 +2% · 이동 +0.3%', tag: 'ranged', css: '#a8ffb0' },
-  { id: 'int', name: '지능', desc: '마법 스킬 피해 +2% · 재사용 -0.3%', tag: 'magic', css: '#9ad8ff' },
+  { id: 'str', name: '힘', desc: '검·도끼·너클 피해 +10%', css: '#ff9a7a' },
+  { id: 'dex', name: '민첩', desc: '창·활·총 피해 +10% · 이동 +0.3%', css: '#a8ffb0' },
+  { id: 'int', name: '지능', desc: '지팡이 피해 +10% · 재사용 -0.3%', css: '#9ad8ff' },
   { id: 'vit', name: '체력', desc: '최대 체력 +1.5% · 회복 +0.02/초', css: '#ffd75e' },
 ];
-export const SP_DMG = 0.02;
-export const SKILL_TAG = { sword: 'melee', spin: 'melee', quake: 'melee', dagger: 'ranged', ice: 'ranged', javelin: 'ranged', wave: 'ranged', bolt: 'magic', fireball: 'magic', holy: 'magic', orb: 'magic' };
+// 든 무기가 따르는 스탯 1점마다 모든 피해 +10%. 다른 무기 스탯에 찍은 점수는 피해를 올리지 않는다
+// 몹 체력은 무기 스탯에 대부분 찍었다고 보고 올린다(spReq): 창을 들고 지능만 찍으면 뒤로 갈수록 못 깬다
+export const SP_DMG = 0.1;
+export const SKILL_TAG = { sword: 'melee', spin: 'melee', quake: 'melee', palm: 'melee', dagger: 'ranged', ice: 'ranged', javelin: 'ranged', wave: 'ranged', volley: 'ranged', grenade: 'ranged', bolt: 'magic', fireball: 'magic', holy: 'magic', orb: 'magic', missile: 'magic' };
 export const TAG_NAME = { melee: '근접', ranged: '원거리', magic: '마법' };
-const TAG_SP = { melee: 'str', ranged: 'dex', magic: 'int' };
 export const spTotal = cleared => cleared * 2 + Math.floor(cleared / 3) * 2;   // 스테이지 2점, 보스 2점 더(끝까지 40점)
 export const spUsed = sv => SP.reduce((a, s) => a + (sv.sp?.[s.id] || 0), 0);
 export const spFree = sv => spTotal(sv.cleared) - spUsed(sv);
-// 그 태그 스킬의 피해 배율
 // 5점마다 한 번 더 붙는 보너스(찍는 맛)
 export const SP_MILE = 5, SP_MILE_DMG = 0.03, SP_MILE_HP = 0.05;
-const spDmg = n => SP_DMG * n + SP_MILE_DMG * Math.floor(n / SP_MILE);
-export const tagMul = (sv, tag) => 1 + spDmg(sv.sp?.[TAG_SP[tag]] || 0);
+const spDmg = (n, k = SP_DMG) => k * n + SP_MILE_DMG * Math.floor(n / SP_MILE);
+// 그 스탯이 주는 피해 배율 / 든 무기의 피해 배율
+export const statMul = (sv, id) => 1 + spDmg(sv.sp?.[id] || 0);
+export const wMul = sv => statMul(sv, wtypeOf(sv).stat);
+// idx번째 스테이지에서 몹 체력에 곱하는 값: 무기 스탯에 80%를 찍은 사람이 예전(1점 +2%) 기준과 같은 힘이 되게
+export const SP_INVEST = 0.8;
+export const spReq = idx => { const e = Math.round(spTotal(idx) * SP_INVEST); return (1 + spDmg(e)) / (1 + spDmg(e, 0.02)); };
 export const SP_RESET_GEM = 50;
 
 // ── 펫: 깬 스테이지 수로 열린다. 금화로 키우고 목걸이를 끼워 준다 ──
@@ -114,9 +142,10 @@ export function makeItem(c, opt = {}) {
   const r = opt.rarity ?? rollRarity(opt.boost || 0);
   const slot = slotOf(opt.slot || pick(SLOTS.map(s => s.id)));
   const ci = Math.min(c, slot.names.length - 1);
-  // 영웅 이상은 35% 확률로 세트(그 챕터에서 나오는 세트만)
-  const sets = Object.entries(SETS).filter(([, s]) => s.minC <= c).map(([k]) => k);
-  const set = opt.set || (r >= 2 && !slot.pet && Math.random() < 0.35 ? pick(sets) : null);
+  // 희귀 이상은 45% 확률로 세트(그 챕터에서 나오는 공용 세트, 또는 든 무기의 전용 세트 반반)
+  const sets = Object.entries(SETS).filter(([, s]) => !s.w && s.minC <= c).map(([k]) => k);
+  const wset = opt.w && SETS[opt.w] ? opt.w : null;
+  const set = opt.set || (r >= 1 && !slot.pet && Math.random() < (opt.setP ?? 0.45) ? (wset && Math.random() < 0.5 ? wset : pick(sets)) : null);
   const st = {};
   st[slot.main] = roll(slot.main, ci, RARITY[r].mul * 1.6);
   const pool = SUB_KEYS.filter(k => k !== slot.main);
@@ -187,5 +216,5 @@ export const eggsSettled = () => pending.clear();
 // 전투 중 드랍 하나(인벤토리에는 판이 끝날 때 넣는다): 아주 드물게 고무 오리
 export function dropItem(sv, c, opt = {}) {
   if (Math.random() < 0.004) { const e = grantEgg(sv, 'duck', false); if (e) return e; }
-  return makeItem(c, opt);
+  return makeItem(c, { w: sv.wtype, ...opt });
 }

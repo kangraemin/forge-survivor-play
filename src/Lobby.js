@@ -6,7 +6,7 @@ import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedCont
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
-import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES } from './gear.js';
+import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf } from './gear.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -338,9 +338,9 @@ export class Lobby extends Phaser.Scene {
     // 보상: 아이콘 + 숫자
     b.add(this.add.rectangle(W / 2, 344, W - 48, 1, 0x2e2740));
     b.add(this.add.text(24, 352, done ? '보상' : '첫 보상', font9(10, '#a89cc8')));
-    const wNew = boss && WTYPES.find(w => w.unlock === idx + 1);
+    const wNew = boss && WTYPES.some(w => !ownsW(sv, w.id));   // 보스를 처음 잡으면 아직 없는 무기 하나를 무작위로 준다
     const rw = [[12, fmt(Math.round(D.clearGold(c, s) * (done ? 1 : D.FIRST_CLEAR_MUL)))], [13, `${D.clearStone(c, s)}`]];
-    if (!done) rw.push(boss ? [11, wNew ? `새 무기 ${wNew.name}` : '방지권'] : [7, '행운 부적']);
+    if (!done) rw.push(boss ? [11, wNew ? '새 무기(무작위)' : '방지권'] : [7, '행운 부적']);
     let rx = 78;
     rw.forEach(([ic, v]) => {
       b.add(icon(this, rx, 359, ic, 14));
@@ -444,7 +444,7 @@ export class Lobby extends Phaser.Scene {
     this.tweens.add({ targets: glow, alpha: 0.4, scale: 3.7, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
 
     const t = D.TIERS[sv.tier], enh = sv.enh, max = enh >= D.ENH_MAX;
-    b.add(this.add.text(W / 2, 54, `+${enh} ${t.name}`, font(16, enh >= 15 ? '#ff9a3a' : enh >= 10 ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 54, `+${enh} ${D.tierName(sv.tier, wtypeOf(sv))}`, font(16, enh >= 15 ? '#ff9a3a' : enh >= 10 ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
     b.add(this.add.text(W / 2, 74, `공격력 ${Math.round(D.weaponAtk(sv.tier, enh))}${max ? '' : `  →  ${Math.round(D.weaponAtk(sv.tier, enh + 1))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1) / D.weaponAtk(sv.tier, enh) - 1) * 100)}%)`}`, font(10, '#e8e2f8')).setOrigin(0.5));
     // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
     if (!max) {
@@ -530,7 +530,7 @@ export class Lobby extends Phaser.Scene {
       else {
         // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
         const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
-        b.add(this.add.text(W / 2, 384, `${D.TIERS[sv.tier + 1].name}: 공격력 ${now} → ${next} (+${e}부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
+        b.add(this.add.text(W / 2, 384, `${D.tierName(sv.tier + 1, wtypeOf(sv))}: 공격력 ${now} → ${next} (+${e}부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
       }
     }
   }
@@ -674,7 +674,7 @@ export class Lobby extends Phaser.Scene {
     const p = this.add.sprite(W / 2, 214, 'fx2_r2s').setOrigin(0.5, 1).setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setTint(0xc8a0ff).play('fxPillar');
     p.once('animationcomplete', () => p.destroy());
     this.sparks(W / 2, 168, 60, 0xc8a0ff);
-    this.flashText(`승급!  ${D.TIERS[sv.tier].name}`, '#c8a0ff');
+    this.flashText(`승급!  ${D.tierName(sv.tier, wtypeOf(sv))}`, '#c8a0ff');
     this.time.delayedCall(1400, () => { this.busy = false; this.show('forge'); });
   }
 

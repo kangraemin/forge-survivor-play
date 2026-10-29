@@ -1,4 +1,4 @@
-import { gearStats, tagMul, wtypeOf, SP_RESET_GEM } from './gear.js';
+import { gearStats, wMul, wtypeOf, spReq, SP_RESET_GEM } from './gear.js';
 // 게임 데이터와 밸런스 수치. 숫자는 전부 여기서만 바꾼다. 근거는 docs/DESIGN.md
 export const W = 270, H = 480;
 
@@ -94,6 +94,9 @@ export const TIERS = [
   { name: '룬 대검', atk: 92, icon: 2, tint: 0xffa0ff },
   { name: '전설의 화염검', atk: 190, icon: 3 },
 ];
+// 무기 종류마다 이름이 다르다(검은 원래 이름, 나머지는 등급 + 무기)
+const TIER_PRE = ['녹슨', '강철', '미스릴', '룬', '전설의'];
+export const tierName = (tier, w) => !w || w.id === 'sword' ? TIERS[tier].name : `${TIER_PRE[tier]} ${w.noun}`;
 // +5·+10·+15·+20을 넘을 때마다 칼이 한 번 더 깨어난다(×1.1). 한 단계 +10%만으론 강해진 게 안 느껴진다
 export const ENH_MILESTONE = 5, MILESTONE_MUL = 1.1;
 // +11부터는 한 단계마다 ×1.15: 더하기로는 단계가 오를수록 오름폭이 +10%→+8%로 줄어 파괴를 무릅쓸 이유가 없었다
@@ -154,14 +157,14 @@ export const trainVal = (t, lv) => (lv + (t.max >= TRAIN_MILE ? Math.floor(lv / 
 export const powerOf = sv => {
   const tv = id => trainVal(TRAINING.find(t => t.id === id), sv.train?.[id] || 0);
   const g = gearStats(sv);
-  return Math.round(weaponAtk(sv.tier, sv.enh) * (1 + tv('atk') + g.atk) * tagMul(sv, wtypeOf(sv).tag) * (1 + (tv('hp') + g.hp) * 0.25 + Math.min(0.6, tv('def') + g.def) * 0.5));
+  return Math.round(weaponAtk(sv.tier, sv.enh) * (1 + tv('atk') + g.atk) * wMul(sv) * (1 + (tv('hp') + g.hp) * 0.25 + Math.min(0.6, tv('def') + g.def) * 0.5));
 };
 // 스테이지별 권장 전투력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
 // 보스 판은 봇 실측에서 권장 100~130%로도 졌다: 권장을 올려 화면이 '충분'이라고 속이지 않게 한다
 // 장 첫 판(2장부터)은 적응 판: 보스 바로 뒤라 강화를 덜 했어도 깰 수 있게 낮춘다
 export const easeHp = (c, s) => c > 0 && s === 0 ? 0.8 : 1;
 export const easeDmg = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
-export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * easeHp(c, s) * (isBossS(s) ? 1.25 : 1) * GEAR_HP(c));
+export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * easeHp(c, s) * (isBossS(s) ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
 // 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯(1점 +2%, 5점 보너스)까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
 export const GEAR_HP = c => 1 + 0.36 * c;
 // 전투력 색: 권장을 넘어도 보스 판은 20% 여유가 있어야 초록(20차 봇: 1-6 권장 114%에서 졌다)
@@ -190,6 +193,10 @@ export const SKILLS = {
   wave: { name: '검기', type: 'active', icon: 0, tint: 0x9ad8ff, own: 'sword', desc: ['베는 방향으로 검기를 날린다', '피해 +30%', '검기 +1', '꿰뚫는다', '검기 +2, 커진다'] },
   javelin: { name: '투창', type: 'active', icon: 5, tint: 0xa8ffb0, own: 'spear', desc: ['가장 먼 적에게 창을 던진다', '피해 +30%', '창 +1', '맞은 적을 밀친다', '창 +2'] },
   quake: { name: '지진', type: 'active', icon: 4, tint: 0xffb050, own: 'axe', desc: ['발밑에서 충격파가 퍼진다', '범위 +20%', '피해 +40%', '더 자주 쓴다', '두 번 퍼진다'] },
+  volley: { name: '화살비', type: 'active', icon: 5, tint: 0xffe0a0, own: 'bow', desc: ['화면의 적 위로 화살이 쏟아진다', '화살 +1', '피해 +30%', '화살 +2', '화살 +3, 빨라진다'] },
+  grenade: { name: '수류탄', type: 'active', icon: 8, tint: 0xffd75e, own: 'gun', desc: ['적 무리에 수류탄을 던진다', '피해 +30%', '폭발 범위 +30%', '수류탄 +1', '바닥에 불이 남는다'] },
+  palm: { name: '기공파', type: 'active', icon: 6, tint: 0xffe070, own: 'knuckle', desc: ['앞으로 큰 기운을 내지른다', '피해 +30%', '커진다', '꿰뚫는다', '두 번 내지른다'] },
+  missile: { name: '유도 마탄', type: 'active', icon: 11, tint: 0xc890ff, own: 'staff', desc: ['적을 쫓는 마탄 셋을 쏜다', '마탄 +1', '피해 +30%', '마탄 +2', '마탄 +3, 빨라진다'] },
   orb: { name: '수호 구슬', type: 'active', icon: 11, tint: 0x9ad0ff, desc: ['구슬이 몸 주위를 돈다', '구슬 +1', '피해 +30%', '구슬 +1', '구슬 +1, 빨라진다'] },
   might: { name: '숫돌', type: 'passive', icon: 0, tint: 0xff9a5a, desc: ['피해 +10%'], bonus: '피해 +10% 더' },
   haste: { name: '신속 물약', type: 'passive', icon: 10, desc: ['이동 속도 +8%'], bonus: '이동 속도 +8% 더' },
@@ -213,6 +220,8 @@ export const SHOP_ITEMS = [
   { id: 'magnet', name: '탐욕의 동전', icon: 12, price: 16, desc: '이번 판 줍는 거리 +25%' },
 ];
 export const SHOP_SLOTS = 4;
+// 상인이 파는 장비 기본가(일반·희귀·영웅·전설). 장비 칸은 매번 하나 나온다
+export const SHOP_GEAR_PRICE = [26, 44, 80, 140];
 export const shopPrice = (base, round) => Math.floor((base + round * 3) * (1 + 0.1 * round));
 export const rerollCost = (round, n) => 3 + round + 2 * n;   // n: 이번 상점에서 리롤한 횟수
 

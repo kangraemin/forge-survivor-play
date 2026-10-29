@@ -6,7 +6,7 @@ import { font, font9, panel, button, fmt, COLOR, toast } from './ui.js';
 import { track } from './log.js';
 import {
   SLOTS, slotOf, RARITY, STATS, statText, SETS, EGGS, WTYPES, PETS, PET_MAX, petCost, petPow, SP, SP_RESET_GEM, SKILL_TAG, TAG_NAME,
-  spFree, spTotal, gearStats, itemScore, INV_MAX, tagMul, SP_MILE, SP_MILE_DMG, SP_MILE_HP,
+  spFree, spTotal, gearStats, itemScore, INV_MAX, statMul, ownsW, SP_MILE, SP_MILE_DMG, SP_MILE_HP,
 } from './gear.js';
 
 const { W, H } = D;
@@ -51,17 +51,17 @@ export const GearTab = {
     const sv = this.sv, b = this.body, g = gearStats(sv);
     // 무기 종류
     WTYPES.forEach((w, i) => {
-      const open = sv.cleared >= w.unlock, on = sv.wtype === w.id;
-      const bt = button(this, 50 + i * 85, 82, 78, 22, open ? w.name : `🔒 ${w.name}`, () => {
+      const open = ownsW(sv, w.id), on = sv.wtype === w.id;
+      const bt = button(this, 22 + i * 37.6, 82, 35, 22, open ? w.name : '?', () => {
         if (this.busy) return;
-        if (!open) { sfx('deny'); toast(this, `${w.hint} 열린다`, '#ff9a8a'); return; }
+        if (!open) { sfx('deny'); toast(this, '보스를 처음 잡거나 판을 깨면 무작위로 얻는다', '#ff9a8a'); return; }
         sv.wtype = w.id; save(); sfx('buy'); track('wtype_set', { wtype: w.id }); this.show('gear');
         toast(this, `${w.name}: ${w.desc}`, '#ffd75e');
-      }, { size: 10, color: on ? 0x5a3f8a : open ? 0x2a2440 : 0x1a1726 });
+      }, { size: w.name.length > 2 ? 9 : 10, color: on ? 0x5a3f8a : open ? 0x2a2440 : 0x1a1726 });
       b.add(bt);
     });
     const wt = WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
-    b.add(this.add.text(W / 2, 101, `${wt.desc}. 전용 스킬 「${D.SKILLS[wt.own].name}」`, font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 101, `${SP.find(p => p.id === wt.stat).name}을 따른다 · 전용 스킬 「${D.SKILLS[wt.own].name}」`, font9(10, '#a89cc8')).setOrigin(0.5));
     // 낀 장비 5칸
     SLOTS.forEach((sl, i) => {
       const x = 31 + i * 52, y = 132, u = sv.eq?.[sl.id], it = u && sv.inv.find(v => v.u === u);
@@ -76,7 +76,7 @@ export const GearTab = {
     // 합친 효과
     const parts = Object.keys(STATS).filter(k => g[k] > 0.0005).map(k => `${SHORT[k]} +${STATS[k].pct ? Math.round(g[k] * 100) + '%' : g[k].toFixed(1)}`);
     b.add(this.add.text(W / 2, 170, parts.length ? parts.join('  ') : '장비를 끼면 능력치가 오른다', { ...font9(9, '#e8e2f8'), align: 'center', wordWrap: { width: W - 20 } }).setOrigin(0.5, 0));
-    const setLine = Object.entries(g.sets).map(([k, n]) => `${SETS[k].name} ${n}/4${n >= 4 ? ' ★' : n >= 2 ? ' ☆' : ''}`).join('  ');
+    const setLine = Object.entries(g.sets).map(([k, n]) => `${SETS[k].name} ${n}/4${n >= 4 ? ' ★' : n >= 2 ? ' ☆' : ''}${SETS[k].w && SETS[k].w !== sv.wtype ? '(4개 효과는 ' + WTYPES.find(w => w.id === SETS[k].w).name + ')' : ''}`).join('  ');
     if (setLine) b.add(this.add.text(W / 2, 194, setLine, font9(9, '#ffb050')).setOrigin(0.5, 0));
     // 가방
     const on = new Set(Object.values(sv.eq || {}));
@@ -130,7 +130,7 @@ export const GearTab = {
     if (it.egg) line(EGGS[it.egg].desc, '#ff8ae0');
     if (it.set) {
       const s = SETS[it.set], n = gearStats(sv).sets[it.set] || 0;
-      y += 3; line(`세트 「${s.name}」 (${n}/4)`, s.css);
+      y += 3; line(`세트 「${s.name}」 (${n}/4)${s.w ? ` · ${WTYPES.find(w => w.id === s.w).name} 전용` : ''}`, s.css);
       line(`2개: ${s.twoTxt}`, n >= 2 ? s.css : '#6a6080'); line(`4개: ${s.fourTxt}`, n >= 4 ? s.css : '#6a6080');
     }
     // 낀 것과 능력치별로 비교(빈칸이면 그대로 오른다)
@@ -199,7 +199,7 @@ export const GearTab = {
 
   // ── 스탯: 스테이지를 처음 깰 때 점수를 받아 찍는다 ──
   statPage() {
-    const sv = this.sv, b = this.body, free = spFree(sv);
+    const sv = this.sv, b = this.body, free = spFree(sv), wt = WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
     sv.sp ||= { str: 0, dex: 0, int: 0, vit: 0 };
     b.add(this.add.text(W / 2, 76, `남은 점수 ${free} / ${spTotal(sv.cleared)}`, font(12, free ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
     b.add(this.add.text(W / 2, 92, '첫 클리어마다 1점, 보스는 2점 더 · 5점마다 보너스', font9(10, '#a89cc8')).setOrigin(0.5));
@@ -207,11 +207,13 @@ export const GearTab = {
       const y = 104 + i * 54, v = sv.sp[st.id] || 0;
       b.add(panel(this, 12, y, W - 24, 48, { fill: 0x1a1528 }));
       b.add(this.add.text(24, y + 7, st.name, font(12, st.css)));
+      if (st.id === wt.stat) b.add(this.add.text(W - 74, y + 7, `${wt.name} 스탯`, font9(9, '#ffd75e')).setOrigin(1, 0));
       b.add(this.add.text(70, y + 9, String(v), font(11)));
       // 지금 효과와 다음 5점 보너스까지 남은 점수
-      const now = Math.round((st.tag ? tagMul(sv, st.tag) - 1 : gearStats({ sp: { vit: v } }).hp) * 100);
+      const dmgStat = st.id !== 'vit';
+      const now = Math.round((dmgStat ? statMul(sv, st.id) - 1 : gearStats({ sp: { vit: v } }).hp) * 100);
       const left = SP_MILE - v % SP_MILE;
-      b.add(this.add.text(92, y + 10, `+${now}% · ${left}점 뒤 +${Math.round((st.tag ? SP_MILE_DMG : SP_MILE_HP) * 100)}%`, font9(9, '#ffd75e')));
+      b.add(this.add.text(92, y + 10, `+${now}% · ${left}점 뒤 +${Math.round((dmgStat ? SP_MILE_DMG : SP_MILE_HP) * 100)}%`, font9(9, '#ffd75e')));
       b.add(this.add.text(24, y + 28, st.desc, font9(10, '#e8e2f8')));
       const pb = button(this, W - 44, y + 24, 44, 28, '+1', () => {
         if (this.busy || spFree(sv) <= 0) return;
@@ -219,9 +221,10 @@ export const GearTab = {
       }, { size: 11, color: 0x2f6b3a });
       pb.setEnabled(free > 0); b.add(pb);
     });
-    // 어떤 스킬이 어느 스탯을 따르는지
-    const by = tag => Object.entries(SKILL_TAG).filter(([, t]) => t === tag).map(([k]) => D.SKILLS[k].name).join('·');
-    b.add(this.add.text(W / 2, 324, ['melee', 'ranged', 'magic'].map(t => `${TAG_NAME[t]}: ${by(t)}`).join('\n'), { ...font9(9, '#8a80a0'), align: 'center', lineSpacing: 2 }).setOrigin(0.5, 0));
+    // 든 무기의 스탯만 피해를 올린다: 안 맞는 스탯에 찍었으면 경고
+    const wrong = SP.filter(p => p.id !== 'vit' && p.id !== wt.stat).reduce((a, p) => a + (sv.sp[p.id] || 0), 0);
+    b.add(this.add.text(W / 2, 330, `${wt.name}은 ${SP.find(p => p.id === wt.stat).name}만 피해를 올린다`, font9(10, '#e8e2f8')).setOrigin(0.5));
+    if (wrong) b.add(this.add.text(W / 2, 346, `다른 무기 스탯에 ${wrong}점: 지금 무기로는 힘이 안 된다`, font9(10, '#ff8070')).setOrigin(0.5));
     const used = spTotal(sv.cleared) - free;
     const rb = button(this, W / 2, 402, 200, 24, sv.spReset > 0 ? `초기화 (초기화권 ${sv.spReset}장)` : `초기화 (보석 ${SP_RESET_GEM})`, () => {
       if (this.busy || !used) return;
