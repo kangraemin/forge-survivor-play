@@ -4,6 +4,7 @@
 import { track, logUser } from './log.js';
 import * as D from './data.js';
 import { save } from './save.js';
+import { HERO_SKINS } from './gear.js';
 import { sfx } from './sfx.js';
 import { font, font9, panel, button, fixedContainer } from './ui.js';
 
@@ -17,13 +18,14 @@ export function grant(sv, give) {
   for (const [k, v] of Object.entries(give)) {
     if (k === 'goldStage') sv.gold += stageGold(sv) * v;
     else if (k === 'skin') (sv.skins ||= {})[v] = true;
+    else if (k === 'hskin') (sv.hskins ||= {})[v] = true;
     else sv[k] = (sv[k] || 0) + v;
   }
   save();
 }
 // sv를 넘기면 goldStage를 '금화 ×2' 대신 실제 받을 금화로 보여 준다
 export const giveText = (give, sv) => Object.entries(give).map(([k, v]) => ({
-  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, spReset: `스탯 초기화권 ${v}`, goldStage: sv ? `금화 ${(stageGold(sv) * v).toLocaleString()}` : `금화 ×${v}`, skin: D.SKINS.find(x => x.id === v)?.name,
+  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, spReset: `스탯 초기화권 ${v}`, goldStage: sv ? `금화 ${(stageGold(sv) * v).toLocaleString()}` : `금화 ×${v}`, skin: D.SKINS.find(x => x.id === v)?.name, hskin: `${HERO_SKINS.find(x => x.id === v)?.name} 스킨`,
 }[k])).join(' · ');
 
 export const firstX2 = (sv, item) => D.FIRST_BUY_X2.includes(item.id) && !sv.bought[item.id];

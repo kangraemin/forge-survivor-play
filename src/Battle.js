@@ -687,7 +687,9 @@ export class Battle extends Phaser.Scene {
     if (this.over || this.paused || this.bt < this.iframe) return;
     // 해골 장군 펫의 방패가 한 대를 막는다
     if (this.petShield) { this.iframe = this.bt + D.PLAYER.iframe; this.pet.block(); return; }
-    const d = Math.max(1, Math.round(dmg * (this.pet.fit > 1 && this.pet.def.tank ? 1 - PET_GOOD_DEF : 1)));
+    // 광전사 4세트: 체력이 절반 아래면 덜 아프다(공격만 올라 위험하기만 했다)
+    const zerk = this.wtype.id === 'axe' && this.gear.fx.has('axe4') && this.hp < this.maxHp / 2 ? 0.8 : 1;
+    const d = Math.max(1, Math.round(dmg * zerk * (this.pet.fit > 1 && this.pet.def.tank ? 1 - PET_GOOD_DEF : 1)));
     const by = this.run.dmgBy; by[src] = (by[src] || 0) + d;
     this.hp -= d;
     this.iframe = this.bt + D.PLAYER.iframe;
@@ -826,10 +828,12 @@ export class Battle extends Phaser.Scene {
       // 스폰: 초당 2.5 → 끝날 즈음 5.5마리(초반 몹은 약하고 많게)
       const f = this.progress();
       // x-1은 판 시작 20초에 초당 2마리를 더 내보낸다: 첫 판 초반 화면이 비어 지루했다(뒤 스테이지는 원래 많다)
+      // 단 1-1은 처음 30초를 반쯤 비운다(25마리 → 22초에 69마리로 늘어 첫 판이 정신없었다)
+      const first11 = !this.endless && this.c === 0 && this.s === 0 && this.bt < 30000;
       const early = !this.endless && this.s === 0 && this.bt < 20000 ? 2 : 0;
       this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 3 * f) / 1000;
       // 화면에 70마리가 넘으면 더 내보내지 않는다(3장에서 89마리까지 쌓여 저사양 폰이 버거웠다)
-      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < 70) this.spawn(); }
+      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? 35 : 70)) this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
       if (this.goblinAt != null && !this.goblinDone && this.progress() >= this.goblinAt) { this.goblinDone = true; this.spawnGoblin(); }

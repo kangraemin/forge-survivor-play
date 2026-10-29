@@ -251,8 +251,10 @@ export const HEAL_PCT = 0.15;
 // 보석으로는 '시간'과 '안전'을 산다(소탕권·방지권·강화석). 무기 공격력을 직접 팔지 않아 실력·강화의 재미를 지킨다
 export const GEM_FREE = { daily: 20, stageFirst: 5, bossFirst: 50 };
 export const IAP = [
-  { id: 'starter', name: '초보 대장장이 꾸러미', price: 1200, once: true, tag: '1회 한정 · 가치 6배', desc: '보석300 방지권3 강화석60 금화3천', give: { gem: 300, guard: 3, stone: 60, gold: 3000 } },
-  { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '총 보석 2,100 · 하루 163원 · 매일 소탕권 +3', give: { gem: 300 }, passDays: 30 },
+  { id: 'starter', name: '초보 대장장이 꾸러미', price: 1200, once: true, tag: '1회 한정 · 가치 10배', desc: '진홍 스킨·보석300·방지권3·강화석60', give: { hskin: 'crimson', gem: 300, guard: 3, stone: 60, gold: 3000 } },
+  // 1,200원과 4,900원 사이가 비어 있었다: 꾸미기 둘을 한 번에(보석으로 사면 1,400)
+  { id: 'cosm', name: '꾸미기 세트', price: 3900, once: true, tag: '1회 한정 · 가치 4배', desc: '서리 칼빛 · 비취 수도승 스킨 · 보석100', give: { skin: 'frost', hskin: 'jade', gem: 100 } },
+  { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '총 보석 2,700 · 매일 소탕권 +3', give: { gem: 300 }, passDays: 30 },
   { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '광고 없이 바로 보상', give: { gem: 100 }, noAds: true },
   { id: 'gem1', name: '보석 한 줌', price: 1200, give: { gem: 120 } },
   { id: 'gem2', name: '보석 주머니', price: 5900, tag: '인기 · +10%', give: { gem: 650 } },
@@ -260,7 +262,7 @@ export const IAP = [
 ];
 // 보석 묶음은 처음 살 때 보석 2배
 export const FIRST_BUY_X2 = ['gem1', 'gem2', 'gem3'];
-export const PASS_DAILY = { gem: 60, sweep: 3 };
+export const PASS_DAILY = { gem: 80, sweep: 3 };
 // 보석으로 사는 것. gold 꾸러미는 지금 도전 중인 스테이지 클리어 금화의 3배
 // 행운 부적: 강화 한 번 성공 확률 +5%p(1회 소모). 부서진 칼 되살리기: 보석 30 + 단계×10
 export const CHARM_RATE = 5;
@@ -310,7 +312,7 @@ export const GEM_SHOP = [
 ];
 // 보상형 광고: 하루 횟수 제한
 export const ADS = {
-  gem: { name: '보석 +15', daily: 3, give: { gem: 15 } },
+  gem: { name: '보석 +10', daily: 3, give: { gem: 10 } },   // 월정액(하루 80)이 광고 보석보다 확실히 낫게
   sweep: { name: '소탕권 +2', daily: 2, give: { sweep: 2 } },
   double: { daily: 10 },   // 클리어 보상 2배
 };

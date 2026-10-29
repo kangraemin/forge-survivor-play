@@ -48,7 +48,7 @@ export const SETS = {
   // 무기 전용 세트: 그 무기를 들고 싸울 때만 나온다(상인도 판다)
   sword: { w: 'sword', name: '검성', pre: '검성의', css: '#9ad8ff', two: { atk: 0.1 }, twoTxt: '모든 피해 +10%', fourTxt: '세 번 벨 때마다 검기가 날아간다', minC: 0 },
   spear: { w: 'spear', name: '용기사', pre: '용기사의', css: '#a8ffb0', two: { luck: 0.06 }, twoTxt: '치명·은화 +6%', fourTxt: '찌를 때 25% 확률로 투창을 던진다', minC: 0 },
-  axe: { w: 'axe', name: '광전사', pre: '광전사의', css: '#ff7a5a', two: { hp: 0.12 }, twoTxt: '최대 체력 +12%', fourTxt: '체력이 절반 아래면 피해 +30%', minC: 0 },
+  axe: { w: 'axe', name: '광전사', pre: '광전사의', css: '#ff7a5a', two: { hp: 0.12 }, twoTxt: '최대 체력 +12%', fourTxt: '체력 절반 아래면 피해 +30%·받는 피해 -20%', minC: 0 },
   bow: { w: 'bow', name: '사냥꾼', pre: '사냥꾼의', css: '#e8d08a', two: { cd: 0.08 }, twoTxt: '재사용 대기 -8%', fourTxt: '세 번째 화살마다 터진다', minC: 0 },
   gun: { w: 'gun', name: '총잡이', pre: '총잡이의', css: '#ffb050', two: { spd: 0.1 }, twoTxt: '이동 속도 +10%', fourTxt: '다섯 번째 총알은 피해 2배', minC: 0 },
   knuckle: { w: 'knuckle', name: '무도가', pre: '무도가의', css: '#ffe070', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '열 번 칠 때마다 충격파가 퍼진다', minC: 0 },
@@ -177,10 +177,10 @@ export function makeItem(c, opt = {}) {
   const r = opt.rarity ?? rollRarity(opt.boost || 0);
   const slot = slotOf(opt.slot || pick(SLOTS.map(s => s.id)));
   const ci = Math.min(c, slot.names.length - 1);
-  // 희귀 이상은 45% 확률로 세트(그 챕터에서 나오는 공용 세트, 또는 든 무기의 전용 세트 반반)
+  // 희귀 이상은 55% 확률로 세트(든 무기의 전용 세트 60%, 나머지는 그 챕터 공용 세트). 4세트가 너무 안 모였다
   const sets = Object.entries(SETS).filter(([, s]) => !s.w && s.minC <= c).map(([k]) => k);
   const wset = opt.w && SETS[opt.w] ? opt.w : null;
-  const set = opt.set || (r >= 1 && !slot.pet && Math.random() < (opt.setP ?? 0.45) ? (wset && Math.random() < 0.5 ? wset : pick(sets)) : null);
+  const set = opt.set || (r >= 1 && !slot.pet && Math.random() < (opt.setP ?? 0.55) ? (wset && Math.random() < 0.6 ? wset : pick(sets)) : null);
   const st = {};
   st[slot.main] = roll(slot.main, ci, RARITY[r].mul * 1.6);
   const pool = SUB_KEYS.filter(k => k !== slot.main);

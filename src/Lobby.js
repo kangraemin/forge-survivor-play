@@ -882,15 +882,15 @@ export class Lobby extends Phaser.Scene {
     // 패키지
     track('view_item_list', { item_list_id: 'pack', items: D.IAP.filter(it => !(it.once && sv.bought[it.id])).map(it => it.id).join(','), gem: sv.gem });
     D.IAP.forEach((it, i) => {
-      const y = 76 + i * 56, sold = it.once && sv.bought[it.id];
-      const hot = it.id === 'starter' || it.id === 'pass';
-      b.add(panel(this, 12, y, W - 24, 50, { line: hot && !sold ? 0xffd75e : COLOR.line }));
-      b.add(gemIcon(this, 30, y + 25, 18));
-      b.add(this.add.text(46, y + 8, it.name, font(11, hot ? '#ffd75e' : '#ffffff')));
-      b.add(this.add.text(46, y + 24, it.desc || giveText(it.give) + (it.passDays ? ` (+매일 ${D.PASS_DAILY.gem})` : '') + (it.noAds ? ' · 광고 없음' : ''), font9(it.desc ? 8 : 9, '#e8e2f8')));
+      const y = 76 + i * 50, sold = it.once && sv.bought[it.id];
+      const hot = it.id === 'starter' || it.id === 'pass' || it.id === 'cosm';
+      b.add(panel(this, 12, y, W - 24, 46, { line: hot && !sold ? 0xffd75e : COLOR.line }));
+      b.add(gemIcon(this, 30, y + 23, 18));
+      b.add(this.add.text(46, y + 5, it.name, font(11, hot ? '#ffd75e' : '#ffffff')));
+      b.add(this.add.text(46, y + 20, it.desc || giveText(it.give) + (it.passDays ? ` (+매일 ${D.PASS_DAILY.gem})` : '') + (it.noAds ? ' · 광고 없음' : ''), font9(it.desc ? 8 : 9, '#e8e2f8')));
       const tag = it.id === 'pass' && sv.passLeft > 0 ? `남은 ${sv.passLeft}일 · 사면 연장` : [it.tag, firstX2(sv, it) && '첫 구매 보석 2배'].filter(Boolean).join(' · ');
-      if (tag) b.add(this.add.text(46, y + 37, tag, font9(9, firstX2(sv, it) ? '#ffd75e' : '#ff9ad0')));
-      const bt = button(this, W - 46, y + 25, 60, 26, sold ? '구매함' : won(it.price), async () => {
+      if (tag) b.add(this.add.text(46, y + 32, tag, font9(9, firstX2(sv, it) ? '#ffd75e' : '#ff9ad0')));
+      const bt = button(this, W - 46, y + 23, 60, 26, sold ? '구매함' : won(it.price), async () => {
         if (this.busy || sold) return;
         this.busy = true;
         const ok = await buy(this, sv, it);
