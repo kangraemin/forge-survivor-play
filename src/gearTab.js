@@ -80,7 +80,7 @@ export const GearTab = {
     const pages = Math.max(1, Math.ceil(inv.length / PAGE));
     this.invPage = Math.min(this.invPage || 0, pages - 1);
     b.add(this.add.text(14, 206, `장비 가방 ${inv.length}/${INV_MAX}`, font(10, '#ffd75e')));
-    if (!inv.length) b.add(this.add.text(W / 2, 270, '스테이지를 깨거나\n정예·보물 고블린을 잡으면 장비가 나온다', { ...font9(10, '#8a80a0'), align: 'center' }).setOrigin(0.5));
+    if (!inv.length) b.add(this.add.text(W / 2, 270, '스테이지를 깨거나\n정예·보물 고블린을 잡으면 장비가 나온다\n빈 칸에는 자동으로 낀다', { ...font(11, '#c8bfe0'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
     inv.slice(this.invPage * PAGE, this.invPage * PAGE + PAGE).forEach((it, i) => {
       const x = 32 + (i % COLS) * CELL, y = 240 + Math.floor(i / COLS) * CELL;
       const box = itemBox(this, x, y, it, 34, on.has(it.u)); b.add(box);

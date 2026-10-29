@@ -344,11 +344,12 @@ export class Overlay {
     c.add(s.add.text(W / 2, 210, `Lv ${s.run.lv}·스킬·주운 것 그대로 남는다`, font9(10, '#9ae0ff')).setOrigin(0.5));
     let busy = false;
     const up = () => { this.end(c); s.reviveNow(); };
-    const ad = button(s, W / 2, 232, 170, 28, sv.noAds ? '무료 부활' : '광고 보고 부활 ▶', async () => {
+    const free = !sv.noAds && sv.stats.runs <= D.FREE_REVIVE_RUNS;   // 판 수는 전투 시작 때 오른다(첫 판 = 1)
+    const ad = button(s, W / 2, 232, 170, 28, sv.noAds ? '무료 부활' : free ? `무료 부활 (처음 ${D.FREE_REVIVE_RUNS}판)` : '광고 보고 부활 ▶', async () => {
       if (busy || c !== this.c) return; busy = true;
-      const ok = await showAd(s, sv, 'revive');
+      const ok = free || await showAd(s, sv, 'revive');
       busy = false;
-      s.log('revive_choice', { via: 'ad', ok });
+      s.log('revive_choice', { via: free ? 'free' : 'ad', ok });
       if (ok && c === this.c) up();
     }, { size: 11, color: 0x2f5a7a });
     const gm = button(s, W / 2, 268, 170, 28, `보석 ${D.REVIVE_GEM}으로 부활`, () => {
@@ -389,7 +390,9 @@ export class Overlay {
       sv.best[idx] = 1;
     } else {
       gold = Math.round(D.clearGold(s.c, s.s) * s.runProgress() * D.FAIL_GOLD_RATE);
-      stone += Math.floor(D.clearStone(s.c, s.s) * s.runProgress() * D.FAIL_STONE_RATE);
+      // 초반 스테이지는 내림하면 0개가 된다: 1/4 넘게 버텼으면 최소 1개
+      const fs = Math.floor(D.clearStone(s.c, s.s) * s.runProgress() * D.FAIL_STONE_RATE);
+      stone += s.runProgress() >= 0.25 ? Math.max(1, fs) : fs;
     }
     gold = Math.round(gold);
     // 장비: 이기면 1개(보스는 2개, 한 등급 위로), 무한의 탑은 3층부터 1개. 판에서 주운 것은 져도 남는다

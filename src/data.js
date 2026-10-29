@@ -104,7 +104,8 @@ export const FIRST_CLEAR_MUL = 2.5;
 export const clearStone = (c, s) => 3 + s + c * 2;
 export const FAIL_STONE_RATE = 0.5;                        // 져도 강화석을 같은 식으로 조금 준다(0개면 허탈했다)
 // 자리를 비운 동안 견습생이 번다: 30분 넘게 비우면, 최대 8시간까지 시간당 지금 스테이지 클리어 보상의 25%
-export const IDLE = { minMin: 30, capH: 8, perH: 0.25 };
+export const IDLE = { minMin: 30, capH: 8, perH: 0.25, bonusH: 12, bonusGem: 10 };   // 12시간 넘게 비웠으면 보석도 조금
+export const FREE_REVIVE_RUNS = 3;   // 처음 세 판은 부활이 공짜(첫 판부터 광고를 들이밀지 않는다)
 // 보스가 이 시간(ms) 넘게 버티면 지쳐서 받는 피해가 늘어난다(보스전이 늘어지지 않게)
 export const BOSS_TIRED = { ms: 75000, mul: 1.5 };
 export const FAIL_GOLD_RATE = 0.5;                         // 실패해도 버틴 시간 비율 × 클리어 금화의 50%를 준다

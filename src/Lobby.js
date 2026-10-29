@@ -131,13 +131,13 @@ export class Lobby extends Phaser.Scene {
     if (sv.cleared < 1 || ms < D.IDLE.minMin * 60000) return null;
     const h = Math.min(D.IDLE.capH, ms / 3600000), top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
     const c = Math.floor(top / 6), s = top % 6;
-    return { h, gold: Math.round(D.clearGold(c, s) * D.IDLE.perH * h), stone: Math.max(1, Math.round(D.clearStone(c, s) * D.IDLE.perH * h)) };
+    return { h, gold: Math.round(D.clearGold(c, s) * D.IDLE.perH * h), stone: Math.max(1, Math.round(D.clearStone(c, s) * D.IDLE.perH * h)), gem: ms >= D.IDLE.bonusH * 3600000 ? D.IDLE.bonusGem : 0 };
   }
 
-  welcomeWin({ h, gold, stone }) {
+  welcomeWin({ h, gold, stone, gem }) {
     const sv = this.sv, c = this.modal();
-    sv.gold += gold; sv.stone += stone; save(); this.refreshTop();
-    track('idle_reward', { hours: Math.round(h * 10) / 10, gold, stone });
+    sv.gold += gold; sv.stone += stone; sv.gem += gem; save(); this.refreshTop();
+    track('idle_reward', { hours: Math.round(h * 10) / 10, gold, stone, gem });
     c.add(panel(this, 24, 130, W - 48, 220, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(this.add.text(W / 2, 152, '돌아왔구나!', font(14, '#ffd75e')).setOrigin(0.5));
     const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
@@ -148,7 +148,7 @@ export class Lobby extends Phaser.Scene {
       c.add(icon(this, x, 214, ic, 26));
       const t = this.add.text(x, 242, '+' + fmt(v), font(13, col)).setOrigin(0.5); c.add(t); tx.push(t);
     });
-    c.add(this.add.text(W / 2, 268, `최대 ${D.IDLE.capH}시간까지 쌓인다`, font9(9, '#8a80a0')).setOrigin(0.5));
+    c.add(gem ? this.add.text(W / 2, 268, `오래 기다렸다! 보석 +${gem}`, font(10, '#ff9ad0')).setOrigin(0.5) : this.add.text(W / 2, 268, `최대 ${D.IDLE.capH}시간까지 쌓인다`, font9(9, '#8a80a0')).setOrigin(0.5));
     if (adsLeft(sv, 'double') > 0) {
       const db = button(this, W / 2, 296, 180, 24, sv.noAds ? '2배 받기' : '광고 보고 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
@@ -282,7 +282,9 @@ export class Lobby extends Phaser.Scene {
     const bs = this.add.sprite(W - 58, 108, null).play(ch.boss);
     bs.setScale((fb[ch.boss] ? 40 : 52) / bs.height); if (fb[ch.boss]) bs.setTint(D.BOSSES[ch.boss].color);
     pv.add(bs);
-    pv.add(this.add.text(W - 58, 136, D.BOSSES[ch.boss].name, font(9, '#ff9090')).setOrigin(0.5, 1));
+    // 장 보스까지 몇 판 남았는지(처음 10분에 향할 곳)
+    const bossLeft = c * 6 + 5 - sv.cleared;
+    pv.add(this.add.text(bossLeft > 0 ? W - 18 : W - 58, 136, bossLeft > 0 ? `${D.BOSSES[ch.boss].name} · ${bossLeft}스테이지 뒤` : bossLeft === 0 ? `${D.BOSSES[ch.boss].name} · 도전!` : `${D.BOSSES[ch.boss].name} 격파`, font(9, bossLeft < 0 ? '#5fdc6a' : '#ff9090')).setOrigin(bossLeft > 0 ? 1 : 0.5, 1));   // 글자가 길면 오른쪽 끝에 맞춰 판 밖으로 안 나가게
     // 스테이지 6칸
     for (let s = 0; s < 6; s++) {
       const idx = c * 6 + s, x = 50 + (s % 3) * 85, y = 172 + Math.floor(s / 3) * 54;
