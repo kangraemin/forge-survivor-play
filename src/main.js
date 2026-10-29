@@ -1,5 +1,5 @@
 // 게임 시작점: 270x480 세로 화면, 픽셀아트, 화면에 맞춰 늘림
-// 그리는 판은 두 배(540x960)로 두고 카메라를 2배로 당긴다: 좌표는 그대로 270x480이지만 움직임이 반 픽셀 단위로 매끄러워진다
+// 그리는 판은 기기 픽셀에 맞춘 PX배로 두고 카메라를 PX배로 당긴다: 좌표는 그대로 270x480
 import './log.js';
 import { W, H } from './data.js';
 import { PX } from './ui.js';
@@ -21,6 +21,9 @@ const start = () => {
     input: { activePointers: 2 },
     scene: [Boot, Lobby, Battle],
   });
+  // 판이 화면보다 조금 크면 줄일 때 픽셀이 빠져 글자가 깨진다: 줄일 때는 매끄럽게
+  const smooth = () => window.game.canvas && (window.game.canvas.style.imageRendering = 'auto');
+  smooth(); window.game.events.once('ready', smooth);
   // 주소창이 접히거나 펴지면 보이는 영역이 바뀐다: 다시 맞춘다
   window.visualViewport?.addEventListener('resize', () => window.game.scale.refresh());
 };

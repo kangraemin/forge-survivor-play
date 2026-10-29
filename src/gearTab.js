@@ -84,7 +84,7 @@ export const GearTab = {
     if (!inv.length) {
       b.add(this.add.text(W / 2, 252, '스테이지를 깨거나\n정예·보물 고블린을 잡으면 장비가 나온다\n빈 칸에는 자동으로 낀다', { ...font(11, '#c8bfe0'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
       // 탭의 빨간 점 = 찍을 스탯 포인트. 비었을 땐 가운데 버튼으로 바로 보낸다
-      if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `● 스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x7a2f3a }));
+      if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x3b2f5c }));
       b.add(button(this, W / 2, spFree(sv) > 0 ? 334 : 310, 170, 26, '장비 얻으러 전투하기 →', () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
     } else if (spFree(sv) > 0) {
       const t = this.add.text(W - 14, 207, `● 스탯 포인트 ${spFree(sv)} 찍기 →`, font9(10, '#ff8080')).setOrigin(1, 0);

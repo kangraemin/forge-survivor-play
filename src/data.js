@@ -10,7 +10,12 @@ export const CHAPTERS = [
   { name: '얼어붙은 설원', tiles: 'tile4', mobs: ['wolf', 'yeti', 'icesp'], boss: 'wyrm', dur: 195, dark: 0.35, light: 0xbfe8ff },
   { name: '마왕성', tiles: 'tile5', mobs: ['dknight', 'cultist', 'gargoyle'], boss: 'demonlord', dur: 210, dark: 0.6, light: 0xff4060 },
 ];
-export const STAGES_PER_CHAPTER = 6;
+// 장마다 3판: 일반 → 일반(규칙·변종·중간 보스) → 보스. 6판일 땐 같은 맵·같은 몹이 이어져 x-5쯤 질렸다
+export const STAGES_PER_CHAPTER = 3;
+export const isBossS = s => s === STAGES_PER_CHAPTER - 1;
+// 난이도·보상 표는 6판 시절 칸(0~5)으로 짜여 있어 새 스테이지를 그 칸으로 옮겨 읽는다
+const OLD_S = [0, 3, 5];
+export const oldS = s => OLD_S[s] ?? s;
 
 // 몬스터 기본값(1챕터 기준). ai: chase 추적, swarm 빠르고 흔들림, tank 느리고 단단함, float 겹쳐 통과, charge 돌진, ranged 거리 두고 쏨
 // sheet/row: 걷기 시트 위치, die: 전용 죽음 시트 행(없으면 공통 연기)
@@ -44,8 +49,9 @@ export const VARIANTS = {
   burst: { pre: '폭탄', desc: '쓰러지면 잠시 뒤 터진다 — 떨어져라', tint: 0xffa030 },
   giant: { pre: '거대', desc: '크고 질기다', tint: 0xffe070, hp: 3, scale: 1.7, spd: 0.8, kb: 0.2 },
 };
-// 스테이지 s(1~5)에 새로 나오는 변종: [챕터 몹 번호, 변종]. 0번 스테이지는 기본 몹만
-export const STAGE_VARIANT = [null, [0, 'split'], [2, 'swift'], [1, 'armor'], [0, 'burst'], [2, 'giant']];
+// x-2에 새로 나오는 변종은 장마다 다르다: [챕터 몹 번호, 변종]. 2장부터 x-1엔 앞 장 변종이 섞인다. 보스 판은 없음
+const CH_VARIANT = [[0, 'split'], [2, 'swift'], [1, 'armor'], [0, 'burst'], [2, 'giant']];
+export const stageVariant = (c, s) => s === 1 ? CH_VARIANT[c % CH_VARIANT.length] : s === 0 && c > 0 ? CH_VARIANT[(c - 1) % CH_VARIANT.length] : null;
 export const VARIANT_RATE = 0.22, VARIANT_OLD_RATE = 0.1;   // 이번 변종 / 앞 스테이지 변종이 섞이는 비율
 // 판 규칙: 같은 스테이지도 판마다 다르게 흘러가도록 시작할 때 하나를 뽑는다(안 뽑힐 수도 있다)
 export const RUN_MODS = [
@@ -54,6 +60,8 @@ export const RUN_MODS = [
   { id: 'rush', name: '질풍', desc: '몹이 빠르지만 약하다', spd: 1.2, hp: 0.85 },
 ];
 export const RUN_MOD_CHANCE = 0.6;
+// x-2는 판 규칙이 정해져 있다(장마다 돌아가며). 다시 할 땐 위 확률로 다른 규칙이 섞인다
+export const stageMod = c => RUN_MODS[[0, 2, 1, 0, 2][c % 5]];
 
 // 보스: sheet/row는 2프레임 시트. hp는 1챕터 배율 기준 값(챕터 배율이 곱해진다)
 // rage: 체력 절반 아래에서 새로 섞여 나오는 공격(같은 패턴만 반복된다는 평가)
@@ -72,9 +80,9 @@ export const chapterDmg = c => 0.65 * Math.pow(1.18, c);   // 1.25면 3장부터
 // 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
 // s는 0~5. 1-2에서 바로 벽을 느끼게 크게 뛰고, 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
 const STAGE_HP = [1, 1.45, 1.7, 1.92, 2.12, 2.3];
-export const stageMul = s => STAGE_HP[s] ?? 1;
-export const stageDmg = s => 1 + 0.1 * s;                // 피해는 공격력으로 못 막으니 체력보다 완만하게
-export const stageSpawn = s => 0.35 * s;                 // 초당 더 나오는 몹 수
+export const stageMul = s => STAGE_HP[oldS(s)] ?? 1;
+export const stageDmg = s => 1 + 0.1 * oldS(s);                // 피해는 공격력으로 못 막으니 체력보다 완만하게
+export const stageSpawn = s => 0.35 * oldS(s);                 // 초당 더 나오는 몹 수
 // 판 안 시간에 따른 체력 상승(처음 0.75배 → 끝날 즈음 1.7배)
 export const timeHp = f => 0.75 + 0.95 * f;          // 초반 몹은 약하고 많게
 
@@ -114,9 +122,9 @@ export const promoteEnh = (tier, enh) => { let e = 0; while (e < PROMOTE_NEED - 
 
 // ── 스테이지 보상(금화·강화석) ──
 // 2장부터 10% 더 준다: 후반 강화 한 번에 판이 너무 많이 들었다(25%면 완주가 3.7시간으로 짧아졌다)
-export const clearGold = (c, s) => Math.round(75 * TIER_COST[c] * (1 + 0.2 * s) * (c >= 1 ? 1.1 : 1) / 5) * 5;
+export const clearGold = (c, s) => Math.round(75 * TIER_COST[c] * (1 + 0.2 * oldS(s)) * (c >= 1 ? 1.1 : 1) / 5) * 5;
 export const FIRST_CLEAR_MUL = 2.5;
-export const clearStone = (c, s) => 3 + s + c * 2;
+export const clearStone = (c, s) => 3 + oldS(s) + c * 2;
 export const FAIL_STONE_RATE = 0.5;                        // 져도 강화석을 같은 식으로 조금 준다(0개면 허탈했다)
 // 자리를 비운 동안 견습생이 번다: 30분 넘게 비우면, 최대 8시간까지 시간당 지금 스테이지 클리어 보상의 50%(25%면 8시간이 두 판어치라 돌아올 맛이 없었다)
 export const IDLE = { minMin: 30, capH: 8, perH: 0.5, bonusH: 12, bonusGem: 10 };   // 12시간 넘게 비웠으면 보석도 조금
@@ -150,11 +158,14 @@ export const powerOf = sv => {
 };
 // 스테이지별 권장 전투력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
 // 보스 판은 봇 실측에서 권장 100~130%로도 졌다: 권장을 올려 화면이 '충분'이라고 속이지 않게 한다
-export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * (s === 5 ? 1.25 : 1) * GEAR_HP(c));
+// 장 첫 판(2장부터)은 적응 판: 보스 바로 뒤라 강화를 덜 했어도 깰 수 있게 낮춘다
+export const easeHp = (c, s) => c > 0 && s === 0 ? 0.8 : 1;
+export const easeDmg = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
+export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * easeHp(c, s) * (isBossS(s) ? 1.25 : 1) * GEAR_HP(c));
 // 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯(1점 +2%, 5점 보너스)까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
 export const GEAR_HP = c => 1 + 0.36 * c;
 // 전투력 색: 권장을 넘어도 보스 판은 20% 여유가 있어야 초록(20차 봇: 1-6 권장 114%에서 졌다)
-export const powerCol = (pw, rp, s) => pw >= rp * (s === 5 ? 1.2 : 1) ? '#5fdc6a' : pw >= rp ? '#ffd75e' : '#ff8070';
+export const powerCol = (pw, rp, s) => pw >= rp * (isBossS(s) ? 1.2 : 1) ? '#5fdc6a' : pw >= rp ? '#ffd75e' : '#ff8070';
 export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
 
 // ── 판 안 성장 ──
@@ -249,7 +260,7 @@ export const BANISH_PER_RUN = 2;
 // 공짜 빼기·다시 뽑기를 다 쓰면 보석으로 더 쓴다
 export const BAN_GEM = 5, REROLL_GEM = 5;
 // 무한의 탑: 1장 보스를 깨면 열린다. 층(웨이브)마다 몹이 세지고 3층마다 해골 장군
-export const ENDLESS = { unlock: 6, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.22, dmgGrow: 1.12 };
+export const ENDLESS = { unlock: 3, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.22, dmgGrow: 1.12 };
 // 칼빛(궤적 색) 꾸미기: 능력치는 그대로, 보이는 것만 바뀐다
 export const SKINS = [
   { id: '', name: '기본 칼빛', desc: '강화 단계 색', cost: 0 },
@@ -259,12 +270,12 @@ export const SKINS = [
 ];
 export const restoreGem = enh => 30 + enh * 10;
 export const GEM_SHOP = [
-  { id: 'guard', name: '파괴 방지권', icon: 11, cost: 80, give: { guard: 1 } },
-  { id: 'charm', name: '행운 부적', icon: 7, cost: 120, give: { charm: 1 } },
-  { id: 'sweep', name: '소탕권 5장', icon: 15, cost: 40, give: { sweep: 5 } },
-  { id: 'stone', name: '강화석 40개', icon: 13, cost: 60, give: { stone: 40 } },
+  { id: 'guard', name: '파괴 방지권', icon: 11, cost: 80, give: { guard: 1 }, desc: '파괴를 막는다' },
+  { id: 'charm', name: '행운 부적', icon: 7, cost: 120, give: { charm: 1 }, desc: '확률 +5%p' },
+  { id: 'sweep', name: '소탕권 5장', icon: 15, cost: 40, give: { sweep: 5 }, desc: '바로 정산' },
+  { id: 'stone', name: '강화석 40개', icon: 13, cost: 60, give: { stone: 40 }, desc: '강화 재료' },
   { id: 'gold', name: '금화 꾸러미', icon: 12, cost: 100, give: { goldStage: 3 } },
-  { id: 'spReset', name: '스탯 초기화권', icon: 14, cost: SP_RESET_GEM, give: { spReset: 1 } },
+  { id: 'spReset', name: '스탯 초기화권', icon: 14, cost: SP_RESET_GEM, give: { spReset: 1 }, desc: '다시 찍기' },
 ];
 // 보상형 광고: 하루 횟수 제한
 export const ADS = {

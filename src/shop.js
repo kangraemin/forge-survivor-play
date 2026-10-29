@@ -12,7 +12,7 @@ const devpay = () => { try { return new URLSearchParams(location.search).has('de
 export const won = n => n.toLocaleString('ko-KR') + '원';
 
 // 보상 지급. goldStage는 지금 도전 중인 스테이지 클리어 금화의 배수
-const stageGold = sv => { const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1); return D.clearGold(Math.floor(top / 6), top % 6); };
+const stageGold = sv => { const top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1); return D.clearGold(Math.floor(top / D.STAGES_PER_CHAPTER), top % D.STAGES_PER_CHAPTER); };
 export function grant(sv, give) {
   for (const [k, v] of Object.entries(give)) {
     if (k === 'goldStage') sv.gold += stageGold(sv) * v;

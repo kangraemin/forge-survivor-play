@@ -4,7 +4,7 @@ import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
-import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled } from './gear.js';
+import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES } from './gear.js';
 import { itemBox } from './gearTab.js';
 
 const { W, H } = D;
@@ -424,7 +424,7 @@ export class Overlay {
     s.over = true; s.physics.pause();
     const idx = s.c * D.STAGES_PER_CHAPTER + s.s;
     const first = win && !s.endless && idx >= sv.cleared;
-    let gold, stone = r.stones, guard = 0, sweep = 0, gem = 0;
+    let gold, stone = r.stones, guard = 0, sweep = 0, gem = 0, charm = 0;
     // 무한의 탑: 버틴 층만큼 받고, 최고 기록을 넘은 층마다 보석
     const floors = s.wave, best = sv.endBest || 0;
     if (s.endless) {
@@ -437,7 +437,7 @@ export class Overlay {
       gold = Math.round(D.clearGold(s.c, s.s) * (first ? D.FIRST_CLEAR_MUL : 1));
       stone += D.clearStone(s.c, s.s);
       mission('clear');
-      if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; gem = s.isBoss ? D.GEM_FREE.bossFirst : D.GEM_FREE.stageFirst; }
+      if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; else charm = 1; gem = s.isBoss ? D.GEM_FREE.bossFirst : D.GEM_FREE.stageFirst; }   // 일반 판 첫 클리어: 강화 성공률을 올리는 행운 부적
       sv.best[idx] = 1;
     } else {
       gold = Math.round(D.clearGold(s.c, s.s) * s.runProgress() * D.FAIL_GOLD_RATE);
@@ -448,7 +448,8 @@ export class Overlay {
     gold = Math.round(gold);
     // 장비: 이기면 1개(보스는 2개, 한 등급 위로), 무한의 탑은 3층부터 1개. 판에서 주운 것은 져도 남는다
     const loot = r.loot.slice();
-    if (win && !s.endless) for (let i = 0; i < (s.isBoss ? 2 : 1); i++) loot.push(makeItem(s.c, { boost: s.isBoss ? 1 : 0 }));
+    // 처음 깬 판은 한 등급 위로(판마다 받는 게 손에 잡히게)
+    if (win && !s.endless) for (let i = 0; i < (s.isBoss ? 2 : 1); i++) loot.push(makeItem(s.c, { boost: s.isBoss || first ? 1 : 0 }));
     if (s.endless && floors >= 3) loot.push(makeItem(s.c, { boost: 1 }));
     if (!win && !s.endless) {
       sv.stats.losses = (sv.stats.losses || 0) + 1;
@@ -460,7 +461,7 @@ export class Overlay {
     // 처음 열린 펫은 알아서 데려간다(펫 탭을 안 열어도 보이게). 한 번만
     const newPet = !sv.pet && !sv.petAuto && PETS.find(p => sv.cleared >= p.unlock);
     if (newPet) { sv.pet = newPet.id; sv.petAuto = true; }
-    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem;
+    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem; sv.charm = (sv.charm || 0) + charm;
     save();
     s.log('battle_end', { win, first, progress: Math.round((win ? 1 : s.runProgress()) * 100), wave: s.wave, floors: s.endless ? floors : undefined, kills: r.kills, gold, stone, gem, power: D.powerOf(sv), rec: s.endless ? undefined : D.recPower(s.c, s.s), top_dmg: s.topHit(), revived: !!r.revived, cleared: sv.cleared, loot: loot.length, skills: Object.entries(r.skills).map(([k, v]) => k + v).join(',').slice(0, 100) });
     stopBgm();
@@ -484,10 +485,12 @@ export class Overlay {
     const rew = [[12, '금화', gold], [13, '강화석', stone]];
     if (guard) rew.push([11, '파괴 방지권', guard]);
     if (sweep) rew.push([15, '소탕권', sweep]);
+    if (charm) rew.push([7, '행운 부적', charm]);
     if (gem) rew.push([-1, '보석', gem]);
     const tx = [];
+    const gap = rew.length >= 5 ? 13 : 16;   // 보스 보상은 줄이 많아 좁혀야 광고 버튼에 안 겹친다
     rew.forEach(([ic, name, n], i) => {
-      const y = 230 + i * 16;
+      const y = 228 + i * gap;
       c.add(ic < 0 ? gemIcon(s, 58, y, 14) : icon(s, 58, y, ic, 18));
       c.add(s.add.text(74, y - 7, name, font(11)));
       const t = s.add.text(W - 50, y - 7, '+0', font(12, '#ffd75e')).setOrigin(1, 0); c.add(t); tx.push(t);
@@ -537,8 +540,10 @@ export class Overlay {
     // 얻은 장비 줄(판 안, 버튼 위). 빈 부위는 알아서 끼워졌다
     c.add(s.add.rectangle(W / 2, 344, W - 80, 1, 0x5b4f7a));
     const egg = loot.find(it => it.egg), top = loot.reduce((a, it) => Math.max(a, it.r < 4 ? it.r : -1), -1);
-    const head = egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개 → 장비 가방${salvaged ? ` · 가득 차 강화석 +${salvaged}` : ''}` : '';
-    if (head) c.add(s.add.text(W / 2, 356, head, egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
+    // 장 보스를 처음 잡으면 새 무기가 열린다(장마다 받는 큰 보상)
+    const wNew = first && s.isBoss && WTYPES.find(w => w.unlock === sv.cleared);
+    const head = wNew ? `새 무기 「${wNew.name}」 획득! · 장비 탭에서 바꾸자` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개 → 장비 가방${salvaged ? ` · 가득 차 강화석 +${salvaged}` : ''}` : '';
+    if (head) c.add(s.add.text(W / 2, 356, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
     const n = Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);
     loot.slice(0, n).forEach((it, i) => {
       const box = itemBox(s, x0 + i * 30, 382, it, 26);
@@ -549,8 +554,15 @@ export class Overlay {
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
     // 이겼으면 다음 스테이지가 주인공(로비는 작게)
     const fw = win || s.endless;
+    // 장 보스를 잡으면 다음 장이 확 세지니 대장간 정비가 주인공이다
+    if (win && s.isBoss && !s.endless && sv.cleared <= nextIdx) {
+      c.add(button(s, 172, 424, 160, 34, '대장간에서 정비 ▶', () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0xc0702a }));
+      c.add(button(s, 52, 424, 72, 26, '다음 장', () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, bot: s.bot }); }, { color: 0x3b2f5c }));
+      s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
+      return;
+    }
     c.add(button(s, fw ? 52 : 85, 424, fw ? 72 : 110, fw ? 26 : 30, fw ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3b2f5c }));
-    c.add(button(s, fw ? 172 : 190, 424, fw ? 160 : 100, fw ? 34 : 30, win ? (s.endless ? '다시 도전' : '다음 스테이지 ▶') : '다시', () => {
+    c.add(button(s, fw ? 172 : 190, 424, fw ? 160 : 100, fw ? 34 : 30, win ? (s.endless ? '다시 도전' : s.s === 1 && !s.isBoss ? '보스 도전 ▶' : '다음 스테이지 ▶') : '다시', () => {
       s.log('result_action', { act: win ? 'next' : 'retry', win });
       if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });
       const n = win ? nextIdx : idx;

@@ -1,14 +1,18 @@
 // 공통 UI: 글자 스타일, 패널, 누르는 버튼, 아이콘
 import { sfx } from './sfx.js';
 
+// 그리는 배율. 카메라를 왼쪽 위 기준으로 PX배 당겨 게임 좌표(270x480)를 그대로 쓴다
+// 기기 실제 픽셀에 맞춘다(1080 폭 폰이면 4배): 화면에 맞추며 정수배가 아니게 늘리거나 줄이면 글자 획이 들쭉날쭉해진다
+const dpr = window.devicePixelRatio || 1;
+export const PX = Math.max(2, Math.min(4, Math.ceil(Math.min(innerWidth * dpr / 270, innerHeight * dpr / 480) - 0.05)));
+
+// 글자는 그리는 판 해상도로 만든다(1배로 만들어 PX배로 늘리면 뭉개진다)
 export const font = (size, color = '#ffffff', stroke = 3) =>
-  ({ fontFamily: 'G11', fontSize: size + 'px', color, stroke: '#0a0710', strokeThickness: stroke });
-export const font9 = (size, color = '#d8d2e8') => ({ fontFamily: 'G9', fontSize: size + 'px', color });
+  ({ fontFamily: 'G11', fontSize: size + 'px', color, stroke: '#0a0710', strokeThickness: stroke, resolution: PX });
+export const font9 = (size, color = '#d8d2e8') => ({ fontFamily: 'G9', fontSize: size + 'px', color, resolution: PX });
 
 export const COLOR = { panel: 0x15121f, panel2: 0x221c33, line: 0x5b4f7a, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
 
-// 그리는 배율. 카메라를 왼쪽 위 기준으로 PX배 당겨 게임 좌표(270x480)를 그대로 쓴다
-export const PX = 2;
 export const hiCam = scene => scene.cameras.main.setOrigin(0).setZoom(PX);
 // 카메라 기준점을 왼쪽 위로 옮겨 Phaser의 worldView(가운데 기준 계산)가 어긋난다 → 보이는 영역은 이걸로 구한다
 export const viewRect = scene => { const c = scene.cameras.main; return new Phaser.Geom.Rectangle(c.scrollX, c.scrollY, c.width / c.zoom, c.height / c.zoom); };
@@ -73,7 +77,7 @@ export function icon(scene, x, y, idx, size = 22) {
     im.setScale(size / Math.max(im.width, im.height));
     return im;
   }
-  return scene.add.text(x, y, FALLBACK[idx] || '?', { fontSize: Math.round(size * 0.8) + 'px' }).setOrigin(0.5);
+  return scene.add.text(x, y, FALLBACK[idx] || '?', { fontSize: Math.round(size * 0.8) + 'px', resolution: PX }).setOrigin(0.5);
 }
 
 // 화면 위쪽에서 잠깐 떴다 사라지는 알림 한 줄

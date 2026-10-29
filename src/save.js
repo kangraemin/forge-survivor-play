@@ -8,7 +8,7 @@ const KEY = 'forge-survivor-v1';
 const fresh = () => ({
   gold: 150, stone: 10, guard: 1, charm: 0, sweep: SWEEP_DAILY,
   tier: 0, enh: 0,
-  cleared: 0,              // 깬 스테이지 수(0이면 1-1 도전 가능). 챕터c 스테이지s의 번호 = c*6+s
+  cleared: 0,              // 깬 스테이지 수(0이면 1-1 도전 가능). 챕터c 스테이지s의 번호 = c*3+s
   best: {},                // 스테이지별 최고 기록(초)
   train: {},
   day: '',
@@ -36,6 +36,9 @@ let mem = null;
 export function load() {
   if (mem) return mem;
   try { mem = { ...fresh(), ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { mem = fresh(); }
+  // 장당 6판 → 3판으로 바뀌기 전 저장: 깬 수를 새 번호로 옮긴다(x-1·x-4까지 깼으면 x-1·x-2, 보스를 잡았으면 다음 장)
+  // 스탯 총점 식도 바뀌어 찍은 점수가 총점을 넘을 수 있다: 돌려주고 다시 찍게 한다
+  if (!mem.st3) { const o = mem.cleared || 0, k = o % 6; mem.cleared = Math.floor(o / 6) * 3 + (k >= 1) + (k >= 4); mem.best = {}; mem.sp = {}; mem.st3 = true; }
   // 마지막으로 저장한 뒤 얼마나 비웠나(자리 비움 보상). 로비가 읽고 0으로 돌린다
   if (mem.seenAt) mem.idleMs = Math.max(mem.idleMs || 0, Date.now() - mem.seenAt);
   // 하루가 바뀌면 소탕권 충전, 파괴 방지권 1장

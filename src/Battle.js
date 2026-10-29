@@ -59,11 +59,11 @@ export class Battle extends Phaser.Scene {
     this.waveLen = this.endless ? D.ENDLESS.floorSec * 1000 : this.ch.dur * 1000 / D.WAVES;
     this.waveCount = this.endless ? Infinity : this.isBoss ? D.WAVES - 1 : D.WAVES;
     this.waveT = 0;
-    this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (1 - this.tv('def'));
+    this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (this.endless ? 1 : D.easeDmg(this.c, this.s)) * (1 - this.tv('def'));
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless;
     if (this.easy) { this.mobDmgMul *= 0.55; this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
-    this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s);
+    this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s) * (this.endless ? 1 : D.easeHp(this.c, this.s));
 
     this.makeMap();
     this.makeHero();
@@ -98,8 +98,10 @@ export class Battle extends Phaser.Scene {
       this.tweens.timeScale = this.speed; this.anims.globalTimeScale = this.speed;
     }
     // 판 규칙(처음 두 판·보스·무한의 탑 제외)
-    this.mod = !this.easy && !this.isBoss && !this.endless && sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE
-      ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || this.s)) : null;   // x-1엔 변종이 없어 '변종 소굴'은 빼고 뽑는다
+    // x-2 첫 도전은 그 장의 규칙이 정해져 나오고, 다시 할 땐 뽑는다
+    const firstTry = !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared;
+    this.mod = this.easy || this.isBoss || this.endless ? null : this.s === 1 && firstTry ? D.stageMod(this.c)
+      : sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s))) : null;   // 변종이 없는 판엔 '변종 소굴'은 빼고 뽑는다
     this.hordeKind = this.mod?.id === 'horde' ? this.ch.mobs[R(0, 2)] : null;
     // 보물 고블린: 보스·무한의 탑·처음 판이 아니면 45% 확률로 판 중간에 한 번 나와 도망친다
     this.goblinAt = !this.easy && !this.isBoss && !this.endless && Math.random() < 0.45 ? RF(0.3, 0.7) : null;
@@ -112,14 +114,14 @@ export class Battle extends Phaser.Scene {
     this.game.events.on('hidden', onHide); this.events.once('shutdown', () => this.game.events.off('hidden', onHide));
     if (sv.stats.runs < 2 && !this.bot) this.dragHint();
     if (this.endless) this.banner('무한의 탑', `1층  ·  최고 ${sv.endBest}층`);
-    else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}`);
+    else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}  ·  ${this.s === 1 ? '깨면 다음은 보스!' : '2판 깨면 보스'}`);
     if (this.mod) this.time.delayedCall(4200, () => !this.over && this.banner(`이번 판: ${this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : ''}${this.mod.name}`, this.mod.desc));
     // 이번 스테이지에 처음 나오는 변종을 알려 준다
-    const nv = !this.endless && D.STAGE_VARIANT[this.s];
+    const nv = !this.endless && !this.isBoss && D.stageVariant(this.c, this.s);
     if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(`새 몬스터: ${D.VARIANTS[nv[1]].pre} ${D.MOB_NAMES[this.ch.mobs[nv[0]]]}`, D.VARIANTS[nv[1]].desc));
     sv.stats.runs++; save();
-    logCtx({ stage: this.endless ? 'tower' : `${this.c + 1}-${this.s + 1}`, idx: this.endless ? -1 : this.c * 6 + this.s });
-    this.log('battle_start', { power: D.powerOf(sv), rec: this.endless ? undefined : D.recPower(this.c, this.s), tier: sv.tier, enh: sv.enh, mod: this.mod?.id || 'none', easy: this.easy, runs: sv.stats.runs, replay: !this.endless && this.c * 6 + this.s < sv.cleared, boss_stage: this.isBoss });
+    logCtx({ stage: this.endless ? 'tower' : `${this.c + 1}-${this.s + 1}`, idx: this.endless ? -1 : this.c * D.STAGES_PER_CHAPTER + this.s });
+    this.log('battle_start', { power: D.powerOf(sv), rec: this.endless ? undefined : D.recPower(this.c, this.s), tier: sv.tier, enh: sv.enh, mod: this.mod?.id || 'none', easy: this.easy, runs: sv.stats.runs, replay: !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s < sv.cleared, boss_stage: this.isBoss });
   }
 
   // ── 지도 ──
@@ -149,6 +151,7 @@ export class Battle extends Phaser.Scene {
     // 전용 바닥 그림이 없는 챕터는 1챕터 바닥에 색을 입힌다
     const TINT = [0xffffff, 0x8a9ab8, 0xd07050, 0xd8f0ff, 0x9a70b0];
     if (!tintless && this.c > 0) rt.setTint(TINT[this.c]);
+    else if (this.s === 1 && !this.endless) rt.setTint(0xb8c0dc);   // x-2는 바닥을 식혀 x-1과 다른 곳처럼
     if (!this.textures.exists('decos')) {
       const ds = this.textures.get('deco').getSourceImage();
       this.textures.addSpriteSheet('decos', ds, { frameWidth: ds.width / 4, frameHeight: ds.height });
@@ -166,6 +169,8 @@ export class Battle extends Phaser.Scene {
     }
     // 어두운 화면 + 빛
     this.dark = this.add.renderTexture(0, 0, W, H).setOrigin(0).setScrollFactor(0).setDepth(50);
+    // x-2는 더 어둡다(횃불 빛 안만 보인다)
+    this.darkA = Math.min(0.8, this.ch.dark + (this.s === 1 && !this.endless ? 0.2 : 0));
     this.glow = this.add.image(0, 0, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(this.ch.light).setAlpha(0.16).setDepth(49);
   }
 
@@ -342,11 +347,11 @@ export class Battle extends Phaser.Scene {
       const ks = Object.keys(D.VARIANTS), vk = ks[R(0, ks.length - 1)];
       return vk === 'giant' && Math.random() > 0.35 ? null : { kind: this.pickKind(), v: vk };
     }
-    if (!this.s) return null;
+    if (this.isBoss) return null;
     let r = Math.random();
     const vm = this.mod?.id === 'mutant' ? 2 : 1;
     for (const [st, rate] of [[this.s, D.VARIANT_RATE * vm], [this.s - 1, D.VARIANT_OLD_RATE * vm]]) {
-      const sv = D.STAGE_VARIANT[st];
+      const sv = D.stageVariant(this.c, st);
       if (sv && r < rate) return r < rate * (sv[1] === 'giant' ? 0.35 : 1) ? { kind: this.ch.mobs[sv[0]], v: sv[1] } : null;
       r -= rate;
     }
@@ -813,9 +818,9 @@ export class Battle extends Phaser.Scene {
       if (this.waveT < dt * 2) { this.eliteDone = false; this.ringDone = false; }
       // 15초마다 한쪽에서 대열이 밀려온다(그냥 몰려오기만 하지 않게). 처음 판의 1-1은 뺀다
       if (!this.easy && (this.formT = (this.formT || 0) + dt) > 15000) { this.formT = 0; this.formation(); }
-      // 3번째 스테이지는 마지막 웨이브에 해골 장군(중간 보스)
+      // x-2는 마지막 웨이브에 해골 장군(중간 보스)
       const towerBoss = this.endless && this.wave % 3 === 2 && this.midWave !== this.wave && !this.midBoss;
-      if ((towerBoss || this.s === 2 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
+      if ((towerBoss || this.s === 1 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
         this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1), true);
         this.banner('해골 장군', '중간 보스'); sfx('bossIn');
       }
@@ -995,7 +1000,7 @@ export class Battle extends Phaser.Scene {
     this.ultTxt.setText(full ? '눌러서 발동!' : `궁극기 ${Math.floor(mf * 100)}%`).setColor(full ? '#ffd75e' : '#c8bfe0');
     // 조명
     this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);
-    this.dark.clear().fill(0x06040c, this.ch.dark).erase('light', this.hero.x - cam.scrollX - 150, this.hero.y - cam.scrollY - 150);
+    this.dark.clear().fill(0x06040c, this.darkA).erase('light', this.hero.x - cam.scrollX - 150, this.hero.y - cam.scrollY - 150);
     for (const t of this.torches) {
       const sx = t.x - cam.scrollX, sy = t.y - cam.scrollY;
       if (sx > -150 && sy > -150 && sx < W + 150 && sy < H + 150) this.dark.erase('light', sx - 150, sy - 150);

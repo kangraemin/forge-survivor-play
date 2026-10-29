@@ -57,14 +57,14 @@ export const EGGS = {
 // ── 무기 종류: 기본 공격 모양과 레벨업에 잘 나오는 스킬이 달라진다 ──
 export const WTYPES = [
   { id: 'sword', name: '검', desc: '앞쪽을 넓게 벤다 · 힘', tag: 'melee', unlock: 0, fav: ['spin', 'orb', 'wave', 'might'], own: 'wave' },
-  { id: 'spear', name: '창', desc: '좁고 길게 꿰뚫는다 · 민첩', tag: 'ranged', unlock: 6, hint: '1-6 보스를 잡으면', fav: ['dagger', 'ice', 'javelin', 'haste'], own: 'javelin' },
-  { id: 'axe', name: '도끼', desc: '느리지만 사방을 크게 찍는다 · 힘', tag: 'melee', unlock: 12, hint: '2-6 보스를 잡으면', fav: ['fireball', 'holy', 'quake', 'vigor'], own: 'quake' },
+  { id: 'spear', name: '창', desc: '좁고 길게 꿰뚫는다 · 민첩', tag: 'ranged', unlock: 3, hint: '1장 보스를 잡으면', fav: ['dagger', 'ice', 'javelin', 'haste'], own: 'javelin' },
+  { id: 'axe', name: '도끼', desc: '느리지만 사방을 크게 찍는다 · 힘', tag: 'melee', unlock: 6, hint: '2장 보스를 잡으면', fav: ['fireball', 'holy', 'quake', 'vigor'], own: 'quake' },
 ];
 export const wtypeOf = sv => WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
 // 무기 전용 스킬: 그 무기를 든 판에서만 나온다
 export const OWN_SKILLS = WTYPES.map(w => w.own);
 // 진행할수록 레벨업 카드에 새 스킬이 섞여 나온다(깬 스테이지 수)
-export const SKILL_UNLOCK = { holy: 1, bolt: 3, fireball: 6, ice: 9 };
+export const SKILL_UNLOCK = { holy: 1, bolt: 2, fireball: 3, ice: 5 };
 
 // ── 스탯: 스테이지를 처음 깰 때 1점, 보스는 2점 더(끝까지 40점) ──
 export const SP = [
@@ -77,7 +77,7 @@ export const SP_DMG = 0.02;
 export const SKILL_TAG = { sword: 'melee', spin: 'melee', quake: 'melee', dagger: 'ranged', ice: 'ranged', javelin: 'ranged', wave: 'ranged', bolt: 'magic', fireball: 'magic', holy: 'magic', orb: 'magic' };
 export const TAG_NAME = { melee: '근접', ranged: '원거리', magic: '마법' };
 const TAG_SP = { melee: 'str', ranged: 'dex', magic: 'int' };
-export const spTotal = cleared => cleared + Math.floor(cleared / 6) * 2;
+export const spTotal = cleared => cleared * 2 + Math.floor(cleared / 3) * 2;   // 스테이지 2점, 보스 2점 더(끝까지 40점)
 export const spUsed = sv => SP.reduce((a, s) => a + (sv.sp?.[s.id] || 0), 0);
 export const spFree = sv => spTotal(sv.cleared) - spUsed(sv);
 // 그 태그 스킬의 피해 배율
@@ -89,9 +89,9 @@ export const SP_RESET_GEM = 50;
 
 // ── 펫: 깬 스테이지 수로 열린다. 금화로 키우고 목걸이를 끼워 준다 ──
 export const PETS = [
-  { id: 'fire', name: '불씨 정령', desc: '가까운 적에게 불꽃을 쏜다', unlock: 3, hint: '1-3을 깨면', color: 0xff8a3a },
-  { id: 'slime', name: '수호 슬라임', desc: '7초마다 체력을 채우고 주변을 밀친다', unlock: 9, hint: '2-3을 깨면', color: 0x6fe08a },
-  { id: 'bat', name: '황금 박쥐', desc: '주변 적을 물고 은화를 더 줍게 한다', unlock: 15, hint: '3-3을 깨면', color: 0xffd75e },
+  { id: 'fire', name: '불씨 정령', desc: '가까운 적에게 불꽃을 쏜다', unlock: 2, hint: '1-2를 깨면', color: 0xff8a3a },
+  { id: 'slime', name: '수호 슬라임', desc: '7초마다 체력을 채우고 주변을 밀친다', unlock: 5, hint: '2-2를 깨면', color: 0x6fe08a },
+  { id: 'bat', name: '황금 박쥐', desc: '주변 적을 물고 은화를 더 줍게 한다', unlock: 8, hint: '3-2를 깨면', color: 0xffd75e },
 ];
 export const PET_MAX = 20;
 export const petCost = lv => Math.round(90 * Math.pow(1.27, lv) / 5) * 5;
