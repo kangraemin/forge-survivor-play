@@ -77,14 +77,14 @@ export function icon(scene, x, y, idx, size = 22) {
 }
 
 // 화면 위쪽에서 잠깐 떴다 사라지는 알림 한 줄
-export function toast(scene, msg, color = '#ffffff') {
+export function toast(scene, msg, color = '#ffffff', y = 88) {
   // 출석·미션 창(깊이 2000) 위에서도 보이게 그보다 위에 띄운다
   // 화면 위쪽(상단 바 바로 아래)에 어두운 띠를 깔아 아래 정보·버튼을 가리지 않는다
-  const t = scene.add.container(135, 104).setDepth(3000).setScrollFactor(0).setAlpha(0);
+  const t = scene.add.container(135, y + 16).setDepth(3000).setScrollFactor(0).setAlpha(0);
   const tx = scene.add.text(0, 0, msg, font(12, color)).setOrigin(0.5);
   t.add([scene.add.rectangle(0, 0, Math.min(262, tx.width + 24), 24, 0x0a0710, 0.85).setStrokeStyle(1, 0x5b4f7a), tx]);
-  scene.tweens.add({ targets: t, alpha: 1, y: 88, duration: 160, ease: 'Back.Out' });
-  scene.tweens.add({ targets: t, alpha: 0, y: 76, delay: 1300, duration: 300, onComplete: () => t.destroy() });
+  scene.tweens.add({ targets: t, alpha: 1, y, duration: 160, ease: 'Back.Out' });
+  scene.tweens.add({ targets: t, alpha: 0, y: y - 12, delay: 1300, duration: 300, onComplete: () => t.destroy() });
 }
 
 // 칼빛 꾸미기: 궤적 그림(하늘색)의 색상을 돌려 다른 색으로 만든다. tint는 곱셈이라 하늘색을 빨강·금색으로 못 바꾼다

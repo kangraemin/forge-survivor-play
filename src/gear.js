@@ -161,9 +161,10 @@ export function addItems(sv, items) {
   sv.eq ||= {};
   for (const it of items) {
     if (it.egg) { if (sv.eggs?.[it.egg]) continue; (sv.eggs ||= {})[it.egg] = true; }
+    if (sv.inv.some(x => x.u === it.u)) continue;   // 판 안에서 이미 끼운 장비
     sv.inv.push(it);
     // 빈 부위는 바로 낀다(장비 탭을 안 열어도 새 장비가 전투에 들어가게)
-    if (!sv.eq[it.s]) sv.eq[it.s] = it.u;
+    if (!sv.eq[it.s] && !it.bag) sv.eq[it.s] = it.u;   // 판에서 '가방에'를 고른 건 끼지 않는다
     if (sv.inv.length > INV_MAX) {
       const on = new Set(Object.values(sv.eq || {}));
       const worst = sv.inv.filter(x => !on.has(x.u) && !x.egg).sort((a, b) => itemScore(a) - itemScore(b))[0];

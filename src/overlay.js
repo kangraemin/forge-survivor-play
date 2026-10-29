@@ -4,7 +4,7 @@ import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
-import { SKILL_UNLOCK, PETS, addItems, makeItem, grantEgg, eggsSettled } from './gear.js';
+import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled } from './gear.js';
 import { itemBox } from './gearTab.js';
 
 const { W, H } = D;
@@ -97,7 +97,8 @@ export class Overlay {
     const draw = () => {
       cards.removeAll(true);
       this.choices().forEach((k, i) => cards.add(this.card(k, W / 2, 172 + i * 78, i)));
-      banTxt.setText(r.banLeft > 0 ? `카드 모서리 X를 누르면 이번 판에서 뺀다 · ${r.banLeft}번` : '');
+      // 다시 뽑기와 헷갈렸다(설명을 듣고도 몰랐다): 카드의 '빼기'는 그 카드만, 아래 버튼은 3장 전부
+      banTxt.setText(`빼기: 그 카드만 바꾸고 이번 판엔 다시 안 나옴 · ${r.banLeft > 0 ? `무료 ${r.banLeft}번` : `보석 ${D.BAN_GEM}`}`);
     };
     const r = s.run;
     if (r.banLeft === undefined) r.banLeft = D.BANISH_PER_RUN;
@@ -110,15 +111,19 @@ export class Overlay {
       const glow = s.add.rectangle(W / 2, 172, 236, 76).setStrokeStyle(2, 0xffffff).setAlpha(0); c.add(glow);
       s.tweens.add({ targets: glow, alpha: 1, duration: 350, yoyo: true, repeat: -1, delay: 300 });
     }
-    const label = () => r.freeReroll > 0 ? '다시 뽑기 (무료)' : `다시 뽑기  은화 ${this.lvReroll()}`;
-    const rb = button(s, W / 2, 400, 150, 28, label(), () => {
+    // 무료 → 은화 → 은화가 모자라면 보석
+    const label = () => r.freeReroll > 0 ? '3장 모두 다시 뽑기 (무료)' : r.silver >= this.lvReroll() ? `3장 모두 다시 뽑기 · 은화 ${this.lvReroll()}` : `3장 모두 다시 뽑기 · 보석 ${D.REROLL_GEM}`;
+    const can = () => r.freeReroll > 0 || r.silver >= this.lvReroll() || s.sv.gem >= D.REROLL_GEM;
+    const rb = button(s, W / 2, 400, 190, 28, label(), () => {
+      let gem = false;
       if (r.freeReroll > 0) r.freeReroll--;
       else if (r.silver >= this.lvReroll()) { r.silver -= this.lvReroll(); r.lvRerolls = (r.lvRerolls || 0) + 1; }
+      else if (s.sv.gem >= D.REROLL_GEM) { s.sv.gem -= D.REROLL_GEM; save(); gem = true; }
       else return;
-      s.log('levelup_reroll', { n: r.lvRerolls || 0, silver: r.silver });
-      sfx('buy'); draw(); rb.label.setText(label()); rb.setEnabled(r.freeReroll > 0 || r.silver >= this.lvReroll());
+      s.log('levelup_reroll', { n: r.lvRerolls || 0, silver: r.silver, gem });
+      sfx('buy'); draw(); rb.label.setText(label()); rb.setEnabled(can());
     }, { size: 10, color: 0x3b2f5c });
-    rb.setEnabled(r.freeReroll > 0 || r.silver >= this.lvReroll());
+    rb.setEnabled(can());
     c.add(rb);
     c.add(s.add.text(W / 2, 418, `은화 ${r.silver}`, font9(11, '#d8e0f0')).setOrigin(0.5));
     if (s.bot) s.time.delayedCall(150, () => this.pick(cards.list[0]?.key));
@@ -133,14 +138,14 @@ export class Overlay {
     const def = special ? null : D.SKILLS[k], lv = sk[k] || 0;
     const isAct = def?.type === 'active';
     const firstRun = s.sv.stats.runs <= 1;
-    const canBan = !special && s.run.banLeft > 0 && !(firstRun && s.run.lv === 2);
+    const banGem = s.run.banLeft <= 0, canBan = !special && (!banGem || s.sv.gem >= D.BAN_GEM) && !(firstRun && s.run.lv === 2);
     c.add(panel(s, -115, -35, 230, 70, { fill: lv ? 0x241d38 : 0x1c1830, line: isAct ? 0x6fd3ff : 0xffd75e }));
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4).setStrokeStyle(1, isAct ? 0x6fd3ff : 0xffd75e, 0.6));
     c.add(special ? icon(s, -88, 0, k === '_heal' ? 14 : 12, 32) : skillIcon(s, -88, 0, def, 32));
     // 기본 공격 이름은 든 무기를 따른다(창 찌르기·도끼 찍기)
     const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : k === 'sword' ? { sword: def.name, spear: '창 찌르기', axe: '도끼 찍기' }[s.wtype.id] : def.name;
     c.add(s.add.text(-60, -24, name, font(12, isAct ? '#9ae0ff' : '#ffe08a')));
-    c.add(s.add.text(canBan ? 84 : 108, -24, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(11, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
+    c.add(s.add.text(canBan ? 72 : 108, -24, special ? '' : lv ? `Lv ${lv} → ${lv + 1}` : '새 스킬', font(11, lv ? '#ffffff' : '#5fdc6a')).setOrigin(1, 0));
     let desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
     if (def?.bonus && lv + 1 === D.PASSIVE_LV3) desc += `\n+ Lv3 보너스: ${def.bonus}`;
     c.add(s.add.text(-60, -6, desc, { ...font9(11, '#e8e2f8'), wordWrap: { width: 165 } }).setLineSpacing(1));
@@ -153,15 +158,19 @@ export class Overlay {
     onTap(c, () => this.pick(k, c));
     // 추방: 이번 판에서 다시 안 나온다(첫 레벨업에는 숨김)
     if (canBan) {
-      // 카드 오른쪽 위 모서리에 붙인다. 글꼴에 따라 ✕가 x로 보여 선 두 개로 그린다
-      const x = s.add.container(103, -24);
-      x.add(s.add.rectangle(0, 0, 24, 22, 0x2a0e16, 0.9).setStrokeStyle(1, 0xc06070));
-      const g = s.add.graphics().lineStyle(2, 0xff8090).lineBetween(-5, -5, 5, 5).lineBetween(-5, 5, 5, -5); x.add(g);
-      x.setSize(28, 26).setInteractive({ useHandCursor: true });
+      // 카드 오른쪽 위 모서리에 '빼기'라고 글로 붙인다(X만 있으면 다시 뽑기와 구분이 안 됐다)
+      const x = s.add.container(98, -24);
+      x.add(s.add.rectangle(0, 0, 36, 20, 0x2a0e16, 0.9).setStrokeStyle(1, 0xc06070));
+      x.add(s.add.text(banGem ? 4 : 0, 0, banGem ? `빼기${D.BAN_GEM}` : '빼기', font9(10, '#ff9aa8')).setOrigin(0.5));
+      if (banGem) x.add(gemIcon(s, -13, 0, 8));
+      x.setSize(42, 24).setInteractive({ useHandCursor: true });
       onTap(x, (p, lx, ly, ev) => {
         ev?.stopPropagation();
-        if (this.picking || s.run.banLeft <= 0) return;
-        s.run.banLeft--; (s.run.banned ||= {})[k] = true; sfx('deny'); this.redraw?.();
+        if (this.picking) return;
+        if (s.run.banLeft > 0) s.run.banLeft--;
+        else if (s.sv.gem >= D.BAN_GEM) { s.sv.gem -= D.BAN_GEM; save(); s.log('banish_gem'); }
+        else return;
+        (s.run.banned ||= {})[k] = true; sfx('deny'); this.redraw?.();
       });
       c.add(x);
     }
@@ -212,6 +221,32 @@ export class Overlay {
     if (cardObj) {
       s.tweens.add({ targets: cardObj, scale: 1.08, duration: 90, yoyo: true, onComplete: after });
     } else after();
+  }
+
+  // ── 주운 장비가 지금 낀 것보다 좋으면 바로 낄지 묻는다 ──
+  lootAsk(item, cur) {
+    if (this.open) { this.queue.push(() => this.lootAsk(item, cur)); return; }
+    const s = this.s;
+    // 줄 서 있던 사이 더 좋은 걸 꼈으면 묻지 않는다
+    cur = equipped(s.sv).find(x => x.s === item.s);
+    if (cur && itemScore(item) <= itemScore(cur)) return;
+    if (s.bot) { s.equipNow(item); return; }
+    const c = this.begin('loot'), rr = RARITY[item.r], slot = SLOTS.find(x => x.id === item.s);
+    c.add(panel(s, 24, 130, W - 48, 236, { fill: 0x1a1426, line: rr.color }));
+    c.add(s.add.text(W / 2, 150, `더 좋은 ${slot.name} 주웠다!`, font(13, '#ffd75e')).setOrigin(0.5));
+    // 왼쪽: 지금 낀 것, 오른쪽: 주운 것
+    const side = (x, it, head, col) => {
+      c.add(s.add.text(x, 172, head, font9(10, col)).setOrigin(0.5));
+      if (!it) { c.add(s.add.text(x, 204, '비어 있음', font9(10, '#6a6080')).setOrigin(0.5)); return; }
+      c.add(itemBox(s, x, 200, it, 32));
+      c.add(s.add.text(x, 224, it.n, font9(10, RARITY[it.r].css)).setOrigin(0.5));
+      Object.entries(it.st).forEach(([k, v], i) => c.add(s.add.text(x, 240 + i * 13, statText(k, v), font9(9, '#c8bfe0')).setOrigin(0.5)));
+    };
+    side(W / 2 - 54, cur, '지금', '#a89cc8');
+    side(W / 2 + 54, item, '주운 것', '#5fdc6a');
+    c.add(s.add.text(W / 2, 200, '→', font(14, '#ffd75e')).setOrigin(0.5));
+    c.add(button(s, W / 2 - 52, 340, 92, 30, '가방에', () => { item.bag = true; s.log('loot_ask', { equip: false }); this.end(c); }, { size: 11, color: 0x3b2f5c }));
+    c.add(button(s, W / 2 + 52, 340, 92, 30, '바로 장착', () => { s.equipNow(item); sfx('level'); s.log('loot_ask', { equip: true }); this.end(c); }, { size: 11, color: 0x2f7a3a }));
   }
 
   // ── 스킬 상자: 가진 스킬 중 하나가 무료로 오른다 ──

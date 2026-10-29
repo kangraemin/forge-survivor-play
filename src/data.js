@@ -63,7 +63,7 @@ export const BOSSES = {
   lavagolem: { name: '용암 거신', sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
   wyrm: { name: '서리 용', sheet: 'boss2', row: 0, hp: 1650, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
   demonlord: { name: '마왕', sheet: 'boss2', row: 1, hp: 1800, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'], rage: 'sweep' },
-  general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'] },
+  general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
 };
 
 // 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다. 4~5장 벽이 너무 높아 조금 낮췄다
@@ -88,28 +88,32 @@ export const TIERS = [
 ];
 // +5·+10·+15·+20을 넘을 때마다 칼이 한 번 더 깨어난다(×1.1). 한 단계 +10%만으론 강해진 게 안 느껴진다
 export const ENH_MILESTONE = 5, MILESTONE_MUL = 1.1;
-// +11부터는 한 단계가 +20%: 파괴를 무릅쓸 만큼 세져야 한다(+5%로는 아무도 +10을 넘지 않았다)
-export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * enh + 0.1 * Math.max(0, enh - 10)) * Math.pow(MILESTONE_MUL, Math.floor(enh / ENH_MILESTONE));
+// +11부터는 한 단계마다 ×1.15: 더하기로는 단계가 오를수록 오름폭이 +10%→+8%로 줄어 파괴를 무릅쓸 이유가 없었다
+export const OVER10_MUL = 1.15;
+export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * Math.min(enh, 10)) * Math.pow(OVER10_MUL, Math.max(0, enh - 10)) * Math.pow(MILESTONE_MUL, Math.floor(enh / ENH_MILESTONE));
 // 강화 성공 확률(%) — 인덱스는 현재 강화 수치
 export const ENH_RATE = [100, 100, 95, 90, 85, 75, 65, 55, 50, 45, 45, 40, 36, 32, 28, 22, 18, 15, 12, 10];
 export const ENH_MAX = 20;
 export const DESTROY_FROM = 10;                            // +10에서 +11을 노릴 때부터 실패하면 파괴
-// 부서지면 바로 아래 각성 단계로 떨어진다(+0까지 떨어지면 아무도 위험을 지지 않았다)
-export const shatterTo = enh => Math.max(0, Math.floor((enh - 1) / ENH_MILESTONE) * ENH_MILESTONE);
+// 부서지면 두 단계 떨어진다(+0이나 +5까지 떨어지면 성공 +10%에 실패 -32%라 아무도 위험을 지지 않았다)
+export const SHATTER_DROP = 2;
+export const shatterTo = enh => Math.max(0, enh - SHATTER_DROP);
 export const FAIL_REFUND = 0.3;                            // 위험 구간에서 실패하면 금화 30%를 돌려준다
 const TIER_COST = [1, 2.2, 4.8, 10.5, 23];
 export const enhGold = (tier, enh) => Math.round(40 * TIER_COST[tier] * Math.pow(1.22, enh) / 5) * 5;
 export const enhStone = (tier, enh) => Math.ceil((enh + 1) / 2) + tier;
 export const PROMOTE_NEED = 10;                            // 승급하려면 +10 이상
 export const promoteGold = tier => Math.round(600 * TIER_COST[tier + 1] / 50) * 50;
+// 승급하면 지금 공격력 이상이 되는 가장 낮은 강화 수치에서 시작한다(+0부터면 223 → 190으로 약해졌다)
+export const promoteEnh = (tier, enh) => { let e = 0; while (e < PROMOTE_NEED - 1 && weaponAtk(tier + 1, e) < weaponAtk(tier, enh)) e++; return e; };
 
 // ── 스테이지 보상(금화·강화석) ──
 export const clearGold = (c, s) => Math.round(75 * TIER_COST[c] * (1 + 0.2 * s) / 5) * 5;
 export const FIRST_CLEAR_MUL = 2.5;
 export const clearStone = (c, s) => 3 + s + c * 2;
 export const FAIL_STONE_RATE = 0.5;                        // 져도 강화석을 같은 식으로 조금 준다(0개면 허탈했다)
-// 자리를 비운 동안 견습생이 번다: 30분 넘게 비우면, 최대 8시간까지 시간당 지금 스테이지 클리어 보상의 25%
-export const IDLE = { minMin: 30, capH: 8, perH: 0.25, bonusH: 12, bonusGem: 10 };   // 12시간 넘게 비웠으면 보석도 조금
+// 자리를 비운 동안 견습생이 번다: 30분 넘게 비우면, 최대 8시간까지 시간당 지금 스테이지 클리어 보상의 50%(25%면 8시간이 두 판어치라 돌아올 맛이 없었다)
+export const IDLE = { minMin: 30, capH: 8, perH: 0.5, bonusH: 12, bonusGem: 10 };   // 12시간 넘게 비웠으면 보석도 조금
 export const FREE_REVIVE_RUNS = 3;   // 처음 세 판은 부활이 공짜(첫 판부터 광고를 들이밀지 않는다)
 // 보스가 이 시간(ms) 넘게 버티면 지쳐서 받는 피해가 늘어난다(보스전이 늘어지지 않게)
 export const BOSS_TIRED = { ms: 75000, mul: 1.5 };
@@ -236,6 +240,8 @@ export const PASS_DAILY = { gem: 60, sweep: 3 };
 export const CHARM_RATE = 5;
 // 레벨업 카드 추방(이번 판에서 다시 안 나옴) 횟수
 export const BANISH_PER_RUN = 2;
+// 공짜 빼기·다시 뽑기를 다 쓰면 보석으로 더 쓴다
+export const BAN_GEM = 5, REROLL_GEM = 5;
 // 무한의 탑: 1장 보스를 깨면 열린다. 층(웨이브)마다 몹이 세지고 3층마다 해골 장군
 export const ENDLESS = { unlock: 6, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.22, dmgGrow: 1.12 };
 // 칼빛(궤적 색) 꾸미기: 능력치는 그대로, 보이는 것만 바뀐다

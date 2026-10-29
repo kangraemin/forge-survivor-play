@@ -484,7 +484,7 @@ export class Lobby extends Phaser.Scene {
         const chk = this.add.container(24, 344);
         chk.add(this.add.rectangle(0, 0, 12, 12, 0x000000).setStrokeStyle(1, 0x9ae0ff).setOrigin(0, 0.5));
         if (this.useGuard) chk.add(this.add.text(6, 0, '✓', font(10, '#9ae0ff')).setOrigin(0.5));
-        chk.add(this.add.text(18, 0, `파괴 방지권 쓰기 (${sv.guard}장)`, font9(10, sv.guard ? '#e8e2f8' : '#5a5070')).setOrigin(0, 0.5));
+        chk.add(this.add.text(18, 0, `방지권 쓰기 · 실패 때만 씀 (${sv.guard}장)`, font9(10, sv.guard ? '#e8e2f8' : '#5a5070')).setOrigin(0, 0.5));
         chk.setSize(200, 18).setInteractive({ useHandCursor: true });
         chk.on('pointerup', () => { if (this.busy) return; if (!sv.guard) { sfx('deny'); track('guard_toggle_fail'); return; } sfx('click'); this.guardOff = !this.guardOff; track('guard_toggle', { on: !this.guardOff, guard: sv.guard }); this.show('forge'); });
         b.add(chk);
@@ -511,7 +511,7 @@ export class Lobby extends Phaser.Scene {
       // +10부터는 칼이 붉게 달아오른다
       if (danger) { this.halo.setTint(0xff3a2a).setAlpha(0.5); this.tweens.add({ targets: this.halo, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 }); }
     }
-    // 승급: +10 이상이고 그 등급 챕터 보스를 깨면 다음 등급 무기로(강화는 +0부터)
+    // 승급: +10 이상이고 그 등급 챕터 보스를 깨면 다음 등급 무기로(지금보다 약해지지 않는 강화 수치부터)
     if (sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1) {
       const need = (sv.tier + 1) * 6, okBoss = sv.cleared >= need, cost = D.promoteGold(sv.tier);
       const pb = button(this, max ? W / 2 : 200, 410, max ? 180 : 110, 38, `승급 ${fmt(cost)}`, () => this.promote(), { size: 12, color: 0x5a2f8a });
@@ -519,9 +519,9 @@ export class Lobby extends Phaser.Scene {
       if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }
       else if (!okBoss) b.add(this.add.text(W / 2, 384, `승급하려면 ${sv.tier + 1}장 보스를 쓰러뜨려야 한다`, font9(10, '#ff9a8a')).setOrigin(0.5, 0));
       else {
-        // 승급하면 강화가 +0으로 돌아가니 지금 공격력과 견줘 보여 준다
-        const now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = D.TIERS[sv.tier + 1].atk;
-        b.add(this.add.text(W / 2, 384, `${D.TIERS[sv.tier + 1].name}: 공격력 ${now} → ${next} (+0부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
+        // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
+        const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
+        b.add(this.add.text(W / 2, 384, `${D.TIERS[sv.tier + 1].name}: 공격력 ${now} → ${next} (+${e}부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
       }
     }
   }
@@ -538,17 +538,17 @@ export class Lobby extends Phaser.Scene {
     if (sv.gold < gold || sv.stone < stone) {
       track('enhance_blocked', { from: enh, tier: sv.tier, gold_short: Math.max(0, gold - sv.gold), stone_short: Math.max(0, stone - sv.stone) });
       // 탭을 멋대로 바꾸면 연타가 '전투 시작'에 떨어졌다: 알림만 띄우고 아래 탭으로 가게 둔다
-      sfx('deny'); toast(this, sv.sweep > 0 ? '전투 탭에서 소탕으로 벌자' : '전투 탭에서 금화·강화석을 벌자', '#ffd75e');
+      sfx('deny'); toast(this, sv.sweep > 0 ? '전투 탭에서 소탕으로 벌자' : '전투 탭에서 금화·강화석을 벌자', '#ffd75e', 226);   // 위에 띄우면 공격력 줄을 가렸다
       return;
     }
     this.busy = true;
     sv.gold -= gold; sv.stone -= stone;
     const danger = enh >= D.DESTROY_FROM, guard = danger && this.useGuard && sv.guard > 0;
-    if (guard) sv.guard--;
     const charm = this.useCharm;
     if (charm) sv.charm--;
     const win = Math.random() * 100 < D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0) + this.apron();
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
+    if (guard && !win) sv.guard--;   // 방지권은 칼을 지켜 냈을 때만 쓴다(성공해도 사라지면 아까워서 안 켰다)
     if (!win && danger) sv.gold += Math.round(gold * D.FAIL_REFUND);
     if (win) sv.enh++;
     else if (outcome === 'shatter') {
@@ -655,7 +655,7 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, cost = D.promoteGold(sv.tier);
     if (this.busy || sv.gold < cost || sv.cleared < (sv.tier + 1) * 6) return;
     this.busy = true;
-    sv.gold -= cost; sv.tier++; sv.enh = 0; save(); this.refreshTop();
+    sv.gold -= cost; sv.enh = D.promoteEnh(sv.tier, sv.enh); sv.tier++; save(); this.refreshTop();
     track('promote', { tier: sv.tier, cost, cleared: sv.cleared });
     sfx('win');
     this.cameras.main.flash(400, 200, 160, 255);

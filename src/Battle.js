@@ -6,7 +6,7 @@ import { font, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX }
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
-import { gearStats, tagMul, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY } from './gear.js';
+import { gearStats, tagMul, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore } from './gear.js';
 import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 
@@ -595,14 +595,30 @@ export class Battle extends Phaser.Scene {
     it.destroy();
   }
 
-  // 판에서 얻은 장비: 판이 끝나면 가방에 들어간다(져도 남는다)
+  // 판에서 얻은 장비: 그 부위가 비었거나 지금 낀 것보다 좋으면 바로 낄지 묻는다(판이 끝나야 쓰면 주운 맛이 없었다)
+  // 나머지는 판이 끝나면 가방에 들어간다(져도 남는다)
   gotLoot(item) {
     this.run.loot.push(item);
+    const sv = this.sv, cur = !item.egg && equipped(sv).find(x => x.s === item.s);
+    if (!item.egg && (!cur || itemScore(item) > itemScore(cur))) this.ui.lootAsk(item, cur);
     const rr = RARITY[item.r];
     const t = this.add.text(this.hero.x, this.hero.y - 34, `${rr.name} ${item.n}`, font(10, rr.css)).setOrigin(0.5).setDepth(40);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, delay: 600, duration: 700, onComplete: () => t.destroy() });
     sfx(item.r >= 2 ? 'level' : 'coin');
     this.log('loot', { rarity: item.r, slot: item.s, egg: item.egg || 'none' });
+  }
+
+  // 판 안에서 장비를 바로 낀다: 능력치·체력·받는 피해를 다시 계산한다
+  equipNow(item) {
+    const sv = this.sv, def0 = this.tv('def'), hp0 = 1 + this.tv('hp');
+    if (!(sv.inv ||= []).some(x => x.u === item.u)) sv.inv.push(item);
+    (sv.eq ||= {})[item.s] = item.u;
+    this.gear = gearStats(sv);
+    this.mobDmgMul *= (1 - this.tv('def')) / (1 - def0);
+    const k = (1 + this.tv('hp')) / hp0;
+    this.maxHp *= k; this.hp = Math.min(this.maxHp, this.hp * k);
+    save();
+    this.log('loot_equip', { rarity: item.r, slot: item.s });
   }
 
   // 보물 고블린: 금빛, 단단하고 도망친다. 12초 안에 잡으면 은화와 희귀 이상 장비

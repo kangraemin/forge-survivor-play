@@ -181,7 +181,7 @@ export class BossAI {
     const a0 = Phaser.Math.Angle.Between(m.x, m.y, s.hero.x, s.hero.y) - dir * arc / 2;
     this.busy = 2100; m.setVelocity(0, 0);
     const g = s.add.graphics().setDepth(9), st = { a: a0 };
-    g.fillStyle(0xff2030, 0.16).slice(m.x, m.y, len, a0, a0 + dir * arc, dir < 0).fillPath()
+    g.fillStyle(0xff2030, 0.26).slice(m.x, m.y, len, a0, a0 + dir * arc, dir < 0).fillPath()
       .lineStyle(2, 0xff4050, 0.8).lineBetween(m.x, m.y, m.x + Math.cos(a0) * len, m.y + Math.sin(a0) * len);
     sfx('warn');
     s.time.delayedCall(fast ? 650 : 850, () => {
@@ -193,7 +193,7 @@ export class BossAI {
         onUpdate: () => {
           if (!m.active || !g.active) return;
           const c = Math.cos(st.a), sn = Math.sin(st.a);
-          g.clear().lineStyle(7, 0xff3040, 0.5).lineBetween(ox, oy, ox + c * len, oy + sn * len).lineStyle(2, 0xffe0e0, 1).lineBetween(ox, oy, ox + c * len, oy + sn * len);
+          g.clear().lineStyle(11, 0xff3040, 0.5).lineBetween(ox, oy, ox + c * len, oy + sn * len).lineStyle(4, 0xffe0e0, 1).lineBetween(ox, oy, ox + c * len, oy + sn * len);
           const dx = s.hero.x - ox, dy = s.hero.y - oy, along = dx * c + dy * sn;
           if (!hit && along > 0 && along < len && Math.abs(dy * c - dx * sn) < 8) { hit = true; s.hurt(m.dmg * 1.2); }
         },
@@ -210,7 +210,8 @@ export class BossAI {
       const x = s.hero.x + (i ? R(-55, 55) : 0), y = s.hero.y + (i ? R(-55, 55) : 0);
       s.time.delayedCall(i * 250, () => this.m.active && this.warnCircle(x, y, r, 850, () => {
         if (!this.m.active) return;
-        const g = s.add.graphics().setDepth(8).fillStyle(this.b.color, 0.35).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(1, this.b.color, 0.9).strokeEllipse(x, y, r * 2, r * 1.5);
+        // 바닥 색과 섞이지 않게(용암 장에서 주황 장판이 안 보였다) 독 보라색에 빨간 테를 두른다
+        const g = s.add.graphics().setDepth(8).fillStyle(0x9a3aff, 0.4).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(2, 0xff4050, 1).strokeEllipse(x, y, r * 2, r * 1.5);
         let left = 4000;
         s.time.addEvent({ delay: 400, repeat: 9, callback: () => {
           if (!g.active) return;
