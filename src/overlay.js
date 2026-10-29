@@ -4,7 +4,8 @@ import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
-import { SKILL_UNLOCK, RARITY, addItems, makeItem, grantEgg, slotOf } from './gear.js';
+import { SKILL_UNLOCK, PETS, addItems, makeItem, grantEgg, eggsSettled } from './gear.js';
+import { itemBox } from './gearTab.js';
 
 const { W, H } = D;
 const DEPTH = 150;
@@ -400,6 +401,10 @@ export class Overlay {
       if (sv.stats.losses >= 10) { const e = grantEgg(sv, 'granny', false); if (e) loot.push(e); }
     }
     const salvaged = addItems(sv, loot);
+    eggsSettled();
+    // 처음 열린 펫은 알아서 데려간다(펫 탭을 안 열어도 보이게). 한 번만
+    const newPet = !sv.pet && !sv.petAuto && PETS.find(p => sv.cleared >= p.unlock);
+    if (newPet) { sv.pet = newPet.id; sv.petAuto = true; }
     sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem;
     save();
     s.log('battle_end', { win, first, progress: Math.round((win ? 1 : s.runProgress()) * 100), wave: s.wave, floors: s.endless ? floors : undefined, kills: r.kills, gold, stone, gem, power: D.powerOf(sv), rec: s.endless ? undefined : D.recPower(s.c, s.s), top_dmg: s.topHit(), revived: !!r.revived, cleared: sv.cleared, loot: loot.length, skills: Object.entries(r.skills).map(([k, v]) => k + v).join(',').slice(0, 100) });
@@ -409,7 +414,7 @@ export class Overlay {
     if (this.c) { this.c.destroy(); this.c = null; this.open = null; }
     this.queue = []; this.pendingLv = 0;
     const c = this.begin('result');
-    c.add(panel(s, 20, 90, W - 40, 300, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
+    c.add(panel(s, 20, 84, W - 40, 368, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
     const title = s.add.text(W / 2, 118, s.endless ? (floors > best ? '최고 기록!' : '탑 도전 끝') : win ? (s.isBoss ? '보스 격파!' : '스테이지 클리어!') : '쓰러졌다…', font(18, win || (s.endless && floors > best) ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
     c.add(s.add.text(W / 2, 142, s.endless ? `무한의 탑  ·  최고 ${sv.endBest}층` : `${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
@@ -438,7 +443,7 @@ export class Overlay {
     if (!win && !s.endless) {
       const pw = D.powerOf(sv), rp = D.recPower(s.c, s.s);
       c.add(s.add.text(W / 2, 294, `내 전투력 ${pw}  ·  권장 ${rp}`, font(11, pw >= rp ? '#5fdc6a' : '#ff8070')).setOrigin(0.5));
-      c.add(pw >= rp ? s.add.text(W / 2, 306, '권장은 넘었다\n체력·갑옷 훈련과 보석 줍기를 챙기자', { ...font9(10, '#c8bfe0'), align: 'center' }).setOrigin(0.5) : s.add.text(W / 2, 310, `권장까지 ${rp - pw} 부족 · 강화·훈련하자`, font(12, '#ffb070')).setOrigin(0.5));
+      c.add(pw >= rp ? s.add.text(W / 2, 310, '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#c8bfe0')).setOrigin(0.5) : s.add.text(W / 2, 310, `권장까지 ${rp - pw} 부족 · 강화·훈련하자`, font(12, '#ffb070')).setOrigin(0.5));
     }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
@@ -455,23 +460,21 @@ export class Overlay {
       }, { size: 10, color: 0x2f5a7a });
       c.add(db);
     }
-    // 얻은 장비 줄(판 아래)
-    if (loot.length) {
-      const n = Math.min(loot.length, 8), x0 = W / 2 - (n - 1) * 13;
-      c.add(s.add.text(W / 2, 404, `장비 ${loot.length}개 → 장비 가방${salvaged ? `  ·  가득 차 강화석 +${salvaged}` : ''}`, font9(10, '#c8bfe0')).setOrigin(0.5));
-      loot.slice(0, n).forEach((it, i) => {
-        const rr = RARITY[it.r], x = x0 + i * 26, y = 428;
-        const box = s.add.rectangle(x, y, 22, 22, 0x15121f).setStrokeStyle(2, rr.color);
-        const t = s.add.text(x, y, slotOf(it.s).name[0], font(10, rr.css)).setOrigin(0.5);
-        c.add([box, t]);
-        box.setScale(0); t.setScale(0);
-        s.tweens.add({ targets: [box, t], scale: 1, duration: 220, delay: 450 + i * 90, ease: 'Back.Out', onStart: () => it.r >= 2 && sfx('level') });
-      });
-      if (loot.some(it => it.r >= 3 || it.egg)) c.add(s.add.text(W / 2, 450, loot.find(it => it.egg) ? `숨겨진 장비 「${loot.find(it => it.egg).n}」!` : '전설 장비!', font(11, '#ffb050')).setOrigin(0.5));
-    }
+    // 얻은 장비 줄(판 안, 버튼 위). 빈 부위는 알아서 끼워졌다
+    c.add(s.add.rectangle(W / 2, 344, W - 80, 1, 0x5b4f7a));
+    const egg = loot.find(it => it.egg), top = loot.reduce((a, it) => Math.max(a, it.r < 4 ? it.r : -1), -1);
+    const head = egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개 → 장비 가방${salvaged ? ` · 가득 차 강화석 +${salvaged}` : ''}` : '';
+    if (head) c.add(s.add.text(W / 2, 356, head, egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
+    const n = Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);
+    loot.slice(0, n).forEach((it, i) => {
+      const box = itemBox(s, x0 + i * 30, 382, it, 26);
+      c.add(box); box.setScale(0);
+      s.tweens.add({ targets: box, scale: 1, duration: 220, delay: 450 + i * 90, ease: 'Back.Out', onStart: () => it.r >= 2 && sfx('level') });
+    });
+    if (loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 382, `+${loot.length - n}`, font(10, '#c8bfe0')).setOrigin(0, 0.5));
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
-    c.add(button(s, 85, 360, 110, 30, win || s.endless ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3b2f5c }));
-    c.add(button(s, 190, 360, 100, 30, win ? '다음' : '다시', () => {
+    c.add(button(s, 85, 424, 110, 30, win || s.endless ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3b2f5c }));
+    c.add(button(s, 190, 424, 100, 30, win ? '다음' : '다시', () => {
       s.log('result_action', { act: win ? 'next' : 'retry', win });
       if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });
       const n = win ? nextIdx : idx;

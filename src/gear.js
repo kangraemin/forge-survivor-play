@@ -81,7 +81,10 @@ export const spTotal = cleared => cleared + Math.floor(cleared / 6) * 2;
 export const spUsed = sv => SP.reduce((a, s) => a + (sv.sp?.[s.id] || 0), 0);
 export const spFree = sv => spTotal(sv.cleared) - spUsed(sv);
 // 그 태그 스킬의 피해 배율
-export const tagMul = (sv, tag) => 1 + SP_DMG * (sv.sp?.[TAG_SP[tag]] || 0);
+// 5점마다 한 번 더 붙는 보너스(찍는 맛)
+export const SP_MILE = 5, SP_MILE_DMG = 0.03, SP_MILE_HP = 0.05;
+const spDmg = n => SP_DMG * n + SP_MILE_DMG * Math.floor(n / SP_MILE);
+export const tagMul = (sv, tag) => 1 + spDmg(sv.sp?.[TAG_SP[tag]] || 0);
 export const SP_RESET_GEM = 50;
 
 // ── 펫: 깬 스테이지 수로 열린다. 금화로 키우고 목걸이를 끼워 준다 ──
@@ -146,7 +149,7 @@ export function gearStats(sv) {
   }
   // 스탯 체력·민첩·지능
   const sp = sv.sp || {};
-  out.hp += 0.015 * (sp.vit || 0); out.regen += 0.02 * (sp.vit || 0);
+  out.hp += 0.015 * (sp.vit || 0) + SP_MILE_HP * Math.floor((sp.vit || 0) / SP_MILE); out.regen += 0.02 * (sp.vit || 0);
   out.spd += 0.003 * (sp.dex || 0); out.cd += 0.003 * (sp.int || 0);
   return out;
 }
@@ -155,8 +158,12 @@ export function gearStats(sv) {
 export const INV_MAX = 60;
 export function addItems(sv, items) {
   sv.inv ||= []; let stone = 0;
+  sv.eq ||= {};
   for (const it of items) {
+    if (it.egg) { if (sv.eggs?.[it.egg]) continue; (sv.eggs ||= {})[it.egg] = true; }
     sv.inv.push(it);
+    // 빈 부위는 바로 낀다(장비 탭을 안 열어도 새 장비가 전투에 들어가게)
+    if (!sv.eq[it.s]) sv.eq[it.s] = it.u;
     if (sv.inv.length > INV_MAX) {
       const on = new Set(Object.values(sv.eq || {}));
       const worst = sv.inv.filter(x => !on.has(x.u) && !x.egg).sort((a, b) => itemScore(a) - itemScore(b))[0];
@@ -166,13 +173,16 @@ export function addItems(sv, items) {
   sv.stone += stone;
   return stone;
 }
-// 숨겨진 템을 한 번만 준다. add가 false면 표시만 하고 아이템을 돌려준다(전투 중 줍는 것은 판이 끝날 때 넣는다)
+// 숨겨진 템을 한 번만 준다. add가 false면 아이템만 돌려준다(전투 중 줍는 것은 판이 끝날 때 넣는다)
+// 얻었다는 표시는 가방에 들어갈 때(addItems) 남긴다: 판 도중 앱이 꺼져도 다시 얻을 수 있게
+const pending = new Set();
 export function grantEgg(sv, id, add = true) {
-  sv.eggs ||= {};
-  if (sv.eggs[id]) return null;
-  sv.eggs[id] = true;
-  const it = makeEgg(id); if (add) addItems(sv, [it]); return it;
+  if (sv.eggs?.[id] || pending.has(id)) return null;
+  const it = makeEgg(id);
+  if (add) addItems(sv, [it]); else pending.add(id);
+  return it;
 }
+export const eggsSettled = () => pending.clear();
 // 전투 중 드랍 하나(인벤토리에는 판이 끝날 때 넣는다): 아주 드물게 고무 오리
 export function dropItem(sv, c, opt = {}) {
   if (Math.random() < 0.004) { const e = grantEgg(sv, 'duck', false); if (e) return e; }

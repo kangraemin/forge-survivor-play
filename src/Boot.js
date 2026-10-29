@@ -107,6 +107,28 @@ export class Boot extends Phaser.Scene {
       g.fillStyle(0xffd75e).fillRect(1, 4, 12, 2).fillRect(6, 3, 2, 5);
       g.fillStyle(0xb57a3a).fillRect(2, 1, 10, 2);
     });
+    // 장비 부위 그림(밝은 회색으로 그려 등급 색으로 물들인다)
+    const L = 0xffffff, M = 0xb0b0b0, Dk = 0x606060;
+    tex('gs_helm', 12, 12, g => {
+      g.fillStyle(Dk).fillRect(2, 3, 8, 8); g.fillStyle(M).fillRect(3, 2, 6, 8); g.fillStyle(L).fillRect(4, 2, 4, 2).fillRect(3, 4, 1, 4);
+      g.fillStyle(0x000000).fillRect(4, 6, 4, 1).fillRect(5, 7, 2, 3);
+    });
+    tex('gs_armor', 12, 12, g => {
+      g.fillStyle(Dk).fillRect(1, 2, 10, 4).fillRect(2, 6, 8, 5); g.fillStyle(M).fillRect(2, 2, 8, 3).fillRect(3, 5, 6, 5);
+      g.fillStyle(L).fillRect(3, 3, 2, 1).fillRect(4, 5, 1, 4); g.fillStyle(0x000000).fillRect(5, 2, 2, 2);
+    });
+    tex('gs_boots', 12, 12, g => {
+      g.fillStyle(Dk).fillRect(3, 1, 5, 9).fillRect(3, 8, 8, 3); g.fillStyle(M).fillRect(4, 1, 3, 8).fillRect(4, 8, 6, 2);
+      g.fillStyle(L).fillRect(4, 1, 1, 6).fillRect(3, 3, 5, 1);
+    });
+    tex('gs_ring', 12, 12, g => {
+      g.fillStyle(Dk).fillCircle(6, 7, 4); g.fillStyle(0x000000).fillCircle(6, 7, 2); g.fillStyle(M).fillRect(3, 9, 6, 1);
+      g.fillStyle(L).fillRect(4, 1, 4, 3); g.fillStyle(M).fillRect(5, 2, 2, 1);
+    });
+    tex('gs_collar', 12, 12, g => {
+      g.fillStyle(Dk).fillRect(1, 3, 10, 3); g.fillStyle(M).fillRect(1, 3, 10, 2); g.fillStyle(L).fillRect(2, 3, 2, 1).fillRect(7, 3, 2, 1);
+      g.fillStyle(M).fillCircle(6, 8, 3); g.fillStyle(L).fillRect(5, 6, 2, 2); g.fillStyle(0x000000).fillRect(6, 9, 1, 1);
+    });
     // 정예가 떨어뜨리는 장비 꾸러미(빛나는 보따리)
     tex('loot', 12, 12, g => {
       g.fillStyle(0x0a0710).fillRect(1, 2, 10, 10);

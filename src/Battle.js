@@ -6,7 +6,7 @@ import { font, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX }
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
-import { gearStats, tagMul, wtypeOf, dropItem, makeItem, grantEgg, RARITY } from './gear.js';
+import { gearStats, tagMul, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY } from './gear.js';
 import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 
@@ -54,7 +54,7 @@ export class Battle extends Phaser.Scene {
     this.gear = gearStats(sv);
     this.wtype = wtypeOf(sv);
     this.tagM = { melee: tagMul(sv, 'melee'), ranged: tagMul(sv, 'ranged'), magic: tagMul(sv, 'magic'), pet: 1 };
-    this.run.loot = [];
+    this.run.loot = []; eggsSettled();
     this.wave = 0;
     this.waveLen = this.endless ? D.ENDLESS.floorSec * 1000 : this.ch.dur * 1000 / D.WAVES;
     this.waveCount = this.endless ? Infinity : this.isBoss ? D.WAVES - 1 : D.WAVES;

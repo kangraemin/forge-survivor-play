@@ -404,6 +404,8 @@ export class Lobby extends Phaser.Scene {
     this.sword.setInteractive().on('pointerup', () => {
       if (this.busy || sv.eggs?.rock) return;
       sv.taps = (sv.taps || 0) + 1; sfx('hit', 40);
+      // 다섯 번마다 뭔가 있다는 기척을 준다
+      if (sv.taps % 5 === 0 && sv.taps < 20) { save(); toast(this, ['칼 밑에서 뭔가 덜그럭거린다…', '덜그럭… 덜그럭…', '거의 빠질 것 같다!'][sv.taps / 5 - 1], '#c8bfe0'); }
       this.tweens.add({ targets: this.sword, angle: { from: -6, to: 6 }, duration: 60, yoyo: true, onComplete: () => this.sword.setAngle(0) });
       if (sv.taps >= 20 && grantEgg(sv, 'rock')) { save(); sfx('win'); toast(this, '칼 밑에서 「이상한 돌멩이」가 굴러 나왔다!', '#ff8ae0'); track('egg_found', { egg: 'rock' }); }
     });

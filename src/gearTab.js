@@ -6,18 +6,20 @@ import { font, font9, panel, button, fmt, COLOR, toast } from './ui.js';
 import { track } from './log.js';
 import {
   SLOTS, slotOf, RARITY, STATS, statText, SETS, EGGS, WTYPES, PETS, PET_MAX, petCost, petPow, SP, SP_RESET_GEM, SKILL_TAG, TAG_NAME,
-  spFree, spTotal, gearStats, itemScore, INV_MAX,
+  spFree, spTotal, gearStats, itemScore, INV_MAX, tagMul, SP_MILE, SP_MILE_DMG, SP_MILE_HP,
 } from './gear.js';
 
 const { W, H } = D;
 const PAGE = 24, COLS = 6, CELL = 40;
+const SHORT = { hp: '체력', atk: '피해', def: '방어', spd: '이속', mag: '자력', luck: '치명', regen: '회복', cd: '재사용', pet: '펫' };
 
-// 장비 한 칸 그림: 등급 색 테두리 + 부위 첫 글자(숨겨진 템은 ?)
-function itemBox(scene, x, y, it, size = 34, on = false) {
+// 장비 한 칸 그림: 등급 색 테두리 + 등급 색으로 물든 부위 그림. 세트는 안쪽 테두리를 세트 색으로, 숨겨진 템은 ★
+export function itemBox(scene, x, y, it, size = 34, on = false) {
   const c = scene.add.container(x, y), rr = RARITY[it.r];
   c.add(scene.add.rectangle(0, 0, size, size, it.r === 4 ? 0x2a0a22 : it.r === 3 ? 0x2a1a08 : 0x15121f).setStrokeStyle(2, rr.color));
-  c.add(scene.add.text(0, -2, it.egg ? '?' : slotOf(it.s).name[0], font(size > 30 ? 13 : 11, rr.css)).setOrigin(0.5));
-  if (it.set) c.add(scene.add.rectangle(size / 2 - 4, -size / 2 + 4, 5, 5, Phaser.Display.Color.HexStringToColor(SETS[it.set].css).color));
+  if (it.set) c.add(scene.add.rectangle(0, 0, size - 6, size - 6).setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(SETS[it.set].css).color, 0.9));
+  c.add(scene.add.image(0, 0, 'gs_' + it.s).setScale(Math.floor(size * 0.6 / 12 * 2) / 2).setTint(it.r === 0 ? 0xd8d2e8 : Phaser.Display.Color.HexStringToColor(rr.css).color));
+  if (it.egg) c.add(scene.add.text(size / 2 - 3, -size / 2 + 1, '★', font(8, '#ff8ae0')).setOrigin(1, 0));
   if (on) c.add(scene.add.text(-size / 2 + 2, size / 2 - 2, 'E', font(8, '#5fdc6a')).setOrigin(0, 1));
   c.setSize(size, size);
   return c;
@@ -68,7 +70,6 @@ export const GearTab = {
       b.add(this.add.text(x, y + 25, sl.name, font9(9, '#8a80a0')).setOrigin(0.5));
     });
     // 합친 효과
-    const SHORT = { hp: '체력', atk: '피해', def: '방어', spd: '이속', mag: '자력', luck: '치명', regen: '회복', cd: '재사용', pet: '펫' };
     const parts = Object.keys(STATS).filter(k => g[k] > 0.0005).map(k => `${SHORT[k]} +${STATS[k].pct ? Math.round(g[k] * 100) + '%' : g[k].toFixed(1)}`);
     b.add(this.add.text(W / 2, 164, parts.length ? parts.join('  ') : '장비를 끼면 능력치가 오른다', { ...font9(9, '#e8e2f8'), align: 'center', wordWrap: { width: W - 20 } }).setOrigin(0.5, 0));
     const setLine = Object.entries(g.sets).map(([k, n]) => `${SETS[k].name} ${n}/4${n >= 4 ? ' ★' : n >= 2 ? ' ☆' : ''}`).join('  ');
@@ -105,7 +106,7 @@ export const GearTab = {
   itemWin(it) {
     const sv = this.sv, c = this.modal(), rr = RARITY[it.r], sl = slotOf(it.s);
     const curU = sv.eq?.[it.s], cur = curU && curU !== it.u ? sv.inv.find(v => v.u === curU) : null, isOn = curU === it.u;
-    c.add(panel(this, 22, 96, W - 44, 290, { fill: 0x1a1426, line: rr.color }));
+    c.add(panel(this, 22, 96, W - 44, 302, { fill: 0x1a1426, line: rr.color }));
     c.add(itemBox(this, W / 2, 130, it, 40));
     c.add(this.add.text(W / 2, 160, it.n, font(13, rr.css)).setOrigin(0.5));
     c.add(this.add.text(W / 2, 177, `${rr.name} ${sl.name}${it.egg ? '' : ` · ${it.c + 1}장`}`, font9(10, '#a89cc8')).setOrigin(0.5));
@@ -118,11 +119,19 @@ export const GearTab = {
       y += 3; line(`세트 「${s.name}」 (${n}/4)`, s.css);
       line(`2개: ${s.twoTxt}`, n >= 2 ? s.css : '#6a6080'); line(`4개: ${s.fourTxt}`, n >= 4 ? s.css : '#6a6080');
     }
-    if (cur) {
-      const d = itemScore(it) - itemScore(cur);
-      y += 3; line(`지금 낀 「${cur.n}」보다 ${d >= 0 ? '좋다 ▲' : '약하다 ▼'}`, d >= 0 ? '#5fdc6a' : '#ff8070');
+    // 낀 것과 능력치별로 비교(빈칸이면 그대로 오른다)
+    if (!isOn) {
+      const keys = [...new Set([...Object.keys(it.st), ...Object.keys(cur?.st || {})])];
+      const diff = keys.map(k => {
+        const d = (it.st[k] || 0) - (cur?.st[k] || 0);
+        if (Math.abs(d) < 0.0005) return null;
+        const v = STATS[k].pct ? `${Math.round(Math.abs(d) * 1000) / 10}%` : Math.abs(d).toFixed(2);
+        return `${SHORT[k]} ${d > 0 ? '▲' : '▼'}${v}`;
+      }).filter(Boolean);
+      y += 3; line(cur ? `낀 「${cur.n}」과 비교` : '빈칸에 끼면', '#a89cc8');
+      c.add(this.add.text(W / 2, y, diff.join('  ') || '차이 없음', { ...font9(9, '#e8e2f8'), align: 'center', wordWrap: { width: W - 64 } }).setOrigin(0.5, 0));
     }
-    const eb = button(this, 72, 360, 88, 26, isOn ? '빼기' : '끼기', () => {
+    const eb = button(this, 72, 372, 88, 26, isOn ? '빼기' : '끼기', () => {
       sv.eq ||= {};
       if (isOn) delete sv.eq[it.s]; else sv.eq[it.s] = it.u;
       save(); sfx('buy'); track('gear_equip', { on: !isOn, slot: it.s, rarity: it.r, set: it.set || 'none', egg: it.egg || 'none', power: D.powerOf(sv) });
@@ -130,13 +139,13 @@ export const GearTab = {
     }, { size: 11, color: 0x2f6b3a });
     c.add(eb);
     const salv = RARITY[it.r].salvage;
-    const xb = button(this, W / 2 + 8, 360, 72, 26, it.egg ? '분해 불가' : `분해 +${salv}`, () => {
+    const xb = button(this, W / 2 + 8, 372, 72, 26, it.egg ? '분해 불가' : `분해 +${salv}`, () => {
       if (it.egg || isOn) return;
       sv.inv = sv.inv.filter(v => v !== it); sv.stone += salv; save();
       track('gear_salvage', { rarity: it.r, stone: salv }); sfx('coin'); c.close(); toast(this, `강화석 +${salv}`, '#9ae0ff');
     }, { size: 10, color: 0x5a3a2a });
     xb.setEnabled(!it.egg && !isOn); c.add(xb);
-    c.add(button(this, W - 52, 360, 44, 26, '닫기', () => c.close(), { size: 10 }));
+    c.add(button(this, W - 52, 372, 44, 26, '닫기', () => c.close(), { size: 10 }));
   },
 
   // ── 펫 ──
@@ -177,12 +186,16 @@ export const GearTab = {
     const sv = this.sv, b = this.body, free = spFree(sv);
     sv.sp ||= { str: 0, dex: 0, int: 0, vit: 0 };
     b.add(this.add.text(W / 2, 76, `남은 점수 ${free} / ${spTotal(sv.cleared)}`, font(12, free ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 92, '첫 클리어마다 1점, 보스는 2점 더', font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 92, '첫 클리어마다 1점, 보스는 2점 더 · 5점마다 보너스', font9(10, '#a89cc8')).setOrigin(0.5));
     SP.forEach((st, i) => {
       const y = 104 + i * 54, v = sv.sp[st.id] || 0;
       b.add(panel(this, 12, y, W - 24, 48, { fill: 0x1a1528 }));
       b.add(this.add.text(24, y + 7, st.name, font(12, st.css)));
       b.add(this.add.text(70, y + 9, String(v), font(11)));
+      // 지금 효과와 다음 5점 보너스까지 남은 점수
+      const now = Math.round((st.tag ? tagMul(sv, st.tag) - 1 : gearStats({ sp: { vit: v } }).hp) * 100);
+      const left = SP_MILE - v % SP_MILE;
+      b.add(this.add.text(92, y + 10, `+${now}% · ${left}점 뒤 +${Math.round((st.tag ? SP_MILE_DMG : SP_MILE_HP) * 100)}%`, font9(9, '#ffd75e')));
       b.add(this.add.text(24, y + 28, st.desc, font9(10, '#e8e2f8')));
       const pb = button(this, W - 44, y + 24, 44, 28, '+1', () => {
         if (this.busy || spFree(sv) <= 0) return;
