@@ -97,7 +97,7 @@ export function toast(scene, msg, color = '#ffffff', y = 88) {
 export function skinFx(sprite, sk) {
   const cm = sprite.preFX?.addColorMatrix();
   if (!cm) return sprite.setTint(sk.tint);
-  if (sk.gray) { cm.grayscale(1); cm.brightness(1.4, true); } else cm.hue(sk.hue);
+  if (sk.gray) { cm.grayscale(1); cm.brightness(sk.dark ? 0.55 : 1.4, true); } else cm.hue(sk.hue);
   return sprite;
 }
 

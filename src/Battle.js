@@ -2,11 +2,11 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, playBgm, stopBgm } from './sfx.js';
-import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast } from './ui.js';
+import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
-import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF } from './gear.js';
+import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF, heroSkin } from './gear.js';
 import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 
@@ -50,6 +50,8 @@ export class Battle extends Phaser.Scene {
       bDmg: 0, bSpd: 0, bHp: 0, bPick: 0,
       revive: sv.train.revive ? 1 : 0, lastHeal: 0, dmgBy: {},
     };
+    // 비급: 산 스킬 한 권을 판 시작부터 들고 들어간다
+    if (sv.book && sv.books?.[sv.book]) this.run.skills[sv.book] = D.BOOK_LV;
     // 장비·세트·스탯, 무기 종류. 든 무기가 따르는 스탯만 피해를 올린다
     this.gear = gearStats(sv);
     this.wtype = wtypeOf(sv);
@@ -195,6 +197,8 @@ export class Battle extends Phaser.Scene {
     this.heroRing = this.add.ellipse(0, 0, 24, 10, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(11.5);
     // 몹 더미에 몸이 가려도 머리 위 작은 화살표로 어디 있는지 보인다
     this.heroMark = this.add.triangle(0, 0, 0, 0, 8, 0, 4, 5, rc).setStrokeStyle(1, 0x000000, 0.6).setDepth(12);
+    // 영웅 스킨: 몸 색을 바꾼다
+    if (heroSkin(sv).id) skinFx(this.hero, heroSkin(sv));
     if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
     this.face = 1; this.walkT = 0; this.iframe = 0;
     this.atk = D.weaponAtk(sv.tier, sv.enh);

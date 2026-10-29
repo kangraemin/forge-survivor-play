@@ -75,6 +75,30 @@ export const WTYPES = [
   { id: 'staff', name: '지팡이', noun: '지팡이', desc: '적을 따라가는 마력탄을 쏜다', stat: 'int', tag: 'magic', fav: ['bolt', 'fireball', 'holy', 'missile'], own: 'missile' },
 ];
 export const wtypeOf = sv => WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
+
+// ── 보석으로 사는 꾸미기 ──
+// 영웅 스킨: 주인공 몸 색이 바뀌고 작은 능력치가 붙는다(st 값은 장비 옵션과 같은 비율)
+export const HERO_SKINS = [
+  { id: '', name: '기본 모험가', desc: '처음 옷', cost: 0 },
+  { id: 'crimson', name: '진홍 기사', desc: '최대 체력 +6%', hue: 150, st: { hp: 0.06 }, cost: 500 },
+  { id: 'shadow', name: '그림자 추적자', desc: '이동 속도 +6%', gray: true, dark: true, st: { spd: 0.06 }, cost: 500 },
+  { id: 'jade', name: '비취 수도승', desc: '재사용 대기 -5%', hue: -90, st: { cd: 0.05 }, cost: 800 },
+  { id: 'paladin', name: '황금 성기사', desc: '피해 +6%', hue: -150, st: { atk: 0.06 }, cost: 800 },
+  { id: 'demon', name: '마왕 갑주', desc: '피해 +8% · 체력 +8%', hue: 100, st: { atk: 0.08, hp: 0.08 }, cost: 1600 },
+];
+// 캐시 무기: 무기 종류마다 하나. 그 무기를 들면 피해 +12%, 칼빛을 따로 안 끼면 고유 궤적 색
+export const CASH_W = {
+  sword: { name: '용살검', hue: 175, tint: 0xff5a2a },
+  spear: { name: '천룡창', hue: -60, tint: 0x9ae8ff },
+  axe: { name: '파멸의 도끼', hue: 100, tint: 0xb07aff },
+  bow: { name: '천궁', hue: -150, tint: 0xffd75e },
+  gun: { name: '마도총', hue: 60, tint: 0xff6ad0 },
+  knuckle: { name: '용권', hue: -120, tint: 0x6fe36a },
+  staff: { name: '대현자의 지팡이', gray: true, tint: 0xffffff },
+};
+export const CASH_W_GEM = 900, CASH_W_DMG = 0.12;
+export const heroSkin = sv => HERO_SKINS.find(x => x.id === (sv.hskin || '')) || HERO_SKINS[0];
+export const cashW = sv => sv.cw?.[wtypeOf(sv).id] ? CASH_W[wtypeOf(sv).id] : null;
 export const ownsW = (sv, id) => id === 'sword' || !!sv.wOwn?.[id];
 // 아직 없는 무기 하나를 무작위로 준다(없으면 null). chance: 얻을 확률
 export function grantWeapon(sv, chance = 1) {
@@ -185,6 +209,9 @@ export function gearStats(sv) {
     if (n >= 2) for (const [sk, v] of Object.entries(SETS[k].two)) out[sk] += v;
     if (n >= 4) out.fx.add(k + '4');
   }
+  // 영웅 스킨·캐시 무기
+  for (const [k, v] of Object.entries(heroSkin(sv).st || {})) out[k] += v;
+  if (cashW(sv)) out.atk += CASH_W_DMG;
   // 스탯 체력·민첩·지능
   const sp = sv.sp || {};
   out.hp += 0.015 * (sp.vit || 0) + SP_MILE_HP * Math.floor((sp.vit || 0) / SP_MILE); out.regen += 0.02 * (sp.vit || 0);

@@ -24,6 +24,7 @@ const fresh = () => ({
   starterShown: false,
   endBest: 0,              // 무한의 탑 최고 층
   skins: {}, skin: '',     // 산 칼빛, 끼고 있는 칼빛
+  hskins: {}, hskin: '', cw: {}, books: {}, book: '',   // 산 영웅 스킨·캐시 무기·비급, 낀 것
   stats: { runs: 0, kills: 0, destroyed: 0, playMs: 0, losses: 0 },
   inv: [], eq: {},         // 가진 장비, 부위별로 낀 장비 uid
   wtype: 'sword',          // 든 무기 종류(가진 무기 wOwn·스탯 버전 spV는 load에서 채운다)

@@ -278,7 +278,25 @@ export const SKINS = [
   { id: 'flame', name: '불꽃 칼빛', desc: '붉은 불길이 남는다', hue: 175, tint: 0xff5a2a, cost: 300 },
   { id: 'silver', name: '은빛 칼빛', desc: '하얀 달빛이 남는다', gray: true, tint: 0xffffff, cost: 600 },
   { id: 'gold', name: '황금 칼빛', desc: '금빛 궤적 + 불티', hue: -150, tint: 0xffd75e, cost: 1200, ember: true },
+  { id: 'frost', name: '서리 칼빛', desc: '푸른 냉기가 남는다', hue: -60, tint: 0x9ae8ff, cost: 600 },
+  { id: 'venom', name: '맹독 칼빛', desc: '초록 독안개가 남는다', hue: -120, tint: 0x6fe36a, cost: 600 },
+  { id: 'void', name: '공허 칼빛', desc: '보랏빛 틈 + 불티', hue: 100, tint: 0xb07aff, cost: 1200, ember: true },
+  { id: 'sakura', name: '벚꽃 칼빛', desc: '분홍 꽃잎 + 불티', hue: 60, tint: 0xff6ad0, cost: 1500, ember: true },
 ];
+// 비급: 보석으로 산 스킬은 판을 시작할 때부터 Lv2로 들고 들어간다(한 권만 낀다)
+export const BOOKS = ['spin', 'dagger', 'bolt', 'holy', 'fireball', 'ice', 'orb'];
+export const BOOK_GEM = 400, BOOK_LV = 2;
+// 시너지: 짝 스킬을 둘 다 가지면 두 스킬 모두 더 자주 나간다
+export const SYNERGY = [
+  { a: 'bolt', b: 'ice', name: '빙뢰' },
+  { a: 'fireball', b: 'holy', name: '불의 성역' },
+  { a: 'spin', b: 'dagger', name: '칼춤' },
+  { a: 'dagger', b: 'bolt', name: '번개 단검' },
+  { a: 'spin', b: 'holy', name: '회전 성역' },
+];
+// 수호 구슬은 대기 시간 없이 늘 돌아서 '더 자주'가 효과가 없다: 시너지 짝에 넣지 않는다
+export const SYN_CD = 0.75;
+export const synOf = (k, skills) => SYNERGY.filter(x => (x.a === k && skills[x.b]) || (x.b === k && skills[x.a]));
 export const restoreGem = enh => 30 + enh * 10;
 export const GEM_SHOP = [
   { id: 'guard', name: '파괴 방지권', icon: 11, cost: 80, give: { guard: 1 }, desc: '파괴를 막는다' },

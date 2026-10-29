@@ -1,7 +1,8 @@
 // 액티브 스킬 8종 + 무기 전용 7종(검기·투창·지진·화살비·수류탄·기공파·유도 마탄). 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
 import { sfx } from './sfx.js';
 import { skinFx, viewRect } from './ui.js';
-import { SKILLS, PASSIVE_LV3, SKINS } from './data.js';
+import { SKILLS, PASSIVE_LV3, SKINS, synOf, SYN_CD } from './data.js';
+import { cashW } from './gear.js';
 
 const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
 
@@ -33,7 +34,8 @@ export class Weapons {
       if (SKILLS[k].type !== 'active') continue;
       this.cd[k] = (this.cd[k] ?? 300) - dt;
       if (this.cd[k] <= 0) {
-        this.cd[k] = this[k](lv) * this.cdMul();
+        // 시너지: 짝 스킬을 함께 가지면 더 자주 나간다
+        this.cd[k] = this[k](lv) * this.cdMul() * (synOf(k, this.sk).length ? SYN_CD : 1);
         // 대마법사 4세트: 기본 공격 말고 스킬이 10% 확률로 한 번 더 나간다
         if (k !== 'sword' && k !== 'orb' && k !== 'holy' && this.s.wtype.id === 'staff' && this.s.gear.fx.has('staff4') && Math.random() < 0.1) this.s.time.delayedCall(150, () => !this.s.over && this[k](lv));
       }
@@ -44,7 +46,7 @@ export class Weapons {
   }
 
   enhGlow() {
-    const sv = this.s.sv, g = this.enhBase(sv.enh), sk = sv.skin && SKINS.find(x => x.id === sv.skin);
+    const sv = this.s.sv, g = this.enhBase(sv.enh), sk = (sv.skin && SKINS.find(x => x.id === sv.skin)) || cashW(sv);
     // 칼빛을 끼면 색만 바꾼다(크기는 강화 단계 그대로)
     return sk ? { ...g, tint: sk.tint, skin: sk, ember: g.ember || sk.ember } : g;
   }

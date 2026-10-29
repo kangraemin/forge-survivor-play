@@ -2,11 +2,11 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, won, firstX2 } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
-import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf, PETS } from './gear.js';
+import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, ownsW, wtypeOf, PETS, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -726,43 +726,97 @@ export class Lobby extends Phaser.Scene {
 
   update() { if (this.topTxt) this.topTxt.forEach(t => { const v = t.get(); if (t.text !== String(v)) t.setText(v); }); }
 
-  // ── 칼빛 꾸미기: 보석으로 사고 골라 낀다 ──
+  // ── 꾸미기: 칼빛·영웅 스킨·캐시 무기를 보석으로 사고 골라 낀다 ──
   skinPage() {
-    const sv = this.sv, b = this.body;
-    b.add(this.add.text(16, 76, '칼빛 꾸미기', font(11, '#ff9ad0')));
-    b.add(this.add.text(16, 92, '휘두르는 궤적 색만 바뀐다 · 능력치는 그대로', font9(10, '#a89cc8')));
-    D.SKINS.forEach((sk, i) => {
-      const y = 112 + i * 64, own = !sk.id || sv.skins?.[sk.id], on = (sv.skin || '') === sk.id;
-      b.add(panel(this, 16, y, W - 32, 56, { fill: on ? 0x2e2448 : COLOR.panel, line: on ? 0xffd75e : COLOR.line }));
-      const fx = this.add.sprite(52, y + 28, 'fx1_r0s', 2).setBlendMode(Phaser.BlendModes.ADD).setScale(0.8);
-      if (sk.id) skinFx(fx, sk);
-      b.add(fx);
-      b.add(this.add.text(80, y + 10, sk.name, font(11)));
-      b.add(this.add.text(80, y + 28, sk.desc, font9(10, '#c8bfe0')));
-      const label = on ? '끼는 중' : own ? '끼기' : `   ${sk.cost}`;
-      const bt = button(this, W - 60, y + 28, 76, 26, label, () => {
+    const sv = this.sv, b = this.body, page = this.skinTab ||= 'blade';
+    [['blade', '칼빛'], ['hero', '영웅'], ['weapon', '무기']].forEach(([id, name], i) => {
+      const x = 50 + i * 85, on = page === id;
+      b.add(this.add.text(x, 84, name, font(11, on ? '#ffffff' : '#8a80a0')).setOrigin(0.5));
+      if (on) b.add(this.add.rectangle(x, 95, 50, 2, 0xffffff));
+      const hit = this.add.rectangle(x, 86, 80, 22, 0, 0).setInteractive({ useHandCursor: true });
+      hit.on('pointerup', () => { if (this.busy) return; this.skinTab = id; sfx('click'); this.show('shop'); });
+      b.add(hit);
+    });
+    // 한 칸: 미리보기 · 이름 · 효과 · 버튼
+    const cell = (i, it, own, on, preview, onBuy) => {
+      const x = 16 + (i % 2) * 122, y = 102 + Math.floor(i / 2) * 74, c = this.add.container(x, y); b.add(c);
+      c.add(panel(this, 0, 0, 116, 68, { fill: on ? 0x2e2448 : COLOR.panel, line: on ? 0xffd75e : COLOR.line }));
+      c.add(preview(20, 26));
+      c.add(this.add.text(40, 6, it.name, font(10)));
+      c.add(this.add.text(40, 21, it.desc, { ...font9(10, '#c8bfe0'), wordWrap: { width: 72 } }));
+      const label = on ? '끼는 중' : own ? '끼기' : `   ${it.cost}`;
+      const bt = button(this, x + 58, y + 56, 104, 18, label, () => {
         if (this.busy || on) return;
         if (!own) {
-          if (sv.gem < sk.cost) { sfx('deny'); track('skin_buy_fail', { skin: sk.id, gem: sv.gem }); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
-          track('skin_buy', { skin: sk.id, cost: sk.cost });
-          sv.gem -= sk.cost; (sv.skins ||= {})[sk.id] = true; sfx('buy'); toast(this, `${sk.name} 얻음!`, '#ffd75e');
+          if (sv.gem < it.cost) { sfx('deny'); track('cosm_buy_fail', { item: it.id, kind: page, gem: sv.gem }); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          sv.gem -= it.cost; track('cosm_buy', { item: it.id, kind: page, cost: it.cost }); sfx('buy'); toast(this, `${it.name} 얻음!`, '#ffd75e');
         } else sfx('click');
-        sv.skin = sk.id; save(); track('skin_equip', { skin: sk.id || 'none' }); this.refreshTop(); this.show('shop');
+        onBuy(); save(); this.refreshTop(); this.show('shop');
       }, { size: 10, color: on ? 0x3b2f5c : own ? 0x2f6b3a : 0x8a2f6a });
       b.add(bt);
-      if (!own) b.add(gemIcon(this, W - 78, y + 28, 10));
+      if (!own) b.add(gemIcon(this, x + 40, y + 56, 9));
+    };
+    const slash = sk => (x, y) => { const fx = this.add.sprite(x, y, 'fx1_r0s', 2).setBlendMode(Phaser.BlendModes.ADD).setScale(0.5); return sk ? skinFx(fx, sk) : fx; };
+    if (page === 'blade') {
+      b.add(this.add.text(W / 2, 410, '휘두르는 궤적 색만 바뀐다 · 능력치는 그대로', font9(10, '#a89cc8')).setOrigin(0.5));
+      D.SKINS.forEach((sk, i) => {
+        const own = !sk.id || sv.skins?.[sk.id], on = (sv.skin || '') === sk.id;
+        cell(i, sk, own, on, slash(sk.id && sk), () => { (sv.skins ||= {})[sk.id] = true; sv.skin = sk.id; track('skin_equip', { skin: sk.id || 'none' }); });
+      });
+    } else if (page === 'hero') {
+      b.add(this.add.text(W / 2, 410, '몸 색이 바뀌고 작은 능력치가 붙는다', font9(10, '#a89cc8')).setOrigin(0.5));
+      HERO_SKINS.forEach((hs, i) => {
+        const own = !hs.id || sv.hskins?.[hs.id], on = (sv.hskin || '') === hs.id;
+        cell(i, hs, own, on, (x, y) => { const h = this.add.sprite(x, y, 'hero2_r0s').play('idle').setScale(0.8); return hs.id ? skinFx(h, hs) : h; },
+          () => { (sv.hskins ||= {})[hs.id] = true; sv.hskin = hs.id; track('hskin_equip', { skin: hs.id || 'none' }); });
+      });
+    } else {
+      b.add(this.add.text(W / 2, 410, `그 무기를 들면 피해 +${CASH_W_DMG * 100}% · 고유 궤적 색`, font9(10, '#a89cc8')).setOrigin(0.5));
+      WTYPES.forEach((w, i) => {
+        const cw = CASH_W[w.id], own = !!sv.cw?.[w.id], on = own && sv.wtype === w.id;
+        const it = { id: w.id, name: cw.name, desc: `${w.name} 피해 +${CASH_W_DMG * 100}%`, cost: CASH_W_GEM };
+        // 산 무기를 누르면 그 무기 종류로 바꿔 든다(아직 없는 무기 종류도 함께 열린다)
+        cell(i, it, own, on, slash(cw), () => { (sv.cw ||= {})[w.id] = true; (sv.wOwn ||= {})[w.id] = 1; sv.wtype = w.id; track('cashw_equip', { w: w.id }); });
+      });
+    }
+  }
+
+  // ── 비급: 스킬을 사서 판 시작부터 들고 간다. 짝 스킬끼리는 시너지 ──
+  bookPage() {
+    const sv = this.sv, b = this.body;
+    b.add(this.add.text(16, 76, `산 비급 한 권을 판 시작부터 Lv${D.BOOK_LV}로 들고 간다`, font9(10, '#a89cc8')));
+    D.BOOKS.forEach((k, i) => {
+      const def = D.SKILLS[k], own = !!sv.books?.[k], on = own && sv.book === k;
+      const x = 16 + (i % 2) * 122, y = 92 + Math.floor(i / 2) * 60, c = this.add.container(x, y); b.add(c);
+      c.add(panel(this, 0, 0, 116, 56, { fill: on ? 0x2e2448 : COLOR.panel, line: on ? 0xffd75e : COLOR.line }));
+      c.add(skillIcon(this, 18, 18, def, 22));
+      c.add(this.add.text(34, 5, def.name, font(10)));
+      const dt = this.add.text(34, 17, def.desc[0], { ...font9(9, '#c8bfe0'), wordWrap: { width: 80 } }); c.add(dt.setText(dt.getWrappedText().slice(0, 2).join('\n')));   // 두 줄 넘으면 버튼에 겹친다
+      const bt = button(this, x + 58, y + 47, 104, 14, on ? '들고 간다' : own ? '끼기' : `   ${D.BOOK_GEM}`, () => {
+        if (this.busy || on) return;
+        if (!own) {
+          if (sv.gem < D.BOOK_GEM) { sfx('deny'); track('book_buy_fail', { skill: k, gem: sv.gem }); toast(this, '보석이 모자라다 · 패키지에서 얻을 수 있다', '#ff9a8a'); return; }
+          sv.gem -= D.BOOK_GEM; (sv.books ||= {})[k] = true; track('book_buy', { skill: k, cost: D.BOOK_GEM }); sfx('buy'); toast(this, `${def.name} 비급 얻음!`, '#ffd75e');
+        } else sfx('click');
+        sv.book = k; save(); this.refreshTop(); this.show('shop');
+      }, { size: 9, color: on ? 0x3b2f5c : own ? 0x2f6b3a : 0x8a2f6a });
+      b.add(bt);
+      if (!own) b.add(gemIcon(this, x + 40, y + 47, 8));
     });
+    b.add(this.add.text(16, 338, '시너지 · 둘 다 가지면 두 스킬이 더 자주 나간다', font(10, '#ffb050')));
+    D.SYNERGY.forEach((x, i) => b.add(this.add.text(16 + (i % 2) * 122, 356 + Math.floor(i / 2) * 15, `${x.name}: ${D.SKILLS[x.a].name}+${D.SKILLS[x.b].name}`, font9(9, '#c8bfe0'))));
   }
 
   // ── 상점 탭: 보석으로 사기·광고 보상 / 패키지(결제) ──
   shopTab() {
     const sv = this.sv, b = this.body, page = this.shopPage || 'gem';
     const sub = (x, id, name) => {
-      const bt = button(this, x, 54, 82, 24, name, () => { this.shopPage = id; track('shop_page', { page: id, gem: sv.gem }); this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : 0x2a2440 });
+      const bt = button(this, x, 54, 62, 24, name, () => { this.shopPage = id; track('shop_page', { page: id, gem: sv.gem }); this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : 0x2a2440 });
       b.add(bt);
     };
-    sub(50, 'gem', '보석 상점'); sub(135, 'skin', '칼빛'); sub(220, 'pack', '패키지');
+    sub(36, 'gem', '보석'); sub(102, 'skin', '꾸미기'); sub(168, 'book', '비급'); sub(234, 'pack', '패키지');
     if (page === 'skin') return this.skinPage();
+    if (page === 'book') return this.bookPage();
     const after = msg => { this.refreshTop(); this.bump(4); toast(this, msg, '#ffd75e'); this.show('shop'); };
     if (page === 'gem') {
       b.add(this.add.text(16, 76, '보석으로 사기', font(11, '#ff9ad0')));

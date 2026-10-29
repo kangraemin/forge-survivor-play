@@ -161,7 +161,10 @@ export class Overlay {
     if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 26, 7, 4, j < lv ? 0xd8d2e8 : j === lv ? 0x5fdc6a : 0x3a3450).setOrigin(0, 0.5));
     // 진화 재료 표시: 이 스킬이 다른 스킬의 진화에 쓰이면 짝을 알려 준다
     const evoOf = special ? null : def.type === 'active' ? D.EVOS[k] && D.SKILLS[D.EVOS[k].need].name : Object.keys(D.EVOS).filter(b => D.EVOS[b].need === k).map(b => D.SKILLS[b].name).join('·');
-    if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(10, '#a89cc8')).setOrigin(1, 0.5));
+    // 시너지: 이 스킬을 고르면 이미 가진 짝 스킬과 시너지가 생긴다(진화 안내보다 먼저 보여 준다)
+    const syn = special || lv ? [] : D.synOf(k, sk);
+    if (syn.length) c.add(s.add.text(108, 26, `시너지: ${syn[0].name}`, font9(10, '#ffb050')).setOrigin(1, 0.5));
+    else if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(10, '#a89cc8')).setOrigin(1, 0.5));
     c.setSize(230, 70).setInteractive({ useHandCursor: true });
     onTap(c, () => this.pick(k, c));
     // 추방: 이번 판에서 다시 안 나온다(첫 레벨업에는 숨김)
@@ -221,6 +224,8 @@ export class Overlay {
     else if (k === '_silver') r.silver += 25;
     else {
       r.skills[k] = (r.skills[k] || 0) + 1;
+      const syn = r.skills[k] === 1 ? D.synOf(k, r.skills) : [];
+      if (syn.length) s.time.delayedCall(250, () => s.banner(syn[0].name, '시너지! 두 스킬이 더 자주 나간다'));
       if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
       s.refreshSkillRow();
     }
