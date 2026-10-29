@@ -68,12 +68,12 @@ export const SKILL_UNLOCK = { holy: 1, bolt: 3, fireball: 6, ice: 9 };
 
 // ── 스탯: 스테이지를 처음 깰 때 1점, 보스는 2점 더(끝까지 40점) ──
 export const SP = [
-  { id: 'str', name: '힘', desc: '근접 스킬 피해 +1%', tag: 'melee', css: '#ff9a7a' },
-  { id: 'dex', name: '민첩', desc: '원거리 스킬 피해 +1% · 이동 +0.3%', tag: 'ranged', css: '#a8ffb0' },
-  { id: 'int', name: '지능', desc: '마법 스킬 피해 +1% · 재사용 -0.3%', tag: 'magic', css: '#9ad8ff' },
+  { id: 'str', name: '힘', desc: '근접 스킬 피해 +2%', tag: 'melee', css: '#ff9a7a' },
+  { id: 'dex', name: '민첩', desc: '원거리 스킬 피해 +2% · 이동 +0.3%', tag: 'ranged', css: '#a8ffb0' },
+  { id: 'int', name: '지능', desc: '마법 스킬 피해 +2% · 재사용 -0.3%', tag: 'magic', css: '#9ad8ff' },
   { id: 'vit', name: '체력', desc: '최대 체력 +1.5% · 회복 +0.02/초', css: '#ffd75e' },
 ];
-export const SP_DMG = 0.01;
+export const SP_DMG = 0.02;
 export const SKILL_TAG = { sword: 'melee', spin: 'melee', quake: 'melee', dagger: 'ranged', ice: 'ranged', javelin: 'ranged', wave: 'ranged', bolt: 'magic', fireball: 'magic', holy: 'magic', orb: 'magic' };
 export const TAG_NAME = { melee: '근접', ranged: '원거리', magic: '마법' };
 const TAG_SP = { melee: 'str', ranged: 'dex', magic: 'int' };

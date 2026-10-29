@@ -95,7 +95,7 @@ export class Lobby extends Phaser.Scene {
       ab.setEnabled(allDone && !sv.misGot.all); body.add(ab);
       // 출석 7일
       body.add(this.add.rectangle(W / 2, 258, W - 60, 1, 0x5b4f7a));
-      const day = (sv.streak - 1) % 7;
+      const day = (sv.streak - 1) % 7, top = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);   // 금화는 지금 도전 중인 스테이지 기준
       body.add(this.add.text(W / 2, 272, `출석 ${sv.streak}일째`, font(12, '#9ae0ff')).setOrigin(0.5));
       body.add(this.add.text(W / 2, 288, '하루 빠져도 처음으로 돌아가지 않는다', font9(10, '#a89cc8')).setOrigin(0.5));
       D.LOGIN_REWARDS.forEach((g, i) => {
@@ -104,7 +104,7 @@ export class Lobby extends Phaser.Scene {
         body.add(this.add.text(x, y - 16, `${i + 1}일`, font9(10, today ? '#ffd75e' : '#8a80a0')).setOrigin(0.5).setPadding(0, 2));
         const [k, v] = Object.entries(g)[0];
         body.add(k === 'gem' ? gemIcon(this, x, y - 3, 12) : icon(this, x, y - 3, { goldStage: 12, stone: 13, guard: 11, sweep: 15 }[k], 14));
-        body.add(this.add.text(x, y + 10, k === 'goldStage' ? `×${v}` : String(v), font9(10, '#ffffff')).setOrigin(0.5));
+        body.add(this.add.text(x, y + 10, k === 'goldStage' ? fmt(D.clearGold(Math.floor(top / 6), top % 6) * v) : String(v), font9(10, '#ffffff')).setOrigin(0.5));
         if (g.skin && !sv.skins?.[g.skin]) body.add(this.add.text(x, y + 20, '+칼빛', font9(9, '#ff9a5a')).setOrigin(0.5));
         if (past) { body.add(this.add.rectangle(x, y, 28, 50, 0x000000, 0.55)); body.add(this.add.text(x + 9, y - 15, '✓', font(11, '#5fdc6a')).setOrigin(0.5)); }
       });
@@ -270,7 +270,7 @@ export class Lobby extends Phaser.Scene {
     const s = this.selS, idx = c * 6 + s, done = idx < sv.cleared, rec = recAtk(c, s);
     b.add(panel(this, 12, 286, W - 24, atk < rec ? 84 : 92, { fill: 0x15111f }));
     const lines = [
-      ['내 전투력', `${atk}`, atk >= rec ? '#5fdc6a' : '#ff8070'],
+      ['내 전투력', `${atk}`, D.powerCol(atk, rec, s)],
       ['권장 전투력', `${rec}`, '#e8e2f8'],
       ['클리어 금화', `${fmt(D.clearGold(c, s))}${done ? '' : `  (첫 클리어 ×${D.FIRST_CLEAR_MUL})`}`, '#ffd75e'],
       ['강화석', `${D.clearStone(c, s)}`, '#9ae0ff'],
@@ -388,7 +388,7 @@ export class Lobby extends Phaser.Scene {
     // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
     if (!max) {
       const next = (Math.floor(enh / D.ENH_MILESTONE) + 1) * D.ENH_MILESTONE;
-      this.awakeTxt = this.add.text(W / 2, 88, next === enh + 1 ? `다음 강화에서 각성! 공격력 ×${D.MILESTONE_MUL}` : `+${next} 각성까지 ${next - enh}단계`, font(8, next === enh + 1 ? '#ffd75e' : '#a8a0c0', 2)).setOrigin(0.5);
+      this.awakeTxt = this.add.text(W / 2, 88, next === enh + 1 ? `다음 강화에 각성! ×${D.MILESTONE_MUL}` : `+${next} 각성까지 ${next - enh}단계`, font(8, next === enh + 1 ? '#ffd75e' : '#a8a0c0', 2)).setOrigin(0.5);
       b.add(this.awakeTxt);
     }
     // 모루 위의 칼
@@ -483,7 +483,13 @@ export class Lobby extends Phaser.Scene {
     if (this.busy) { if (enh < D.DESTROY_FROM) this.enhQ = true; return; }
     if (enh >= D.ENH_MAX) return;
     const gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
-    if (sv.gold < gold || sv.stone < stone) { track('enhance_blocked', { from: enh, tier: sv.tier, gold_short: Math.max(0, gold - sv.gold), stone_short: Math.max(0, stone - sv.stone) }); return; }
+    if (sv.gold < gold || sv.stone < stone) {
+      track('enhance_blocked', { from: enh, tier: sv.tier, gold_short: Math.max(0, gold - sv.gold), stone_short: Math.max(0, stone - sv.stone) });
+      // 막힌 자리에서 어디서 버는지 알려 주고 전투 탭으로 데려간다
+      sfx('deny'); toast(this, sv.sweep > 0 ? '소탕으로 금화·강화석을 바로 벌자' : '깬 스테이지에서 금화·강화석을 벌자', '#ffd75e');
+      this.time.delayedCall(700, () => !this.busy && this.tab === 'forge' && this.show('battle'));
+      return;
+    }
     this.busy = true;
     sv.gold -= gold; sv.stone -= stone;
     const danger = enh >= D.DESTROY_FROM, guard = danger && this.useGuard && sv.guard > 0;
@@ -694,7 +700,9 @@ export class Lobby extends Phaser.Scene {
     const after = msg => { this.refreshTop(); this.bump(4); toast(this, msg, '#ffd75e'); this.show('shop'); };
     if (page === 'gem') {
       b.add(this.add.text(16, 76, '보석으로 사기', font(11, '#ff9ad0')));
-      D.GEM_SHOP.forEach((it, i) => {
+      // 파괴 구간(+10)에 닿기 전엔 방지권을 맨 뒤로 민다
+      const far = sv.tier === 0 && sv.enh < D.DESTROY_FROM - 2;
+      D.GEM_SHOP.slice().sort((a, c) => far ? (a.id === 'guard') - (c.id === 'guard') : 0).forEach((it, i) => {
         const x = 16 + (i % 2) * 122, y = 92 + Math.floor(i / 2) * 56;
         const c = this.add.container(x, y); b.add(c);
         c.add(panel(this, 0, 0, 116, 52));

@@ -130,8 +130,10 @@ export const powerOf = sv => {
 // 스테이지별 권장 전투력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
 // 보스 판은 봇 실측에서 권장 100~130%로도 졌다: 권장을 올려 화면이 '충분'이라고 속이지 않게 한다
 export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * (s === 5 ? 1.25 : 1) * GEAR_HP(c));
-// 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯 5점 보너스까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
-export const GEAR_HP = c => 1 + 0.26 * c;
+// 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯(1점 +2%, 5점 보너스)까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
+export const GEAR_HP = c => 1 + 0.36 * c;
+// 전투력 색: 권장을 넘어도 보스 판은 20% 여유가 있어야 초록(20차 봇: 1-6 권장 114%에서 졌다)
+export const powerCol = (pw, rp, s) => pw >= rp * (s === 5 ? 1.2 : 1) ? '#5fdc6a' : pw >= rp ? '#ffd75e' : '#ff8070';
 export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
 
 // ── 판 안 성장 ──

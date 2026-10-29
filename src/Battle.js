@@ -62,7 +62,7 @@ export class Battle extends Phaser.Scene {
     this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (1 - this.tv('def'));
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless;
-    if (this.easy) this.mobDmgMul *= 0.55;
+    if (this.easy) { this.mobDmgMul *= 0.55; this.waveCount = 2; }   // 처음 판은 웨이브 둘(150초 → 100초)
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s);
 
     this.makeMap();
@@ -437,7 +437,8 @@ export class Battle extends Phaser.Scene {
     const { dmg, crit } = this.dmgCalc(mult, tag);
     m.hp -= dmg;
     // 흰 번쩍임 + 찌그러짐
-    m.setTintFill(0xffffff);
+    // 보스는 몸집이 커서 흰 번쩍임이 화면을 덮는다: 붉게만 물들인다
+    if (m.isBoss) m.setTint(0xff8a8a); else m.setTintFill(0xffffff);
     this.time.delayedCall(60, () => { if (m.active && !m.dead) { m.clearTint(); if (m.baseTint !== 0xffffff) m.setTint(m.baseTint); } });
     if (!m.isBoss && !m.goblin) {
       const ox = from ? from.x : this.hero.x, oy = from ? from.y : this.hero.y;

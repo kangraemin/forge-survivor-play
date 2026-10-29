@@ -126,10 +126,12 @@ export const GearTab = {
         const d = (it.st[k] || 0) - (cur?.st[k] || 0);
         if (Math.abs(d) < 0.0005) return null;
         const v = STATS[k].pct ? `${Math.round(Math.abs(d) * 1000) / 10}%` : Math.abs(d).toFixed(2);
-        return `${SHORT[k]} ${d > 0 ? '▲' : '▼'}${v}`;
+        return [`${SHORT[k]} ${d > 0 ? '▲' : '▼'}${v}`, d > 0 ? '#5fdc6a' : '#ff8070'];
       }).filter(Boolean);
       y += 3; line(cur ? `낀 「${cur.n}」과 비교` : '빈칸에 끼면', '#a89cc8');
-      c.add(this.add.text(W / 2, y, diff.join('  ') || '차이 없음', { ...font9(9, '#e8e2f8'), align: 'center', wordWrap: { width: W - 64 } }).setOrigin(0.5, 0));
+      if (!diff.length) line('차이 없음', '#a89cc8');
+      // 두 칸씩 줄을 나눠 글자가 중간에서 잘리지 않게
+      diff.forEach(([t, col], i) => c.add(this.add.text(W / 2 + (i % 2 ? 6 : -6), y + Math.floor(i / 2) * 13, t, font9(9, col)).setOrigin(i % 2 ? 0 : 1, 0)));
     }
     const eb = button(this, 72, 372, 88, 26, isOn ? '빼기' : '끼기', () => {
       sv.eq ||= {};

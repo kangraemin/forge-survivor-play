@@ -442,8 +442,8 @@ export class Overlay {
     // 졌으면 무엇이 모자랐는지 숫자로 보여 준다
     if (!win && !s.endless) {
       const pw = D.powerOf(sv), rp = D.recPower(s.c, s.s);
-      c.add(s.add.text(W / 2, 294, `내 전투력 ${pw}  ·  권장 ${rp}`, font(11, pw >= rp ? '#5fdc6a' : '#ff8070')).setOrigin(0.5));
-      c.add(pw >= rp ? s.add.text(W / 2, 310, '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#c8bfe0')).setOrigin(0.5) : s.add.text(W / 2, 310, `권장까지 ${rp - pw} 부족 · 강화·훈련하자`, font(12, '#ffb070')).setOrigin(0.5));
+      c.add(s.add.text(W / 2, 294, `내 전투력 ${pw}  ·  권장 ${rp}`, font(11, D.powerCol(pw, rp, s.s))).setOrigin(0.5));
+      c.add(pw >= rp ? s.add.text(W / 2, 310, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#c8bfe0')).setOrigin(0.5) : s.add.text(W / 2, 310, `권장까지 ${rp - pw} 부족 · 강화·훈련하자`, font(12, '#ffb070')).setOrigin(0.5));
     }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
