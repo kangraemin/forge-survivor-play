@@ -125,13 +125,14 @@ export const powerOf = sv => {
   return Math.round(weaponAtk(sv.tier, sv.enh) * (1 + tv('atk')) * (1 + tv('hp') * 0.25 + tv('def') * 0.5));
 };
 // 스테이지별 권장 전투력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
-export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s));
+// 보스 판은 봇 실측에서 권장 100~130%로도 졌다: 권장을 올려 화면이 '충분'이라고 속이지 않게 한다
+export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * (s === 5 && c > 0 ? 1.25 : 1));
 export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
 
 // ── 판 안 성장 ──
 export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 34 };
-// 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 30% 줄여 한 판 안에 진화까지 닿게 한다
-export const xpNeed = lv => lv === 1 ? 5 : lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.7)) : 8 + (lv - 1) * 11;
+// 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 40% 줄여 한 판 안에 진화까지 닿게 한다
+export const xpNeed = lv => lv === 1 ? 5 : lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6)) : 8 + (lv - 1) * 11;
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 

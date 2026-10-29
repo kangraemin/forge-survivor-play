@@ -116,14 +116,19 @@ export class Battle extends Phaser.Scene {
     const rt = this.add.renderTexture(0, 0, WORLD, WORLD).setOrigin(0).setDepth(-10);
     const stamp = this.make.image({ key: key + '_t', add: false });
     const c = WORLD / 2;
-    const zone = (x, y) => (Math.hypot(x - c, y - c) < 190 || Math.abs(x - c) < 50 || Math.abs(y - c) < 50) ? 1 : 0;
+    // 가운데 광장·길 안쪽으로 들어간 거리(밖이면 음수)
+    const inside = (x, y) => Math.max(190 - Math.hypot(x - c, y - c), 50 - Math.abs(x - c), 50 - Math.abs(y - c));
+    // 바깥 바닥을 전부 깔고, 광장 바닥은 경계에서 서서히 짙어지게 겹친다(경계 타일을 쓰면 계단식 사각 패치로 보였다)
     for (let y = 0; y < WORLD; y += T) for (let x = 0; x < WORLD; x += T) {
-      const z = zone(x, y), edge = z !== zone(x + T, y) || z !== zone(x - T, y) || z !== zone(x, y + T) || z !== zone(x, y - T);
-      const n = Math.random();
-      stamp.setFrame(edge ? R(10, 11) : z ? (n < 0.85 ? R(4, 5) : R(8, 9)) : (n < 0.85 ? Phaser.Math.RND.pick([0, 2]) : 3));
-      stamp.setAngle(R(0, 3) * 90);
-      rt.draw(stamp, x + T / 2, y + T / 2);
+      const n = Math.random(), cx = x + T / 2, cy = y + T / 2;
+      stamp.setFrame(n < 0.85 ? Phaser.Math.RND.pick([0, 2]) : 3).setAngle(R(0, 3) * 90).setAlpha(1);
+      rt.draw(stamp, cx, cy);
+      const a = Phaser.Math.Clamp((inside(cx, cy) + T * 0.8) / (T * 2.4), 0, 1);
+      if (a <= 0) continue;
+      stamp.setFrame(Math.random() < 0.85 ? R(4, 5) : R(8, 9)).setAngle(R(0, 3) * 90).setAlpha(a * a);
+      rt.draw(stamp, cx, cy);
     }
+    stamp.setAlpha(1);
     // 전용 바닥 그림이 없는 챕터는 1챕터 바닥에 색을 입힌다
     const TINT = [0xffffff, 0x8a9ab8, 0xd07050, 0xd8f0ff, 0x9a70b0];
     if (!tintless && this.c > 0) rt.setTint(TINT[this.c]);
@@ -720,8 +725,10 @@ export class Battle extends Phaser.Scene {
       }
     } else {
       // 보스전에도 졸개가 꾸준히 나온다(1.2마리면 화면이 비어 보였다)
-      this.spawnAcc = (this.spawnAcc || 0) + dt * 2.2 / 1000;
-      while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
+      // 다만 40마리를 넘으면 멈추고, 보스가 거의 죽으면 줄여 막판에 포위당해 지지 않게 한다
+      const bm = this.boss?.m, low = bm && bm.hp < bm.maxHp * 0.3;
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (low ? 1.1 : 2.2) / 1000;
+      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < 40) this.spawn(); }
     }
     this.boss?.update(dt);
     this.midBoss?.update(dt);
@@ -824,7 +831,7 @@ export class Battle extends Phaser.Scene {
         const want = d > 120 ? 1 : d < 90 ? -0.6 : 0;
         m.setVelocity(dx / d * spd * want, dy / d * spd * want);
         m.cd = (m.cd ?? 1500 + R(0, 1500)) - dt;
-        if (m.cd <= 0 && d < 200) { m.cd = 2600; this.enemyShot(m.x, m.y, Math.atan2(dy, dx), 85, m.dmg); }
+        if (m.cd <= 0 && d < 200) { m.cd = 3000; this.enemyShot(m.x, m.y, Math.atan2(dy, dx), 75, m.dmg); }
       } else m.setVelocity(dx / d * spd, dy / d * spd);
     });
   }
