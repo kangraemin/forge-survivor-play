@@ -567,7 +567,7 @@ export class Overlay {
       const ct = s.add.text(W / 2, 247, msg, font(12, '#ffd75e')).setOrigin(0.5); c.add(ct);
       s.tweens.add({ targets: ct, scale: 1.08, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     }
-    if (!win && !s.endless && !dun) {
+    if (!win && !s.endless && !dun && !close) {   // 아깝게 졌으면 '한 번 더'만 권한다(강화하자와 둘로 갈렸다)
       const pw = D.powerOf(sv), rp = D.recOf(s.c, s.s, hard);
       c.add(s.add.text(W / 2, 266, `내 전투력 ${pw} / 권장 ${rp}`, font(11, D.powerCol(pw, rp, s.s))).setOrigin(0.5));
       c.add(pw >= rp ? s.add.text(W / 2, 282, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#c8bfe0')).setOrigin(0.5) : s.add.text(W / 2, 282, `권장까지 ${rp - pw} 모자란다. 강화하자`, font9(11, '#e8e2f8')).setOrigin(0.5));

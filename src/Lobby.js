@@ -680,7 +680,7 @@ export class Lobby extends Phaser.Scene {
       sfx('fail');
       sw.setTint?.(0x6a6a7a); this.time.delayedCall(400, () => sw.clearTint?.());
       this.tweens.add({ targets: sw, x: W / 2 + 4, duration: 45, yoyo: true, repeat: 4 });
-      this.flashText(from >= D.DESTROY_FROM ? '실패… 방지권이 지켰다 · 금화 30% 환급' : '강화 실패', '#a8a0c0');
+      this.flashText(from >= D.DESTROY_FROM ? '실패… 방지권이 지켰다\n금화 30% 환급' : '강화 실패', '#a8a0c0');
     } else {
       sfx('shatter');
       this.cameras.main.shake(350, 0.02);
@@ -751,8 +751,10 @@ export class Lobby extends Phaser.Scene {
   }
 
   flashText(msg, color) {
-    const t = this.add.text(W / 2, 120, msg, font(16, color)).setOrigin(0.5).setDepth(60).setScale(0.4);
-    this.tweens.add({ targets: t, scale: 1, duration: 220, ease: 'Back.Out' });
+    const t = this.add.text(W / 2, 120, msg, { ...font(16, color), align: 'center' }).setOrigin(0.5).setDepth(60).setScale(0.4);
+    // 긴 문구가 화면 밖으로 넘치지 않게 폭에 맞춰 줄인다
+    const fit = Math.min(1, (W - 16) / t.width);
+    this.tweens.add({ targets: t, scale: fit, duration: 220, ease: 'Back.Out' });
     this.tweens.add({ targets: t, alpha: 0, y: 100, delay: 900, duration: 300, onComplete: () => t.destroy() });
   }
 
@@ -937,7 +939,8 @@ export class Lobby extends Phaser.Scene {
       b.add(panel(this, 12, 198, W - 24, 52, { fill: 0x100d16 }));
       b.add(this.add.text(W / 2, 224, '장 보스를 처음 잡으면 24시간 동안\n그 장에 맞는 강화석·방지권 꾸러미가 열린다', { ...font9(10, '#8a80a0'), align: 'center' }).setOrigin(0.5));
     }
-    // 큰 꾸러미(달마다 한 번)
+    // 큰 꾸러미(달마다 한 번): 3장에 들어선 뒤에만 보인다(2-2·플레이 20분에 33,000원이 보이면 이르다, 37차)
+    if (sv.cleared < 2 * D.STAGES_PER_CHAPTER) return;
     b.add(this.add.text(16, 262, '큰 꾸러미', font(12, '#ffb050')));
     b.add(this.add.text(W - 16, 265, '보석 첫 구매 2배와 따로', font9(9, '#8a80a0')).setOrigin(1, 0));
     D.BIG_PACKS.forEach((it, i) => {

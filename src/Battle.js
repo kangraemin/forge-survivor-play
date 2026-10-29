@@ -120,14 +120,16 @@ export class Battle extends Phaser.Scene {
     // 판 규칙(처음 두 판·보스·무한의 탑 제외)
     // x-2 첫 도전은 그 장의 규칙이 정해져 나오고, 다시 할 땐 뽑는다
     const firstTry = !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s >= (this.hard ? sv.hardCleared : sv.cleared);
+    // 어려움은 늘 판 규칙이 붙는다(같은 맵에 바닥만 붉어 새 판으로 안 느껴졌다)
     this.mod = this.easy || this.isBoss || this.endless || this.dungeon ? null : this.s === 1 && firstTry ? D.stageMod(this.c)
+      : this.hard ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s)))
       : sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s))) : null;   // 변종이 없는 판엔 '변종 소굴'은 빼고 뽑는다
     this.hordeKind = this.mod?.id === 'horde' ? this.ch.mobs[R(0, 2)] : null;
     // 깜짝 이벤트: 보스·무한의 탑·처음 판·던전이 아니면 판 중간에 하나(보물 고블린·황금 박쥐 떼·축복의 제단)
     this.eventAt = !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
     this.eventKind = Phaser.Utils.Array.GetRandom(D.EVENTS.kinds);
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
-    for (let i = 0; i < (this.easy ? 18 : 40); i++) this.spawn(true);
+    for (let i = 0; i < (this.easy ? 18 : 28); i++) this.spawn(true);   // 40이면 무기 1~2개인 첫 30초가 가장 위험했다(37차)
     if (!this.bot) playBgm('battle', this.c);
     this.events.once('shutdown', stopBgm);
     // 앱을 내리거나 화면이 꺼지면 일시정지 창을 띄워 둔다(돌아왔을 때 이미 맞고 있지 않게)
@@ -388,7 +390,7 @@ export class Battle extends Phaser.Scene {
     }
     if (this.isBoss) return null;
     let r = Math.random();
-    const vm = this.mod?.id === 'mutant' ? 2 : 1;
+    const vm = (this.mod?.id === 'mutant' ? 2 : 1) * (this.hard ? 2 : 1);   // 어려움은 변종이 두 배
     for (const [st, rate] of [[this.s, D.VARIANT_RATE * vm], [this.s - 1, D.VARIANT_OLD_RATE * vm]]) {
       const sv = D.stageVariant(this.c, st);
       if (sv && r < rate) return r < rate * (sv[1] === 'giant' ? 0.35 : 1) ? { kind: this.ch.mobs[sv[0]], v: sv[1] } : null;
@@ -916,7 +918,7 @@ export class Battle extends Phaser.Scene {
       // 단 1-1은 처음 30초를 반쯤 비운다(25마리 → 22초에 69마리로 늘어 첫 판이 정신없었다)
       const first11 = !this.endless && this.c === 0 && this.s === 0 && this.bt < 30000;
       const early = !this.endless && this.s === 0 && this.bt < 20000 ? 2 : 0;
-      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 3 * f) * (this.dungeon ? 1.6 : 1) / 1000;   // 던전은 잡을 몹이 많아야 한다
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 5 * f) * (this.dungeon ? 1.6 : 1) / 1000;   // 던전은 잡을 몹이 많아야 한다
       // 화면에 70마리가 넘으면 더 내보내지 않는다(3장에서 89마리까지 쌓여 저사양 폰이 버거웠다)
       while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 25 : 35) : 70)) this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터

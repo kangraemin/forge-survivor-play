@@ -8,6 +8,9 @@ const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero
   'mob2_r0', 'mob2_r1', 'mob2_r2', 'fx1_r0', 'fx1_r1', 'fx1_r2', 'fx2_r0', 'fx2_r1', 'fx2_r2', 'tiles', 'deco'];
 const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2'].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
   .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'tile2', 'tile3', 'tile4', 'tile5']);
+// 코드로 그리던 작은 그림을 대신하는 PNG(assets/icon). 있으면 makeTextures가 건너뛴다
+const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'meat', 'silver',
+  'magnetItem', 'gem1', 'gem2', 'gem3', 'ebullet', 'fireball', 'ice'];
 
 export class Boot extends Phaser.Scene {
   constructor() { super('Boot'); }
@@ -20,6 +23,7 @@ export class Boot extends Phaser.Scene {
     this.load.on('progress', v => { bar.width = 160 * v; });
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
     for (const k of REQUIRED.concat(OPTIONAL)) this.load.image(k, `assets/${k}.png`);
+    for (const k of ICONS) this.load.image(k, `assets/icon/${k}.png`);
   }
 
   sheet(key, frames = 4) {
@@ -74,7 +78,7 @@ export class Boot extends Phaser.Scene {
   // 픽셀 단위로 직접 그리는 작은 그림들
   makeTextures() {
     const g = this.make.graphics({ add: false });
-    const tex = (key, w, h, draw) => { g.clear(); draw(g); g.generateTexture(key, w, h); };
+    const tex = (key, w, h, draw) => { if (this.textures.exists(key)) return; g.clear(); draw(g); g.generateTexture(key, w, h); };
     tex('px', 2, 2, g => g.fillStyle(0xffffff).fillRect(0, 0, 2, 2));
     // 경험치 보석: 작은 파랑, 중간 초록, 큰 빨강
     const gem = (key, c1, c2) => tex(key, 6, 8, g => {

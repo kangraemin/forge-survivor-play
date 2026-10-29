@@ -70,7 +70,7 @@ export const BOSSES = {
   lich: { name: '리치 왕', sheet: 'boss1', row: 1, hp: 1500, dmg: 12, spd: 22, color: 0x9dff7a, pattern: ['ring', 'summon', 'aimed', 'ring'], rage: 'sweep' },
   lavagolem: { name: '용암 거신', sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
   wyrm: { name: '서리 용', sheet: 'boss2', row: 0, hp: 1450, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
-  demonlord: { name: '마왕', sheet: 'boss2', row: 1, hp: 1800, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'], rage: 'sweep' },
+  demonlord: { name: '마왕', sheet: 'boss2', row: 1, hp: 3000, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'], rage: 'sweep' },
   general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
 };
 
@@ -79,12 +79,13 @@ export const chapterHp = c => Math.pow(2.05, c) * GEAR_HP(c);           // c는 
 export const chapterDmg = c => 0.65 * Math.pow(1.18, c);   // 1.25면 3장부터 무기 등급 체력 보너스를 앞질러 30초 만에 녹았다
 // 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
 // s는 0~5. 1-2에서 바로 벽을 느끼게 크게 뛰고, 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
-const STAGE_HP = [1, 1.45, 1.7, 1.92, 2.12, 2.3];
+// x-2가 읽는 칸(3)은 1.92→1.6: 2-1 32 → 2-2 84로 한 판에 2.6배 뛰었다(37차). 장 안 세 판이 고르게 오르게
+const STAGE_HP = [1, 1.45, 1.7, 1.6, 2.12, 2.3];
 export const stageMul = s => STAGE_HP[oldS(s)] ?? 1;
 export const stageDmg = s => 1 + 0.1 * oldS(s);                // 피해는 공격력으로 못 막으니 체력보다 완만하게
 export const stageSpawn = s => 0.35 * oldS(s);                 // 초당 더 나오는 몹 수
 // 판 안 시간에 따른 체력 상승(처음 0.75배 → 끝날 즈음 1.7배)
-export const timeHp = f => 0.75 + 0.95 * f;          // 초반 몹은 약하고 많게
+export const timeHp = f => 0.75 + 0.8 * f + 0.45 * f * f;   // 초반 몹은 약하고 많게. 끝 무렵을 더 세게(1.7→2.0): 마지막 웨이브는 늘 체력 만땅이었다(37차)
 
 // ── 무기·대장간 ──
 export const TIERS = [
@@ -103,7 +104,8 @@ export const ENH_MILESTONE = 5, MILESTONE_MUL = 1.1;
 export const OVER10_MUL = 1.15;
 export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * Math.min(enh, 10)) * Math.pow(OVER10_MUL, Math.max(0, enh - 10)) * Math.pow(MILESTONE_MUL, Math.floor(enh / ENH_MILESTONE));
 // 강화 성공 확률(%) — 인덱스는 현재 강화 수치
-export const ENH_RATE = [100, 100, 95, 90, 85, 75, 65, 55, 50, 45, 45, 40, 36, 32, 28, 22, 18, 15, 12, 10];
+// 앞 칸을 낮춰 첫 판 뒤 강화 몇 번 안에 실패→보정→성공을 겪게 한다(37차: +12까지 한 번도 실패가 없었다)
+export const ENH_RATE = [100, 95, 85, 75, 70, 65, 60, 55, 50, 45, 45, 40, 36, 32, 28, 22, 18, 15, 12, 10];
 export const ENH_MAX = 20;
 // 결과 창 자랑하기: 하루 한 번 보석
 export const SHARE_GEM = 5, SHARE_URL = 'https://kangraemin.github.io/forge-survivor-play/';
@@ -165,7 +167,7 @@ export const powerOf = sv => {
 // 스테이지별 권장 전투력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
 // 보스 판은 봇 실측에서 권장 100~130%로도 졌다: 권장을 올려 화면이 '충분'이라고 속이지 않게 한다
 // 장 첫 판(2장부터)은 적응 판: 보스 바로 뒤라 강화를 덜 했어도 깰 수 있게 낮춘다
-export const easeHp = (c, s) => c > 0 && s === 0 ? 0.8 : 1;
+export const easeHp = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
 export const easeDmg = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
 export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * easeHp(c, s) * (isBossS(s) && c > 0 ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
 // 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯(1점 +2%, 5점 보너스)까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
@@ -193,7 +195,7 @@ export const SKILLS = {
   fireball: { name: '화염구', type: 'active', icon: 8, desc: ['터지는 불덩이를 쏜다', '피해 +30%', '폭발 범위 +30%', '불덩이 +1', '바닥에 불이 남는다'] },
   ice: { name: '얼음 파편', type: 'active', icon: 9, desc: ['꿰뚫는 얼음을 쏜다', '파편 +1', '적을 얼린다', '피해 +40%', '파편 +2'] },
   // 무기 전용 스킬: 그 무기를 든 판에서만 레벨업 카드에 나온다(진화 없음)
-  wave: { name: '검기', type: 'active', icon: 0, tint: 0x9ad8ff, own: 'sword', desc: ['베는 방향으로 검기를 날린다', '피해 +30%', '검기 +1', '꿰뚫는다', '검기 +2, 커진다'] },
+  wave: { name: '검기', type: 'active', icon: 0, tint: 0x40a0ff, flip: true, own: 'sword', desc: ['베는 방향으로 검기를 날린다', '피해 +30%', '검기 +1', '꿰뚫는다', '검기 +2, 커진다'] },
   javelin: { name: '투창', type: 'active', icon: 5, tint: 0xa8ffb0, own: 'spear', desc: ['가장 먼 적에게 창을 던진다', '피해 +30%', '창 +1', '맞은 적을 밀친다', '창 +2'] },
   quake: { name: '지진', type: 'active', icon: 4, tint: 0xffb050, own: 'axe', desc: ['발밑에서 충격파가 퍼진다', '범위 +20%', '피해 +40%', '더 자주 쓴다', '두 번 퍼진다'] },
   volley: { name: '화살비', type: 'active', icon: 5, tint: 0xffe0a0, own: 'bow', desc: ['화면의 적 위로 화살이 쏟아진다', '화살 +1', '피해 +30%', '화살 +2', '화살 +3, 빨라진다'] },
@@ -297,7 +299,7 @@ export const BAN_GEM = 5, REROLL_GEM = 5;
 // 무한의 탑: 1장 보스를 깨면 열린다. 층(웨이브)마다 몹이 세지고 3층마다 해골 장군
 // 3장부터 몬스터가 더 아프다: 상성 펫이 받는 피해를 줄여 이걸 메운다
 export const LATE_DMG = 1.12;
-export const ENDLESS = { unlock: 3, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.22, dmgGrow: 1.12 };
+export const ENDLESS = { unlock: 3, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.28, dmgGrow: 1.2 };
 // 칼빛(궤적 색) 꾸미기: 능력치는 그대로, 보이는 것만 바뀐다
 export const SKINS = [
   { id: '', name: '기본 칼빛', desc: '강화 단계 색', cost: 0 },

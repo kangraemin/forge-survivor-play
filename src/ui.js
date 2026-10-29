@@ -117,6 +117,7 @@ export function skillIcon(scene, x, y, def, size) {
   if (def === SKILLS.sword && scene.wtype && scene.wtype.id !== 'sword') return weaponIcon(scene, x, y, scene.wtype.id, scene.sv?.tier || 0, size);
   const im = icon(scene, x, y, def.icon, size);
   if (def.tint) im.setTint(def.tint);
+  if (def.flip) im.setFlipX(true);   // 같은 칼 그림이라 뒤집어 기본 공격과 구분한다
   return im;
 }
 
