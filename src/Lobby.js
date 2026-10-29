@@ -40,7 +40,9 @@ export class Lobby extends Phaser.Scene {
     this.hard = !!sv.hardOn && sv.cleared >= D.HARD.unlock;
     dexRefresh(sv);
     // 처음 고를 챕터는 지금 도전할 곳
-    if (this.selC === undefined) this.selTop();
+    // 판을 새로 깼으면 다음 도전 칸으로 옮긴다(깬 칸에 머물러 1-1만 되풀이했다)
+    if (this.selC === undefined || this.lastProg !== this.prog) this.selTop();
+    this.lastProg = this.prog;
     this.makeTextures();
     hiCam(this).setBackgroundColor('#0d0a14');
     this.bg = this.add.container(0, 0);
@@ -519,7 +521,7 @@ export class Lobby extends Phaser.Scene {
       const pity = D.pityRate(sv), rate = Math.min(100, D.ENH_RATE[enh] + (this.useCharm ? D.CHARM_RATE : 0) + this.apron() + pity), gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
       const danger = enh >= D.DESTROY_FROM;
       const row = (y, a, v, col) => { b.add(this.add.text(24, y, a, font9(10, '#a89cc8'))); b.add(this.add.text(W - 24, y, v, font(10, col)).setOrigin(1, 0)); };
-      row(280, '성공 확률', rate + '%' + (this.useCharm ? ' (부적)' : '') + (pity ? ` (천장 +${pity})` : ''), rate >= 70 ? '#5fdc6a' : rate >= 35 ? '#ffd75e' : '#ff7070');
+      row(280, '성공 확률', rate + '%' + (this.useCharm ? ' (부적)' : '') + (pity ? ` (실패 보정 +${pity})` : ''), rate >= 70 ? '#5fdc6a' : rate >= 35 ? '#ffd75e' : '#ff7070');
       row(296, '실패하면', danger ? (this.useGuard ? '방지권이 지킴 · 금화 30% 환급' : `파괴 → +${D.shatterTo(enh)} · 금화 30% 환급`) : '그대로 유지', danger ? (this.useGuard ? '#9ae0ff' : '#ff5050') : '#e8e2f8');
       row(312, '비용', `금화 ${fmt(gold)} · 강화석 ${stone}`, sv.gold >= gold && sv.stone >= stone ? '#ffd75e' : '#ff7070');
       if (danger) {
@@ -580,7 +582,7 @@ export class Lobby extends Phaser.Scene {
     if (sv.gold < gold || sv.stone < stone) {
       track('enhance_blocked', { from: enh, tier: sv.tier, gold_short: Math.max(0, gold - sv.gold), stone_short: Math.max(0, stone - sv.stone) });
       // 탭을 멋대로 바꾸면 연타가 '전투 시작'에 떨어졌다: 알림만 띄우고 아래 탭으로 가게 둔다
-      sfx('deny'); toast(this, sv.sweep > 0 ? '전투 탭에서 소탕으로 벌자' : '전투 탭에서 금화·강화석을 벌자', '#ffd75e');
+      sfx('deny'); toast(this, sv.sweep > 0 ? '전투 탭에서 소탕으로 벌자' : '전투 탭에서 금화·강화석을 벌자', '#ffd75e', 372);
       return;
     }
     this.busy = true;
@@ -589,7 +591,7 @@ export class Lobby extends Phaser.Scene {
     const charm = this.useCharm;
     if (charm) sv.charm--;
     const win = Math.random() * 100 < D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0) + this.apron() + D.pityRate(sv);
-    sv.pity = win || enh < D.PITY_FROM ? 0 : (sv.pity || 0) + 1;
+    sv.pity = win || !D.pityOn(enh) ? 0 : (sv.pity || 0) + 1;
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
     if (guard && !win) sv.guard--;   // 방지권은 칼을 지켜 냈을 때만 쓴다(성공해도 사라지면 아까워서 안 켰다)
     if (!win && danger) sv.gold += Math.round(gold * D.FAIL_REFUND);

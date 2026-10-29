@@ -178,7 +178,7 @@ export const GearTab = {
       b.add(this.add.text(56, y + 5, open ? `${p.name}  Lv ${lv}` : `??? · ${p.hint}`, font(11, open ? '#ffffff' : '#6a6080')));
       if (!open) { b.add(this.add.text(56, y + 23, '보스를 잡으면 따라온다', font9(10, '#5a5070'))); return; }
       b.add(this.add.text(56, y + 20, p.desc, font9(10, '#e8e2f8')));
-      const fit = `강함 ${(p.good || []).map(chN).join('·') || '-'}${p.weak ? `  약함 ${p.weak.map(chN).join('·')}` : ''}`;
+      const fit = `강함 ${[...(p.good || []).map(chN), ...(p.id === 'demonlord' ? ['탑'] : [])].join('·') || '-'}${p.weak ? `  약함 ${p.weak.map(chN).join('·')}` : ''}`;
       b.add(this.add.text(56, y + 33, fit, font9(9, '#8fdc8a')));
       const tb = button(this, W - 50, y + 13, 62, 18, on ? '함께' : '데려가기', () => {
         if (this.busy || on) return;
@@ -193,7 +193,9 @@ export const GearTab = {
       }, { size: 10 });
       fbt.setEnabled(!max && sv.gold >= cost); b.add(fbt);
     });
-    b.add(this.add.text(W / 2, 392, `맞는 맵이면 효과 ×1.8 (장군·거신은 피해 -20%)  ·  목걸이 +${Math.round(g.pet * 100)}%`, font9(9, '#a89cc8')).setOrigin(0.5));
+    // 한 줄이면 화면 양 끝이 잘려 두 줄로 나눈다
+    b.add(this.add.text(W / 2, 386, '맞는 맵이면 효과 ×1.8 (장군·거신은 피해 -20%)', font9(9, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 399, `목걸이로 펫 효과 +${Math.round(g.pet * 100)}%`, font9(9, '#a89cc8')).setOrigin(0.5));
   },
 
   // ── 스탯: 스테이지를 처음 깰 때 점수를 받아 찍는다 ──

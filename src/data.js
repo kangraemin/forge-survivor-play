@@ -109,7 +109,10 @@ export const ENH_MAX = 20;
 export const SHARE_GEM = 5, SHARE_URL = 'https://kangraemin.github.io/forge-survivor-play/';
 // 천장: +15부터 실패할 때마다 다음 확률 +3%(성공하면 0으로). +19→+20(10%)에 운이 없으면 끝없이 갈렸다
 export const PITY_FROM = 15, PITY_STEP = 3;
-export const pityRate = sv => sv.enh >= PITY_FROM ? (sv.pity || 0) * PITY_STEP : 0;
+// +10 아래는 실패할 때마다 다음 확률 +10%p(65%에서 세 번 내리 실패해 금화만 날렸다)
+export const LOW_PITY_STEP = 10;
+export const pityOn = enh => enh < DESTROY_FROM || enh >= PITY_FROM;
+export const pityRate = sv => sv.enh < DESTROY_FROM ? (sv.pity || 0) * LOW_PITY_STEP : sv.enh >= PITY_FROM ? (sv.pity || 0) * PITY_STEP : 0;
 export const DESTROY_FROM = 10;                            // +10에서 +11을 노릴 때부터 실패하면 파괴
 // 부서지면 두 단계 떨어진다(+0이나 +5까지 떨어지면 성공 +10%에 실패 -32%라 아무도 위험을 지지 않았다)
 export const SHATTER_DROP = 2;

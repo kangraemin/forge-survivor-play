@@ -30,7 +30,7 @@ export class Overlay {
     c.add(s.add.text(W / 2, 236, p.name, font(14, '#ffffff')).setOrigin(0.5));
     c.add(s.add.text(W / 2, 256, p.desc, font9(10, '#c8bfe0')).setOrigin(0.5));
     const chN = i => `${i + 1}장`;
-    c.add(s.add.text(W / 2, 274, `잘 듣는 장: ${(p.good || []).map(chN).join(' · ') || '-'}`, font9(10, '#5fdc6a')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 274, `잘 듣는 곳: ${[...(p.good || []).map(chN), ...(p.id === 'demonlord' ? ['무한의 탑'] : [])].join(' · ') || '-'}`, font9(10, '#5fdc6a')).setOrigin(0.5));
     const close = () => { s.tweens.killTweensOf(c); c.destroy(); };
     c.add(button(s, W / 2 + 46, 320, 84, 28, '데려가기', () => { sv.pet = p.id; save(); sfx('buy'); s.log('pet_join_take', { pet: p.id }); close(); }, { size: 11, color: 0x2f6b3a }));
     c.add(button(s, W / 2 - 50, 320, 76, 28, sv.pet === p.id ? '확인' : '나중에', () => { s.log('pet_join_later', { pet: p.id }); close(); }, { size: 10, color: 0x3a3846 }));
@@ -348,7 +348,7 @@ export class Overlay {
     const draw = () => {
       grid.removeAll(true);
       silverTxt.setText(`보유 은화 ${r.silver}`);
-      hpTxt.setText(`체력 ${Math.ceil(s.hp)} / ${Math.round(s.maxHp)}`);
+      hpTxt.setText(`체력 ${Math.min(Math.ceil(s.hp), Math.round(s.maxHp))} / ${Math.round(s.maxHp)}`);
       stock.forEach((it, i) => {
         const x = 75 + (i % 2) * 120, y = 190 + Math.floor(i / 2) * 104;
         const can = !it.sold && r.silver >= it.price;
@@ -610,7 +610,7 @@ export class Overlay {
     const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
     const head = wNew ? `새 무기 「${wNew.name}」 획득!` : s.run.dupW ? `무기를 다 모아 강화석 +${D.DUP_W_STONE}` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
     // 보스를 처음 잡으면 새 무기와 보스 펫이 같이 온다: 펫은 한 줄 위에 따로
-    if (wNew && newPet) c.add(s.add.text(W / 2, 334, `새 펫 「${newPet.name}」 합류!`, font9(10, '#ffb050')).setOrigin(0.5));
+    if (wNew && newPet) c.add(s.add.text(W / 2, 326, `새 펫 「${newPet.name}」 합류!`, font9(10, '#ffb050')).setOrigin(0.5));
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
     // 보스 펫 합류는 결과 창 위에 따로 크게 띄운다(한 줄 글씨로는 못 보고 지나갔다)
     if (newPet && !s.bot) this.petJoin(newPet);
@@ -661,7 +661,7 @@ export class Overlay {
       return;
     }
     // 다음 판 전투력이 권장의 80%도 안 되면 대장간이 주인공(그대로 보스에 들어가 25초 만에 쓰러졌다)
-    const weak = win && !s.endless && D.powerOf(sv) < D.recOf(Math.floor(nextIdx / D.STAGES_PER_CHAPTER), nextIdx % D.STAGES_PER_CHAPTER, hard) * 0.8;
+    const weak = win && !s.endless && D.powerOf(sv) < D.recOf(Math.floor(nextIdx / D.STAGES_PER_CHAPTER), nextIdx % D.STAGES_PER_CHAPTER, hard) * (nextIdx < D.STAGES_PER_CHAPTER ? 0.65 : 0.8);   // 1장은 강화 한두 번이면 넘는다
     if (weak) {
       c.add(button(s, 68, 424, 76, 28, '다음 판', () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, hard, bot: s.bot }); }, { color: 0x3a3846 }));
       c.add(button(s, 176, 424, 136, 32, '대장간에서 정비 ▶', () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0x2f6b3a }));

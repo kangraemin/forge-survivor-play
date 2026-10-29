@@ -50,6 +50,8 @@ export class Battle extends Phaser.Scene {
     this.combo = 0; this.lastKillT = -1e9;
     // 장면 인스턴스는 판끼리 재사용된다: 이벤트·축복·던전 고블린 상태를 비운다
     this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
+    // 보스 단계도 비운다(앞 판이 보스전으로 끝나면 다음 판이 웨이브 없이 영원히 이어졌다)
+    this.bossPhase = false; this.midBoss = null; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.spawnAcc = 0;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -317,8 +319,8 @@ export class Battle extends Phaser.Scene {
     const y = 150;
     // 앞 배너가 아직 떠 있으면 지우고 띄운다(두 줄이 겹쳐 읽을 수 없었다)
     if (this.bannerObjs) this.bannerObjs.forEach(o => { this.tweens.killTweensOf(o); o.destroy(); });
-    const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.35).setScrollFactor(0).setDepth(110).setScale(1, 0);
-    const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
+    const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.7).setScrollFactor(0).setDepth(110).setScale(1, 0);
+    const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e', 4)).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     const t2 = this.add.text(W / 2, y + 12, small, font9(11, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     this.tweens.add({ targets: b, scaleY: 1, duration: 160, ease: 'Back.Out' });
     this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 220, delay: 80 });
@@ -1085,7 +1087,7 @@ export class Battle extends Phaser.Scene {
     const f = Math.max(0, this.hp / this.maxHp);
     this.hpBar.width = 76 * f;
     this.hpLag.width += (76 * f - this.hpLag.width) * 0.06;
-    this.hpTxt.setText(`${Math.ceil(Math.max(0, this.hp))}/${Math.round(this.maxHp)}`);
+    this.hpTxt.setText(`${Math.min(Math.ceil(Math.max(0, this.hp)), Math.round(this.maxHp))}/${Math.round(this.maxHp)}`);
     if (this.bossPhase) { this.timeTxt.setText('보스'); this.waveTxt.setText(''); }
     else {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));
