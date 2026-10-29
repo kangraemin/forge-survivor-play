@@ -341,7 +341,7 @@ export class Lobby extends Phaser.Scene {
   swordAura(enh) {
     const b = this.body, sw = this.sword, col = enh >= 15 ? 0xd06bff : enh >= 10 ? 0xff8a2a : 0x5fc8ff;
     if (enh < 5) return;
-    sw.preFX?.addGlow(col, enh >= 15 ? 6 : enh >= 10 ? 4 : 2, 0, false, 0.1, 12);
+    sw.preFX?.addGlow(col, enh >= 15 ? 6 : enh >= 10 ? 5 : 3, 0, false, 0.1, 12);
     const ring = this.add.image(W / 2, 168, 'disc').setScale(1.1).setTint(col).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD);
     b.addAt(ring, 0);
     this.tweens.add({ targets: ring, scale: 1.35, alpha: 0.12, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
@@ -387,7 +387,7 @@ export class Lobby extends Phaser.Scene {
     const halo = this.halo = this.add.image(W / 2, 170, 'disc').setScale(1.6).setTint(enh >= 10 ? 0xffd75e : 0x9ad8ff).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD);
     // 강화할수록 칼이 커지고 빛깔이 물든다(+5 푸른, +10 주황, +15 보라)
     this.sword = icon(this, W / 2, 168, t.icon, 72 * (1 + Math.min(enh, 20) * 0.012));
-    const et = enh >= 15 ? 0xf0c0ff : enh >= 10 ? 0xffd8b0 : enh >= 5 ? 0xd0f0ff : 0;
+    const et = enh >= 15 ? 0xf0c0ff : enh >= 10 ? 0xffc088 : enh >= 5 ? 0xb8e4ff : 0;
     if (t.tint) this.sword.setTint?.(t.tint); else if (et) this.sword.setTint?.(et);
     this.tweens.add({ targets: this.sword, y: 162, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     this.hammer = this.add.image(W / 2 + 54, 130, 'hammer').setScale(2.2).setOrigin(0.5, 0.9).setAngle(30);

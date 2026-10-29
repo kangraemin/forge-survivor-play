@@ -262,7 +262,7 @@ export class Battle extends Phaser.Scene {
 
   banner(big, small) {
     const y = 150;
-    const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.55).setScrollFactor(0).setDepth(110).setScale(1, 0);
+    const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.35).setScrollFactor(0).setDepth(110).setScale(1, 0);
     const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     const t2 = this.add.text(W / 2, y + 12, small, font(9, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     this.tweens.add({ targets: b, scaleY: 1, duration: 160, ease: 'Back.Out' });
