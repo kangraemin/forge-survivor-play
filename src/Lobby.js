@@ -561,21 +561,23 @@ export class Lobby extends Phaser.Scene {
     mission('enh'); sv.tut.forge = true;
     save();
     this.refreshTop();
-    // 망치질 세 번(확률이 낮을수록 한 번 더 뜸을 들인다)
-    const hits = D.ENH_RATE[enh] >= 100 ? 2 : D.ENH_RATE[enh] < 40 ? 4 : 3;
+    // 망치질 세 번(확률이 낮을수록 한 번 더 뜸을 들인다). 연달아 세 번 넘게 두드리면 두 번으로 줄인다(천장 구간은 스무 번 가까이 두드려 지쳤다)
+    this.enhN = (this.enhN || 0) + 1;
+    const quick = this.quick = this.enhN > 3;
+    const hits = quick || D.ENH_RATE[enh] >= 100 ? 2 : D.ENH_RATE[enh] < 40 ? 4 : 3;
     const h = this.hammer, sw = this.sword;
     this.tweens.killTweensOf(sw); sw.y = 168;
     const strike = i => {
       this.tweens.add({
         targets: h, angle: -50, x: W / 2 + 26, y: 150, duration: 110, ease: 'Quad.In', onComplete: () => {
           sfx('anvil');
-          this.cameras.main.shake(70, 0.006);
+          this.cameras.main.shake(70, quick ? 0.003 : 0.006);
           this.sparks(W / 2 + 6, 176, 10 + i * 4, 0xffc46a);
           sw.setTintFill?.(0xffffff); this.time.delayedCall(50, () => sw.clearTint?.());
           // 파괴 구간 마지막 한 방 전: 붉게 달아오르고 숨을 고른다
           const last = i === hits - 2, tense = danger && last;
           if (tense) { sfx('warn'); this.time.delayedCall(60, () => sw.setTint?.(0xff5a3a)); this.tweens.add({ targets: sw, scale: sw.scale * 1.12, duration: 500, ease: 'Quad.Out' }); }
-          this.tweens.add({ targets: h, angle: 30, x: W / 2 + 54, y: 130, duration: 220, ease: 'Quad.Out', onComplete: () => i + 1 < hits ? this.time.delayedCall(tense ? 750 : last ? 320 : 60, () => strike(i + 1)) : (this.reveal(outcome, enh, guard)) });
+          this.tweens.add({ targets: h, angle: 30, x: W / 2 + 54, y: 130, duration: 220, ease: 'Quad.Out', onComplete: () => i + 1 < hits ? this.time.delayedCall(tense ? (quick ? 380 : 750) : last ? 320 : 60, () => strike(i + 1)) : (this.reveal(outcome, enh, guard)) });
         },
       });
     };
@@ -619,7 +621,7 @@ export class Lobby extends Phaser.Scene {
       this.flashText(`파괴!  +${from} → +${D.shatterTo(from)}`, '#ff5050');
     }
     // 낮은 단계 성공은 짧게 끊어 연타가 답답하지 않게
-    const wait = outcome === 'shatter' ? 1500 : outcome === 'success' && from + 1 < 8 ? 450 : 900;
+    const wait = outcome === 'shatter' ? 1500 : this.quick ? 380 : outcome === 'success' && from + 1 < 8 ? 450 : 900;
     this.time.delayedCall(wait, () => {
       this.busy = false; this.show('forge');
       if (outcome === 'shatter' && !guarded) this.shatterWin(from);

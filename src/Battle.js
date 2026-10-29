@@ -62,7 +62,7 @@ export class Battle extends Phaser.Scene {
     this.mobDmgMul = D.chapterDmg(this.c) * D.stageDmg(this.s) * (1 - this.tv('def'));
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless;
-    if (this.easy) { this.mobDmgMul *= 0.55; this.waveCount = 2; }   // 처음 판은 웨이브 둘(150초 → 100초)
+    if (this.easy) { this.mobDmgMul *= 0.55; this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s);
 
     this.makeMap();

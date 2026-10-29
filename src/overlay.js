@@ -110,6 +110,8 @@ export class Overlay {
       banTxt.setText('');
       const glow = s.add.rectangle(W / 2, 172, 236, 76).setStrokeStyle(2, 0xffffff).setAlpha(0); c.add(glow);
       s.tweens.add({ targets: glow, alpha: 1, duration: 350, yoyo: true, repeat: -1, delay: 300 });
+      // 세 장이 다 새 스킬이라 뭘 골라야 할지 몰랐다: 첫 장에 '추천'
+      c.add(s.add.text(47, 200, '추천', font(9, '#ffffff')).setOrigin(0.5).setBackgroundColor('#2f7a3a').setPadding(3, 1, 3, 1));
     }
     // 무료 → 은화 → 은화가 모자라면 보석
     const label = () => r.freeReroll > 0 ? '3장 모두 다시 뽑기 (무료)' : r.silver >= this.lvReroll() ? `3장 모두 다시 뽑기 · 은화 ${this.lvReroll()}` : `3장 모두 다시 뽑기 · 보석 ${D.REROLL_GEM}`;
@@ -248,7 +250,7 @@ export class Overlay {
       const keys = it === item && cur ? [...new Set([...Object.keys(it.st), ...Object.keys(cur.st)])] : Object.keys(it.st);
       keys.forEach((k, i) => {
         const v = it.st[k] || 0, o = it === item && cur ? cur.st[k] || 0 : null, mark = o == null || v === o ? '' : v > o ? ' ▲' : ' ▼';
-        const txt = v ? statText(k, v) + mark : statText(k, o).replace(/ \+.*/, ' 잃음 ▼');
+        const txt = v ? statText(k, v) + mark : statText(k, o).replace('+', '-') + ' ▼';   // 잃는 만큼 빼서 보여 준다
         c.add(s.add.text(x, 240 + i * 13, txt, font9(9, mark === ' ▲' ? '#5fdc6a' : mark ? '#ff8a8a' : '#c8bfe0')).setOrigin(0.5));
       });
     };
@@ -498,7 +500,8 @@ export class Overlay {
     const brag = !s.bot && (win || (s.endless && floors > best));
     if (brag) {
       const gift = sv.shareDay !== sv.day;
-      const sb = button(s, 212, 330, 76, 20, gift ? `자랑 +${D.SHARE_GEM}` : '자랑하기', async () => {
+      // 광고 버튼 옆에서 묻혀 크고 밝게
+      const sb = button(s, 207, 330, 100, 24, gift ? `자랑하기 보석+${D.SHARE_GEM}` : '자랑하기', async () => {
         const msg = s.endless ? `무한의 탑 ${floors}층 돌파!` : `${s.isBoss ? D.BOSSES[s.ch.boss].name + ' 격파! ' : ''}${s.c + 1}-${s.s + 1} 클리어`;
         const text = `${msg} 내 칼은 ${D.TIERS[sv.tier].name} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
         let ok = false;
@@ -508,12 +511,12 @@ export class Overlay {
         } catch { /* 공유 창을 닫았다 */ }
         s.log('share', { ok, boss: !!s.isBoss, endless: !!s.endless });
         if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += D.SHARE_GEM; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
-      }, { size: 10, color: 0x7a4a2f });
+      }, { size: 10, color: 0xc0702a });
       c.add(sb);
     }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
-      const db = button(s, brag ? 98 : W / 2, 330, brag ? 140 : 190, 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
+      const db = button(s, brag ? 88 : W / 2, 330, brag ? 132 : 190, brag ? 24 : 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         s.log('double_reward', { ok, gold, stone });
