@@ -147,19 +147,19 @@ export const PETS = [
   { id: 'kingslime', name: '슬라임 왕', desc: '은화·상자를 주워 온다', unlock: 3, hint: '1-3 보스', color: 0x6fe36a, good: [1], weak: [2] },
   { id: 'lich', name: '리치 왕', desc: '저주로 적을 약하게 한다', unlock: 6, hint: '2-3 보스', color: 0xb07aff, good: [4], weak: [1] },
   { id: 'lavagolem', name: '용암 거신', desc: '둘레에 불바다를 깐다', unlock: 9, hint: '3-3 보스', color: 0xff7a2a, good: [3], weak: [2], tank: true },
-  { id: 'wyrm', name: '서리 용', desc: '입김으로 앞쪽 적을 얼린다', unlock: 12, hint: '4-3 보스', color: 0x9ae8ff, good: [2], weak: [3] },
+  { id: 'wyrm', name: '서리 용', desc: '입김으로 앞쪽 적을 얼린다', unlock: 12, hint: '4-3 보스', color: 0x9ae8ff, good: [4] },   // 4-3에서 얻으면 남은 곳이 5장뿐이라 5장에 잘 듣게
   { id: 'demonlord', name: '마왕', desc: '마탄 세 발을 흩뿌린다', unlock: 15, hint: '5-3 보스', color: 0xff3a50, good: [0, 1], weak: [4] },
 ];
 // 예전 펫(불씨·슬라임·박쥐)을 키운 만큼 같은 때 받는 보스 펫으로 옮긴다
 export const PET_OLD = { fire: 'general', slime: 'lich', bat: 'lavagolem' };
 export const PET_GOOD = 1.8, PET_WEAK = 0.6, PET_GOOD_DEF = 0.2;   // 받는 피해 감소는 막아 주는 펫(tank)만
 // 이 장에 잘 듣는 펫: 가진 것 먼저, 최대 두 마리
-export const recPets = (sv, c) => PETS.filter(p => p.good?.includes(c)).sort((a, b) => (sv.cleared >= b.unlock) - (sv.cleared >= a.unlock)).slice(0, 2);
+export const recPets = (sv, c) => PETS.filter(p => p.good?.includes(c) && sv.cleared >= p.unlock).slice(0, 2);   // 잠긴 펫은 '???'로 떠 뜻을 몰랐다
 export const petFit = (p, c) => p.good?.includes(c) ? PET_GOOD : p.weak?.includes(c) ? PET_WEAK : 1;
 export const PET_MAX = 20;
 export const petCost = lv => Math.round(90 * Math.pow(1.27, lv) / 5) * 5;
 // 펫 한 번 공격의 무기 공격력 대비 배율
-export const petPow = lv => 0.4 + 0.06 * lv;
+export const petPow = lv => 0.6 + 0.08 * lv;   // 직접 피해 비중이 1~3%라 펫 차이가 안 보였다
 
 // ── 장비 만들기 ──
 let uidN = 0;

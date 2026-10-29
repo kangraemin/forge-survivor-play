@@ -31,7 +31,7 @@ export const MOBS = {
   fskull: { sheet: 'z3', row: 2, hp: 13, spd: 30, dmg: 5, ai: 'ranged', color: 0xffc23a },
   wolf: { sheet: 'z4', row: 0, hp: 18, spd: 44, dmg: 6.5, ai: 'charge', color: 0xdff2ff },
   yeti: { sheet: 'z4', row: 1, hp: 48, spd: 21, dmg: 8, ai: 'tank', color: 0xffffff },
-  icesp: { sheet: 'z4', row: 2, hp: 13, spd: 30, dmg: 5, ai: 'ranged', color: 0x7fe8ff },
+  icesp: { sheet: 'z4', row: 2, hp: 13, spd: 30, dmg: 5, ai: 'ranged', color: 0x7fe8ff, tint: 0x7fb0ff },   // 눈 바닥에 묻혀 안 보였다
   dknight: { sheet: 'z5', row: 0, hp: 46, spd: 25, dmg: 8, ai: 'tank', color: 0xc04050 },
   cultist: { sheet: 'z5', row: 1, hp: 15, spd: 28, dmg: 5, ai: 'ranged', color: 0xb070ff },
   gargoyle: { sheet: 'z5', row: 2, hp: 14, spd: 52, dmg: 4.5, ai: 'swarm', color: 0x9a9aa8 },
@@ -66,10 +66,10 @@ export const stageMod = c => RUN_MODS[[0, 2, 1, 0, 2][c % 5]];
 // 보스: sheet/row는 2프레임 시트. hp는 1챕터 배율 기준 값(챕터 배율이 곱해진다)
 // rage: 체력 절반 아래에서 새로 섞여 나오는 공격(같은 패턴만 반복된다는 평가)
 export const BOSSES = {
-  kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1500, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'summon', 'jump', 'ring'], rage: 'pools' },
+  kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'summon', 'jump', 'ring'], rage: 'pools' },
   lich: { name: '리치 왕', sheet: 'boss1', row: 1, hp: 1500, dmg: 12, spd: 22, color: 0x9dff7a, pattern: ['ring', 'summon', 'aimed', 'ring'], rage: 'sweep' },
   lavagolem: { name: '용암 거신', sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
-  wyrm: { name: '서리 용', sheet: 'boss2', row: 0, hp: 1650, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
+  wyrm: { name: '서리 용', sheet: 'boss2', row: 0, hp: 1450, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
   demonlord: { name: '마왕', sheet: 'boss2', row: 1, hp: 1800, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'], rage: 'sweep' },
   general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
 };
@@ -164,7 +164,7 @@ export const powerOf = sv => {
 // 장 첫 판(2장부터)은 적응 판: 보스 바로 뒤라 강화를 덜 했어도 깰 수 있게 낮춘다
 export const easeHp = (c, s) => c > 0 && s === 0 ? 0.8 : 1;
 export const easeDmg = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
-export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * easeHp(c, s) * (isBossS(s) ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
+export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * easeHp(c, s) * (isBossS(s) && c > 0 ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
 // 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯(1점 +2%, 5점 보너스)까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
 export const GEAR_HP = c => 1 + 0.36 * c;
 // 전투력 색: 권장을 넘어도 보스 판은 20% 여유가 있어야 초록(20차 봇: 1-6 권장 114%에서 졌다)

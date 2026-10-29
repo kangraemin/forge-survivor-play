@@ -43,6 +43,8 @@ export class Battle extends Phaser.Scene {
     const sv = this.sv;
     this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
     this.paused = false; this.hitstop = 0; this.over = false; this.mv = null; this.formT = 0;
+    // 씬을 다시 쓰므로 콤보도 판마다 비운다(앞 판 처치 시각이 남아 다음 판 콤보가 424까지 이어졌다)
+    this.combo = 0; this.lastKillT = -1e9;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -406,7 +408,7 @@ export class Battle extends Phaser.Scene {
     m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.curse = 0; m.tint0 = undefined; m.phase = RF(0, 6); m.t = 0;
     m.hitBy = {};
     if (this.registry.get('fallback')[kind] && this.c > 0) m.setTint(m0.color);
-    if (v) m.setTint(v.tint);
+    if (v) m.setTint(v.tint); else if (m0.tint) m.setTint(m0.tint);
     m.baseTint = m.tintTopLeft;
     m.setScale(m.bs);
     if (elite) {

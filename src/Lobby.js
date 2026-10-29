@@ -333,7 +333,7 @@ export class Lobby extends Phaser.Scene {
     // 이 맵에 잘 듣는 펫(데려가고 있으면 초록). 보상 줄과 겹치지 않게 전투력 줄 오른쪽에 둔다
     const rps = recPets(sv, c);
     if (rps.length) {
-      const nm = rps.map(p => sv.cleared >= p.unlock ? p.name : '???');
+      const nm = rps.map(p => p.name);
       const rt = this.add.text(W - 24, 301, `추천 펫 ${nm.join(' / ')}`, font9(9, rps.some(p => p.id === sv.pet) ? '#5fdc6a' : '#ffd75e')).setOrigin(1, 0);
       if (rt.x - rt.width < pt.x + pt.width + 8) rt.setText(`추천 펫 ${nm[0]}`);
       b.add(rt);
@@ -568,7 +568,7 @@ export class Lobby extends Phaser.Scene {
     if (sv.gold < gold || sv.stone < stone) {
       track('enhance_blocked', { from: enh, tier: sv.tier, gold_short: Math.max(0, gold - sv.gold), stone_short: Math.max(0, stone - sv.stone) });
       // 탭을 멋대로 바꾸면 연타가 '전투 시작'에 떨어졌다: 알림만 띄우고 아래 탭으로 가게 둔다
-      sfx('deny'); toast(this, sv.sweep > 0 ? '전투 탭에서 소탕으로 벌자' : '전투 탭에서 금화·강화석을 벌자', '#ffd75e', 226);   // 위에 띄우면 공격력 줄을 가렸다
+      sfx('deny'); toast(this, sv.sweep > 0 ? '전투 탭에서 소탕으로 벌자' : '전투 탭에서 금화·강화석을 벌자', '#ffd75e');
       return;
     }
     this.busy = true;

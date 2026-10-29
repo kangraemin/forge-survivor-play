@@ -1,6 +1,6 @@
 // 전투 속 펫: 잡은 보스를 작게 만든 모습으로 주인공을 따라다니며 저마다 다른 일을 한다
 // 장(맵)마다 잘 듣는 펫이 달라(petFit) 처음 받은 펫도 뒤 장에서 다시 꺼내 쓴다
-import { PETS, petPow, petFit } from './gear.js';
+import { PETS, petPow, petFit, PET_GOOD } from './gear.js';
 import { sfx } from './sfx.js';
 import { font } from './ui.js';
 
@@ -12,14 +12,14 @@ export class Pet {
     if (!this.def) return;
     this.lv = s.sv.pets?.[this.def.id] || 0;
     // 맵 상성: 잘 듣는 장이면 효과가 세지고, 안 듣는 장이면 약해진다(무한의 탑은 보통)
-    this.fit = s.endless ? 1 : petFit(this.def, s.c);
+    this.fit = s.endless ? (this.def.id === 'demonlord' ? PET_GOOD : 1) : petFit(this.def, s.c);   // 마왕은 마지막에 얻으니 무한의 탑에서 강하게
     // 펫 목걸이·이상한 돌멩이가 피해를 올린다
     this.pow = petPow(this.lv) * (1 + s.gear.pet) * this.fit;
     this.t = 0; this.t2 = 0; this.x = s.hero.x - 20; this.y = s.hero.y;
     const fb = s.registry.get('fallback')?.[this.def.id];
-    this.g = s.add.sprite(this.x, this.y, null).play(this.def.id).setScale(fb ? 0.7 : 0.32).setDepth(10);
+    this.g = s.add.sprite(this.x, this.y, null).play(this.def.id).setScale(fb ? 0.7 : 0.26).setDepth(10);
     if (fb) this.g.setTint(this.def.color);
-    this.ring = s.add.ellipse(this.x, this.y, 20, 7, this.def.color, 0.3).setDepth(8);
+    this.ring = s.add.ellipse(this.x, this.y, 20, 7, this.def.color, 0.6).setDepth(8);   // 보스와 같은 그림이라 발밑 링으로 구분
   }
 
   update(dt) {

@@ -615,6 +615,23 @@ export class Overlay {
       s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
       return;
     }
+    // 마지막 보스까지 잡았으면 끝: 같은 판을 다시 시작하지 않고 무한의 탑으로
+    const total = D.CHAPTERS.length * D.STAGES_PER_CHAPTER;
+    if (win && !s.endless && sv.cleared >= total && idx === total - 1) {
+      c.add(s.add.text(W / 2, 404, '모든 장 정복!', font(12, '#ffd75e')).setOrigin(0.5));
+      c.add(button(s, 68, 432, 76, 28, '로비', () => { s.log('result_action', { act: 'lobby', win }); s.scene.start('Lobby', { tab: 'battle' }); }, { color: 0x3a3846 }));
+      c.add(button(s, 176, 432, 136, 32, '무한의 탑 ▶', () => { s.log('result_action', { act: 'tower', win }); s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot }); }, { color: 0x2f6b3a }));
+      s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
+      return;
+    }
+    // 다음 판 전투력이 권장의 80%도 안 되면 대장간이 주인공(그대로 보스에 들어가 25초 만에 쓰러졌다)
+    const weak = win && !s.endless && D.powerOf(sv) < D.recPower(Math.floor(nextIdx / D.STAGES_PER_CHAPTER), nextIdx % D.STAGES_PER_CHAPTER) * 0.8;
+    if (weak) {
+      c.add(button(s, 68, 424, 76, 28, '다음 판', () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, bot: s.bot }); }, { color: 0x3a3846 }));
+      c.add(button(s, 176, 424, 136, 32, '대장간에서 정비 ▶', () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0x2f6b3a }));
+      s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
+      return;
+    }
     c.add(button(s, fw ? 68 : 82, 424, fw ? 76 : 100, fw ? 28 : 30, fw ? '로비' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3a3846 }));
     c.add(button(s, fw ? 176 : 190, 424, fw ? 136 : 100, fw ? 32 : 30, win ? (s.endless ? '다시 도전' : s.s === 1 && !s.isBoss ? '보스 도전 ▶' : '다음 스테이지 ▶') : '다시', () => {
       s.log('result_action', { act: win ? 'next' : 'retry', win });

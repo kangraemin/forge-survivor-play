@@ -83,7 +83,9 @@ export function icon(scene, x, y, idx, size = 22) {
 }
 
 // 화면 위쪽에서 잠깐 떴다 사라지는 알림 한 줄
-export function toast(scene, msg, color = '#ffffff', y = 88) {
+export function toast(scene, msg, color = '#ffffff', y) {
+  // 로비는 위쪽 정보(임무 제목·공격력 줄)를 가려서 탭 바로 위에 띄운다
+  y ??= scene.scene.key === 'Lobby' ? 421 : 88;
   // 출석·미션 창(깊이 2000) 위에서도 보이게 그보다 위에 띄운다
   // 화면 위쪽(상단 바 바로 아래)에 어두운 띠를 깔아 아래 정보·버튼을 가리지 않는다
   const t = scene.add.container(135, y + 16).setDepth(3000).setScrollFactor(0).setAlpha(0);
