@@ -322,6 +322,30 @@ export class Lobby extends Phaser.Scene {
   }
 
   // ── 대장간 탭 ──
+  // 강화 단계마다 칼 모습이 달라진다: +5 푸른 빛, +10 불티, +15 보랏빛 룬이 칼 둘레를 돈다
+  swordAura(enh) {
+    const b = this.body, sw = this.sword, col = enh >= 15 ? 0xd06bff : enh >= 10 ? 0xff8a2a : 0x5fc8ff;
+    if (enh < 5) return;
+    sw.preFX?.addGlow(col, enh >= 15 ? 6 : enh >= 10 ? 4 : 2, 0, false, 0.1, 12);
+    const ring = this.add.image(W / 2, 168, 'disc').setScale(1.1).setTint(col).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD);
+    b.addAt(ring, 0);
+    this.tweens.add({ targets: ring, scale: 1.35, alpha: 0.12, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    if (enh >= 10) for (let i = 0; i < 7; i++) {
+      const e = this.add.circle(W / 2 + R(-22, 22), 200, R(1, 2), i % 2 ? 0xffd75e : 0xff7a2a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+      b.add(e);
+      this.tweens.add({ targets: e, y: R(118, 140), x: e.x + R(-10, 10), alpha: { from: 0.9, to: 0 }, duration: R(900, 1400), delay: i * 180, repeat: -1 });
+    }
+    if (enh >= 15) {
+      const rc = this.add.container(W / 2, 168);
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI / 3;
+        rc.add(this.add.rectangle(Math.cos(a) * 44, Math.sin(a) * 44, 5, 5, 0xe8a0ff).setAngle(45).setBlendMode(Phaser.BlendModes.ADD));
+      }
+      b.add(rc);
+      this.tweens.add({ targets: rc, angle: 360, duration: 6000, repeat: -1 });
+    }
+  }
+
   forgeTab() {
     const sv = this.sv, b = this.body, bg = this.bg;
     if (this.textures.exists('forge_bg')) {
@@ -338,6 +362,12 @@ export class Lobby extends Phaser.Scene {
     const t = D.TIERS[sv.tier], enh = sv.enh, max = enh >= D.ENH_MAX;
     b.add(this.add.text(W / 2, 54, `+${enh} ${t.name}`, font(16, enh >= 15 ? '#ff9a3a' : enh >= 10 ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
     b.add(this.add.text(W / 2, 74, `공격력 ${Math.round(D.weaponAtk(sv.tier, enh))}${max ? '' : `  →  ${Math.round(D.weaponAtk(sv.tier, enh + 1))}`}`, font(10, '#e8e2f8')).setOrigin(0.5));
+    // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
+    if (!max) {
+      const next = (Math.floor(enh / D.ENH_MILESTONE) + 1) * D.ENH_MILESTONE;
+      this.awakeTxt = this.add.text(W / 2, 88, next === enh + 1 ? `다음 강화에서 각성! 공격력 ×${D.MILESTONE_MUL}` : `+${next} 각성까지 ${next - enh}단계`, font(8, next === enh + 1 ? '#ffd75e' : '#a8a0c0', 2)).setOrigin(0.5);
+      b.add(this.awakeTxt);
+    }
     // 모루 위의 칼
     const halo = this.halo = this.add.image(W / 2, 170, 'disc').setScale(1.6).setTint(enh >= 10 ? 0xffd75e : 0x9ad8ff).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD);
     this.sword = icon(this, W / 2, 168, t.icon, 72);
@@ -345,6 +375,8 @@ export class Lobby extends Phaser.Scene {
     this.tweens.add({ targets: this.sword, y: 162, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     this.hammer = this.add.image(W / 2 + 54, 130, 'hammer').setScale(2.2).setOrigin(0.5, 0.9).setAngle(30);
     b.add([halo, this.sword, this.hammer]);
+    if (!max) b.bringToTop(this.awakeTxt);
+    this.swordAura(enh);
     // 강화 단계 표시(20칸)
     b.add(this.add.rectangle(W / 2, 256, W - 32, 26, 0x07050c, 0.75).setStrokeStyle(1, COLOR.line));
     for (let i = 0; i < D.ENH_MAX; i++) {
@@ -453,9 +485,10 @@ export class Lobby extends Phaser.Scene {
       p.once('animationcomplete', () => p.destroy());
       this.sparks(W / 2, 168, 40, 0xffe08a);
       this.tweens.add({ targets: sw, scale: sw.scale * 1.25, duration: 160, yoyo: true });
-      this.flashText(`강화 성공!  +${from + 1}`, '#ffd75e');
-      // +8부터는 성공이 귀하다: 화면을 번쩍이고 오른 공격력을 크게 띄운다
-      if (from + 1 >= 8) {
+      const awake = (from + 1) % D.ENH_MILESTONE === 0;
+      this.flashText(awake ? `칼이 각성했다!  +${from + 1}` : `강화 성공!  +${from + 1}`, '#ffd75e');
+      // +8부터와 각성(+5 단위)은 화면을 번쩍이고 오른 공격력을 크게 띄운다
+      if (from + 1 >= 8 || awake) {
         const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));
         this.cameras.main.flash(220, 255, 220, 120);
         this.sparks(W / 2, 168, 30, 0xffffff);

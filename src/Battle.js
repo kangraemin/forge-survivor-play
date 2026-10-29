@@ -683,7 +683,9 @@ export class Battle extends Phaser.Scene {
       if (this.waveT >= this.waveLen) { this.waveT = 0; this.endWave(); return; }
       // 스폰: 초당 2.5 → 끝날 즈음 5.5마리(초반 몹은 약하고 많게)
       const f = this.progress();
-      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + 3 * f) / 1000;
+      // 판 시작 20초는 초당 2마리를 더 내보낸다: 첫 판 초반 화면이 비어 지루했다
+      const early = !this.endless && this.bt < 20000 ? 2 : 0;
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + 3 * f) / 1000;
       while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }

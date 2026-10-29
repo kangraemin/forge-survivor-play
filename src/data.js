@@ -80,7 +80,9 @@ export const TIERS = [
   { name: '룬 대검', atk: 92, icon: 2, tint: 0xffa0ff },
   { name: '전설의 화염검', atk: 190, icon: 3 },
 ];
-export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * enh);
+// +5·+10·+15·+20을 넘을 때마다 칼이 한 번 더 깨어난다(×1.1). 한 단계 +10%만으론 강해진 게 안 느껴진다
+export const ENH_MILESTONE = 5, MILESTONE_MUL = 1.1;
+export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * enh) * Math.pow(MILESTONE_MUL, Math.floor(enh / ENH_MILESTONE));
 // 강화 성공 확률(%) — 인덱스는 현재 강화 수치
 export const ENH_RATE = [100, 100, 95, 90, 85, 75, 65, 55, 50, 45, 40, 35, 30, 27, 24, 20, 17, 14, 12, 10];
 export const ENH_MAX = 20;
@@ -118,7 +120,7 @@ export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) 
 // ── 판 안 성장 ──
 export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 34 };
 // 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 30% 줄여 한 판 안에 진화까지 닿게 한다
-export const xpNeed = lv => lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.7)) : 8 + (lv - 1) * 11;
+export const xpNeed = lv => lv === 1 ? 5 : lv > 5 ? Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.7)) : 8 + (lv - 1) * 11;
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 
