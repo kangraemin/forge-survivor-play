@@ -119,6 +119,13 @@ export const TRAINING = [
 // 5레벨마다 이정표: 한 레벨치 효과를 덤으로 준다(부활 같은 1회짜리는 제외)
 export const TRAIN_MILE = 5, TRAIN_MILE_BONUS = 1;
 export const trainVal = (t, lv) => (lv + (t.max >= TRAIN_MILE ? Math.floor(lv / TRAIN_MILE) * TRAIN_MILE_BONUS : 0)) * t.v;
+// 전투력: 무기 공격력에 훈련(근력·체력·갑옷)을 합친 값. 권장 전투력과 비교한다(훈련만 올려도 숫자가 오른다)
+export const powerOf = sv => {
+  const tv = id => trainVal(TRAINING.find(t => t.id === id), sv.train?.[id] || 0);
+  return Math.round(weaponAtk(sv.tier, sv.enh) * (1 + tv('atk')) * (1 + tv('hp') * 0.25 + tv('def') * 0.5));
+};
+// 스테이지별 권장 전투력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
+export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s));
 export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
 
 // ── 판 안 성장 ──

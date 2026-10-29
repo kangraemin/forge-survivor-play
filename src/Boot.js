@@ -87,11 +87,14 @@ export class Boot extends Phaser.Scene {
       g.fillStyle(0xc8d0e0).fillCircle(3, 3, 2.4);
       g.fillStyle(0xffffff).fillRect(2, 1, 1, 2);
     });
-    tex('meat', 12, 10, g => {
-      g.fillStyle(0x0a0710).fillRoundedRect(0, 1, 10, 9, 3);
-      g.fillStyle(0xb5562a).fillRoundedRect(1, 2, 8, 7, 3);
-      g.fillStyle(0xe07a3a).fillRect(2, 3, 4, 2);
-      g.fillStyle(0xf2efe6).fillRect(8, 0, 3, 3).fillRect(9, 3, 2, 2);
+    // 체력 포션(키는 예전 고기 그대로): 빨간 물약병에 흰 십자
+    tex('meat', 12, 15, g => {
+      g.fillStyle(0x0a0710).fillRect(3, 0, 6, 5).fillRoundedRect(0, 4, 12, 11, 4);
+      g.fillStyle(0x9a6a3a).fillRect(4, 1, 4, 2);
+      g.fillStyle(0xcfe8f0).fillRect(4, 3, 4, 2);
+      g.fillStyle(0xe8283a).fillRoundedRect(1, 5, 10, 9, 3);
+      g.fillStyle(0xff7080).fillRect(2, 6, 2, 3);
+      g.fillStyle(0xffffff).fillRect(5, 7, 2, 6).fillRect(3, 9, 6, 2);
     });
     tex('magnetItem', 10, 10, g => {
       g.fillStyle(0x0a0710).fillRect(0, 0, 10, 10);

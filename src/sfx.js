@@ -8,9 +8,15 @@ function ac() {
     if (!C) return null;
     ctx = new C(); master = ctx.createGain(); master.gain.value = 0.35; master.connect(ctx.destination);
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  // 아이폰은 앱을 나갔다 오면 'interrupted'가 된다: running이 아니면 다시 깨운다
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
   return ctx;
 }
+// 백그라운드에서 돌아오면 소리가 멈춰 있었다: 돌아올 때와 다음 터치 때마다 깨운다(아이폰은 터치 안에서만 깨워 준다)
+const wake = () => { if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); };
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+window.addEventListener('pageshow', wake);
+['touchend', 'pointerup', 'keydown'].forEach(e => document.addEventListener(e, wake, true));
 export const setSound = v => { on = v; if (!v) stopBgm(); };
 export const unlock = () => ac();
 

@@ -20,6 +20,8 @@ const start = () => {
     input: { activePointers: 2 },
     scene: [Boot, Lobby, Battle],
   });
+  // 주소창이 접히거나 펴지면 보이는 영역이 바뀐다: 다시 맞춘다
+  window.visualViewport?.addEventListener('resize', () => window.game.scale.refresh());
 };
 // 픽셀 글꼴을 먼저 받아야 첫 화면 글자가 기본 글꼴로 안 나온다
 Promise.all(['G11', 'G9'].map(f => document.fonts.load(`12px ${f}`))).catch(() => {}).finally(start);

@@ -322,7 +322,9 @@ export class Overlay {
     const c = this.begin('revive');
     c.add(panel(s, 30, 150, W - 60, 190, { fill: 0x1a1426, line: 0x7a3a4a }));
     c.add(s.add.text(W / 2, 176, '쓰러졌다…', font(16, '#ff7070')).setOrigin(0.5));
-    c.add(s.add.text(W / 2, 198, '체력 절반으로 일어나 이어서 싸울까?', font9(10, '#e8e2f8')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 194, '체력 절반으로 일어나 이어서 싸울까?', font9(10, '#e8e2f8')).setOrigin(0.5));
+    // 다시 하기와 다른 점: 지금까지 키운 것이 그대로 남는다
+    c.add(s.add.text(W / 2, 210, `Lv ${s.run.lv}·스킬·주운 것 그대로 남는다`, font9(10, '#9ae0ff')).setOrigin(0.5));
     let busy = false;
     const up = () => { this.end(c); s.reviveNow(); };
     const ad = button(s, W / 2, 232, 170, 28, sv.noAds ? '무료 부활' : '광고 보고 부활 ▶', async () => {
@@ -403,7 +405,12 @@ export class Overlay {
       const o = { v: 0 };
       s.tweens.add({ targets: o, v: n, duration: 350, delay: 150 + i * 80, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
     });
-    if (!win && !s.endless) c.add(s.add.text(W / 2, 306, '대장간에서 무기를 강화하고 다시 도전하자', font9(10, '#c8bfe0')).setOrigin(0.5));
+    // 졌으면 무엇이 모자랐는지 숫자로 보여 준다
+    if (!win && !s.endless) {
+      const pw = D.powerOf(sv), rp = D.recPower(s.c, s.s);
+      c.add(s.add.text(W / 2, 294, `내 전투력 ${pw}  ·  권장 ${rp}`, font(11, pw >= rp ? '#5fdc6a' : '#ff8070')).setOrigin(0.5));
+      c.add(s.add.text(W / 2, 308, pw >= rp ? '움직임을 바꿔 다시 도전하자' : '강화·훈련하고 다시 도전하자', font9(10, '#c8bfe0')).setOrigin(0.5));
+    }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
       const db = button(s, W / 2, 330, 190, 20, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
@@ -419,7 +426,7 @@ export class Overlay {
       c.add(db);
     }
     const nextIdx = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
-    c.add(button(s, 85, 360, 110, 30, '로비', () => s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }), { color: 0x3b2f5c }));
+    c.add(button(s, 85, 360, 110, 30, win || s.endless ? '로비' : '대장간으로', () => s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }), { color: 0x3b2f5c }));
     c.add(button(s, 190, 360, 100, 30, win ? '다음' : '다시', () => {
       if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });
       const n = win ? nextIdx : idx;

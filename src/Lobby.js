@@ -9,8 +9,8 @@ const { W, H } = D;
 const R = Phaser.Math.Between;
 const TABS = [['battle', '전투', 1], ['forge', '대장간', 13], ['train', '훈련', 14], ['shop', '상점', 12]];
 
-// 스테이지별 권장 공격력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
-export const recAtk = (c, s) => Math.round(D.TIERS[Math.min(c, D.TIERS.length - 1)].atk * D.stageMul(s));
+// 스테이지별 권장 전투력(data.js recPower)
+export const recAtk = D.recPower;
 
 export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
@@ -199,7 +199,7 @@ export class Lobby extends Phaser.Scene {
   battleTab() {
     if (this.tower) return this.towerPage();
     const sv = this.sv, b = this.body, c = this.selC, ch = D.CHAPTERS[c];
-    const atk = Math.round(D.weaponAtk(sv.tier, sv.enh) * (1 + this.tv('atk')));
+    const atk = D.powerOf(sv);
     // 챕터 제목과 화살표
     b.add(this.add.text(W / 2, 56, `${c + 1}장  ${ch.name}`, font(15, '#ffd75e')).setOrigin(0.5));
     const unlockedC = Math.floor(Math.min(sv.cleared, D.CHAPTERS.length * 6 - 1) / 6);
@@ -258,8 +258,8 @@ export class Lobby extends Phaser.Scene {
     const s = this.selS, idx = c * 6 + s, done = idx < sv.cleared, rec = recAtk(c, s);
     b.add(panel(this, 12, 286, W - 24, atk < rec ? 84 : 92, { fill: 0x15111f }));
     const lines = [
-      ['내 공격력', `${atk}`, atk >= rec ? '#5fdc6a' : '#ff8070'],
-      ['권장 공격력', `${rec}`, '#e8e2f8'],
+      ['내 전투력', `${atk}`, atk >= rec ? '#5fdc6a' : '#ff8070'],
+      ['권장 전투력', `${rec}`, '#e8e2f8'],
       ['클리어 금화', `${fmt(D.clearGold(c, s))}${done ? '' : `  (첫 클리어 ×${D.FIRST_CLEAR_MUL})`}`, '#ffd75e'],
       ['강화석', `${D.clearStone(c, s)}`, '#9ae0ff'],
     ];
@@ -269,7 +269,7 @@ export class Lobby extends Phaser.Scene {
     });
     // 권장에 못 미치면 바로 대장간으로 보낸다(글자만 있으면 그냥 지나친다)
     if (atk < rec) {
-      const fb = button(this, W / 2, 381, 230, 18, '공격력이 모자라다  대장간으로 →', () => this.show('forge'), { size: 10, color: 0x7a3a2a, textColor: '#ffd0b0' });
+      const fb = button(this, W / 2, 381, 230, 18, '전투력이 모자라다  대장간으로 →', () => this.show('forge'), { size: 10, color: 0x7a3a2a, textColor: '#ffd0b0' });
       b.add(fb);
       this.tweens.add({ targets: fb, alpha: 0.7, duration: 500, yoyo: true, repeat: -1 });
     }
@@ -419,7 +419,7 @@ export class Lobby extends Phaser.Scene {
         b.add(ck);
       }
       const ok = sv.gold >= gold && sv.stone >= stone;
-      const eb = button(this, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 82 : W / 2, 410, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 130 : 180, 38, '강화', () => this.enhance(), { size: 15, color: danger ? 0x8a3a2a : 0x7a5a1a });
+      const eb = button(this, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 82 : W / 2, 410, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 130 : 180, 38, ok ? '강화' : sv.gold < gold ? `금화 ${fmt(gold - sv.gold)} 부족` : `강화석 ${stone - sv.stone} 부족`, () => this.enhance(), { size: ok ? 15 : 11, color: danger ? 0x8a3a2a : 0x7a5a1a });
       eb.setEnabled(ok); b.add(eb);
       // 처음 하는 사람: 강화 버튼을 가리킨다
       this.forgeArrow = sv.cleared >= 1 && !sv.tut.forge && ok;

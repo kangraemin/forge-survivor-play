@@ -702,7 +702,8 @@ export class Battle extends Phaser.Scene {
         this.banner('해골 장군', '중간 보스'); sfx('bossIn');
       }
     } else {
-      this.spawnAcc = (this.spawnAcc || 0) + dt * 1.2 / 1000;
+      // 보스전에도 졸개가 꾸준히 나온다(1.2마리면 화면이 비어 보였다)
+      this.spawnAcc = (this.spawnAcc || 0) + dt * 2.2 / 1000;
       while (this.spawnAcc >= 1) { this.spawnAcc--; this.spawn(); }
     }
     this.boss?.update(dt);
