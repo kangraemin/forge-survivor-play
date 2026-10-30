@@ -1,6 +1,8 @@
 // 장마다 다른 중간보스 전용 패턴(data.js CHAPTERS[].mid). boss.js가 BossAI.prototype에 섞는다.
 // 장 보스 패턴(envfx.js·lateEnv.js)과 함께 쓰며, 이쪽은 장 기믹(바닥·몹·지형)과 엮인 작은 변형이다.
 import { sfx } from './sfx.js';
+import { t } from './i18n.js';
+import * as D from './data.js';
 import { lineWarn, flashLine, segDist } from './lateEnv.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
@@ -190,3 +192,56 @@ export const MID_PATTERNS = {
     }
   },
 };
+
+// ── 58차: 장마다 다른 중반 이벤트(둘째 웨이브 중간에 한 번). 1장 엘리트 습격은 Battle.js(1-1), 여기는 그 밖의 판 ──
+// 행동이 서로 다르다: 습격=정예가 달려듦 / 무덤 손=내 둘레에서 몹이 솟음 / 독비=바닥 곳곳에 경고 뒤 낙하(피해야 함).
+// 스탯 배수는 쓰지 않는다(몹 체력·피해는 판 기본식 그대로).
+export const MID_EVENTS = {
+  // 엘리트 습격(1-2 같은 1장 다른 판은 둘이 달려든다)
+  raid(s) {
+    for (let i = 0; i < 2; i++) s.spawn(false, s.ch.mobs[1], { elite: true, force: true });
+    s.banner(t('battle.raidT'), t('battle.raid2S')); sfx('bossIn');
+  },
+  // 무덤 손: 내 둘레 여섯 곳에 붉은 표식이 뜨고 1.1초 뒤 그 자리에서 몹이 솟아오른다. 표식 밖으로 빠지면 한 마리씩 상대할 수 있다
+  graves(s) {
+    s.banner(t('battle.graveT'), t('battle.graveS')); sfx('warn', 300);
+    const h = s.hero, n = 6, a0 = RF(0, 6.28);
+    for (let i = 0; i < n; i++) {
+      const x = cl(h.x + Math.cos(a0 + i / n * 6.28) * 74), y = cl(h.y + Math.sin(a0 + i / n * 6.28) * 58);
+      const g = s.add.ellipse(x, y, 34, 20, 0x2a1020, 0.55).setStrokeStyle(2, 0xff4050, 0.9).setDepth(8);
+      s.tweens.add({ targets: g, alpha: 0.2, duration: 220, yoyo: true, repeat: 4 });
+      s.time.delayedCall(i * 120 + 1100, () => {
+        g.destroy();
+        if (s.over) return;
+        if (s.mobs.countActive() < 60) s.spawn(false, s.ch.mobs[i % 3], { force: true, at: { x, y } });
+        const p = s.add.image(x, y, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff4050).setScale(0.2).setDepth(9);
+        s.tweens.add({ targets: p, alpha: 0, scale: 0.4, duration: 300, onComplete: () => p.destroy() });
+      });
+    }
+  },
+  // 독비: 바닥 곳곳에 경고 원이 깔렸다가 1초 뒤 터진다. 원 안에 서 있으면 맞는다(걸어서 빠지면 피한다)
+  rain(s) {
+    s.banner(t('battle.rainT'), t('battle.rainS')); sfx('warn', 300);
+    for (let k = 0; k < 14; k++) s.time.delayedCall(500 + k * 320, () => {
+      if (s.over) return;
+      const near = k % 2 === 0, h = s.hero, x = cl(near ? h.x + R(-50, 50) : h.x + R(-130, 130)), y = cl(near ? h.y + R(-40, 40) : h.y + R(-100, 100));
+      const g = s.add.ellipse(x, y, 52, 36, 0x6a2aa0, 0.22).setStrokeStyle(2, 0xc060ff, 0.9).setDepth(8);
+      s.tweens.add({ targets: g, alpha: 0.6, duration: 160, yoyo: true, repeat: 2 });
+      s.time.delayedCall(1000, () => {
+        g.destroy();
+        if (s.over) return;
+        const f = s.add.image(x, y, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(0xc060ff).setScale(0.3).setDepth(9);
+        s.tweens.add({ targets: f, alpha: 0, scale: 0.5, duration: 260, onComplete: () => f.destroy() });
+        sfx('crit', 110);
+        const dx = (s.hero.x - x) / 26, dy = (s.hero.y - y) / 18;
+        if (dx * dx + dy * dy < 1) s.hurt(D.MOBS[s.ch.mobs[1]].dmg * s.mobDmgMul * 1.2, 'rain');
+      });
+    });
+  },
+};
+const MID_ORDER = ['raid', 'graves', 'rain'];
+export function runMidEvent(s) {
+  const k = s.c === 0 ? (s.s === 0 ? 'raid' : 'rain') : MID_ORDER[s.c % 3];
+  s.log('mid_event', { kind: k, c: s.c, s: s.s });
+  MID_EVENTS[k](s);
+}

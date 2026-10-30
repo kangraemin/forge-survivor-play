@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Alarm an",
  "lobby.ch16Share": "Freund einladen",
  "lobby.ch16Open": "Kapitel 16 ist offen! Auf zum Eispalast",
- "lobby.ch16Thx": "Benachrichtigung ist an"
+ "lobby.ch16Thx": "Benachrichtigung ist an",
+ "battle.goldGain": "+{n} Gold",
+ "battle.goldRushT": "Goldrausch!",
+ "battle.goldRushS": "{n} Gold-Goblins rennen in Reihe heran",
+ "battle.raid2S": "2 Elite-Gegner stürmen heran",
+ "battle.graveT": "Grabhände!",
+ "battle.graveS": "Gegner steigen aus den roten Markierungen",
+ "battle.rainT": "Giftregen!",
+ "battle.rainS": "Bleib aus den lila Kreisen",
+ "desk.ordTitle": "Schmiedeaufträge {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "Meine Klinge",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Stärke {p}"
 }

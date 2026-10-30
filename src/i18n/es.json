@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Aviso activado",
  "lobby.ch16Share": "Avisar a un amigo",
  "lobby.ch16Open": "¡Capítulo 16 abierto! Ve al Palacio Helado",
- "lobby.ch16Thx": "Aviso activado"
+ "lobby.ch16Thx": "Aviso activado",
+ "battle.goldGain": "+{n} de oro",
+ "battle.goldRushT": "¡Oleada de oro!",
+ "battle.goldRushS": "{n} goblins dorados llegan en fila",
+ "battle.raid2S": "2 élites te embisten",
+ "battle.graveT": "¡Manos de tumba!",
+ "battle.graveS": "Los enemigos surgen de las marcas rojas",
+ "battle.rainT": "¡Lluvia de veneno!",
+ "battle.rainS": "No te quedes en los círculos morados",
+ "desk.ordTitle": "Encargos de la forja {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "Mi espada",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Poder {p}"
 }

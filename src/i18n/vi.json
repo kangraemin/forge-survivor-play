@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Đã bật báo",
  "lobby.ch16Share": "Rủ bạn bè",
  "lobby.ch16Open": "Chương 16 đã mở! Đến Cung điện băng giá nào",
- "lobby.ch16Thx": "Đã bật thông báo"
+ "lobby.ch16Thx": "Đã bật thông báo",
+ "battle.goldGain": "+{n} vàng",
+ "battle.goldRushT": "Đoàn vàng!",
+ "battle.goldRushS": "{n} yêu tinh vàng chạy thành hàng tới",
+ "battle.raid2S": "2 tinh anh lao tới",
+ "battle.graveT": "Bàn tay mồ mả!",
+ "battle.graveS": "Kẻ địch trồi lên từ các dấu đỏ",
+ "battle.rainT": "Mưa độc!",
+ "battle.rainS": "Đừng đứng trong vòng tròn tím",
+ "desk.ordTitle": "Đơn rèn {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "Kiếm của tôi",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Sức mạnh {p}"
 }

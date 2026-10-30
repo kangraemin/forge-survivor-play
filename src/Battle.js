@@ -13,6 +13,7 @@ import { track, logCtx } from './log.js';
 import { dexKill } from './codex.js';
 import { makeEnv } from './envfx.js';
 import { raidFlag, playOnce } from './fx2.js';
+import { runMidEvent } from './midPat.js';
 import { ModeRun } from './modes.js';   // 모드(지키기·점령·돌파·사냥) 규칙. 여기선 연결만
 
 import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
@@ -62,9 +63,9 @@ export class Battle extends Phaser.Scene {
     // 장면 인스턴스는 판끼리 재사용된다: 이벤트·축복·던전 고블린 상태를 비운다
     this.ultTip = null; this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
     // 보스 단계도 비운다(앞 판이 보스전으로 끝나면 다음 판이 웨이브 없이 영원히 이어졌다)
-    this.bossLvQ = 0; this.lvForce = false; this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.raidDone = false; this.healOrbDone = false; this.spawnAcc = 0;
+    this.bossLvQ = 0; this.lvForce = false; this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.raidDone = false; this.rushDone = false; this.midEvDone = false; this.healOrbDone = false; this.spawnAcc = 0;
     this.run = {
-      lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
+      lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0, goldBag: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
       // 판 안에서 산 강화
       bDmg: 0, bSpd: 0, bHp: 0, bPick: 0,
@@ -158,6 +159,7 @@ export class Battle extends Phaser.Scene {
     // 깜짝 이벤트: 보스·무한의 탑·처음 판·던전이 아니면 판 중간에 하나(보물 고블린·황금 박쥐 떼·축복의 제단)
     this.eventAt = !this.practice && !this.mode && !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
     this.eventKind = Phaser.Utils.Array.GetRandom(D.EVENTS.kinds);
+    this.goldOk = !this.practice && !this.mode && !this.easy && !this.endless && !this.dungeon && !this.hard && !this.stage1 && this.c * D.STAGES_PER_CHAPTER + this.s >= 1;   // 58차: 1-2 이후 장 안 금화 콘텐츠(보상표는 그대로, 판 안에서 더 줍는다)
     this.chestOk = !this.practice && !this.mode && !this.easy && !this.isBoss && !this.endless && !this.stage1; this.chest = null;
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
     // 44차: 6장부터는 시작 몹 28마리가 곧바로 에워싸 무기 1개인 첫 30초에 쓰러졌다 → 일부만 두고 나머지는 화면 밖에서 차례로 들어온다
@@ -539,7 +541,7 @@ export class Battle extends Phaser.Scene {
     m.spd = m0.spd * (1 + 0.04 * this.c) * RF(0.9, 1.1) * (v?.spd || 1) * (opt.mini ? 1.2 : 1) * (this.mod?.spd || 1);
     if (v?.ai) m.ai = v.ai;
     m.kbRes = v?.kb ?? (m.ai === 'tank' ? 0.45 : elite ? 0.3 : 1);
-    m.variant = opt.mini ? null : vk; m.bs = (elite ? 1.5 : 1) * (v?.scale || 1) * (opt.mini ? 0.65 : 1);
+    m.variant = opt.mini ? null : vk; m.bs = (elite ? 1.85 : 1) * (v?.scale || 1) * (opt.mini ? 0.65 : 1);
     m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.curse = 0; m.marked = 0; m.tint0 = undefined; m.phase = RF(0, 6); m.t = 0;
     m.hitBy = {};
     this.env?.mobInit(m);
@@ -550,7 +552,8 @@ export class Battle extends Phaser.Scene {
     m.baseTint = m.tintTopLeft;
     m.setScale(m.bs);
     if (elite) {
-      m.preFX?.addGlow(0xffd75e, 3, 0, false, 0.1, 8);
+      m.preFX?.addGlow(0xff2a2a, 4, 0, false, 0.1, 10);
+      this.eliteAura(m);
     }
     m.body.setSize(m.width * 0.6, m.height * 0.5).setOffset(m.width * 0.2, m.height * 0.45);
     m.setAlpha(m.float ? 0.85 : 1);
@@ -568,6 +571,17 @@ export class Battle extends Phaser.Scene {
     if (vk === 'burst' && !opt.mini) this.tweens.add({ targets: m, scaleX: m.bs * 1.15, scaleY: m.bs * 0.9, duration: 260, yoyo: true, repeat: -1, delay: 220 });
     this.mode?.onSpawn(m);
     return m;
+  }
+
+  // 58차: 엘리트는 크고(1.85배) 발밑이 붉게 번쩍이는 오라를 두른다(스탯은 그대로)
+  eliteAura(m) {
+    const mk = this.add.container(m.x, m.y).setDepth(9);
+    const ring = this.add.ellipse(0, 0, 26 * m.bs, 10 * m.bs).setStrokeStyle(2, 0xff3030, 0.95).setFillStyle(0xff2020, 0.22);
+    const glow = this.add.image(0, -4 * m.bs, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff3030).setScale(0.3 * m.bs).setAlpha(0.55);
+    mk.add([glow, ring]);
+    this.tweens.add({ targets: [glow, ring], alpha: 0.2, duration: 380, yoyo: true, repeat: -1 });
+    m.mark = mk; m.markY = m.height * m.bs * 0.5 - 2;
+    m.once('destroy', () => { this.tweens.killTweensOf(mk.list); mk.destroy(); });
   }
 
   // 뱀서식 포위: 떼거리가 원을 그리며 한꺼번에 몰려온다
@@ -884,6 +898,8 @@ export class Battle extends Phaser.Scene {
       const n = R(...P.eliteSilver);
       for (let i = 0; i < 6; i++) this.addItem(m.x + R(-10, 10), m.y + R(-10, 10), 'silver', Math.ceil(n / 6));
       this.addItem(m.x, m.y, 'chest');
+      const ct = this.add.text(m.x, m.y - 30, tt('battle.chest'), font(10, '#ffd75e')).setOrigin(0.5).setDepth(40);
+      this.tweens.add({ targets: ct, y: ct.y - 16, alpha: 0, duration: 1100, onComplete: () => ct.destroy() });
       // 정예는 다섯에 한 번 장비 꾸러미도 떨어뜨린다
       if (Math.random() < 0.2) this.addItem(m.x + 8, m.y, 'loot');
       r.stones += R(1, 2);
@@ -1026,6 +1042,7 @@ export class Battle extends Phaser.Scene {
       for (let i = 0; i < 5; i++) this.addItem(ch.x + R(-14, 14), ch.y + R(-12, 12), 'silver', 3);
       for (let i = 0; i < 3; i++) this.addGem(ch.x + R(-10, 10), ch.y + R(-10, 10), 4);
       if (this.hp < this.maxHp * 0.7) this.addItem(ch.x, ch.y - 10, 'meat');
+      if (this.goldOk) this.addGold(ch.x, ch.y - 6, this.goldUnit());
       this.cameras.main.flash(120, 255, 220, 120); sfx('coin'); this.log('chest_open', { wave: this.wave });
       ch.life = 0;
     }
@@ -1055,6 +1072,8 @@ export class Battle extends Phaser.Scene {
     if (f >= 1 || sh.life <= 0) { this.tweens.killTweensOf(sh.g.list); sh.g.destroy(); this.shrine = null; }
   }
   goblinDown(m) {
+    // 58차 금화 고블린: 처치하면 판 보상 금화에 더해진다
+    if (m.goldGob) { this.addGold(m.x, m.y, m.goldVal); this.log('gold_gob_kill', { v: m.goldVal }); return; }
     // 황금 박쥐: 은화와 경험치만
     if (m.bat) { for (let i = 0; i < 3; i++) this.addItem(m.x + R(-8, 8), m.y + R(-8, 8), 'silver', 2); this.addGem(m.x, m.y, 4); this.log('bat_kill'); return; }
     this.sv.stats.gob = (this.sv.stats.gob || 0) + 1;
@@ -1065,6 +1084,29 @@ export class Battle extends Phaser.Scene {
     if (Math.random() < 0.1) { const e = grantEgg(this.sv, 'cat', false); if (e) this.gotLoot(e); }
     this.cameras.main.flash(120, 255, 220, 120);
     this.log('goblin_kill');
+  }
+
+  // 58차: 판 안에서 주운 금화(결과 보상에 더해진다. 져도 남는다)
+  goldUnit() { return Math.max(5, Math.round(D.goldOf(this.c, this.s, false) * 0.12 / 5) * 5); }
+  addGold(x, y, v) {
+    this.run.goldBag += v; sfx('coin', 60);
+    const tx = this.add.text(x, y - 14, tt('battle.goldGain', { n: v }), font(11, '#ffd75e')).setOrigin(0.5).setDepth(40);
+    this.tweens.add({ targets: tx, y: tx.y - 20, alpha: 0, duration: 900, onComplete: () => tx.destroy() });
+    this.cameras.main.flash(80, 255, 220, 120);
+  }
+  // 금화 행렬: 한쪽 가장자리에서 금화 고블린이 줄지어 뛰어든다. 하나씩 달아나니 쫓아가 잡는다
+  goldRush() {
+    const a = R(0, 3) * Math.PI / 2, v = this.goldUnit(), n = 5, ex = Math.cos(a), ey = Math.sin(a);
+    this.banner(tt('battle.goldRushT'), tt('battle.goldRushS', { n }));
+    sfx('warn', 300); this.log('gold_rush', { v });
+    for (let i = 0; i < n; i++) this.time.delayedCall(700 + i * 420, () => {
+      if (this.over || this.bossPhase) return;
+      const px = Phaser.Math.Clamp(this.hero.x + ex * 190 - ey * (i - 2) * 22, 20, WORLD - 20), py = Phaser.Math.Clamp(this.hero.y + ey * 190 + ex * (i - 2) * 22, 20, WORLD - 20);
+      const m = this.spawn(true, this.ch.mobs[0], { force: true, at: { x: px, y: py } });
+      if (!m) return;
+      m.goblin = true; m.goldGob = true; m.goldVal = v; m.goblinT = 14000; m.maxHp = m.hp = m.hp * 3; m.spd = 66; m.kbRes = 0.25; m.dmg = 0;
+      m.setTint(0xffd75e); m.baseTint = 0xffd75e; m.bs *= 1.1; m.setScale(m.bs); m.preFX?.addGlow(0xffd75e, 4, 0, false, 0.1, 10);
+    });
   }
 
   heal(n) {
@@ -1307,6 +1349,9 @@ export class Battle extends Phaser.Scene {
         for (let i = 0; i < 3; i++) this.spawn(false, this.ch.mobs[1], { elite: true, force: true });
         this.banner(t('battle.raidT'), t('battle.raidS')); sfx('bossIn'); this.log('stage1_raid', { bt: Math.round(this.bt / 1000) });
       }
+      // 58차: 1-2 이후 일반 판 — 마지막에서 둘째 웨이브에 금화 행렬, 둘째 웨이브엔 장마다 다른 중반 이벤트(midPat.js MID_EVENTS)
+      if (this.goldOk && !this.isBoss && !this.rushDone && this.wave === Math.min(2, this.waveCount - 1) && this.waveT > this.waveLen * 0.2) { this.rushDone = true; this.goldRush(); }
+      if (!this.stage1 && !this.midEvDone && !this.easy && !this.practice && !this.mode && !this.isBoss && !this.endless && !this.dungeon && this.wave === 1 && this.waveT > this.waveLen * 0.35) { this.midEvDone = true; runMidEvent(this); }
       // 53차: 1-1 마지막 웨이브가 열리면(중간보스 직전) 회복 구슬 하나를 몸 곁에. 체력이 모자랄 때만 의미가 있게 항상 놓는다
       if (this.stage1 && !this.healOrbDone && this.wave === this.waveCount - 1) { this.healOrbDone = true; this.addItem(this.hero.x + 24, this.hero.y - 12, 'meat'); this.log('stage1_heal_orb', { hp: Math.round(this.hp / this.maxHp * 100) }); }
       if (this.eventAt != null && !this.eventDone && this.progress() >= this.eventAt) { this.eventDone = true; this.surprise(this.eventKind); }

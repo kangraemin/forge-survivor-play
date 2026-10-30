@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "เปิดแจ้งเตือนแล้ว",
  "lobby.ch16Share": "ชวนเพื่อน",
  "lobby.ch16Open": "บทที่ 16 เปิดแล้ว! ไปวังน้ำแข็งกัน",
- "lobby.ch16Thx": "เปิดแจ้งเตือนแล้ว"
+ "lobby.ch16Thx": "เปิดแจ้งเตือนแล้ว",
+ "battle.goldGain": "+{n} ทอง",
+ "battle.goldRushT": "ทองมาเป็นขบวน!",
+ "battle.goldRushS": "ก็อบลินทอง {n} ตัววิ่งมาเป็นแถว",
+ "battle.raid2S": "อีลิท 2 ตัววิ่งเข้ามา",
+ "battle.graveT": "มือจากหลุมศพ!",
+ "battle.graveS": "ศัตรูโผล่ขึ้นจากเครื่องหมายสีแดง",
+ "battle.rainT": "ฝนพิษ!",
+ "battle.rainS": "อย่ายืนในวงกลมสีม่วง",
+ "desk.ordTitle": "คำสั่งโรงตีเหล็ก {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "ดาบของฉัน",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "พลัง {p}"
 }

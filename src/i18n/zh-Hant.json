@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "提醒已開",
  "lobby.ch16Share": "告訴朋友",
  "lobby.ch16Open": "第16章開放了！去冰封王宮吧",
- "lobby.ch16Thx": "已開啟提醒"
+ "lobby.ch16Thx": "已開啟提醒",
+ "battle.goldGain": "+{n} 金幣",
+ "battle.goldRushT": "金幣大隊!",
+ "battle.goldRushS": "{n}隻金幣哥布林列隊跑來",
+ "battle.raid2S": "2隻精英衝過來了",
+ "battle.graveT": "墓中之手!",
+ "battle.graveS": "紅色標記處會冒出敵人",
+ "battle.rainT": "毒雨!",
+ "battle.rainS": "站在紫色圓圈裡會受傷",
+ "desk.ordTitle": "鐵匠委託 {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "我的劍",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "戰力 {p}"
 }

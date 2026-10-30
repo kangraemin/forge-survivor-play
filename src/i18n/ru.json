@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Уведомление вкл.",
  "lobby.ch16Share": "Позвать друга",
  "lobby.ch16Open": "Глава 16 открыта! В Ледяной дворец",
- "lobby.ch16Thx": "Уведомление включено"
+ "lobby.ch16Thx": "Уведомление включено",
+ "battle.goldGain": "+{n} золота",
+ "battle.goldRushT": "Золотая лихорадка!",
+ "battle.goldRushS": "{n} золотых гоблинов бегут вереницей",
+ "battle.raid2S": "Две элитки мчатся к вам",
+ "battle.graveT": "Руки из могил!",
+ "battle.graveS": "Враги вылезают из красных меток",
+ "battle.rainT": "Ядовитый дождь!",
+ "battle.rainS": "Не стойте в фиолетовых кругах",
+ "desk.ordTitle": "Заказы кузницы {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "Мой клинок",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Сила {p}"
 }

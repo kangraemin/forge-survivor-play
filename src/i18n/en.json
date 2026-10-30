@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Alert on",
  "lobby.ch16Share": "Tell a friend",
  "lobby.ch16Open": "Chapter 16 is open! Head to the Frozen Palace",
- "lobby.ch16Thx": "Alert is on"
+ "lobby.ch16Thx": "Alert is on",
+ "battle.goldGain": "+{n} Gold",
+ "battle.goldRushT": "Gold Rush!",
+ "battle.goldRushS": "{n} gold goblins are running in",
+ "battle.raid2S": "2 elites are charging in",
+ "battle.graveT": "Grave Hands!",
+ "battle.graveS": "Foes rise from the red marks",
+ "battle.rainT": "Poison Rain!",
+ "battle.rainS": "Stay out of the purple circles",
+ "desk.ordTitle": "Forge Orders {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "My Blade",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Power {p}"
 }

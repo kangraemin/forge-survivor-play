@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Alerte activée",
  "lobby.ch16Share": "Prévenir un ami",
  "lobby.ch16Open": "Le chapitre 16 est ouvert ! Direction le Palais gelé",
- "lobby.ch16Thx": "Alerte activée"
+ "lobby.ch16Thx": "Alerte activée",
+ "battle.goldGain": "+{n} or",
+ "battle.goldRushT": "Ruée vers l'or !",
+ "battle.goldRushS": "{n} gobelins dorés arrivent en file",
+ "battle.raid2S": "2 élites foncent sur vous",
+ "battle.graveT": "Mains des tombes !",
+ "battle.graveS": "Des ennemis surgissent des marques rouges",
+ "battle.rainT": "Pluie de poison !",
+ "battle.rainS": "Ne restez pas dans les cercles violets",
+ "desk.ordTitle": "Commandes de forge {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "Ma lame",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Puissance {p}"
 }

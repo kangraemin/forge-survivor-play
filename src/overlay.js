@@ -560,11 +560,16 @@ export class Overlay {
       c.add(s.add.text(W / 2 + 70, 288, t('overlay.4a8baf', { gem: sv.gem }), font9(10, '#ff9ad0')).setOrigin(1, 0));
     } else { gm.destroy(); c.add(s.add.text(W / 2, 266, t('overlay.0a1e97', { REVIVE_GEM: D.REVIVE_GEM, gem: sv.gem }), font9(10, '#7d8f94')).setOrigin(0.5)); }
     c.add(ad);
-    c.add(button(s, W / 2, 316, 80, 20, t('overlay.2facf7'), () => {
+    // 58차: 포기는 큰 빨강 버튼 대신 작은 회색 링크(선택 부담을 줄인다)
+    const gl = s.add.text(W / 2, 318, t('overlay.2facf7'), font9(10, '#8a98a0')).setOrigin(0.5);
+    const ul = s.add.rectangle(W / 2, 318 + gl.height / 2, gl.width, 1, 0x8a98a0);
+    const hit = s.add.rectangle(W / 2, 318, Math.max(96, gl.width + 24), 26, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+    hit.on('pointerup', () => {
       if (busy || c !== this.c) return;
       s.log('revive_choice', { via: 'giveup' });
       this.end(c); s.die(true);
-    }, { size: 10, color: 0x8a2f3a }));
+    });
+    c.add([ul, gl, hit]);
   }
 
   // ── 결과 ──
@@ -612,6 +617,7 @@ export class Overlay {
       const fs = Math.floor(D.stoneOf(s.c, s.s, hard) * s.runProgress() * D.FAIL_STONE_RATE);
       stone += s.runProgress() >= 0.25 ? Math.max(1, fs) : fs;
     }
+    if (!s.endless && !dun) gold += r.goldBag || 0;   // 58차: 판 안에서 주운 금화
     gold = Math.round(gold);
     // 장비: 이기면 1개(보스는 2개, 한 등급 위로), 무한의 탑은 3층부터 1개. 판에서 주운 것은 져도 남는다
     const loot = r.loot.slice();

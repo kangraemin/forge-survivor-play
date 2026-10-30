@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "通知オン",
  "lobby.ch16Share": "友だちに知らせる",
  "lobby.ch16Open": "16章が開きました! 凍てついた王宮へ行こう",
- "lobby.ch16Thx": "通知をオンにしました"
+ "lobby.ch16Thx": "通知をオンにしました",
+ "battle.goldGain": "+{n} ゴールド",
+ "battle.goldRushT": "ゴールドラッシュ!",
+ "battle.goldRushS": "ゴールドゴブリン{n}体が列をなして走ってくる",
+ "battle.raid2S": "エリート2体が突進してくる",
+ "battle.graveT": "墓の手!",
+ "battle.graveS": "赤い印の場所から敵が湧き出す",
+ "battle.rainT": "毒の雨!",
+ "battle.rainS": "紫の円の中にいると当たる",
+ "desk.ordTitle": "鍛冶の依頼 {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "私の剣",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "戦闘力 {p}"
 }

@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "알림 켜짐",
  "lobby.ch16Share": "친구에게 알리기",
  "lobby.ch16Open": "16장이 열렸어요! 얼어붙은 왕궁으로 가요",
- "lobby.ch16Thx": "알림을 켰어요"
+ "lobby.ch16Thx": "알림을 켰어요",
+ "battle.goldGain": "+{n} 금화",
+ "battle.goldRushT": "금화 행렬!",
+ "battle.goldRushS": "금화 고블린 {n}마리가 줄지어 달려와요",
+ "battle.raid2S": "정예 2마리가 달려와요",
+ "battle.graveT": "무덤 손!",
+ "battle.graveS": "붉은 표식 자리에서 몹이 솟아올라요",
+ "battle.rainT": "독비!",
+ "battle.rainS": "보라 원 안에 서 있으면 맞아요",
+ "desk.ordTitle": "대장간 의뢰 {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "내 칼",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "전투력 {p}"
 }

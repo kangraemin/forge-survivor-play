@@ -86,7 +86,11 @@ export class Lobby extends Phaser.Scene {
     // 47차: 팝업은 한 번에 하나, 순서는 새 펫 → 출석 → 꾸러미. 구매 유도(성장·첫 결제 꾸러미)는 하루 한 번, 직전에 다른 팝업이 뜬 뒤 한 판은 더 해야 뜬다
     else if (sv.petJoinPending && this.tab === 'battle') { sv.popRun = sv.stats.runs; this.time.delayedCall(250, () => this.petWin()); }
     // 세 판을 하고 난 뒤부터(처음엔 창이 연달아 뜨지 않게): 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
-    else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; sv.popRun = sv.stats.runs; save(); this.time.delayedCall(250, () => this.missionWin(true)); }
+    // 58차: 하루 한 번만(저장된 날짜로 막는다), 코치마크·다른 창이 떠 있으면 그날은 건너뛴다(수동으로 종 버튼에서 열 수 있다)
+    else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day && sv.tut?.loginPopDay !== sv.day && !modeDue(sv)) this.time.delayedCall(250, () => {
+      if (this.busy || this._coach || sv.loginGot || sv.tut?.loginPopDay === sv.day) return;
+      sv.loginPop = sv.day; (sv.tut ||= {}).loginPopDay = sv.day; sv.popRun = sv.stats.runs; save(); this.missionWin(true);
+    });
     // 장 보스를 처음 잡고 오면 24시간 성장 꾸러미를 한 번 띄운다
     else if (this.offerOk() && growOffer(sv) && !sv.grow.shown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && !this.busy && this.growWin());
     else if (this.offerOk() && salesOpen(sv) && sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());

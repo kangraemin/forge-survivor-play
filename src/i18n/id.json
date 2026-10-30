@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Pengingat aktif",
  "lobby.ch16Share": "Beritahu teman",
  "lobby.ch16Open": "Bab 16 terbuka! Menuju Istana Beku",
- "lobby.ch16Thx": "Pengingat diaktifkan"
+ "lobby.ch16Thx": "Pengingat diaktifkan",
+ "battle.goldGain": "+{n} Emas",
+ "battle.goldRushT": "Serbuan Emas!",
+ "battle.goldRushS": "{n} goblin emas berlari berbaris",
+ "battle.raid2S": "2 elit menyerbu ke arahmu",
+ "battle.graveT": "Tangan Kubur!",
+ "battle.graveS": "Musuh muncul dari tanda merah",
+ "battle.rainT": "Hujan Racun!",
+ "battle.rainS": "Jangan berdiri di lingkaran ungu",
+ "desk.ordTitle": "Pesanan Tempa {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "Pedangku",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Kekuatan {p}"
 }

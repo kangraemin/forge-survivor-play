@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Bildirim açık",
  "lobby.ch16Share": "Arkadaşa söyle",
  "lobby.ch16Open": "16. Bölüm açıldı! Donmuş Saray'a git",
- "lobby.ch16Thx": "Bildirim açıldı"
+ "lobby.ch16Thx": "Bildirim açıldı",
+ "battle.goldGain": "+{n} altın",
+ "battle.goldRushT": "Altın Akını!",
+ "battle.goldRushS": "{n} altın goblin sıra halinde koşuyor",
+ "battle.raid2S": "2 elit üstüne koşuyor",
+ "battle.graveT": "Mezar Elleri!",
+ "battle.graveS": "Düşmanlar kırmızı işaretlerden çıkıyor",
+ "battle.rainT": "Zehir Yağmuru!",
+ "battle.rainS": "Mor dairelerin içinde durma",
+ "desk.ordTitle": "Demirci Siparişleri {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "Kılıcım",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Güç {p}"
 }

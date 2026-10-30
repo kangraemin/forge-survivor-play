@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "提醒已开",
  "lobby.ch16Share": "告诉朋友",
  "lobby.ch16Open": "第16章开放了！去冰封王宫吧",
- "lobby.ch16Thx": "已开启提醒"
+ "lobby.ch16Thx": "已开启提醒",
+ "battle.goldGain": "+{n} 金币",
+ "battle.goldRushT": "金币大队!",
+ "battle.goldRushS": "{n}只金币哥布林列队跑来",
+ "battle.raid2S": "2只精英冲过来了",
+ "battle.graveT": "墓中之手!",
+ "battle.graveS": "红色标记处会冒出敌人",
+ "battle.rainT": "毒雨!",
+ "battle.rainS": "站在紫色圆圈里会受伤",
+ "desk.ordTitle": "铁匠委托 {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "我的剑",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "战力 {p}"
 }

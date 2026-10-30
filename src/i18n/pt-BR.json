@@ -2031,5 +2031,18 @@
  "lobby.ch16Done": "Aviso ativado",
  "lobby.ch16Share": "Contar a um amigo",
  "lobby.ch16Open": "Capítulo 16 aberto! Vá ao Palácio Congelado",
- "lobby.ch16Thx": "Aviso ativado"
+ "lobby.ch16Thx": "Aviso ativado",
+ "battle.goldGain": "+{n} de ouro",
+ "battle.goldRushT": "Corrida do ouro!",
+ "battle.goldRushS": "{n} goblins dourados vêm em fila",
+ "battle.raid2S": "2 elites avançam contra você",
+ "battle.graveT": "Mãos do túmulo!",
+ "battle.graveS": "Inimigos surgem das marcas vermelhas",
+ "battle.rainT": "Chuva de veneno!",
+ "battle.rainS": "Não fique nos círculos roxos",
+ "desk.ordTitle": "Pedidos da forja {done}/{n}",
+ "desk.ordRow": "{name}  {have}/{need}",
+ "desk.swordTitle": "Minha lâmina",
+ "desk.sword": "+{enh} {name}",
+ "desk.power": "Poder {p}"
 }

@@ -29,13 +29,27 @@ export const logCtx = o => { ctx = o ? { ...ctx, ...o } : {}; };
 let user = {};
 export const logUser = o => { user = { ...user, ...o }; };
 
+// GA4 dl(페이지 주소): 쿼리는 모두 빼고 유입 경로(utm_*·gclid)만 남긴다. 첫 이벤트에서 본 값을 sessionStorage에 두어 같은 세션의 다음 이벤트에도 붙인다
+const KEEP = /^(utm_[a-z0-9_]+|gclid)$/i, SS = 'forge-utm-v1';
+export function dlOf(href, store = true) {
+  let u; try { u = new URL(href); } catch { return String(href).split('?')[0]; }
+  const keep = new URLSearchParams();
+  u.searchParams.forEach((v, k) => { if (KEEP.test(k)) keep.set(k, v); });
+  try {
+    if (keep.toString()) { if (store) sessionStorage.setItem(SS, keep.toString()); }
+    else { const old = sessionStorage.getItem(SS); if (old) new URLSearchParams(old).forEach((v, k) => keep.set(k, v)); }
+  } catch { /* 저장소 막힘 */ }
+  const q = keep.toString();
+  return u.origin + u.pathname + (q ? '?' + q : '');
+}
+
 export function track(name, params = {}) {
   const p = { ...ctx, ...params };
   recent.push([Date.now(), name, p]); if (recent.length > 200) recent.shift();
   try { window.forgePlatform?.log?.(name, p); } catch {}
   if (off || GA_ID.includes('X') || navigator.onLine === false) return;
   const t = Date.now();
-  const q = new URLSearchParams({ v: '2', tid: GA_ID, cid: st.cid, sid: String(st.sid), sct: String(st.sct), seg: '1', _s: String(++seq), en: name, dl: location.href.split('?')[0], dt: document.title, ul: navigator.language || 'ko', sr: `${screen.width}x${screen.height}`, npa: '1' });
+  const q = new URLSearchParams({ v: '2', tid: GA_ID, cid: st.cid, sid: String(st.sid), sct: String(st.sct), seg: '1', _s: String(++seq), en: name, dl: dlOf(location.href), dt: document.title, ul: navigator.language || 'ko', sr: `${screen.width}x${screen.height}`, npa: '1' });
   if (first) { if (st.newSession) { q.set('_ss', '1'); q.set('_nsi', '1'); } if (firstVisit) q.set('_fv', '1'); first = false; }
   else q.set('_et', String(Math.min(t - lastT, 60000)));
   lastT = t;
