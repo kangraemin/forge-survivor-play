@@ -1,6 +1,7 @@
 // 모드 데이터(순수 값). 설계표는 docs/modes.md. Phaser·씬에 기대지 않아 codex.js·Lobby가 가볍게 불러 쓴다
 import * as D from './data.js';
 import { t } from './i18n.js';
+import { STAGE_DATA } from './modeStages.js';
 
 export const MODE_N = 15;   // 모드마다 판 수(본편 장 수와 같다)
 export const MODE_IDS = ['guard', 'capture', 'breach', 'hunt'];
@@ -31,6 +32,9 @@ export const MODE_STAGES = {
     { c: 1, goal: t('modeData.978760'), note: t('modeData.cb8474'), sec: 200, par: 120, prey: ['ghost', 'spider', 'ghost', 'zombie', 'ghost', 'spider'] },
   ],
 };
+
+// 3~15장 판(modeStages.js)을 배열 인덱스=장 번호로 합친다
+for (const id of Object.keys(STAGE_DATA)) for (const n of Object.keys(STAGE_DATA[id])) MODE_STAGES[id][+n] = STAGE_DATA[id][n];
 
 export const modeStage = (id, n) => MODE_STAGES[id]?.[n];                       // n: 0부터. 없으면 아직 준비 중
 export const modeOpen = (sv, n) => (sv.cleared | 0) >= (n + 1) * D.STAGES_PER_CHAPTER;   // 본편 n+1장 보스를 깨면 열린다

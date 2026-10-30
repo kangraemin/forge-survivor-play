@@ -6,6 +6,7 @@ import { save, mission } from './save.js';
 import { addItems } from './gear.js';
 import { dexRefresh } from './codex.js';
 import { ensureModeArt, modeAnim, wallArt, WALL_FILL } from './modeArt.js';
+import { makeRule } from './modeRules.js';
 import { MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward, STAR_HURT, starTexts, starMask, starCount, starFirstReward, repeatReward, fmtT } from './modeData.js';
 import { t, tt } from './i18n.js';
 
@@ -21,6 +22,7 @@ export class ModeRun {
     this.cfg = modeStage(id, n); this.def = MODE_DEFS[id];
     this.t = 0; this.el = 0; this.acc = 0; this.formT = 0; this.eliteDone = false; this.ended = false; this.leg = 0;
     this.limit = (this.cfg.sec || 0) * 1000;
+    this.tw = null; this.bp = null;   // 3~15장 규칙 비틀기(modeRules.js·modeBreach.js)는 setup에서 만든다. 1·2장은 null
   }
   // Battle이 읽는 값
   waveLen() { return this.limit || 1e9; }
@@ -29,7 +31,7 @@ export class ModeRun {
   progress() { return this.prog(); }
   prog() {
     const c = this.cfg;
-    if (this.id === 'breach') return Phaser.Math.Clamp((this.leg + Phaser.Math.Clamp((this.y0 - this.s.hero.y) / c.len, 0, 1)) / (c.legs || 1), 0, 1);
+    if (this.id === 'breach') return this.bp ? this.bp.prog() : Phaser.Math.Clamp((this.leg + Phaser.Math.Clamp((this.y0 - this.s.hero.y) / c.len, 0, 1)) / (c.legs || 1), 0, 1);
     if (this.id === 'guard' && c.go) return Phaser.Math.Clamp(Math.max(this.item?.prog || 0, this.s.waveT / this.limit * 0.6), 0, 1);
     return Math.min(1, this.s.waveT / (this.limit || 1));
   }
@@ -44,10 +46,15 @@ export class ModeRun {
     // 스킬 줄과 콤보 글자를 진행 표시 아래로 내린다
     s.skillRow.setPosition(8, 74); s.comboTxt.setPosition(W - 57, 80);
     this.mkTxt = (x, y, str, o, size = 10) => { const t = s.add.text(x, y, str, o || font9(size, '#ffffff')).setScrollFactor(0).setDepth(101); this.hud_.push(t); return t; };
-    if (this.id === 'guard') this.setupGuard();
-    if (this.id === 'capture') this.setupCapture();
-    if (this.id === 'breach') this.setupBreach();
-    if (this.id === 'hunt') this.setupHunt();
+    if (this.id === 'breach' && c.path) { this.tw = this.bp = makeRule(this); this.bp.setup(); }   // 3~15장 돌파: 사행 길
+    else {
+      if (this.id === 'guard') this.setupGuard();
+      if (this.id === 'capture') this.setupCapture();
+      if (this.id === 'breach') this.setupBreach();
+      if (this.id === 'hunt') this.setupHunt();
+      this.tw = makeRule(this);
+      if (this.tw) { this.prey?.forEach((m, i) => this.tw.preyInit?.(m, i)); this.tw.setup?.(); }
+    }
     s.events.once('shutdown', () => { this.hud_.length = 0; });
   }
 
@@ -88,7 +95,7 @@ export class ModeRun {
     const sp = modeAnim(s, s.add.sprite(MX, y, 'ma_' + art), art).setDepth(35 + y / WORLD * 0.9);
     sp.setScale(big);
     const sh = s.add.ellipse(MX, y + 14 * big / 1.3, 60, 16, 0x000000, 0.5).setDepth(9);
-    const max = Math.round(D.PLAYER.hp * c.hp * 2);
+    const max = Math.round(D.PLAYER.hp * c.hp * 2 * (c.c >= 2 ? Math.pow(D.chapterDmg(c.c) / D.chapterDmg(1), 0.85) : 1));   // 3장부터는 몹 피해가 커진 만큼 물건 체력도 키운다
     this.item = { x: MX, y, sp, sh, hp: max, max, prog: 0, startY: y, flashT: 0, att: 0, big, glow: this.glowAt(MX, y, 0x9ad8ff, 1.3, 0.3), bar: s.add.graphics().setDepth(62), ico: s.add.image(0, 0, 'ma_mode_defend').setDisplaySize(15, 15).setDepth(62), lab: s.add.text(0, 0, c.go ? t('modes.4b9182') : t('modes.5599ae'), font(9, '#cfe8ff', 3)).setOrigin(0.5, 1).setDepth(62) };
     this.arrow = this.mkArrow(0x5fc8ff);
     h.setPosition(MX, y + 70);
@@ -121,12 +128,13 @@ export class ModeRun {
     if (c.go) {
       // 곁에 서 있어야 간다. 갉아 대는 몹이 많으면 느려진다
       const near = Math.hypot(h.x - it.x, h.y - it.y) < 80;
-      if (near) {
-        const v = c.speed * Math.max(0.3, 1 - 0.14 * it.att) * dt / 1000;
-        it.y -= v; it.sp.y = it.y; it.sh.y = it.y + 12; it.glow.y = it.y; it.sp.setDepth(35 + it.y / WORLD * 0.9);
+      const mul = this.tw?.cartMul ? this.tw.cartMul(near) : near ? 1 : 0;   // 규칙이 속도 배수를 바꾼다(0이면 선다, 음수면 밀린다)
+      if (mul !== 0) {
+        const v = c.speed * (mul > 0 ? Math.max(0.3, 1 - 0.14 * it.att) : 1) * mul * dt / 1000;
+        it.y = Math.min(it.startY, it.y - v); it.sp.y = it.y; it.sh.y = it.y + 12; it.glow.y = it.y; it.sp.setDepth(35 + it.y / WORLD * 0.9);
         it.prog = (it.startY - it.y) / c.route;
       }
-      it.moving = near;
+      it.moving = mul > 0;
       if (it.y <= this.endY + 6) return this.finish(true);
       s.waveT += dt; if (s.waveT >= this.limit) return this.finish(false, t('modes.bd7fdd'));
     } else {
@@ -155,7 +163,14 @@ export class ModeRun {
   }
   hitItem(m) {
     const s = this.s, it = this.item, c = this.cfg;
-    const d = m.dmg * 0.55 * (c.mult?.[m.kind] || 1);
+    const d = m.dmg * 0.55 * (c.mult?.[m.kind] || 1) * (this.tw?.itemDmgMul?.(m) ?? 1);
+    if (d > 0) this.damageItem(d);
+    this.tw?.onItemHit?.(m);
+  }
+  // 물건이 입는 피해(규칙에서도 직접 부른다)
+  damageItem(d, why) {
+    const s = this.s, it = this.item, c = this.cfg;
+    if (this.ended || !it || it.hp <= 0) return;
     it.hp = Math.max(0, it.hp - d);
     if (c.go && it.hp > 0) { it.sp.stop(); it.sp.setTexture('ma_cart_hit', (s.bt >> 6) & 1); it.flashT = 160; } else { it.sp.setTintFill(0xffffff); it.flashT = 90; }
     if (!it.ringT || s.bt - it.ringT > 260) {   // 붉은 링이 퍼진다
@@ -164,7 +179,7 @@ export class ModeRun {
       s.tweens.add({ targets: rg, scale: 2.2, alpha: 0, duration: 340, onComplete: () => rg.destroy() });
     }
     if (!it.popT || s.bt - it.popT > 450) { it.popT = s.bt; const t = s.add.text(it.x + R(-8, 8), it.y - 20, '-' + Math.round(d), font(9, '#ff7070')).setOrigin(0.5).setDepth(40); s.tweens.add({ targets: t, y: t.y - 12, alpha: 0, duration: 500, onComplete: () => t.destroy() }); sfx('hurt', 200); }
-    if (it.hp <= 0) { if (c.go) { it.sp.stop(); it.sp.setTexture('ma_cart_broken').clearTint(); } this.finish(false, c.go ? tt('modes.61e6dd') : tt('modes.0cad2e')); }
+    if (it.hp <= 0) { if (c.go) { it.sp.stop(); it.sp.setTexture('ma_cart_broken').clearTint(); } this.finish(false, why || (c.go ? tt('modes.61e6dd') : tt('modes.0cad2e'))); }
   }
 
   // ═══ 점령 ═══
@@ -219,6 +234,7 @@ export class ModeRun {
         const have = s.mobs.getChildren().filter(m => m.sentry === i && !m.dead && m.active).length;
         if (p.gT <= 0 && have < 2 && s.mobs.countActive() < 70) { p.gT = 4; const m = s.spawn(false, 'ghost', { force: true, at: { x: p.x + R(-20, 20), y: p.y + R(-20, 20) } }); if (m) m.sentry = i; }
       }
+      if (this.tw?.zoneRate) rate = this.tw.zoneRate(p, i, inside, rate);
       p.g = Phaser.Math.Clamp(p.g + rate * sec, 0, 100);
       // 거점 위에 서 있으면 몹이 더 몰린다
       if (inside) {
@@ -338,7 +354,7 @@ export class ModeRun {
       const m = s.spawn(false, kind, { elite: true, force: true, at: { x: Phaser.Math.Clamp(MX + Math.cos(a) * d, 60, WORLD - 60), y: Phaser.Math.Clamp(MX + Math.sin(a) * d, 60, WORLD - 60) } });
       if (!m) return;
       m.prey = true; m.maxHp = m.hp = m.hp * 0.8; m.dmg *= 0.5; m.ph = 'rest'; m.phT = RF(0.2, 1.2); m.hide = kind === 'ghost';
-      m.runSpd = kind === 'bat' ? 82 : kind === 'ghost' ? 66 : 60;
+      m.runSpd = c.run ? c.run * (kind === 'bat' ? 1.3 : 1) : kind === 'bat' ? 82 : kind === 'ghost' ? 66 : 60;
       m.mk = modeAnim(s, s.add.sprite(m.x, m.y, 'ma_elite_mark'), 'elite_mark').setDepth(41);
       m.au = modeAnim(s, s.add.sprite(m.x, m.y, 'ma_elite_aura'), 'elite_aura').setDepth(8);
       this.prey.push(m);
@@ -361,7 +377,7 @@ export class ModeRun {
     if (!this.prey.length) this.finish(true);
   }
   huntArrows() {
-    this.arrows.forEach((sp, i) => { const m = this.prey[i]; if (!m) sp.setVisible(false); else this.edgeArrow(sp, m.x, m.y); });
+    this.arrows.forEach((sp, i) => { const m = this.prey[i]; if (!m || (this.tw?.arrowOk && !this.tw.arrowOk(m))) sp.setVisible(false); else this.edgeArrow(sp, m.x, m.y); });
   }
 
   // ── 공통: 일반 몹이 계속 방해한다 ──
@@ -381,10 +397,12 @@ export class ModeRun {
     if (this.ended) return;
     this.t += this.id === 'breach' ? 0 : dt;
     this.el += dt;
+    if (this.bp) return this.bp.update(dt);
     if (this.id === 'guard') this.guardUpdate(dt);
     else if (this.id === 'capture') this.captureUpdate(dt);
     else if (this.id === 'breach') this.breachUpdate(dt);
     else this.huntUpdate(dt);
+    if (!this.ended) this.tw?.update?.(dt);
   }
 
   // ── 몹 훅 ──
@@ -394,6 +412,7 @@ export class ModeRun {
     if (c.raiders.includes(m.kind) && Math.random() < c.raid && this.s.mobs.getChildren().filter(q => q.raider && !q.dead && q.active).length < c.cap) { m.raider = true; m.setTint(0xff9a7a); m.baseTint = m.tintTopLeft; }
   }
   spawnPoint(min, max) {
+    if (this.bp) return this.bp.spawnPoint(min, max);
     if (this.id !== 'breach') return null;
     const h = this.s.hero;
     for (let i = 0; i < 6; i++) {
@@ -429,10 +448,12 @@ export class ModeRun {
       else m.setVelocity(Math.cos(m.t / 600 + m.phase) * 14, Math.sin(m.t / 600 + m.phase) * 14);
       return true;
     }
+    if (this.tw?.steer?.(m, dt)) return true;
     if (m.prey) {
       const dx = m.x - h.x, dy = m.y - h.y, d = Math.hypot(dx, dy) || 1;
       if (m.hide) { const vis = d < 115 + 22 * this.cl('mmark'); m.setAlpha(vis ? 0.9 : 0.12); m.mk?.setAlpha(vis ? 1 : 0.15); m.au?.setAlpha(vis ? 1 : 0.15); }
       m.phT -= dt / 1000;
+      if (this.tw?.prey?.(m, dt)) return true;
       if (d > 280) { m.setVelocity(Math.cos(m.t / 900 + m.phase) * 14, Math.sin(m.t / 900 + m.phase) * 14); return true; }   // 멀리 있으면 서성인다
       if (m.phT <= 0) { m.ph = m.ph === 'run' ? 'rest' : 'run'; m.phT = m.ph === 'run' ? RF(1.0, 1.5) : RF(0.7, 1.1); if (m.ph === 'run') m.fx = dx / d, m.fy = dy / d; }
       if (m.ph === 'rest') { m.setVelocity(0, 0); return true; }
@@ -440,13 +461,14 @@ export class ModeRun {
       const edge = Math.max(0, 1 - Math.min(m.x, m.y, WORLD - m.x, WORLD - m.y) / 200);
       let vx = (m.fx ?? dx / d) + (MX - m.x) / 800 * edge * 3, vy = (m.fy ?? dy / d) + (MX - m.y) / 800 * edge * 3;
       const vl = Math.hypot(vx, vy) || 1;
-      const slow = (m.slow > 0 ? 0.5 : 1) * (1 - 0.07 * this.cl('mmark'));
+      const slow = (m.slow > 0 ? 0.5 : 1) * (1 - 0.07 * this.cl('mmark')) * (this.tw?.preySpd?.(m) ?? 1);
       m.setVelocity(vx / vl * m.runSpd * slow, vy / vl * m.runSpd * slow);
+      this.tw?.preyPost?.(m, dt);
       return true;
     }
     return false;
   }
-  spdMul() { return this.id === 'breach' ? (this.slowed ? 0.5 : 1) * (this.inWall ? 0.7 : 1) * 0.62 * (1 + 0.06 * this.cl('mdash')) : 1; }
+  spdMul() { if (this.bp) return this.bp.spdMul(); return this.id === 'breach' ? (this.slowed ? 0.5 : 1) * (this.inWall ? 0.7 : 1) * 0.62 * (1 + 0.06 * this.cl('mdash')) : 1; }
 
   // 봇이 판 목표를 따라가게 하는 방향(자동 검증용)
   botDir() {
@@ -454,7 +476,7 @@ export class ModeRun {
     const to = (x, y, k) => { const d = Math.hypot(x - h.x, y - h.y) || 1; return { x: (x - h.x) / d * k, y: (y - h.y) / d * k, d }; };
     if (this.id === 'guard' && this.item) { const t = to(this.item.x, this.item.y - 6, 1.4); return t.d > 40 ? t : { x: 0, y: 0 }; }
     if (this.id === 'capture') { const p = this.pts.find(q => !q.done); if (p) { const t = to(p.x, p.y, 2.2); return t.d > this.cfg.r * 0.3 ? t : { x: 0, y: 0 }; } }
-    if (this.id === 'breach') return { x: (MX - h.x) / 400, y: -1.5 };
+    if (this.id === 'breach') return this.bp ? this.bp.botDir() : { x: (MX - h.x) / 400, y: -1.5 };
     if (this.id === 'hunt') { const m = this.prey[0]; if (m) { let b = m, bd = 1e9; for (const q of this.prey) { const d = Math.hypot(q.x - h.x, q.y - h.y); if (d < bd) { bd = d; b = q; } } return to(b.x, b.y, 1.6); } }
     return null;
   }
@@ -486,6 +508,8 @@ export class ModeRun {
         g.fillStyle(p.done ? 0x7ddc6a : p.inside ? 0xffd75e : 0x6fd3ff).fillRect(x + 2, 47, (sw - 4) * p.g / 100, 11);
       });
       s.waveTxt.setText(t('modes.203ed7', { length: this.pts.filter(p => p.done).length, n })).setColor('#a1b2b6');
+    } else if (id === 'breach' && this.bp) {
+      this.bp.hud(g, bx, bw);
     } else if (id === 'breach') {
       const prog = Phaser.Math.Clamp((this.y0 - s.hero.y) / c.len, 0, 1), wp = Phaser.Math.Clamp((this.y0 - this.wallY) / c.len, -0.2, 1);
       g.fillStyle(0x000000, 0.55).fillRect(bx, 44, bw, 22);

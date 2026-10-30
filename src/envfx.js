@@ -3,6 +3,7 @@
 // 장 기믹(CHAPTERS[c].env): tide 물웅덩이 · fog 독안개 · beam 수정 레이저 · wind 바람 · abyss 어둠
 import * as D from './data.js';
 import { sfx } from './sfx.js';
+import { t } from './i18n.js';
 import { font, viewRect } from './ui.js';
 import { warnDisc, warnStrip, warnFan, runWarn } from './fx2.js';
 import { Late, LATE_PATTERNS, LATE_FX4 } from './lateEnv.js';   // 16~18장 기믹·몹·보스 패턴
