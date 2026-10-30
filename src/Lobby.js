@@ -941,14 +941,14 @@ export class Lobby extends Phaser.Scene {
     b.add(this.add.text(16, 74, '오늘의 특가', font(12, '#ffd75e')));
     timer(77, () => `남은 ${leftText(msToMidnight())}`);
     const day = sv.deal.day; this.ticks.push({ redraw: () => dayKey() !== day });
-    b.add(panel(this, 12, 92, W - 24, 78, { fill: 0x2a1a30, line: deal.got ? COLOR.line : 0xffd75e }));
+    b.add(panel(this, 12, 92, W - 24, 78, { line: deal.got ? COLOR.line : 0xffd75e }));
     b.add(this.add.rectangle(42, 131, 48, 48, 0x8a2f3a).setStrokeStyle(1, 0xff9a8a));
     b.add(this.add.text(42, 124, `-${deal.off}%`, font(13, '#ffffff')).setOrigin(0.5));
     b.add(this.add.text(42, 140, '할인', font9(10, '#ffd0d0')).setOrigin(0.5));
     b.add(this.add.text(76, 98, deal.name, font(12, '#ffffff')));
     b.add(this.add.text(76, 116, nb(giveText(deal.give, sv)), { ...font9(10, '#f2e4bc'), wordWrap: { width: W - 100 } }));
-    const was = this.add.text(76, 150, won(deal.base), font9(10, '#8a80a0')); b.add(was);
-    b.add(this.add.rectangle(76, 157, was.width, 1, 0xa89cc8).setOrigin(0, 0.5));
+    const was = this.add.text(76, 150, won(deal.base), font9(10, '#a1b2b6')); b.add(was);
+    b.add(this.add.rectangle(76, 157, was.width, 1, 0xa1b2b6).setOrigin(0, 0.5));
     b.add(this.add.text(82 + was.width, 150, '하루 1번', font9(10, '#ff9ad0')));
     buyBtn(W - 52, 154, deal, deal.got);
     // 성장 꾸러미
@@ -962,11 +962,23 @@ export class Lobby extends Phaser.Scene {
       b.add(this.add.text(46, 219, nb(giveText(grow.give, sv)), { ...font9(9, '#f2e4bc'), wordWrap: { width: W - 136 } }));
       buyBtn(W - 52, 224, grow, false);
     } else {
-      b.add(panel(this, 12, 198, W - 24, 52, { fill: 0x100d16 }));
-      b.add(this.add.text(W / 2, 224, '장 보스를 처음 잡으면 24시간 동안\n그 장에 맞는 강화석·방지권 꾸러미가 열린다', { ...font9(10, '#8a80a0'), align: 'center' }).setOrigin(0.5));
+      b.add(panel(this, 12, 198, W - 24, 52, { fill: 0x0b111a }));
+      b.add(this.add.text(W / 2, 224, '장 보스를 처음 잡으면 24시간 동안\n그 장에 맞는 강화석·방지권 꾸러미가 열린다', { ...font9(10, '#a1b2b6'), align: 'center' }).setOrigin(0.5));
     }
     // 큰 꾸러미(달마다 한 번): 3장에 들어선 뒤에만 보인다(2-2·플레이 20분에 33,000원이 보이면 이르다, 37차)
-    if (sv.cleared < 2 * D.STAGES_PER_CHAPTER) return;
+    if (sv.cleared < 2 * D.STAGES_PER_CHAPTER) {
+      // 큰 꾸러미가 열리기 전엔 아래가 비어 있었다(40차): 초보 꾸러미를 추천 칸으로 올린다. 사면 패키지 칸으로 안내만
+      const st = D.IAP.find(x => x.id === 'starter'), sold = soldOut(sv, st);
+      b.add(this.add.text(16, 262, '추천', font(12, '#ffb85c')));
+      b.add(panel(this, 12, 280, W - 24, 66, { line: sold ? COLOR.line : 0xffb85c }));
+      b.add(gemIcon(this, 30, 313, 18));
+      b.add(this.add.text(46, 284, st.name, font(11, '#ffb85c')));
+      // 설명은 '·'를 붙여 써서 줄이 안 바뀌고 버튼까지 넘쳤다: 띄워서 끊기게 한다
+      const dt = this.add.text(46, 299, nb(st.desc.replace(/·/g, ' · ')), { ...font9(9, '#f2e4bc'), wordWrap: { width: W - 136 } }); b.add(dt);
+      b.add(this.add.text(46, 301 + dt.height, sold ? '이미 샀다 · 패키지 칸에 더 있다' : st.tag, font9(9, '#a1b2b6')));
+      buyBtn(W - 52, 313, st, sold);
+      return;
+    }
     b.add(this.add.text(16, 262, '큰 꾸러미', font(12, '#ffb050')));
     b.add(this.add.text(W - 16, 265, '보석 첫 구매 2배와 따로', font9(9, '#8a80a0')).setOrigin(1, 0));
     D.BIG_PACKS.forEach((it, i) => {
