@@ -41,7 +41,9 @@ function fitOne(o, panels, GH, rects) {
   if (o.isBtnLabel) return;
   const base = o._fitBase, orig = o._fitOrig;
   const m = worldOf(o), ax = m.tx, ay = m.ty, sx = Math.abs(m.scaleX) || 1;
-  const host = panels.filter(p => ax >= p.x && ax <= p.x + p.w && ay >= p.y && ay <= p.y + p.h).sort((a, b) => a.w * a.h - b.w * b.h)[0];
+  const inP = panels.filter(p => ax >= p.x && ax <= p.x + p.w && ay >= p.y && ay <= p.y + p.h);
+  const mineP = o.parentContainer ? inP.filter(p => p.pc === o.parentContainer) : [];   // 같은 창(모달) 안의 판을 먼저: 창 뒤에 깔린 작은 판(스테이지 칸)이 호스트로 잡히면 폭이 50px로 줄어든다
+  const host = (mineP.length ? mineP : inP).sort((a, b) => a.w * a.h - b.w * b.h)[0];
   const L = host ? host.x : 0, R = host ? host.x + host.w : SCREEN_W, B = host ? host.y + host.h : GH;
   const ox = o.originX;
   let avail = ox === 0.5 ? 2 * Math.min(ax - L, R - ax) - 3 : ox === 0 ? R - ax - 2 : ax - L - 2;
@@ -97,7 +99,7 @@ export function installTextFit(game) {
       }
       if (!pending) continue;
       const GH = Math.round(game.scale.gameSize.height / sc.cameras.main.zoom);
-      const panels = acc.panels.map(o => { const m = worldOf(o); return { x: m.tx + o.box.x, y: m.ty + o.box.y, w: o.box.w, h: o.box.h }; });
+      const panels = acc.panels.map(o => { const m = worldOf(o); return { x: m.tx + o.box.x, y: m.ty + o.box.y, w: o.box.w, h: o.box.h, pc: o.parentContainer }; });
       const rects = [];
       for (const [q, v] of acc.texts) if (v && !q.isBtnLabel && String(q.text).trim()) { const b = q.getBounds(); rects.push({ o: q, x: b.x, y: b.y, w: b.width, h: b.height }); }
       for (const q of acc.btns) { const m = worldOf(q), w = q.width * Math.abs(m.scaleX), h = q.height * Math.abs(m.scaleY); rects.push({ o: q, x: m.tx - w / 2, y: m.ty - h / 2, w, h }); }
