@@ -11,7 +11,7 @@ import { openInvite } from './share.js';
 import { LANGS, LANG_NAME, lang, setLang, t, tt } from './i18n.js';
 import { shareHidden, cashHidden, trialInfo, openFull } from './platform/flags.js';   // 포털판 분기
 import { runTutorial } from './tutorial.js';
-import { setSound, setMusic, setVib, sfx, buzz, playBgm } from './sfx.js';
+import { setSound, setMusic, setMusicLevel, setVib, sfx, buzz, playBgm } from './sfx.js';
 
 // 문의·약관·개인정보: 웹 배포 레포(forge-survivor-play)의 정적 페이지. 원본은 docs/legal/. 문의 메일은 다른 앱(오늘의 눈썰미 사이트)이 이미 쓰는 주소
 const LINKS = { mail: 'remin1994@gmail.com', terms: 'https://kangraemin.github.io/forge-survivor-play/terms.html', privacy: 'https://kangraemin.github.io/forge-survivor-play/privacy.html' };
@@ -100,7 +100,15 @@ export function openSettings(scene) {
     b.label.setText(`${name} ${get() ? tt('settingsPanel.8f13d8') : tt('settingsPanel.667709')}`); b.label.setColor(get() ? '#ffffff' : '#7d8f94'); c.add(b);
   };
   tg(W / 2 - 68, tt('settingsPanel.9c2420'), () => sv.sound !== false, v => { sv.sound = v; setSound(v); track('sound_toggle', { on: v, from: 'settings' }); if (v) { sfx('click'); } });
-  tg(W / 2, tt('settingsPanel.4e71ce'), () => !sv.musicOff, v => { sv.musicOff = !v; setMusic(v); if (v) playBgm('lobby'); });
+  // 음악 크기(53차): 보통 -> 작게 -> 끔 순으로 돌린다. musicLvl 없으면 보통(2), 작게 1, 끔은 기존 musicOff
+  const mv = () => (sv.musicOff ? 0 : sv.musicLvl === 1 ? 1 : 2);
+  const mb = button(scene, W / 2, 146, 62, 24, '', () => {
+    const n = (mv() + 2) % 3;   // 2 -> 1 -> 0 -> 2
+    sv.musicOff = n === 0; if (n) sv.musicLvl = n; setMusicLevel(n === 1 ? 1 : 2); setMusic(n !== 0); if (n) playBgm('lobby');
+    save(); track('music_level', { lv: n }); paint();
+  }, { size: 10, color: 0x3a3846 });
+  const paint = () => { const n = mv(); mb.label.setText(`${tt('settingsPanel.4e71ce')} ${n === 0 ? tt('settingsPanel.667709') : n === 1 ? tt('settingsPanel.2247a8') : tt('settingsPanel.2179da')}`); mb.label.setColor(n ? '#ffffff' : '#7d8f94'); };
+  paint(); c.add(mb);
   tg(W / 2 + 68, tt('settingsPanel.9b37fc'), () => !sv.vibOff, v => { sv.vibOff = !v; setVib(v); if (v) buzz(30); });
   // 문의·이용약관·개인정보처리방침: 주소가 비어 있으면 안내만 띄운다
   const ly = cloud ? 386 : 356;

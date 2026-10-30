@@ -11,10 +11,10 @@ import { Battle } from './Battle.js';
 import { load } from './save.js';
 import { captureRef, deviceId } from './share.js';
 import { initSafeArea } from './safeArea.js';
-import { earlyBgm } from './sfx.js';
+import { earlyBgm, setMusicLevel } from './sfx.js';
 
 // 로딩 화면부터 로비 곡을 튼다(음악을 꺼 둔 저장값이면 틀지 않는다). 로비가 같은 요소를 이어 쓴다
-try { const s0 = load(); earlyBgm(!s0.musicOff && s0.sound !== false); } catch { /* 저장소 문제는 게임을 막지 않는다 */ }
+try { const s0 = load(); setMusicLevel(s0.musicLvl); earlyBgm(!s0.musicOff && s0.sound !== false); } catch { /* 저장소 문제는 게임을 막지 않는다 */ }
 
 const start = () => {
   initSafeArea();

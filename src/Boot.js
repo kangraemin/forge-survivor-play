@@ -12,7 +12,7 @@ import { t, tt } from './i18n.js';
 import { load } from './save.js';
 import { track } from './log.js';
 import { isFirstRun } from './coach.js';
-import { setSound, setMusic, setVib, unlock } from './sfx.js';
+import { setSound, setMusic, setMusicLevel, setVib, unlock } from './sfx.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
@@ -145,7 +145,7 @@ export class Boot extends Phaser.Scene {
   enter() {
     const sv = load();
     if (!isFirstRun(sv) || new URLSearchParams(location.search).has('lobby')) return this.scene.start('Lobby');
-    setSound(sv.sound); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);   // 로비가 하던 소리 설정을 대신
+    setSound(sv.sound); setMusicLevel(sv.musicLvl); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);   // 로비가 하던 소리 설정을 대신
     this.game.canvas.addEventListener('pointerdown', () => unlock(), { once: true });
     track('first_run_direct');
     this.scene.start('Battle', { chapter: 0, stage: 0 });

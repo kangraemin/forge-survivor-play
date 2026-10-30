@@ -7,7 +7,7 @@ import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmeti
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
-import { sfx, setSound, setMusic, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
+import { sfx, setSound, setMusic, setMusicLevel, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, markIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
 import { track, logUser } from './log.js';
@@ -46,7 +46,7 @@ export class Lobby extends Phaser.Scene {
     this.anims.resumeAll(); this.anims.globalTimeScale = 1;
     this.sv = load();
     const sv = this.sv;
-    setSound(sv.sound); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);
+    setSound(sv.sound); setMusicLevel(sv.musicLvl); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);
     this.input.once('pointerdown', () => { unlock(); playBgm('lobby'); });
     playBgm('lobby');
     if (!sv.musicOff && sv.sound !== false) preloadBattleBgm();   // 1장 전투 곡을 로비에 있는 동안 받아 둔다

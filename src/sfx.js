@@ -145,12 +145,12 @@ const BGM_FILES = {
 };
 // 파일 음악 기본 음량(0~1). 효과음 최대치(master 0.35 x 톤 0.25~0.45 = 약 -16dB)보다 한 단계 아래로 둔다.
 // 두 곡 모두 평균 -17.8dB·최대 -3dB라 0.6이면 최대가 -7.6dB로 효과음보다 컸다 → 0.2(평균 -32dB·최대 -17dB, 절차 BGM과 비슷). 음량 설정이 생기면 여기에 곱한다
-// 53차: 웹·itch에서 배경음악이 크다는 말이 나와 0.2 → 0.07로(-9dB). 최대 -3dB인 곡이 -26dB, 평균은 -41dB.
+// 53차: 웹·itch에서 배경음악이 크다는 말이 나와 0.2 → 0.035로(-15dB). 측정(tools/audio_levels.mjs): 효과음 소리 나는 구간 RMS 평균 -35dB, 음악은 0.07일 때 -43dB였고 0.035면 -49dB.
 // 효과음 한 톤 최대는 베기·피격 약 -21dB, 처치 -18dB, 레벨업 -27dB(master 0.35 x 톤 vol). 음악 설정(끔/작게/보통)의 '작게'는 절반(-6dB)
-const BGM_BASE = 0.07;
+const BGM_BASE = 0.035;
 let musicMul = 1;   // 보통 1, 작게 0.5
 const bv = () => BGM_BASE * musicMul;
-const PGAIN = (lobby) => (lobby ? 0.08 : 0.1) * musicMul;   // 절차 BGM(0.22/0.28 → 0.08/0.10)
+const PGAIN = (lobby) => (lobby ? 0.04 : 0.05) * musicMul;   // 절차 BGM(0.22/0.28 → 0.04/0.05)
 export const setMusicLevel = lv => {
   musicMul = lv === 1 ? 0.5 : 1;
   try {
