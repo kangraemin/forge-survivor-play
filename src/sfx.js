@@ -139,7 +139,7 @@ const ROOT = [110, 98, 116.5, 92.5, 82.4];   // 장별 으뜸음(Hz)
 // battle의 장 번호는 0부터(0=1장). lobby는 장과 무관
 const BGM_FILES = {
   lobby: 'assets/bgm/lobby.mp3',
-  battle: [[0, 2, 'assets/bgm/ch1_3.mp3'], [3, 5, 'assets/bgm/ch4_6.mp3'], [6, 8, 'assets/bgm/ch7_9.mp3'], [9, 11, 'assets/bgm/ch10_12.mp3']],   // [시작 장, 끝 장, 파일] — 13장~는 곡이 없어 절차 BGM
+  battle: [[0, 2, 'assets/bgm/ch1_3.mp3'], [3, 5, 'assets/bgm/ch4_6.mp3'], [6, 8, 'assets/bgm/ch7_9.mp3'], [9, 11, 'assets/bgm/ch10_12.mp3'], [12, 14, 'assets/bgm/ch13_15.mp3']],   // [시작 장, 끝 장, 파일] — 16장~(업데이트 장)은 곡이 없어 절차 BGM
   boss: 'assets/bgm/boss.mp3',     // 중간보스·장 보스 등장 때. 잡으면 그 장 묶음 곡으로 돌아간다
   mode: 'assets/bgm/modes.mp3',    // 모드 4종(지키기·점령·돌파·사냥)
 };

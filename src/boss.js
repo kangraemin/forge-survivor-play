@@ -166,6 +166,7 @@ export class BossAI {
   phaseShift(i, f) {
     const s = this.s, m = this.m;
     // 47차: 0.7초 완전 정지(보스·움직임), 화면 번쩍임, 말풍선, 약점 표식
+    s.lvForce = true;   // 52차: 모아 둔 레벨업 카드를 페이즈 전환 사이에 연다
     this.phase = i; this.busy = Math.max(this.busy, 1100); m.setVelocity(0, 0); m.invuln = s.bt + 900;
     s.hitstop = Math.max(s.hitstop || 0, 700);
     s.flashFx.setAlpha(0.45); s.tweens.add({ targets: s.flashFx, alpha: 0, duration: 450 });

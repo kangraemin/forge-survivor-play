@@ -26,7 +26,8 @@ export const TOSS_OG_IMAGE = SHARE_URL + 'assets/og.png';   // 공유 미리보�
 export const INVITE_GEM = 30;     // 친구 한 명이 1-3을 깰 때 나와 친구가 각각 받는 보석(자랑하기 보석보다 크고 광고 3번쯤)
 export const INVITE_CAP = 10;     // 보상을 받는 친구 수 상한(서버도 같다)
 export const INVITE_NEED = 3;     // 친구가 깨야 하는 스테이지 수(1-3 = sv.cleared 3)
-const TICK_GAP_MS = 15000;
+const TICK_GAP_MS = 15000, DOWN_MS = 5 * 60 * 1000;
+let downUntil = 0;
 
 // ── 기기 식별: game/src/deviceKey.js (토스 사용자 키 -> 없으면 저장소 uuid) ──
 export { deviceId };
@@ -58,8 +59,9 @@ async function api(path, body) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
   try {
     const r = await fetch(INVITE_URL + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal } : { signal: ctl.signal });
+    if (r.status >= 500) { downUntil = Date.now() + DOWN_MS; return null; }   // 52차: 서버가 5xx면 5분 쉰다(15초마다 다시 두드려 콘솔에 503이 쌓였다)
     return await r.json();
-  } catch { return null; } finally { clearTimeout(t); }   // 서버가 죽었거나 오프라인이면 조용히 넘어간다. 다음에 다시 시도
+  } catch { downUntil = Date.now() + DOWN_MS; return null; } finally { clearTimeout(t); }   // 서버가 죽었거나 오프라인이면 조용히 넘어간다. 다음에 다시 시도
 }
 
 // ── 공유 ──
@@ -104,7 +106,7 @@ let lastTick = 0, busyTick = false;
 export async function lobbyShareTick(scene, force = false) {
   if (window.forgePlatform?.noShare) return;   // 포털판은 초대 서버를 부르지 않는다
   const sv = load();
-  if (busyTick || (!force && Date.now() - lastTick < TICK_GAP_MS)) return;
+  if (busyTick || Date.now() < downUntil || (!force && Date.now() - lastTick < TICK_GAP_MS)) return;
   busyTick = true; lastTick = Date.now();
   try {
     const device = await deviceId();

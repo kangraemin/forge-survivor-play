@@ -1,4 +1,7 @@
 import { t } from './i18n.js';
+import { PETS } from './gear.js';
+import { font, font9 } from './ui.js';
+const W = 270;
 // 펫 역할: 줍기(떨어진 것을 끌어온다) · 약화(적이 20% 더 아프게 맞는다) · 표식(센 적 하나를 찍어 40% 더 아프게) · 수호(피해를 막는다)
 // 펫마다 주 역할이 하나 있고, 맵 상성(fit)이 좋으면 범위·빈도가 늘어난다. 그림은 assets/pet2 (docs/pet2.md)
 export const ROLES = {
@@ -86,4 +89,38 @@ function statusIcon(s, m, kind, ms) {
   const follow = () => { if (!i.active || m.dead || !m.active) { s.events.off('update', follow); i.destroy(); return; } i.setPosition(m.x, m.y - m.height * (m.bs || 1) * 0.5 - 6); };
   s.events.on('update', follow);
   s.time.delayedCall(ms, () => { s.events.off('update', follow); if (i.active) i.destroy(); });
+}
+
+// 52차: 펫 설명 카드 — 얻을 때 팝업·펫 탭에서 같은 모양. 그림·이름·역할·실제 효과(수치)·잘 듣는 장·지금 펫과 비교
+const ROLE_FX = {
+  pickup: () => t('petRoles.e1c9e7'),
+  weaken: () => t('petRoles.0efcb2'),
+  mark: () => t('petRoles.fb23df'),
+  guard: () => t('gear.e0457f'),
+};
+export function petCard(s, c, p, sv, y0 = 100) {
+  const role = roleOf(p.id), cur = PETS.find(x => x.id === sv.pet), curRole = cur && roleOf(cur.id), id = PET_ROLE[p.id];
+  const chN = i => t('lobby.022fbd', { v: i + 1 });
+  c.add(s.add.image(W / 2, y0 + 20, 'disc').setScale(0.9).setTint(p.color).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD));
+  const fb = s.registry.get('fallback')?.[p.id];
+  if (s.anims.exists(p.id)) { const g = s.add.sprite(W / 2, y0 + 20, null).play(p.id).setScale(fb ? 1.2 : 0.6); if (fb) g.setTint(p.color); c.add(g); }
+  let y = y0 + 48;
+  c.add(s.add.text(W / 2, y, `${p.name}  Lv ${sv.pets?.[p.id] || 0}`, font(14, '#ffffff')).setOrigin(0.5)); y += 22;
+  const line = (txt, style) => { const o = s.add.text(24, y, txt, { ...style, wordWrap: { width: W - 48 } }).setOrigin(0, 0); c.add(o); y += o.height + 3; };
+  if (role) {
+    if (s.textures.exists(role.icon)) c.add(s.add.image(34, y + 7, role.icon).setScale(0.62));
+    c.add(s.add.text(50, y, t('petRoles.77fe00', { name: role.name }), font(12, role.color))); y += 18;
+    line(`- ${ROLE_FX[id]()}`, font9(10, '#f2e4bc'));
+    line(id === 'guard' ? t('petRoles.455a20') : t('petRoles.1c3d00'), font9(10, '#f2e4bc'));
+  }
+  line(t('lobby.7e168d', { v: (p.good || []).map(chN).join(' · ') || '-' }), font9(10, '#5fdc6a'));
+  y += 3;
+  c.add(s.add.text(24, y, t('petRoles.66ac2a'), font(12, '#ffd75e'))); y += 18;
+  if (!cur) line(t('petRoles.78fc89'), font9(10, '#f2e4bc'));
+  else if (cur.id === p.id) line(t('petRoles.e960b5'), font9(10, '#f2e4bc'));
+  else {
+    line(t('petRoles.7d68c8', { name: cur.name, v: curRole?.name || '-', name2: p.name, v2: role?.name || '-' }), font9(10, '#f2e4bc'));
+    line(curRole && role && curRole === role ? t('petRoles.95dbce') : t('petRoles.433048', { v: curRole?.name || '-', v2: role?.name || '-' }), font9(10, '#a1b2b6'));
+  }
+  return y;
 }

@@ -1,0 +1,86 @@
+// 코치마크: 화면을 어둡게 덮고 가리킬 곳만 구멍 뚫듯 밝히며, 깜빡이는 화살표와 말풍선으로 설명한다. 탭하면 다음 단계
+// 공용 함수 coachRun(여러 장)·coachOne(한 장). 새 탭·기능이 처음 열릴 때 같은 모양으로 한 장만 띄울 수 있다
+// 본 기록은 sv.tut.coach[id]에 남는다(저장 형식은 그대로: tut은 자유 칸)
+import { W, H } from './data.js';
+import { font, font9, button, fixedContainer } from './ui.js';
+import { insetsGame, inTossShell } from './safeArea.js';
+import { sfx } from './sfx.js';
+import { track } from './log.js';
+import { load, save } from './save.js';
+import { t } from './i18n.js';
+
+const DIM = 0.8, BW = W - 28;
+export const coachSeen = (sv, id) => !!sv.tut?.coach?.[id];
+export function coachMark(sv, id, on = true) { sv.tut ||= {}; sv.tut.coach ||= {}; if (on) sv.tut.coach[id] = 1; else delete sv.tut.coach[id]; save(); }
+// 처음 켠 사람인가: 한 판도 안 했고 깬 판도 없다 → 로비를 건너뛰고 바로 1-1
+export const isFirstRun = sv => !!sv && (sv.stats?.runs | 0) === 0 && (sv.cleared | 0) === 0 && !(sv.hardCleared | 0) && !(sv.inv?.length);
+
+// steps: [{ prep?: scene => void, rect: [x,y,w,h] | scene => [x,y,w,h], title, lines: [문장...] }]
+// opts: { id: 저장 키, onEnd: (skipped) => void, skip: 건너뛰기 버튼(기본: 2장 이상일 때)}
+export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = {}) {
+  if (!steps.length || scene._coach) return null;
+  const c = scene._coach = fixedContainer(scene).setDepth(3000);
+  scene.busy = true;
+  let i = -1, done = false;
+  track('coach_start', { id, n: steps.length });
+  const end = skipped => {
+    if (done) return; done = true;
+    c.list.forEach(o => scene.tweens.killTweensOf(o)); c.destroy(); scene._coach = null; scene.busy = false;
+    if (id) coachMark(load(), id);
+    track(skipped ? 'coach_skip' : 'coach_done', { id, at: i + 1 });
+    onEnd?.(skipped);
+  };
+  const next = () => { sfx('click'); i + 1 >= steps.length ? end(false) : draw(i + 1); };
+  function draw(n) {
+    i = n;
+    const st = steps[n];
+    st.prep?.(scene);
+    const kill = o => { scene.tweens.killTweensOf(o); o.list?.forEach(kill); };
+    c.list.forEach(kill); c.removeAll(true);
+    track('coach_step', { id, n: n + 1 });
+    const r0 = typeof st.rect === 'function' ? st.rect(scene) : st.rect;
+    const rx = Math.max(0, r0[0]), ry = Math.max(0, r0[1]), rw = Math.min(W - rx, r0[2]), rh = Math.min(H - ry, r0[3]);
+    // 맨 아래 막: 아무 데나 탭하면 다음
+    c.add(scene.add.rectangle(0, 0, W, H, 0x000000, 0.001).setOrigin(0).setInteractive().on('pointerup', next));
+    // 구멍 뚫린 어두운 막: 위·아래·왼·오른쪽 네 장
+    const dim = (x, y, w, h) => w > 0 && h > 0 && c.add(scene.add.rectangle(x, y, w, h, 0x05030a, DIM).setOrigin(0));
+    dim(0, 0, W, ry); dim(0, ry + rh, W, H - ry - rh); dim(0, ry, rx, rh); dim(rx + rw, ry, W - rx - rw, rh);
+    const hl = scene.add.rectangle(rx + rw / 2, ry + rh / 2, rw + 2, rh + 2).setStrokeStyle(2, 0xffb85c);
+    c.add(hl); scene.tweens.add({ targets: hl, alpha: 0.35, duration: 450, yoyo: true, repeat: -1 });
+    // 말풍선
+    const ins = insetsGame(scene.game), minY = (inTossShell() ? ins.xTop : ins.top) + 6;   // 토스 X 버튼·노치 아래로
+    const title = scene.add.text(BW / 2 + 14, 0, st.title, { ...font(13, '#ffd75e'), wordWrap: { width: BW - 20 } }).setOrigin(0.5, 0);
+    const lines = st.lines.map(s => scene.add.text(24, 0, '- ' + s, { ...font9(10, '#ffffff'), wordWrap: { width: BW - 22 } }).setLineSpacing(2));
+    let hh = 10 + title.height + 6;
+    const ys = lines.map(l => { const y = hh; hh += l.height + 4; return y; });
+    hh += 6 + 24 + 8;   // 아래 버튼 줄
+    const below = ry + rh + 18 + hh <= H - 6, above = ry - 18 - hh >= minY;
+    let by = below || !above ? ry + rh + 18 : ry - 18 - hh;
+    if (!below && !above) by = Math.max(minY, Math.min(H - 6 - hh, (ry + rh / 2 > H / 2) ? ry - 18 - hh : ry + rh + 18));
+    by = Math.max(minY, Math.min(H - 6 - hh, by));
+    const bx = 14, up = by >= ry + rh;   // up: 말풍선이 구멍 아래라 화살표는 위를 가리킨다
+    const bg = scene.add.graphics();
+    bg.fillStyle(0x1a1426, 0.98).fillRect(bx, by, BW, hh); bg.lineStyle(1, 0xffb85c, 1).strokeRect(bx + 0.5, by + 0.5, BW - 1, hh - 1);
+    c.add(bg);
+    title.setPosition(bx + BW / 2, by + 10); c.add(title);
+    lines.forEach((l, k) => { l.setPosition(bx + 10, by + ys[k]); c.add(l); });
+    // 깜빡이는 화살표(구멍 중앙 x, 말풍선과 구멍 사이)
+    const ax = Math.max(bx + 12, Math.min(bx + BW - 12, rx + rw / 2)), ay = up ? ry + rh + 9 : ry - 9;
+    const ar = scene.add.text(ax, ay, up ? '▲' : '▼', font(14, '#ffb85c')).setOrigin(0.5); c.add(ar);
+    scene.tweens.add({ targets: ar, y: ay + (up ? 4 : -4), alpha: 0.4, duration: 380, yoyo: true, repeat: -1 });
+    // 아래 줄: 왼쪽 건너뛰기(보조), 가운데 쪽수, 오른쪽 주황 버튼은 이 화면에 하나
+    const by2 = by + hh - 20;
+    if (skip) c.add(button(scene, bx + 44, by2, 76, 24, t('coach.88130a'), () => end(true), { size: 10, color: 0x3a3846 }));
+    if (steps.length > 1) c.add(scene.add.text(bx + BW / 2, by2, `${n + 1}/${steps.length}`, font9(9, '#a1b2b6')).setOrigin(0.5));
+    c.add(button(scene, bx + BW - 44, by2, 76, 24, n + 1 >= steps.length ? t('lobby.468266') : t('coach.854c76'), next, { size: 11, color: 0x2f6b3a }));
+  }
+  draw(0);
+  return c;
+}
+
+// 새 탭·기능이 처음 열릴 때 한 장짜리. 이미 본 적이 있으면 아무것도 안 한다. 띄웠으면 true
+export function coachOne(scene, id, step, onEnd) {
+  const sv = load();
+  if (coachSeen(sv, id) || scene._coach) return false;
+  return !!coachRun(scene, [step], { id, onEnd });
+}

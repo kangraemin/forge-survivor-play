@@ -38,6 +38,8 @@ for (const id of Object.keys(STAGE_DATA)) for (const n of Object.keys(STAGE_DATA
 
 export const modeStage = (id, n) => MODE_STAGES[id]?.[n];                       // n: 0부터. 없으면 아직 준비 중
 export const modeOpen = (sv, n) => (sv.cleared | 0) >= (n + 1) * D.STAGES_PER_CHAPTER;   // 본편 n+1장 보스를 깨면 열린다
+// 52차: 모드 입구를 한 번이라도 열었거나 이미 모드를 깬 계정이면 '새로 열림' 안내를 더 띄우지 않는다
+export const modeSeen = sv => !!(sv.modes?.seen || Object.keys(sv.modes?.clear || {}).length);
 export const modeDone = (sv, id, n) => !!sv.modes?.clear?.[`${id}:${n}`];
 export const modeCount = (sv, id) => { let k = 0; for (let n = 0; n < MODE_N; n++) if (modeDone(sv, id, n)) k++; return k; };
 // 보상: 본편 같은 장 x-2 기준. 첫 클리어는 금화 ×FIRST_CLEAR_MUL·보석, 다시 깨면 금화 60%·강화석 절반(별 1개 기준)
@@ -51,7 +53,7 @@ export const modeReward = (c, first) => ({
 // 저장 modes.stars[키]는 비트 마스크(1·2·4). 첫 클리어 보상은 ★1에 이미 들어 있고, ★2·★3은 처음 따는 순간 따로 준다
 export const STAR_HURT = 0.6;
 export const fmtT = sec => { const t = Math.max(0, Math.round(sec)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
-export const starTexts = cfg => [t('modeData.330ccf'), cfg.par ? t('modeData.8db565', { fmtT: fmtT(cfg.par) }) : t('modeData.636a63', { round: Math.round((cfg.keep || 0.6) * 100) }), t('modeData.0f284f', { round: Math.round(STAR_HURT * 100) })];
+export const starTexts = cfg => [t('modeData.330ccf'), cfg.par ? t('modeData.8db565', { fmtT: fmtT(cfg.par) }) : t('modeData.636a63', { round: Math.round((cfg.keep || 0.6) * 100) }), t('modeData.9376bf', { round: Math.round(STAR_HURT * 100) })];
 export const starMask = (sv, id, n) => sv.modes?.stars?.[`${id}:${n}`] | 0;
 export const starCount = m => (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1);
 export const modeStars = (sv, id, n) => starCount(starMask(sv, id, n));

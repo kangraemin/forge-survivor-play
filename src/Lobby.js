@@ -1,5 +1,6 @@
 import { cosmeticPage } from './cosmeticShop.js';
 import { openSettings } from './settingsPanel.js';
+import { tutorialDue, runTutorial, modeDue, runModeCoach } from './tutorial.js';
 import { cashHidden, shareHidden, adWord, trialInfo, openFull } from './platform/flags.js';   // 포털판(CrazyGames·itch): 현금 상품·공유 숨김
 import { shareBrag, braggable, bragGem, lobbyShareTick } from './share.js';
 import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmetics.js';
@@ -13,10 +14,12 @@ import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
 import { inTossShell } from './safeArea.js';
 import { ContentTab } from './contentTab.js';
+import { modeSeen } from './modeData.js';
 import { ModeScreen } from './modeScreen.js';
 import { dexRefresh, titleName } from './codex.js';
 import { itemName, PETS, gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, hasW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 import { t, tt } from './i18n.js';
+import { petCard } from './petRoles.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -72,6 +75,8 @@ export class Lobby extends Phaser.Scene {
     // 자리를 비웠다 돌아오면 견습생이 번 것을 먼저 준다(다른 창보다 앞)
     const idle = this.idleReward();
     if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
+    // 1-1을 처음 깨고 오면(또는 이 안내를 아직 못 본 기존 유저) 코치마크 안내(tutorial.js). 다른 창보다 앞
+    else if (this.shopPage !== 'skin' && tutorialDue(sv)) this.time.delayedCall(350, () => !this.busy && runTutorial(this));
     else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, t('lobby.2ee336'), '#ffd75e', 112));
     // 47차: 팝업은 한 번에 하나, 순서는 새 펫 → 출석 → 꾸러미. 구매 유도(성장·첫 결제 꾸러미)는 하루 한 번, 직전에 다른 팝업이 뜬 뒤 한 판은 더 해야 뜬다
     else if (sv.petJoinPending && this.tab === 'battle') { sv.popRun = sv.stats.runs; this.time.delayedCall(250, () => this.petWin()); }
@@ -80,6 +85,8 @@ export class Lobby extends Phaser.Scene {
     // 장 보스를 처음 잡고 오면 24시간 성장 꾸러미를 한 번 띄운다
     else if (this.offerOk() && growOffer(sv) && !sv.grow.shown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && !this.busy && this.growWin());
     else if (this.offerOk() && sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
+    // 2장 보스를 처음 잡고 오면 도전 버튼을 한 장짜리 코치마크로 짚는다(다른 창이 떠 있으면 다음 번에)
+    if (modeDue(sv) && this.tab === 'battle' && !this.modeScr) this.time.delayedCall(600, () => !this.busy && this.tab === 'battle' && runModeCoach(this));
   }
 
   // 지금 난이도에서 깬 판 수, 그 다음 도전할 판을 고른다
@@ -91,7 +98,7 @@ export class Lobby extends Phaser.Scene {
     const c = fixedContainer(this).setDepth(2000);
     c.add(this.add.rectangle(0, 0, W, H, 0x000000, 0.75).setOrigin(0).setInteractive());
     this.busy = true;
-    c.close = () => { c.destroy(); this.busy = false; this.refreshTop(); this.show(this.tab); };
+    c.close = () => { c.destroy(); this.busy = false; this.refreshTop(); this.show(this.tab); if (modeDue(this.sv) && this.tab === 'battle' && !this.modeScr) this.time.delayedCall(250, () => !this.busy && runModeCoach(this)); };   // 앞 창을 닫고 나서 도전 안내(2장 보스 직후 펫·꾸러미 창이 먼저 뜬다)
     return c;
   }
 
@@ -217,19 +224,11 @@ export class Lobby extends Phaser.Scene {
     delete sv.petJoinPending; save();
     if (!p) return;
     const c = this.modal();
-    c.add(panel(this, 30, 120, W - 60, 230, { fill: 0x1a1426, line: p.color }));
-    c.add(this.add.text(W / 2, 142, t('lobby.87c061'), font(15, '#ffd75e')).setOrigin(0.5));
-    c.add(this.add.image(W / 2, 192, 'disc').setScale(1.1).setTint(p.color).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD));
-    const fb = this.registry.get('fallback')?.[p.id];
-    const g = this.add.sprite(W / 2, 192, null).play(p.id).setScale(fb ? 1.4 : 0.7);
-    if (fb) g.setTint(p.color);
-    c.add(g);
-    c.add(this.add.text(W / 2, 236, p.name, font(14, '#ffffff')).setOrigin(0.5));
-    c.add(this.add.text(W / 2, 256, p.desc, font9(10, '#a1b2b6')).setOrigin(0.5));
-    const chN = i => t('lobby.022fbd', { v: i + 1 });
-    c.add(this.add.text(W / 2, 274, t('lobby.7e168d', { v: [...(p.good || []).map(chN), ...(p.id === 'demonlord' ? [t('battle.6304cf')] : [])].join(' · ') || '-' }), font9(10, '#5fdc6a')).setOrigin(0.5));
-    c.add(button(this, W / 2 + 46, 320, 84, 28, t('lobby.6d4e70'), () => { sv.pet = p.id; save(); sfx('buy'); track('pet_join_take', { pet: p.id }); c.close(); }, { size: 11, color: 0x2f6b3a }));
-    c.add(button(this, W / 2 - 50, 320, 76, 28, sv.pet === p.id ? t('lobby.468266') : t('lobby.0fcd14'), () => { track('pet_join_later', { pet: p.id }); c.close(); }, { size: 10, color: 0x3a3846 }));
+    c.add(panel(this, 14, 60, W - 28, 372, { fill: 0x1a1426, line: p.color }));
+    c.add(this.add.text(W / 2, 80, t('lobby.87c061'), font(15, '#ffd75e')).setOrigin(0.5));
+    petCard(this, c, p, sv, 94);
+    c.add(button(this, W / 2 + 46, 404, 84, 28, t('lobby.818a75'), () => { sv.pet = p.id; save(); sfx('buy'); track('pet_join_take', { pet: p.id }); c.close(); }, { size: 11, color: 0x2f6b3a }));
+    c.add(button(this, W / 2 - 50, 404, 76, 28, sv.pet === p.id ? t('lobby.468266') : t('lobby.0fcd14'), () => { track('pet_join_later', { pet: p.id }); c.close(); }, { size: 10, color: 0x3a3846 }));
   }
 
   // 1-3을 깬 뒤 한 번만: 첫 결제 꾸러미
@@ -393,13 +392,16 @@ export class Lobby extends Phaser.Scene {
     // 50차: 처음 시작한 계정(1판도 못 깸): 비는 자리에 첫 목표 한 줄과 모드 예고 카드를 둔다
     if (id === 'battle' && sv.cleared < 1 && !this.tower && bh >= 34) {
       const c = this.bn = this.add.container(0, 436).setDepth(10), w = W - 24;
+      const bh2 = Math.min(bh, Math.floor((H - 50 - 436 - 10) / 2));   // 52차: 두 번째 카드가 아래 탭 줄에 가려지던 것(카드 둘이 들어갈 높이로 줄인다)
       const card = (y, line, title, tc, sub) => {
-        c.add(panel(this, 12, y, w, bh, { fill: 0x141b27, line }));
-        c.add(this.add.text(20, y + 6, title, font(11, tc)));
-        c.add(this.add.text(20, y + 22, sub, font9(10, '#a1b2b6')));
+        c.add(panel(this, 12, y, w, bh2, { fill: 0x141b27, line }));
+        c.add(this.add.text(24, y + 6, title, font(11, tc)));
+        c.add(this.add.text(24, y + 6 + 16, sub, { ...font9(10, '#a1b2b6'), wordWrap: { width: w - 24 } }));
       };
+      // 52차: 단계 버튼 아래 빈 띠에 1장 보상 미리보기
+      c.add(this.add.text(W / 2, -206, t('lobby.f6a172'), font9(10, '#ffd75e')).setOrigin(0.5));
       card(0, 0xffd75e, t('lobby.d68777'), '#ffd75e', t('lobby.968a66'));
-      card(bh + 6, 0x475c66, t('lobby.394214'), '#ffffff', t('lobby.9465aa'));
+      card(bh2 + 6, 0x475c66, t('lobby.394214'), '#ffffff', t('lobby.9465aa'));
       return;
     }
     if (bh < 34 || sv.cleared < 1) return;
@@ -422,9 +424,18 @@ export class Lobby extends Phaser.Scene {
       c.add(this.add.rectangle(12, 0, W - 24, im.displayHeight, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy) toast(this, t('lobby.810f12'), '#9ae0ff', 112); }));
       return;
     }
+    // 52차: 1장을 깨면 모드 4종이 열린다 — 처음 들어갈 때까지 큰 카드 + 빨간 점으로 알린다(작은 회색 '모드' 버튼만 있어 못 찾았다)
+    if (id === 'battle' && sv.cleared >= D.STAGES_PER_CHAPTER && !modeSeen(sv) && !this.modeScr) {
+      c.add(panel(this, 12, 0, W - 24, bh, { fill: 0x1a2236, line: 0x5fc8ff }));
+      c.add(this.add.text(24, 8, t('lobby.f6d312'), font(12, '#9ae0ff')));
+      c.add(this.add.text(24, 25, t('lobby.8e8973'), font9(10, '#cfe0ea')));
+      c.add(this.add.circle(W - 30, 12, 5, 0xff3a3a));
+      c.add(this.add.rectangle(12, 0, W - 24, bh, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); this.openModes(); }));
+      return;
+    }
     const half = (W - 24 - 6) / 2;
     card(12, half, win ? 0x7ad0ff : COLOR.line, win ? t('lobby.4c24d0') : t('lobby.8306ca'), win ? '#9ae0ff' : '#ffffff', win ? t('lobby.01ac36', { length: winterItems().length }) : t('lobby.34a1d0'), () => goSkin(win ? 'winter' : 'character'));
-    card(12 + half + 6, half, 0xff9ad0, t('lobby.34d5dd'), '#ff9ad0', t('lobby.f1b741', { name: ts.name, SALE_OFF }), () => goSkin(ts.kind, ts.id));
+    card(12 + half + 6, half, 0xff9ad0, t('lobby.b0904d'), '#ff9ad0', t('lobby.f1b741', { name: ts.name, SALE_OFF }), () => goSkin(ts.kind, ts.id));
   }
 
   // itch.io 체험판: 전체판 링크(토스·스토어). 다른 판에서는 아무것도 그리지 않는다
@@ -534,7 +545,7 @@ export class Lobby extends Phaser.Scene {
     const rw = [[12, fmt(Math.round(D.goldOf(c, s, hard) * (done ? 1 : D.FIRST_CLEAR_MUL)))], [13, `${D.stoneOf(c, s, hard)}`]];
     if (!done && hard) rw.push(boss ? [11, tt('lobby.2e604f')] : [7, tt('lobby.cf313a')], [-1, String(boss ? D.HARD.bossGem : D.HARD.firstGem)]);
     else if (!done) rw.push(boss ? [11, wNew ? tt('lobby.6d5b7a') : tt('lobby.2e604f')] : [7, tt('lobby.c5e28a')]);
-    let rx = 78;
+    let rx = Math.max(78, 24 + b.list[b.list.length - 1].width + 10);   // 52차: 영어 'First Clear'가 아이콘과 겹쳤다(앞 글자 폭 뒤에서 시작)
     rw.forEach(([ic, v]) => {
       b.add(ic < 0 ? gemIcon(this, rx, 359, 11) : icon(this, rx, 359, ic, 14));
       const t = this.add.text(rx + 10, 352, v, font(10, '#ffffff')); b.add(t);

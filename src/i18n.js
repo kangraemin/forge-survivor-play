@@ -19,6 +19,8 @@ function detect() {
   if (IS_NODE) return process.env.GAME_LANG || 'ko';
   try { const q = norm(new URLSearchParams(location.search).get('lang')); if (q) return q; } catch { /* 주소 없음 */ }
   try { const s = localStorage.getItem(LS_KEY); if (s && LANGS.includes(s)) return s; } catch { /* 저장소 막힘 */ }
+  // 52차: 언어를 고른 적이 있으면 저장 파일(클라우드 복원·다른 저장소)에 남은 값도 따른다 — 처음엔 한국어였다 기기 언어(영어)로 바뀌던 원인
+  try { const s = JSON.parse(localStorage.getItem('forge-survivor-v1') || '{}').lang; if (s && LANGS.includes(s)) return s; } catch { /* 저장 없음 */ }
   for (const l of navigator.languages || [navigator.language]) { const n = norm(l); if (n) return n; }
   return 'en';
 }

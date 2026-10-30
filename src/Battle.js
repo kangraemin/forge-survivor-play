@@ -62,7 +62,7 @@ export class Battle extends Phaser.Scene {
     // 장면 인스턴스는 판끼리 재사용된다: 이벤트·축복·던전 고블린 상태를 비운다
     this.ultTip = null; this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
     // 보스 단계도 비운다(앞 판이 보스전으로 끝나면 다음 판이 웨이브 없이 영원히 이어졌다)
-    this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.spawnAcc = 0;
+    this.bossLvQ = 0; this.lvForce = false; this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.spawnAcc = 0;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -337,6 +337,8 @@ export class Battle extends Phaser.Scene {
     this.makeHud0(ins);
     // 50차: 안전 영역·토스 X 버튼 회피 — 왼쪽 HUD는 인셋만큼, 오른쪽 HUD(처치·은화·일시정지)는 X 버튼 아래로 내린다
     for (const o of this.children.list.slice(n0)) {
+      // 52차: panel()은 y=0인 Graphics에 좌표를 그려 둬서 위 조건에 걸러졌다 — 글자만 내려가고 빈 상자가 위에 남았다
+      if (o.scrollFactorX === 0 && o.box && o.y === 0 && o.box.y > 0.5 && o.box.y < 70) { o.y += o.box.x >= 170 ? ins.xTop : ins.top; continue; }
       if (o.scrollFactorX !== 0 || o.y == null || o.y <= 0.5 || o.y >= 70) continue;
       o.y += o.x >= 170 ? ins.xTop : ins.top;
     }
@@ -1043,8 +1045,15 @@ export class Battle extends Phaser.Scene {
       this.lvTxt.setText('Lv ' + r.lv);
       // 3~5레벨과 7레벨부터 홀수 레벨(7·9·11…)을 카드 없이 자동 소강화로 넘긴다: 한 판 카드 창을 4~5번으로(49차, 80초에 7번 떴다). 2레벨 카드로 첫 스킬을 먼저 고른다. 성장 레벨 수는 같다. 진화가 열렸으면 창을 연다
       if (((r.lv >= 3 && r.lv <= 5) || (r.lv >= 7 && r.lv % 2 === 1)) && !this.ui.evoReady()) this.ui.autoLevel();
+      else if (this.bossLive()) this.bossLvQ = (this.bossLvQ || 0) + 1;   // 52차: 보스전 중엔 카드 창을 모아 두었다 페이즈 사이·처치 후에 연다
       else this.ui.levelUp();
     }
+  }
+  bossLive() { const a = this.boss?.m, b = this.midBoss?.m; return !!((a && a.active && !a.dead) || (b && b.active && !b.dead)); }
+  flushLv(force = false) {
+    if (!(this.bossLvQ > 0) || this.over || this.ui.open) return;
+    if (!force && this.bossLive()) return;
+    this.bossLvQ--; this.ui.levelUp();
   }
 
   // ── 피격 ──
@@ -1216,6 +1225,7 @@ export class Battle extends Phaser.Scene {
     this.rebuildMobs();
     this.bossArrow_();
     const r = this.run;
+    if (this.bossLvQ > 0 && (this.lvForce || !this.bossLive())) { const q0 = this.bossLvQ; this.flushLv(true); if (this.bossLvQ < q0 || !this.bossLive()) this.lvForce = false; }
     if (this.fightXp > 0) { const fx = this.fightXp; this.fightXp = 0; if (r.lv < 3) this.gainXp(fx); }
     // 45차: 장과 무관하게 첫 레벨업은 늦어도 약 12초 안에 온다. 9장은 순풍에 떠밀려 몹 곁에 못 서 38초 Lv1이었다(7장 19초·10장 16초). 4초부터 8초 동안 Lv2분(3) 경험치가 시간으로 찬다
     if (r.lv < 2 && !this.endless && !this.dungeon && this.bt > 4000) { this.trickXp = (this.trickXp || 0) + dt * 3 / 8000; if (this.trickXp >= 0.3) { const tx = this.trickXp; this.trickXp = 0; this.gainXp(tx); } }
@@ -1262,7 +1272,8 @@ export class Battle extends Phaser.Scene {
       // 처음 판(1-1)도 마지막 웨이브 후반에 약한 해골 장군이 나온다: 끝이 밋밋하게 시간만 다 됐다(40차)
       const easyBoss = this.easy && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.45;
       if (easyBoss || (towerBoss || this.s === 1 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
-        this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true, easyBoss);
+        this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true);
+        if (easyBoss) this.midBoss.m.dmg *= 0.7;   // 52차: 1-1 중간보스도 실제 DPS 기준 체력(예전엔 체력 0.4배 식이라 3초에 죽었다). 대신 덜 아프게
         this.banner(t('battle.20631e'), t('battle.a76043')); sfx('bossIn');
         if (!this.bot && !this.mode) playBgm('boss', this.c);   // 중간보스 곡. 잡으면 boss.js die()가 전투 곡으로 되돌린다
       }

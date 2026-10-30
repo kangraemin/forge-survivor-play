@@ -5,7 +5,7 @@ import { save } from './save.js';
 import { sfx } from './sfx.js';
 import { font, font9, panel, button, fmt, COLOR, toast, weaponIcon } from './ui.js';
 import { track } from './log.js';
-import { roleOf } from './petRoles.js';
+import { roleOf, petCard } from './petRoles.js';
 import {
   SLOTS, slotOf, RARITY, STATS, statText, SETS, EGGS, WTYPES, PETS, PET_MAX, petCost, petPow, SP, SP_RESET_GEM, SKILL_TAG, TAG_NAME,
   spFree, spTotal, gearStats, itemScore, INV_MAX, statMul, ownsW, SP_MILE, SP_MILE_DMG, SP_MILE_HP,
@@ -240,6 +240,7 @@ export const GearTab = {
     PETS.slice(pg * PER, pg * PER + PER).forEach((p, i) => {
       const y = 86 + i * 50, open = sv.cleared >= p.unlock, lv = sv.pets?.[p.id] || 0, on = sv.pet === p.id;
       b.add(panel(this, 12, y, W - 24, 46, { fill: on ? 0x2e2448 : 0x1a1528, line: on ? 0xffd75e : COLOR.line }));
+      if (open) { const hit = this.add.rectangle(12, y, W - 24, 46, 0xffffff, 0).setOrigin(0).setInteractive({ useHandCursor: true }); hit.on('pointerup', () => !this.busy && this.petInfo(p)); b.add(hit); }   // 52차: 펫을 누르면 설명 창
       // 전투와 같은 모습(보스를 작게)
       if (!open) b.add(this.add.text(34, y + 23, '?', font(14, '#6a6080')).setOrigin(0.5));
       else if (this.anims.exists(p.id)) { const sp = this.add.sprite(34, y + 23, null).play(p.id).setScale(fb[p.id] ? 0.8 : 0.36); if (fb[p.id]) sp.setTint(p.color); b.add(sp); }
@@ -247,9 +248,10 @@ export const GearTab = {
       if (!open) { b.add(this.add.text(56, y + 23, t('gearTab.267e2a'), font9(10, '#5c6e76'))); return; }
       const rl = roleOf(p.id);
       if (rl && this.textures.exists(rl.icon)) { b.add(this.add.image(W - 91, y + 23, rl.icon).setScale(0.62)); b.add(this.add.text(W - 91, y + 37, rl.name, font9(8, rl.color)).setOrigin(0.5, 0)); }
-      b.add(this.add.text(56, y + 20, p.desc, font9(10, '#f2e4bc')));
+      const fitW = o => { o.setScale(Math.min(1, 118 / o.width)); return o; };   // 52차: 역할 아이콘·버튼과 겹치지 않게 폭 118 안으로
+      b.add(fitW(this.add.text(56, y + 20, p.desc, font9(10, '#f2e4bc'))));
       const fit = t('gearTab.d8ac3d', { v: [...(p.good || []).map(chN), ...(p.id === 'demonlord' ? [t('gearTab.86b73a')] : [])].join('·') || '-', v2: p.weak ? t('gearTab.659c1c', { join: p.weak.map(chN).join('·') }) : '' });
-      b.add(this.add.text(56, y + 33, fit, font9(9, '#8fdc8a')));
+      b.add(fitW(this.add.text(56, y + 33, fit, font9(9, '#8fdc8a'))));
       const tb = button(this, W - 50, y + 13, 62, 18, on ? t('gearTab.2101bf') : t('lobby.6d4e70'), () => {
         if (this.busy || on) return;
         sv.pet = p.id; save(); sfx('buy'); track('pet_set', { pet: p.id, lv }); this.show('gear');
@@ -266,6 +268,18 @@ export const GearTab = {
     // 한 줄이면 화면 양 끝이 잘려 두 줄로 나눈다
     b.add(this.add.text(W / 2, 386, t('gearTab.cb9eee'), font9(9, '#a1b2b6')).setOrigin(0.5));
     b.add(this.add.text(W / 2, 399, t('gearTab.0f4c32', { round: Math.round(g.pet * 100) }), font9(9, '#a1b2b6')).setOrigin(0.5));
+  },
+
+  // 52차: 펫 설명 창(펫을 얻을 때 뜨는 것과 같은 카드) + 장착
+  petInfo(p) {
+    const sv = this.sv, c = this.modal();
+    c.add(panel(this, 14, 60, W - 28, 372, { fill: 0x1a1426, line: p.color }));
+    c.add(this.add.text(W / 2, 80, p.name, font(15, '#ffd75e')).setOrigin(0.5));
+    petCard(this, c, p, sv, 94);
+    const on = sv.pet === p.id;
+    const eb = button(this, W / 2 + 46, 404, 84, 28, on ? t('gearTab.2101bf') : t('lobby.818a75'), () => { if (on) return; sv.pet = p.id; save(); sfx('buy'); track('pet_set', { pet: p.id, from: 'info' }); c.close(); }, { size: 11, color: on ? 0x3a3846 : 0x2f6b3a });
+    eb.setEnabled(!on); c.add(eb);
+    c.add(button(this, W / 2 - 50, 404, 76, 28, t('cosmeticShop.94b7db'), () => c.close(), { size: 10, color: 0x3a3846 }));
   },
 
   // ── 스탯: 스테이지를 처음 깰 때 점수를 받아 찍는다 ──

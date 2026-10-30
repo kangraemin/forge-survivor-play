@@ -10,8 +10,9 @@ import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedCont
 import { showAd, adsLeft } from './shop.js';
 import { itemName, SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, lastTidy, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW } from './gear.js';
 import { itemBox } from './gearTab.js';
-import { dexRefresh, DEX_HP, titleName } from './codex.js';
+import { dexRefresh, dexState, DEX_HP, titleName } from './codex.js';
 import { t } from './i18n.js';
+import { petCard } from './petRoles.js';
 const R = Phaser.Math.Between;
 
 const { W, H } = D;
@@ -26,20 +27,12 @@ export class Overlay {
     const s = this.s, sv = s.sv;
     const c = fixedContainer(s).setDepth(DEPTH + 10);
     const dim = s.add.rectangle(0, 0, W, H, 0x000000, 0.7).setOrigin(0).setInteractive();
-    c.add([dim, panel(s, 30, 120, W - 60, 230, { fill: 0x1a1426, line: p.color })]);
-    c.add(s.add.text(W / 2, 142, t('lobby.87c061'), font(15, '#ffd75e')).setOrigin(0.5));
-    c.add(s.add.image(W / 2, 192, 'disc').setScale(1.1).setTint(p.color).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD));
-    const fb = s.registry.get('fallback')?.[p.id];
-    const g = s.add.sprite(W / 2, 192, null).play(p.id).setScale(fb ? 1.4 : 0.7);
-    if (fb) g.setTint(p.color);
-    c.add(g);
-    c.add(s.add.text(W / 2, 236, p.name, font(14, '#ffffff')).setOrigin(0.5));
-    c.add(s.add.text(W / 2, 256, p.desc, font9(10, '#a1b2b6')).setOrigin(0.5));
-    const chN = i => t('lobby.022fbd', { v: i + 1 });
-    c.add(s.add.text(W / 2, 274, t('lobby.7e168d', { v: [...(p.good || []).map(chN), ...(p.id === 'demonlord' ? [t('battle.6304cf')] : [])].join(' · ') || '-' }), font9(10, '#5fdc6a')).setOrigin(0.5));
+    c.add([dim, panel(s, 14, 60, W - 28, 372, { fill: 0x1a1426, line: p.color })]);
+    c.add(s.add.text(W / 2, 80, t('lobby.87c061'), font(15, '#ffd75e')).setOrigin(0.5));
+    petCard(s, c, p, sv, 94);
     const close = () => { s.tweens.killTweensOf(c); c.destroy(); };
-    c.add(button(s, W / 2 + 46, 320, 84, 28, t('lobby.6d4e70'), () => { sv.pet = p.id; save(); sfx('buy'); s.log('pet_join_take', { pet: p.id }); close(); }, { size: 11, color: 0x2f6b3a }));
-    c.add(button(s, W / 2 - 50, 320, 76, 28, sv.pet === p.id ? t('lobby.468266') : t('lobby.0fcd14'), () => { s.log('pet_join_later', { pet: p.id }); close(); }, { size: 10, color: 0x3a3846 }));
+    c.add(button(s, W / 2 + 46, 404, 84, 28, t('lobby.818a75'), () => { sv.pet = p.id; save(); sfx('buy'); s.log('pet_join_take', { pet: p.id }); close(); }, { size: 11, color: 0x2f6b3a }));
+    c.add(button(s, W / 2 - 50, 404, 76, 28, sv.pet === p.id ? t('lobby.468266') : t('lobby.0fcd14'), () => { s.log('pet_join_later', { pet: p.id }); close(); }, { size: 10, color: 0x3a3846 }));
     c.setAlpha(0); s.tweens.add({ targets: c, alpha: 1, duration: 250, delay: 600 });
   }
 
@@ -687,11 +680,24 @@ export class Overlay {
     rew.forEach(([ic, name, n], i) => {
       const x = i % 2 ? 146 : 38, y = 214 + Math.floor(i / 2) * 22;
       c.add(ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
-      c.add(s.add.text(x + 20, y, name, font9(10, '#a1b2b6')).setOrigin(0, 0.5));
+      { const nt = s.add.text(x + 20, y, name, font9(10, '#a1b2b6')).setOrigin(0, 0.5), mw = 66 - (('+' + fmt(n)).length * 7 + 3); if (nt.width > mw) nt.setScale(Math.max(0.6, mw / nt.width)); c.add(nt); }
       const t = s.add.text(x + 88, y, '+0', font(12)).setOrigin(1, 0.5); c.add(t); tx.push(t);
       const o = { v: 0 };
       s.tweens.add({ targets: o, v: n, duration: 350, delay: 150 + i * 80, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
     });
+    // 52차: 이겼을 때 가운데 빈 곳 — 이 장 별(깬 판 수)·다음 목표·도감 진행(보상 줄 아래에 이어 붙인다)
+    if (win && !s.endless && !dun && !hard) {
+      const per = D.STAGES_PER_CHAPTER, done = Math.max(0, Math.min(per, sv.cleared - s.c * per)), rows = Math.ceil(rew.length / 2);
+      let y = 214 + (rows - 1) * 22 + 24;
+      c.add(s.add.text(W / 2, y, t('overlay.2bf75f', { repeat: '★'.repeat(done), repeat2: '☆'.repeat(per - done), v: s.c + 1, done, per }), font(11, '#ffd75e', 2)).setOrigin(0.5)); y += 15;
+      // 아래 보조 버튼 줄(y 294~)과 겹치지 않는 줄만 쓴다(보상이 6칸이면 별 줄만 남는다)
+      if (sv.cleared < D.openTotal() && y <= 286) {
+        const ni = sv.cleared, nc = Math.floor(ni / per), ns = ni % per, pw = D.powerOf(sv), rp = D.recOf(nc, ns, false);
+        const nt = s.add.text(W / 2, y, t('overlay.451078', { v: nc + 1, v2: ns + 1, fmt: fmt(rp), fmt2: fmt(pw) }), font9(10, D.powerCol(pw, rp, ns))).setOrigin(0.5);
+        nt.setScale(Math.min(1, (W - 40) / nt.width)); c.add(nt); y += 14;
+      }
+      if (rows < 3 && y <= 286) { const dx = dexState(sv); c.add(s.add.text(W / 2, y, t('overlay.bf1d48', { n: dx.n, all: dx.all, v: dexNew > 0 ? ` (+${dexNew})` : '' }), font9(10, '#9ae0ff')).setOrigin(0.5)); }
+    }
     // 졌으면 무엇이 모자랐는지 숫자로 보여 준다
     // 아깝게 졌으면 얼마나 가까웠는지 한 줄(다시 하기를 앞으로)
     const close = !win && !s.endless && !dun && s.runProgress() >= D.CLOSE_LOSS;

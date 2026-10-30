@@ -4,8 +4,9 @@ import { sfx } from './sfx.js';
 import { track } from './log.js';
 import { font, font9, panel, button, fmt, toast } from './ui.js';
 import { ensureModeArt, MODE_ICON } from './modeArt.js';
-import { MODE_IDS, MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward, repeatReward, modeStars, modeStarTotal, modeBest, starTexts, fmtT } from './modeData.js';
+import { modeSeen, MODE_IDS, MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward, repeatReward, modeStars, modeStarTotal, modeBest, starTexts, fmtT } from './modeData.js';
 import { t } from './i18n.js';
+import { save } from './save.js';
 
 const { W } = D;
 
@@ -17,11 +18,16 @@ export const ModeScreen = {
     const open = sv.cleared >= D.STAGES_PER_CHAPTER;
     const bt = button(this, 36, AY + 40, 54, 22, t('modeScreen.cd1abb'), () => {
       if (!open) { sfx('deny'); toast(this, t('modeScreen.5f28d7'), '#ff9090'); return; }
-      sfx('click'); track('mode_open', {});
-      this.modeScr = true; this.modeId = this.modeId || 'guard'; this.modeN = this.modeN ?? 0; this.show('battle');
+      sfx('click'); this.openModes();
     }, { size: 11, color: 0x3a3846 });
     if (!open) bt.label.setAlpha(0.5);
     pv.add(bt);
+    if (open && !modeSeen(sv)) pv.add(this.add.circle(36 + 25, AY + 40 - 10, 4, 0xff3a3a));
+  },
+  openModes() {
+    track('mode_open', {});
+    const sv = this.sv; sv.modes = { ...sv.modes, seen: true }; save();
+    this.modeScr = true; this.modeId = this.modeId || 'guard'; this.modeN = this.modeN ?? 0; this.show('battle');
   },
 
   // ── 모드 선택: 4모드 탭 + 15판 목록 + 선택한 판 정보 ──

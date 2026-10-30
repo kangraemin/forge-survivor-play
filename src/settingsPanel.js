@@ -10,6 +10,7 @@ import { track } from './log.js';
 import { openInvite } from './share.js';
 import { LANGS, LANG_NAME, lang, setLang, t, tt } from './i18n.js';
 import { shareHidden, cashHidden, trialInfo, openFull } from './platform/flags.js';   // 포털판 분기
+import { runTutorial } from './tutorial.js';
 import { setSound, setMusic, setVib, sfx, buzz, playBgm } from './sfx.js';
 
 // 문의·약관·개인정보: 웹 배포 레포(forge-survivor-play)의 정적 페이지. 원본은 docs/legal/. 문의 메일은 다른 앱(오늘의 눈썰미 사이트)이 이미 쓰는 주소
@@ -57,6 +58,8 @@ export function openSettings(scene) {
   c.add(panel(scene, 16, 60, W - 32, cloud ? 400 : 370, { fill: 0x1a1426, line: 0xffd75e }));
   c.add(scene.add.text(W / 2, 78, tt('settingsPanel.c14a56'), font(14, '#ffd75e')).setOrigin(0.5));
   c.add(button(scene, W - 38, 78, 26, 22, 'X', () => c.close(), { size: 11 }));
+  // 안내 다시 보기(코치마크). 1-1을 깨기 전에는 가리킬 화면이 없다
+  c.add(button(scene, 62, 78, 84, 22, t('settingsPanel.930aa2'), () => { if (sv.cleared < 1) { toast(scene, t('settingsPanel.2a3ad0'), '#ffd75e'); return; } track('coach_replay'); c.close(); runTutorial(scene); }, { size: 10, color: 0x3a3846 }));
   const info = [tt('settingsPanel.94d834', { v: SRC[st.source] || tt('settingsPanel.f6846c'), v2: st.lostRaw ? tt('settingsPanel.e90d14') : '' }), tt('settingsPanel.154a72', { BUILD, channel: channel(), schemaVersion: sv.schemaVersion })];
   c.add(scene.add.text(26, 98, info.join('\n'), font9(10, '#a1b2b6')).setLineSpacing(3));
   const row = (y, label, fn, color) => { const b = button(scene, W / 2, y, W - 60, 28, label, fn, { size: 11, color }); c.add(b); return b; };
@@ -66,7 +69,10 @@ export function openSettings(scene) {
     track('save_export');
     textDialog({ title: t('settingsPanel.9f6960'), note: t('settingsPanel.78d36c'), value: exportSave(), readonly: true });
   });
-  row(266, tt('settingsPanel.be28ca'), () => {
+  // 52차: 붉고 커서 위험해 보였다 — 접힌 '고급' 칸으로 두고, 열어도 덮어쓰기 확인을 한 번 더 거친다(아래 onOk)
+  let advOpen = false;
+  const ib = row(266, t('settingsPanel.6bdb31'), () => {
+    if (!advOpen) { advOpen = true; ib.label.setText(tt('settingsPanel.be28ca')); return; }
     textDialog({
       title: t('settingsPanel.dc3734'), note: t('settingsPanel.8738f3'), ok: t('settingsPanel.e01dd0'),
       onOk: (v, err, close) => {
@@ -76,7 +82,7 @@ export function openSettings(scene) {
         importSave(v); track('save_import'); close(); scene.scene.restart();
       },
     });
-  }, 0x8a2f3a);
+  }, 0x3a3846);
   if (!cashHidden()) row(296, tt('settingsPanel.d359b2'), async () => {
     const n = restorePurchases(store(), load()) + await restorePlatformPurchases();
     save(); track('purchase_restore_tap', { n }); toast(scene, n ? t('settingsPanel.d97561', { n }) : t('settingsPanel.5fc588'), n ? '#5fdc6a' : '#ffffff');

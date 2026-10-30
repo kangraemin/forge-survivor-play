@@ -110,12 +110,25 @@ export class ModeRun {
     this.barTxt = this.mkTxt(12, 46, c.go ? t('modes.4b9182') : t('modes.5599ae'), font9(10, '#cfe8ff'));
     this.numTxt = this.mkTxt(0, 0, '', font(9, '#ffffff', 2)); this.numTxt.setOrigin(0.5);
   }
+  raidWave() {
+    const s = this.s, c = this.cfg, it = this.item, n = Math.min(9, 5 + c.c);
+    s.banner(c.go ? t('modes.1acafe') : t('modes.9bf4d2'), c.go ? t('modes.153423') : t('modes.7dc74f'));
+    sfx('warn');
+    for (let i = 0; i < n; i++) {
+      const kind = c.raiders[i % c.raiders.length], a = (i / n) * Math.PI * 2 + RF(-0.3, 0.3);
+      const at = c.go ? { x: Phaser.Math.Clamp(MX + (i % 2 ? 1 : -1) * R(100, 190), 40, WORLD - 40), y: Math.max(60, it.y - R(190, 260)) } : { x: Phaser.Math.Clamp(it.x + Math.cos(a) * 200, 40, WORLD - 40), y: Phaser.Math.Clamp(it.y + Math.sin(a) * 200, 60, WORLD - 40) };
+      const m = s.spawn(false, kind, { at, force: true });
+      if (m) { m.raider = true; m.setTint(0xff9a7a); m.baseTint = m.tintTopLeft; }
+    }
+  }
   guardUpdate(dt) {
     const s = this.s, c = this.cfg, it = this.item, h = s.hero;
     this.spawnTick(dt, 1);
     this.extras(dt);
     this.drawItem();
     if (!it || it.hp <= 0) return;
+    // 52차: 습격 — 처음 22초, 이후 32초마다 몹 여럿이 한꺼번에 노리는 물건 쪽으로 달려든다(긴장이 늘 같았다)
+    if ((this.raidT = (this.raidT ?? 22000) - dt) <= 0) { this.raidT = 32000; this.raidWave(); }
     const sec = dt / 1000;
     // 모드 카드: 수리(수레 HP 차오름)·가시(곁의 몹이 찔림)
     const rp = this.cl('mrepair'); if (rp) it.hp = Math.min(it.max, it.hp + it.max * 0.008 * rp * sec);
@@ -280,6 +293,8 @@ export class ModeRun {
     this.wallLab = s.add.text(MX, this.wallY - 76, c.wallName || t('modes.65fef2'), font(12, '#ffd0c0', 3)).setOrigin(0.5, 1).setDepth(52);
     this.warn = s.add.rectangle(W / 2, H - 58, W, 116, 0xc01020, 0).setScrollFactor(0).setDepth(97);   // 벽이 가까우면 화면 아래가 붉게 뛴다
     this.warnTxt = this.mkTxt(W / 2, H - 84, '', font(15, '#ffffff', 4)); this.warnTxt.setOrigin(0.5).setAlpha(0);
+    // 52차: 구간·벽 거리는 줄을 나눈다(위 칸은 '1/4구간', 막대 아래 줄은 '벽 이름 거리' — 처치·은화 숫자와 겹쳤다)
+    this.wallInfo = this.mkTxt(W / 2, 68, '', font9(10, '#a1b2b6')).setOrigin(0.5, 0); this.s.skillRow.setPosition(8, 84); this.s.comboTxt.setPosition(W - 57, 92);
     this.legTxt = this.mkTxt(W / 2, 128, '', font(14, '#ffe8a0', 4)); this.legTxt.setOrigin(0.5).setAlpha(0);
     this.wallF = 0;
     this.items = [];
@@ -519,7 +534,8 @@ export class ModeRun {
       g.fillStyle(0xffe8a0).fillRect(bx + bw - 6, 44, 3, 22);
       const gap = Math.max(0, Math.round((this.wallY - s.hero.y) / 4));
       s.timeTxt.setText(t('modes.02f94d', { max: Math.max(0, Math.round((s.hero.y - this.goalY) / 4)) })).setColor('#ffffff');
-      s.waveTxt.setText(t('modes.63d525', { v: this.leg + 1, v2: c.legs || 1, v3: c.wallName || t('modes.8e939b'), gap })).setColor(gap < 25 ? '#ff7070' : '#a1b2b6');
+      s.waveTxt.setText(t('modes.b33be9', { v: this.leg + 1, v2: c.legs || 1 })).setColor('#a1b2b6');
+      this.wallInfo.setText(`${c.wallName || t('modes.8e939b')} ${gap}m`).setColor(gap < 25 ? '#ff7070' : '#a1b2b6');
       this.wallTxt.setText('').setPosition(0, 0);
     } else {
       const n = this.preyTotal, alive = this.prey.length;
@@ -597,7 +613,7 @@ export class ModeRun {
     }
     cc.add(s.add.rectangle(W / 2, 262, W - 80, 1, 0x293845));
     // 이번 판 기록
-    [[t('modes.6c3513'), fmtT(sec)], [t('battle.5e9c0f'), fmt(r.kills)], [t('modes.33dde2'), Math.round(hurt * 100) + '%']].forEach(([a, b], i) => {
+    [[t('modes.6c3513'), fmtT(sec)], [t('battle.5e9c0f'), fmt(r.kills)], [t('modes.33dde2'), t('modes.e403d2', { round: Math.round(hurt * 100) })]].forEach(([a, b], i) => {
       const x = W / 2 + (i - 1) * 78;
       cc.add(s.add.text(x, 278, a, font9(10, '#a1b2b6')).setOrigin(0.5));
       cc.add(s.add.text(x, 296, b, font(13)).setOrigin(0.5));
@@ -608,7 +624,7 @@ export class ModeRun {
     rows.forEach(([ic, name, n], i) => {
       const x = i % 2 ? 146 : 38, y = 330 + Math.floor(i / 2) * 22;
       cc.add(ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
-      cc.add(s.add.text(x + 20, y, name, font9(10, '#a1b2b6')).setOrigin(0, 0.5));
+      { const nt = s.add.text(x + 20, y, name, font9(10, '#a1b2b6')).setOrigin(0, 0.5), mw = 66 - (('+' + fmt(n)).length * 7 + 3); if (nt.width > mw) nt.setScale(Math.max(0.6, mw / nt.width)); cc.add(nt); }
       cc.add(s.add.text(x + 88, y, '+' + fmt(n), font(12)).setOrigin(1, 0.5));
     });
     cc.add(s.add.text(W / 2, 372, t('modes.0b6006', { name: this.def.name, cnt, MODE_N }), font9(10, '#a1b2b6')).setOrigin(0.5));

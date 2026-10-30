@@ -9,6 +9,10 @@ import { MODE_SHEETS, MODE_IMAGES } from './modeArt.js';
 import { loadPetRoles, makePetRoleAnims } from './petRoles.js';
 import { BODY_LOOKS, COS_ROWS, WEAPON_LOOKS, HEAD_LOOKS, CASH_PETS, AURAS } from './cosmetics.js';
 import { t, tt } from './i18n.js';
+import { load } from './save.js';
+import { track } from './log.js';
+import { isFirstRun } from './coach.js';
+import { setSound, setMusic, setVib, unlock } from './sfx.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
@@ -23,7 +27,7 @@ const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2', 'boss3', 'boss4', 'b
 const LATE_CH = [16, 17, 18];
 const LATE_IMAGES = LATE_CH.flatMap(c => [0, 1, 2].flatMap(r => [`z${c}_r${r}`, `z${c}_r${r}_attack`]).concat([`tile${c}`, `prop${c}`, `lobby_bg${c}`, `boss${c}_r0`, `boss${c}_r0_telegraph`]))
   .concat(['gimmick16_frost_vent', 'gimmick16_ice_patch', 'gimmick17_deck_vent', 'gimmick17_wind_sail', 'gimmick18_hourglass', 'gimmick18_stopped_clock']);
-const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'meat', 'silver',
+const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'silver',
   'magnetItem', 'gem1', 'gem2', 'gem3', 'ebullet', 'fireball', 'ice', 'hammer', 'wave', 'dagger', 'orb'];
 // 무기 그림 PNG(assets/weapon/<종류><등급>.png). 있으면 makeWeaponTextures가 건너뛴다
 const WEAPONS = ['sword', 'spear', 'axe', 'bow', 'gun', 'knuckle', 'staff'];
@@ -133,7 +137,17 @@ export class Boot extends Phaser.Scene {
     for (const id of AURAS) A(`aura_${id}`, `cos_aura_${id}`, 8);
     this.registry.set('fallback', fallback);
     this.makeTextures();
-    updateGate(this, this.upd).then(async go => { if (go && !(await bootSync().catch(() => false))) this.scene.start('Lobby'); });   // 서버 저장이 이 기기보다 앞서면 받아서 화면을 다시 불러온다   // 강제 업데이트면 여기서 멈춘다
+    updateGate(this, this.upd).then(async go => { if (go && !(await bootSync().catch(() => false))) this.enter(); });   // 서버 저장이 이 기기보다 앞서면 받아서 화면을 다시 불러온다   // 강제 업데이트면 여기서 멈춘다
+  }
+
+  // 처음 켠 사람(한 판도 안 함)은 로비를 건너뛰고 곧바로 1-1. 이동·자동 공격은 전투의 손가락 표시(dragHint)가 알려 준다. 나머지는 로비
+  enter() {
+    const sv = load();
+    if (!isFirstRun(sv) || new URLSearchParams(location.search).has('lobby')) return this.scene.start('Lobby');
+    setSound(sv.sound); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);   // 로비가 하던 소리 설정을 대신
+    this.game.canvas.addEventListener('pointerdown', () => unlock(), { once: true });
+    track('first_run_direct');
+    this.scene.start('Battle', { chapter: 0, stage: 0 });
   }
 
   // 픽셀 단위로 직접 그리는 작은 그림들
