@@ -43,6 +43,8 @@ export function track(name, params = {}) {
     if (v === undefined || v === null) continue;
     q.set((typeof v === 'string' ? 'up.' : 'upn.') + k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v).slice(0, 36));
   }
+  // 플레이어별 흐름 리포트용: 무작위 id(개인정보 아님, 기기 localStorage에만 있음)와 시각. GA 관리에서 맞춤 측정기준 pid·ts를 등록해야 API로 읽힌다
+  q.set('ep.pid', st.cid.split('.')[0]); q.set('ep.ts', String(t));
   // 결제 매출은 GA 매출 칸(cu+value)으로 간다
   if (p.currency) q.set('cu', p.currency);
   for (const [k, v] of Object.entries(p)) {

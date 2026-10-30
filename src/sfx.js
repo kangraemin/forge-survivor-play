@@ -145,7 +145,19 @@ const BGM_FILES = {
 };
 // 파일 음악 기본 음량(0~1). 효과음 최대치(master 0.35 x 톤 0.25~0.45 = 약 -16dB)보다 한 단계 아래로 둔다.
 // 두 곡 모두 평균 -17.8dB·최대 -3dB라 0.6이면 최대가 -7.6dB로 효과음보다 컸다 → 0.2(평균 -32dB·최대 -17dB, 절차 BGM과 비슷). 음량 설정이 생기면 여기에 곱한다
-const BGM_VOL = 0.2;
+// 53차: 웹·itch에서 배경음악이 크다는 말이 나와 0.2 → 0.07로(-9dB). 최대 -3dB인 곡이 -26dB, 평균은 -41dB.
+// 효과음 한 톤 최대는 베기·피격 약 -21dB, 처치 -18dB, 레벨업 -27dB(master 0.35 x 톤 vol). 음악 설정(끔/작게/보통)의 '작게'는 절반(-6dB)
+const BGM_BASE = 0.07;
+let musicMul = 1;   // 보통 1, 작게 0.5
+const bv = () => BGM_BASE * musicMul;
+const PGAIN = (lobby) => (lobby ? 0.08 : 0.1) * musicMul;   // 절차 BGM(0.22/0.28 → 0.08/0.10)
+export const setMusicLevel = lv => {
+  musicMul = lv === 1 ? 0.5 : 1;
+  try {
+    if (bgm && bgm.el && !bgm.el._fx) bgm.el.volume = bv();
+    if (bgm && bgm.g && ctx) { const g = bgm.g.gain, t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(PGAIN(bgm.kind === 'lobby'), t); }
+  } catch { /* 무시 */ }
+};
 function bgmFile(kind, chapter) {
   const f = BGM_FILES[kind];
   if (!f) return null;
@@ -164,7 +176,7 @@ function stopEl(el, ms = 300, file = null) {
     i++;
     if (i >= n) {
       clearInterval(t); el._fx = false;
-      try { el.pause(); if (file && !badFiles.has(file) && !preloaded[file]) { preloaded[file] = el; el.volume = BGM_VOL; } else { el.removeAttribute('src'); el.load(); } } catch { /* 무시 */ }
+      try { el.pause(); if (file && !badFiles.has(file) && !preloaded[file]) { preloaded[file] = el; el.volume = bv(); } else { el.removeAttribute('src'); el.load(); } } catch { /* 무시 */ }
     } else { try { el.volume = Math.max(0, v0 * (1 - i / n)); } catch { /* 일부 기기는 음량 고정 */ } }
   }, 60);
 }
@@ -172,7 +184,7 @@ function fadeIn(el, ms = 800) {
   const n = Math.max(1, Math.round(ms / 60)); let i = 0;
   try { el.volume = 0; } catch { return; }
   el._fx = true;   // 감시가 페이드 중 음량을 건드리지 않게
-  const t = setInterval(() => { i++; try { el.volume = Math.min(BGM_VOL, BGM_VOL * i / n); } catch { /* 무시 */ } if (i >= n) { clearInterval(t); el._fx = false; } }, 60);
+  const t = setInterval(() => { i++; try { el.volume = Math.min(bv(), bv() * i / n); } catch { /* 무시 */ } if (i >= n) { clearInterval(t); el._fx = false; } }, 60);
 }
 // 미리 받아 둔 음악 요소(재생은 아직 안 함). 장면이 열리기 전에 파일을 받아 두면 틀 때 바로 나온다
 const preloaded = {};
@@ -196,7 +208,7 @@ export function earlyBgm(enabled) {
   musicOn = !!enabled;
   if (!musicOn || bgm || typeof Audio === 'undefined') return;
   const file = bgmFile('lobby', 0); if (!file) return;
-  const el = new Audio(); el.loop = true; el.preload = 'auto'; el.volume = BGM_VOL; el.muted = held; el.src = file;
+  const el = new Audio(); el.loop = true; el.preload = 'auto'; el.volume = bv(); el.muted = held; el.src = file;
   const st = { kind: 'lobby', ch: 0, file, el };
   el.addEventListener('error', () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); } });
   bgm = st;
@@ -209,7 +221,7 @@ function startFile(kind, chapter, file, crossfade) {
   const el = pre || new Audio(file);
   const at = kind !== 'boss' && resumeAt[file] > 0 ? resumeAt[file] : 0; delete resumeAt[file];
   if (pre || at) { try { el.currentTime = at; } catch { /* 무시 */ } }
-  el.loop = true; el.preload = 'auto'; el.volume = BGM_VOL; el.muted = held;
+  el.loop = true; el.preload = 'auto'; el.volume = bv(); el.muted = held;
   if (crossfade) fadeIn(el);
   const st = { kind, ch: chapter, file, el };
   const fail = () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); playBgm(kind, chapter); } };
@@ -229,7 +241,7 @@ function retryFile() {
   if (!w || !musicOn || bgm.retrying) return;
   const old = bgm; old.retrying = true;
   const el = new Audio(w.file);
-  el.loop = true; el.volume = BGM_VOL; el.muted = held;
+  el.loop = true; el.volume = bv(); el.muted = held;
   el.play().then(() => {
     if (bgm !== old) { el.pause(); return; }
     clearInterval(old.timer); const g = old.g; try { g.gain.setValueAtTime(g.gain.value, ctx.currentTime); g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2); } catch { /* 무시 */ } setTimeout(() => g.disconnect(), 300);
@@ -262,7 +274,7 @@ function startProc(kind, chapter, blocked) {
   const boss = kind === 'boss', lobby = kind === 'lobby';
   const step = boss ? 0.115 : lobby ? 0.2 : 0.14, root = lobby ? 110 : ROOT[chapter % ROOT.length];
   const g = c.createGain(); g.gain.value = 0; g.connect(master);
-  g.gain.linearRampToValueAtTime(lobby ? 0.22 : 0.28, c.currentTime + 1);
+  g.gain.linearRampToValueAtTime(PGAIN(lobby), c.currentTime + 1);
   const st = { kind, ch: chapter, g, i: 0, next: c.currentTime + 0.05, t0: performance.now() };
   if (blocked) st.want = { kind, ch: chapter, file: blocked.file };
   const note = (t, f, dur, type, vol) => {
@@ -341,10 +353,10 @@ function watchdog() {
       const el = bgm.el;
       if (el.paused && !bgm.want) el.play().catch(() => {});
       if (!held && el.muted) el.muted = false;
-      if (!el._fx && el.volume < BGM_VOL * 0.5) el.volume = BGM_VOL;
+      if (!el._fx && el.volume < bv() * 0.5) el.volume = bv();
     } else if (bgm.g && ctx && ctx.state === 'running') {
       if (bgm.next < ctx.currentTime - 0.5) bgm.next = ctx.currentTime + 0.05;
-      if (performance.now() - (bgm.t0 || 0) > 2500 && bgm.g.gain.value < 0.05) { const g = bgm.g.gain, t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(bgm.kind === 'lobby' ? 0.22 : 0.28, t + 0.3); }
+      if (performance.now() - (bgm.t0 || 0) > 2500 && bgm.g.gain.value < 0.05) { const g = bgm.g.gain, t = ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(PGAIN(bgm.kind === 'lobby'), t + 0.3); }
     }
   } catch { /* 감시는 게임을 막지 않는다 */ }
 }
