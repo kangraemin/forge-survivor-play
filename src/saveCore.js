@@ -6,7 +6,7 @@ export const KEY = 'forge-survivor-v1';
 export const BAK = [KEY + '.bak1', KEY + '.bak2'];   // 직전 저장 2개
 export const CORRUPT = KEY + '.corrupt';             // 읽지 못한 원본 문자열(지우지 않고 보관)
 // 저장 모양 버전. 저장 형식을 바꾸면 SCHEMA를 올리고 STEPS 끝에 한 단계를 더한다(앞 단계는 고치지 않는다)
-export const SCHEMA = 3;
+export const SCHEMA = 4;
 
 export const fresh = () => ({ schemaVersion: SCHEMA,
 
@@ -45,6 +45,10 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   // 한정 판매: 오늘의 특가 { day, id, off, got }, 성장 꾸러미 { c, at, shown }
   deal: null, grow: null,
   modes: { clear: {} },    // 모드(지키기·점령·돌파·사냥) 깬 판: 'guard:1' 같은 키 -> 1
+  // 공유 보상(share.js): 자랑하기 받은 날·받은 적 있나, 내 초대 코드, 나를 초대한 코드(첫 실행에만 저장), 그 코드를 서버에 알렸나,
+  // 초대로 받은 보석 수(친구 수), 확정 중인 보상 {key,n}, 서버가 알려 준 초대한 친구 수·받을 수
+  shareDay: '', shared: false, inviteCode: '', invitedBy: '', refChecked: false, inviteClaimed: false,
+  inviteRewards: 0, inviteAck: null, inviteTotal: 0, invitePending: 0,
 });
 
 // STEPS[i]: schemaVersion i -> i+1. 각 단계는 값을 지우지 않고 없는 것만 채우거나 옮긴다. 이미 한 변환은 플래그로 다시 하지 않는다
@@ -75,6 +79,13 @@ const STEPS = [
   mem => { mem.cosmetics = { owned: {}, equip: {}, tried: {}, ...mem.cosmetics }; mem.ledger ||= {}; collectLedger(mem); },
   // 2 -> 3: 모드 진행 칸. 없던 저장은 빈 칸으로 채운다(본편 진행은 건드리지 않는다)
   mem => { mem.modes = { ...mem.modes }; if (!mem.modes.clear || typeof mem.modes.clear !== 'object') mem.modes.clear = {}; },
+  // 3 -> 4: 공유 보상 필드. 이미 하던 사람은 '처음 들어온 친구'가 아니라서 초대 링크(?ref=)를 받지 않는다(refChecked)
+  mem => {
+    mem.shareDay ||= ''; mem.shared = !!(mem.shared || mem.shareDay);
+    mem.inviteCode ||= ''; mem.invitedBy ||= ''; mem.inviteClaimed = !!mem.inviteClaimed;
+    mem.refChecked = !!(mem.refChecked || mem.cleared > 0 || mem.stats?.runs > 0);
+    mem.inviteRewards |= 0; mem.inviteTotal |= 0; mem.invitePending |= 0; mem.inviteAck ??= null;
+  },
 ];
 export class SaveError extends Error {}
 

@@ -1,3 +1,4 @@
+import { shareBrag } from './share.js';
 import { cosmeticResultCard } from './cosmeticShop.js';
 import { cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 // 전투 위에 뜨는 창: 레벨업 3택, 스킬 상자, 웨이브 사이 상점, 일시정지, 결과
@@ -706,14 +707,9 @@ export class Overlay {
       // 광고 버튼 아래 한 줄. 강조색은 주 버튼 하나만 쓴다(주황·파랑·초록이 한 창에 다 있었다)
       const sb = button(s, W / 2 + sx, 306, sw, 24, gift ? `자랑하기 보석+${shareGem}` : '자랑하기', async () => {
         const msg = s.endless ? `무한의 탑 ${floors}층 돌파!` : `${s.isBoss ? D.BOSSES[s.ch.boss].name + ' 격파! ' : ''}${s.c + 1}-${s.s + 1} 클리어`;
-        const text = `${sv.title ? `[${sv.title}] ` : ''}${hard ? '어려움 ' : ''}${msg} 내 무기는 ${D.tierName(sv.tier, s.wtype)} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
-        let ok = false;
-        try {
-          if (navigator.share) { await navigator.share({ title: '강화 서바이버', text, url }); ok = true; }
-          else { await navigator.clipboard.writeText(`${text} ${url}`); ok = true; toast(s, '링크를 복사했다 · 친구에게 붙여 넣자', '#9ae0ff'); }
-        } catch { /* 공유 창을 닫았다 */ }
-        s.log('share', { ok, boss: !!s.isBoss, endless: !!s.endless });
-        if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += sv.shared ? D.SHARE_GEM : D.SHARE_GEM_FIRST; sv.shared = true; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
+        const text = `${sv.title ? `[${sv.title}] ` : ''}${hard ? '어려움 ' : ''}${msg} 내 무기는 ${D.tierName(sv.tier, s.wtype)} +${sv.enh} · 강화 서바이버`;
+        const r = await shareBrag(s, text, s.endless ? 'endless' : s.isBoss ? 'boss' : 'clear');   // 공유 로직은 share.js
+        if (r.gem && sb.scene) sb.label.setText('보석 받음!');
       }, { size: 10, color: 0x3a3846 });
       c.add(sb);
     }

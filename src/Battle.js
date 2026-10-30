@@ -1,7 +1,7 @@
 // 전투: 웨이브 생존, 자동 공격 스킬, 레벨업 3택, 웨이브 사이 상점, 궁극기, 보스
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
-import { sfx, playBgm, stopBgm } from './sfx.js';
+import { sfx, playBgm, stopBgm, buzz } from './sfx.js';
 import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx, setBackdrop, clearBackdrop } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
@@ -599,7 +599,9 @@ export class Battle extends Phaser.Scene {
     const { dmg, crit } = this.dmgCalc(mult, tag);
     const open = m.isBoss && m.expose > this.bt;   // 46차: 보스 페이즈 전환 뒤 짧게 약점이 드러난다 — 이때 맞으면 추가 피해
     if (open && this.bt - (this.weakAt || -1e9) > 260) { this.weakAt = this.bt; sfx('weak', 120); playOnce(this, 'weakpoint_break', m.x, m.y - m.displayHeight * 0.1, { sx: Math.max(1.4, m.displayWidth * 0.45 / 48), depth: 43 }); }
-    m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (open ? D.WEAK_MUL : 1);
+    let dealt = dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (open ? D.WEAK_MUL : 1);
+    if (m.isBoss && m.shield > 0) dealt = m.bossAI.absorb(dealt, open);   // 49차: 쉴드 구간엔 약점이 열렸을 때 맞혀야 깎인다
+    m.hp -= dealt;
     if (open && this.bt - (m.exposeTxt || 0) > 260) {
       m.exposeTxt = this.bt;
       const wt = this.add.text(m.x + RF(-14, 14), m.y - m.displayHeight * 0.35, '약점!', font(10, '#ffe060', 3)).setOrigin(0.5).setDepth(39);
@@ -686,12 +688,16 @@ export class Battle extends Phaser.Scene {
     // 같은 몹을 0.4초 안에 또 때리면 새로 띄우지 않고 합산해 한 숫자로 보여 준다
     // 왼쪽 위 스킬 아이콘 줄(HUD) 밑에 깔려 겹쳐 보이는 숫자는 띄우지 않는다
     const vr = viewRect(this);
+    // 49차: 숫자 크기는 '큰 한방'(치명타이거나 최근 평균의 2.5배 이상)만 크게, 나머지는 작고 옅게 — 590만·165만이 같은 크기로 겹쳐 떴다
+    this.popRef = this.popRef ? this.popRef * 0.95 + n * 0.05 : n;
+    this.popN = (this.popN || 0) + 1;
+    const major = crit || (this.popN > 12 && n >= this.popRef * 2.5);
     // 44차: 상단 HUD 줄(82px) 안쪽엔 폭 전체에 띄우지 않는다('만' 글자가 '남은 1:16'에 걸렸다)
     if (y - vr.y < 82) return;
     const pp = m && m._pop;
     if (pp && pp.t.active && pp.t.pop === pp && this.bt - pp.at < 650) {   // 45차: 같은 몹 합산 창 0.4→0.65초
       pp.n += n; pp.at = this.bt; pp.crit = pp.crit || crit;
-      pp.t.setText(fmt(pp.n)).setAlpha(1).setScale(1.25);
+      pp.t.setText(fmt(pp.n)).setAlpha(pp.major || pp.crit ? 1 : 0.6).setScale(pp.major || pp.crit ? 1.25 : 1.1);
       if (pp.crit) pp.t.setColor('#ffd23f');
       this.tweens.add({ targets: pp.t, scale: 1, duration: 90 });
       return;
@@ -700,11 +706,12 @@ export class Battle extends Phaser.Scene {
     const pl = this.popLast;
     if (pl && pl.t.active && pl.t.pop === pl && this.bt - pl.at < 300 && Math.hypot(pl.t.x - x, pl.t.y - y) < 64) {
       pl.n += n; pl.at = this.bt; pl.crit = pl.crit || crit;
-      pl.t.setText(fmt(pl.n)).setAlpha(1).setScale(1.2); if (pl.crit) pl.t.setColor('#ffd23f');
+      pl.t.setText(fmt(pl.n)).setAlpha(pl.major || pl.crit ? 1 : 0.6).setScale(pl.major || pl.crit ? 1.2 : 1.1); if (pl.crit) pl.t.setColor('#ffd23f');
       this.tweens.add({ targets: pl.t, scale: 1, duration: 90 });
       return;
     }
-    if (!crit && n < 100 && Math.random() > 0.25) return;   // 일반 타격도 네 번에 한 번은 보여 강화 차이가 숫자로 보인다
+    if (!major && Math.random() > 0.3) return;   // 작은 숫자는 세 번에 한 번만, 다른 숫자 곁에선 접는다
+    if (!major && this.popups.some(o => o.active && Math.abs(o.x - x) < 44 && Math.abs(o.y - y) < 16)) return;
     // 45차: 동시 4개 상한, 새 숫자는 0.12초에 하나씩만(치명타는 예외)
     if (!crit && this.bt - (this.popAt || -1e9) < 120) return;
     this.popAt = this.bt;
@@ -719,13 +726,14 @@ export class Battle extends Phaser.Scene {
     // 46차: 큰 숫자가 주인공을 가렸다 — 주인공 반경(34px) 안에서 뜨는 숫자는 머리 위로 밀어 올린다
     { const hh = this.hero, hr = 34; if (Math.hypot(x - hh.x, y - hh.y) < hr) y = hh.y - hr - 6 - Math.abs(x - hh.x) * 0.1; }
     if (y - vr.y < 82) return;
-    const st =font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2);
+    const st = font(crit ? 14 : major ? 12 : 8, crit ? '#ffd23f' : major ? '#ffffff' : '#c9d2de', crit ? 3 : major ? 2 : 1);
     let t = this.popFree.pop();
-    if (t) t.setActive(true).setVisible(true).setAlpha(1).setStyle(st).setText(fmt(n)).setPosition(x + R(-6, 6), y).setScale(crit ? 1.6 : 1.3);
-    else t = this.add.text(x + R(-6, 6), y, fmt(n), st).setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
+    const a0 = major ? 1 : 0.55, s0 = crit ? 1.6 : major ? 1.3 : 1;
+    if (t) t.setActive(true).setVisible(true).setAlpha(a0).setStyle(st).setText(fmt(n)).setPosition(x + R(-6, 6), y).setScale(s0);
+    else t = this.add.text(x + R(-6, 6), y, fmt(n), st).setOrigin(0.5).setDepth(40).setAlpha(a0).setScale(s0);
     this.popups.push(t);
     t.pop = null;
-    t.pop = this.popLast = { t, n, at: this.bt, crit };
+    t.pop = this.popLast = { t, n, at: this.bt, crit, major };
     if (m) m._pop = t.pop;
     this.tweens.add({ targets: t, scale: 1, duration: 110, ease: 'Back.Out' });
     this.tweens.add({
@@ -996,8 +1004,8 @@ export class Battle extends Phaser.Scene {
       r.xp -= D.xpNeed(r.lv); r.lv++;
       this.log('level_up', { wave: this.wave });
       this.lvTxt.setText('Lv ' + r.lv);
-      // 6레벨부터는 홀수 레벨(7·9·11…)을 카드 없이 자동 소강화로 넘긴다: 레벨업 창이 150초에 20번씩 뜨던 것을 절반으로(48차). 성장 레벨 수는 같다. 진화가 열렸으면 창을 연다
-      if (r.lv >= 6 && r.lv % 2 === 1 && !this.ui.evoReady()) this.ui.autoLevel();
+      // 3~5레벨과 7레벨부터 홀수 레벨(7·9·11…)을 카드 없이 자동 소강화로 넘긴다: 한 판 카드 창을 4~5번으로(49차, 80초에 7번 떴다). 2레벨 카드로 첫 스킬을 먼저 고른다. 성장 레벨 수는 같다. 진화가 열렸으면 창을 연다
+      if (((r.lv >= 3 && r.lv <= 5) || (r.lv >= 7 && r.lv % 2 === 1)) && !this.ui.evoReady()) this.ui.autoLevel();
       else this.ui.levelUp();
     }
   }
@@ -1018,7 +1026,7 @@ export class Battle extends Phaser.Scene {
     this.hurtFx.setAlpha(0.3); this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 240 });
     this.cameras.main.shake(90, 0.004);
     // 폰에서는 짧게 떨어 맞은 걸 손으로도 느끼게 한다(38차: 위험이 안 느껴졌다)
-    try { navigator.vibrate?.(30); } catch (e) {}
+    buzz(30);
     this.hero.setTint(0xff7070); this.time.delayedCall(90, () => this.hero.clearTint());
     this.hurtUntil = this.bt + 160; this.hero.play('hurtPose');
     const t = this.add.text(this.hero.x, this.hero.y - 26, '-' + d, font(10, '#ff5050')).setOrigin(0.5).setDepth(40);

@@ -1,5 +1,5 @@
 // 효과음: 파일 없이 WebAudio로 합성한다. 같은 소리가 한 프레임에 몰리면 묶어서 한 번만 낸다
-let ctx = null, master = null, on = true;
+let ctx = null, master = null, on = true, musicOn = true, vibOn = true;
 const last = {};
 
 function ac() {
@@ -17,7 +17,10 @@ const wake = () => { if (ctx && ctx.state !== 'running') ctx.resume().catch(() =
 document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
 window.addEventListener('pageshow', wake);
 ['touchend', 'pointerup', 'keydown'].forEach(e => document.addEventListener(e, wake, true));
-export const setSound = v => { on = v; if (!v) stopBgm(); };
+// 49차: 효과음·음악·진동을 따로 끈다(설정 창). 위쪽 ♪ 버튼은 셋 중 소리 둘을 함께 켜고 끈다
+export const setSound = v => { on = v; };
+export const setMusic = v => { musicOn = v; if (!v) stopBgm(); };
+export const setVib = v => { vibOn = v; };
 export const unlock = () => ac();
 
 let noiseBuf = null;
@@ -76,7 +79,7 @@ const SOUNDS = {
 };
 
 export function sfx(name, gap = 40, p) {
-  if (!on) return;
+  if (!on) { if (BUZZ[name]) buzz(BUZZ[name]); return; }   // 효과음을 꺼도 진동은 따로 켜 둘 수 있다
   const c = ac(); if (!c) return;
   const now = performance.now();
   if (now - (last[name] || 0) < gap) return;
@@ -91,7 +94,7 @@ const BUZZ = { crit: 12, hurt: 25, boom: 30, success: 40, shatter: 120, bossIn: 
 let lastBuzz = 0;
 export function buzz(ms) {
   const now = performance.now();
-  if (!on || now - lastBuzz < 90) return;
+  if (!vibOn || now - lastBuzz < 90) return;
   lastBuzz = now;
   try { window.forgePlatform?.haptic ? window.forgePlatform.haptic(ms) : navigator.vibrate?.(ms); } catch { /* 지원 안 하면 무시 */ }
 }
@@ -104,7 +107,7 @@ const ROOT = [110, 98, 116.5, 92.5, 82.4];   // 장별 으뜸음(Hz)
 let bgm = null;
 export function playBgm(kind, chapter = 0) {
   // 첫 터치 전에는 오디오를 만들지 않는다(브라우저 자동재생 제한)
-  if (!on || !ctx) return;
+  if (!musicOn || !ctx) return;
   const c = ac(); if (!c) return;
   if (bgm && bgm.kind === kind && bgm.ch === chapter) return;
   stopBgm();

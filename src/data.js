@@ -191,8 +191,8 @@ export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * Math.min(en
 export const ENH_RATE = [100, 95, 85, 75, 70, 65, 60, 55, 50, 45, 45, 40, 36, 32, 28, 22, 18, 15, 12, 10];
 export const ENH_MAX = 20;
 // 결과 창 자랑하기: 하루 한 번 보석
-// 처음 한 번 자랑은 크게(30) 줘서 공유를 한 번은 해 보게 한다(39차: 공유 루프가 약하다)
-export const SHARE_GEM_FIRST = 30;
+// 처음 한 번 자랑은 조금 더(10) 주되 광고 한 번(보석 20)보다 작게(공유 보상 10/30)
+export const SHARE_GEM_FIRST = 10;   // 광고 한 번(보석 20)보다 작게
 export const SHARE_GEM = 5, SHARE_URL = 'https://kangraemin.github.io/forge-survivor-play/';
 // 천장: +15부터 실패할 때마다 다음 확률 +3%(성공하면 0으로). +19→+20(10%)에 운이 없으면 끝없이 갈렸다
 export const PITY_FROM = 15, PITY_STEP = 3;
@@ -231,6 +231,9 @@ export const FAIL_STONE_RATE = 0.5;                        // 져도 강화석�
 export const IDLE = { minMin: 30, capH: 8, perH: 0.5, bonusH: 12, bonusGem: 10 };   // 12시간 넘게 비웠으면 보석도 조금
 export const FREE_REVIVE_RUNS = 3;   // 처음 세 판은 부활이 공짜(첫 판부터 광고를 들이밀지 않는다)
 // 보스가 이 시간(ms) 넘게 버티면 지쳐서 받는 피해가 늘어난다(보스전이 늘어지지 않게)
+// 49차: 장 마지막 보스는 권장 전투력 105%에서 40~60초 걸리게 한다(15장은 15초에 죽었다). hp: 체력 배수, sh: 페이즈 1·2에서 생기는 쉴드(체력 대비 비율, 쉴드 구간엔 약점이 열렸을 때 맞혀야만 깎인다)
+// 1장 보스는 지금 길이(약 55초)를 유지한다
+export const BOSS_TUNE = c => c < 1 ? { hp: 1, sh: [0, 0] } : { hp: +(1 + 0.27 * (c - 1)).toFixed(2), sh: [0.4, 0.4] };   // 장이 깊을수록 체력 배수를 키운다(후반 장은 권장 전투력 대비 훨씬 빨리 잡혔다)
 export const BOSS_TIRED = { ms: 75000, mul: 1.5 };
 export const FAIL_GOLD_RATE = 0.5;                         // 실패해도 버틴 시간 비율 × 클리어 금화의 50%를 준다
 // 은화는 판이 끝나면 사라진다(아껴 두지 말고 상점에서 바로 쓰게)
@@ -275,7 +278,8 @@ export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) 
 export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 46 };
 // 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 40% 줄여 한 판 안에 진화까지 닿게 한다
 // 2레벨은 바로, 3~5레벨은 고르게(17차 150초에 Lv5, 18차 20초에 카드 4연타, 19차 20초에 3장 뒤 30초 공백)
-const XP_EARLY = [0, 3, 10, 18, 28, 40];   // 첫 판 80초에 Lv3이라 무기가 늦게 붙었다(40차)
+// 49차: 첫 카드는 8~12초(2초에 뜨던 것을 늦춤). 2레벨 필요량을 늘렸다
+const XP_EARLY = [0, 26, 10, 18, 28, 40];
 export const xpNeed = lv => lv <= 5 ? XP_EARLY[lv] : Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6));
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
@@ -363,14 +367,16 @@ export const IAP = [
   // 48차 가격 사다리: 2,900·9,900·19,900원. 보석 10원/개 기준에 큰 묶음일수록 덤이 커진다(+7% → +10% → +16% → +17% → +18%)
   { id: 'gem1b', name: '보석 한 자루', price: 2900, tag: '+7%', give: { gem: 310 } },
   { id: 'gem2', name: '보석 주머니', price: 5900, tag: '인기 · +10%', give: { gem: 650 } },
-  { id: 'gem2b', name: '보석 큰 주머니', price: 9900, tag: '+16%', give: { gem: 1150 } },
+  // 49차: 9,900원 보석은 12,000원과 겹쳐 판매 중지(stop). 이미 콘솔에 등록된 ID라 지우지 않고 남긴다(기존 구매·미결 주문 복구용). 9,900원 자리는 특가 칸 중간 꾸러미(mid1)가 쓴다
+  { id: 'gem2b', name: '보석 큰 주머니', price: 9900, stop: true, tag: '+16%', give: { gem: 1150 } },
   { id: 'gem3', name: '보석 상자', price: 12000, tag: '+17%', give: { gem: 1400 } },
-  { id: 'gem4', name: '보석 큰 상자', price: 19900, tag: '+18% · 가장 알뜰', give: { gem: 2350 } },
+  { id: 'gem4', name: '보석 큰 상자', price: 19900, tag: '+18% · 알뜰', give: { gem: 2350 } },
 ];
 // 보석 묶음은 처음 살 때 보석 2배(특가·성장 꾸러미·큰 꾸러미는 해당 없음)
 export const FIRST_BUY_X2 = ['gem1', 'gem1b', 'gem2', 'gem2b', 'gem3', 'gem4'];
 // 패키지 탭 구분(48차): 보석 묶음 / 꾸러미 / 정기
-export const PACK_GROUPS = { gem: ['gem1', 'gem1b', 'gem2', 'gem2b', 'gem3', 'gem4'], bundle: ['starter', 'cosm', 'noads'], sub: ['pass'] };
+// 49차: 보석 가격 사다리 1,200 / 2,900 / 5,900 / 12,000 / 19,900 (덤 0 → 7 → 10 → 17 → 18%로 가격 따라 늘어난다)
+export const PACK_GROUPS = { gem: ['gem1', 'gem1b', 'gem2', 'gem3', 'gem4'], bundle: ['starter', 'cosm', 'noads'], sub: ['pass'] };
 
 // ── 한정 판매(상점 '특가' 칸) ──
 // 오늘의 특가: 하루 한 번 아래 꾸러미 하나를 무작위 할인율로 판다. 기기 시간 자정에 바뀐다
@@ -391,6 +397,8 @@ export const GROW = { ms: 24 * 3600000, price: [2900, 3900, 4900, 5900, 6900, 69
 export const growGive = c => { const t = Math.min(c + 1, TIERS.length - 1); return { stone: 2 * (30 + 10 * t), guard: 3 + c, goldStage: 4 }; };
 // 큰 꾸러미: 달마다 한 번(보석 상자보다 보석당 값이 싸고 방지권·부적이 붙는다)
 export const BIG_PACKS = [
+  // 49차: 특가 칸 중간 꾸러미. 4,900~9,900원 사이가 비어 있었다(9,900원 보석 판매 중지 자리)
+  { id: 'mid1', name: '대장장이 정예 꾸러미', price: 9900, month: true, tag: '달마다 1번 · 보석 +11%', desc: '보석 1,100 · 방지권 6 · 행운 부적 3 · 강화석 150', give: { gem: 1100, guard: 6, charm: 3, stone: 150 } },
   { id: 'big1', name: '대장장이 금고', price: 33000, month: true, tag: '달마다 1번 · 보석 +20%', desc: '보석 4,000 · 방지권 10 · 행운 부적 5 · 강화석 300', give: { gem: 4000, guard: 10, charm: 5, stone: 300 } },
   { id: 'big2', name: '전설의 대장간', price: 55000, month: true, tag: '달마다 1번 · 보석 +27% · 칼빛 덤', desc: '보석 7,000 · 방지권 20 · 행운 부적 10 · 강화석 600', give: { gem: 7000, guard: 20, charm: 10, stone: 600, skin: 'void' } },
 ];

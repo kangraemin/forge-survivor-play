@@ -1,10 +1,11 @@
 import { cosmeticPage } from './cosmeticShop.js';
 import { openSettings } from './settingsPanel.js';
-import { cosmetic } from './cosmetics.js';
+import { shareBrag, braggable, bragGem, lobbyShareTick } from './share.js';
+import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmetics.js';
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
-import { sfx, setSound, unlock, playBgm } from './sfx.js';
+import { sfx, setSound, setMusic, setVib, unlock, playBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, adsDaily, won, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
 import { track, logUser } from './log.js';
@@ -39,7 +40,7 @@ export class Lobby extends Phaser.Scene {
     this.anims.resumeAll(); this.anims.globalTimeScale = 1;
     this.sv = load();
     const sv = this.sv;
-    setSound(sv.sound);
+    setSound(sv.sound); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);
     this.input.once('pointerdown', () => { unlock(); playBgm('lobby'); });
     playBgm('lobby');
     // 1-1을 처음 깨고 오면 대장간으로 안내한다
@@ -56,8 +57,8 @@ export class Lobby extends Phaser.Scene {
     // 세로로 긴 폰(390x844)에서 판 위아래 남는 검은 띠를 전투 화면처럼 바닥 무늬로 채운다(44차)
     setBackdrop(this, 'tiles', 0x6a5a82);
     this.bg = this.add.container(0, 0);
-    // 세로로 더 긴 폰(H>480)은 탭 본문을 남는 높이의 절반만큼 내려 위아래 여백을 고르게 한다(48차)
-    this.body = this.add.container(0, Math.round((H - 480) * 0.5));
+    // 49차: 세로로 더 긴 폰(H>480)도 본문은 위에서부터 채운다. 남는 높이에는 시즌·오늘의 판매 배너를 둔다(banner)
+    this.body = this.add.container(0, 0);
     this.makeTop();
     this.makeTabs();
     logUser({ cleared: sv.cleared, tier: sv.tier, enh: sv.enh, payer: !!sv.paidTotal, paid_total: sv.paidTotal || 0, no_ads: !!sv.noAds, pass: sv.passLeft > 0 });
@@ -317,11 +318,12 @@ export class Lobby extends Phaser.Scene {
     }
     // 소리 켜고 끄기
     const snd = this.add.text(212, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(0.5).setDepth(51);
-    this.add.rectangle(212, 22, 30, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { sv.sound = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
+    this.add.rectangle(212, 22, 30, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { sv.sound = !sv.sound; sv.musicOff = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); setMusic(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
     // 설정(저장 내보내기·가져오기, 구매 복원, 이펙트 간단히): 톱니 아이콘, 누르는 칸 44px
     this.add.image(248, 17, 'gear').setDepth(51);
     this.add.rectangle(248, 22, 44, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); openSettings(this); });
     this.refreshTop();
+    lobbyShareTick(this).catch(() => {});   // 친구 초대 보상 확인(서버가 죽었으면 조용히 넘어간다)
   }
   refreshTop() { this.topTxt.forEach(t => t.setText(t.get())); this.bellDot?.setVisible(this.missionReady() > 0); this.bellHint?.setText(this.bellText()); }
   // 받을 것이 하나뿐이면 이름, 여럿이면 개수. 없으면 빈 글
@@ -359,17 +361,42 @@ export class Lobby extends Phaser.Scene {
   show(id) {
     if (id !== this.lastTab) { track('tab_view', { tab: id, page: id === 'shop' ? this.shopPage : undefined }); this.lastTab = id; }
     if (id === 'train') { this.gearPage = 'train'; id = 'gear'; }
+    if (id !== 'forge') this.clearBrag();
     this.tab = id; this.ticks = [];
     this.tabBtns.forEach(b => { b.hl.setVisible(b.id === id); b.lb.setColor(b.id === id ? '#ffb85c' : '#a1b2b6'); });
     // 탭 안 오브젝트의 트윈만 끊는다(토스트·결과 글씨·날아가는 동전은 끝까지 돈다)
     const kill = o => { this.tweens.killTweensOf(o); o.list?.forEach(kill); };
     [this.body, this.bg].forEach(kill);
     this.body.removeAll(true); this.bg.removeAll(true);
+    this.banner(id);
     if (id === 'battle') this.battleTab();
     if (id === 'forge') this.forgeTab();
     if (id === 'gear') this.gearTab();
     if (id === 'shop') this.shopTab();
     this.body.setAlpha(0); this.tweens.add({ targets: this.body, alpha: 1, duration: 150 });
+  }
+
+  // 49차: 가변 높이 화면(H>480)에서 남는 높이를 채우는 배너. 상점은 위(본문을 아래로 민다), 나머지 탭은 본문 아래 탭바 위
+  // 왼쪽 '겨울 꾸미기'(행사 기간만), 오른쪽 '오늘의 판매'. 높이가 모자라면(480) 아예 만들지 않는다
+  banner(id) {
+    this.bn?.destroy(); this.bn = null; this.body.y = 0;
+    const extra = H - 480, sv = this.sv, top = id === 'shop';
+    const bh = Math.min(top ? extra - 4 : extra - 10, 50);
+    if (bh < 34 || sv.cleared < 1) return;
+    const y0 = top ? 38 : 436, ts = todaySale(), win = available({ winter: true });
+    if (top) this.body.y = bh + 4;
+    const c = this.bn = this.add.container(0, y0).setDepth(10);
+    const goSkin = (tab, sel) => { sfx('click'); this.shopPage = 'skin'; this.skinTab = tab; if (sel) { this.cosSelected = this.cosSelected || {}; this.cosSelected[ts.kind] = sel; } track('banner_tap', { to: tab }); this.show('shop'); };
+    const card = (x, w, line, title, tc, sub, fn) => {
+      c.add(panel(this, x, 0, w, bh, { fill: 0x141b27, line }));
+      c.add(this.add.text(x + 8, 6, title, font(11, tc)));
+      c.add(this.add.text(x + 8, 21, sub, { ...font9(10, '#a1b2b6'), wordWrap: { width: w - 16 } }).setLineSpacing(2));
+      c.add(this.add.text(x + w - 8, bh - 6, '보러 가기 ▶', font9(9, '#7d8f94')).setOrigin(1, 1));
+      c.add(this.add.rectangle(x, 0, w, bh, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy) fn(); }));
+    };
+    const half = (W - 24 - 6) / 2;
+    card(12, half, win ? 0x7ad0ff : COLOR.line, win ? '겨울 꾸미기' : '꾸미기 상점', win ? '#9ae0ff' : '#ffffff', win ? `${winterItems().length}종 · 12월 31일까지` : '머리·무기·캐릭터', () => goSkin(win ? 'winter' : 'character'));
+    card(12 + half + 6, half, 0xff9ad0, '오늘의 판매', '#ff9ad0', `${ts.name} ${SALE_OFF}% 할인`, () => goSkin(ts.kind, ts.id));
   }
 
   // ── 전투 탭 ──
@@ -713,6 +740,20 @@ export class Lobby extends Phaser.Scene {
     }
   }
 
+  // +10 이상 강화 성공 순간의 자랑하기(테두리 버튼). 다음 강화·탭 이동·8초 뒤에 사라진다
+  clearBrag() { this.bragB?.destroy(); this.bragB = null; this.bragT?.remove(); }
+  bragEnh(lv) {
+    this.clearBrag();
+    const sv = this.sv;
+    const b = this.bragB = button(this, W / 2, 224, 132, 22, braggable() ? `자랑하기 보석+${bragGem()}` : '자랑하기', async () => {
+      b.setEnabled(false);
+      const r = await shareBrag(this, `${sv.title ? `[${sv.title}] ` : ''}${D.tierName(sv.tier, wtypeOf(sv))} +${lv} 강화 성공! · 강화 서바이버`, 'enh');
+      if (!this.scene.isActive()) return;
+      if (r.gem) { b.label.setText('보석 받음!'); this.refreshTop(); } else b.setEnabled(true);
+    }, { size: 10, color: 0x3a3846 }).setDepth(60);
+    this.bragT = this.time.delayedCall(8000, () => this.clearBrag());
+  }
+
   // 대장장이 앞치마를 끼면 강화 성공 +5%p
   apron() { return gearStats(this.sv).fx.has('apron') ? 5 : 0; }
 
@@ -728,6 +769,7 @@ export class Lobby extends Phaser.Scene {
       sfx('deny'); toast(this, sv.sweep > 0 ? '전투 탭에서 소탕으로 벌자' : '전투 탭에서 금화·강화석을 벌자', '#ffd75e', 372);
       return;
     }
+    this.clearBrag();
     this.busy = true;
     sv.gold -= gold; sv.stone -= stone;
     const danger = enh >= D.DESTROY_FROM, guard = danger && this.useGuard && sv.guard > 0;
@@ -782,6 +824,7 @@ export class Lobby extends Phaser.Scene {
       const awake = (from + 1) % D.ENH_MILESTONE === 0;
       const an = D.AWAKENINGS.find(x => x[0] === from + 1);
       this.flashText(awake ? `칼이 각성했다!  +${from + 1}${an ? ` ${an[1]}` : ''}` : `강화 성공!  +${from + 1}`, '#ffd75e');
+      if (from + 1 >= 10) this.bragEnh(from + 1);   // +10 이상 성공: 자랑하기
       // +8부터와 각성(+5 단위)은 화면을 번쩍이고 오른 공격력을 크게 띄운다
       if (from + 1 >= 8 || awake) {
         const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));
@@ -1017,14 +1060,14 @@ export class Lobby extends Phaser.Scene {
   dealPage() {
     const sv = this.sv, b = this.body, deal = todayDeal(sv), grow = growOffer(sv);
     const after = it => { this.refreshTop(); this.bump(4); toast(this, `${it.name} 구매 완료!`, '#ffd75e'); this.show('shop'); };
-    const buyBtn = (x, y, it, sold) => {
+    const buyBtn = (x, y, it, sold, ghost = true) => {   // 한 화면에 채운 주황은 오늘의 특가 하나만(49차)
       const bt = button(this, x, y, 64, 26, sold ? '구매함' : won(it.price), async () => {
         if (this.busy || sold) return;
         this.busy = true;
         const ok = await buy(this, sv, it);
         this.busy = false;
         if (ok && this.scene.isActive()) after(it);
-      }, { size: 10, color: 0x2f6b3a });
+      }, { size: 10, color: 0x2f6b3a, ghost });
       bt.setEnabled(!sold); b.add(bt);
     };
     // 줄바꿈이 '금화 / 1,580'처럼 항목 안에서 끊기지 않게 항목 안 띄어쓰기는 붙인다
@@ -1039,13 +1082,13 @@ export class Lobby extends Phaser.Scene {
     b.add(this.add.rectangle(42, 131, 48, 48, 0x8a2f3a).setStrokeStyle(1, 0xff9a8a));
     b.add(this.add.text(42, 124, `-${deal.off}%`, font(13, '#ffffff')).setOrigin(0.5));
     b.add(this.add.text(42, 140, '할인', font9(10, '#ffd0d0')).setOrigin(0.5));
-    b.add(this.add.text(76, 98, deal.name, font(12, '#ffffff')));
+    const dn = this.add.text(76, 98, deal.name, font(12, '#ffffff')); b.add(dn);
+    b.add(this.add.text(76 + dn.width + 6, 101, '하루 1번', font9(10, '#ff9ad0')));   // 49차: 가격 버튼에 가려지던 문구를 이름 줄로
     b.add(this.add.text(76, 116, nb(giveText(deal.give, sv)), { ...font9(10, '#f2e4bc'), wordWrap: { width: W - 100 } }));
     // 46차: 원가는 보석 상점에서 실제로 파는 구성품 합계(상시 판매가)가 있을 때만 긋는다
     const was = deal.base ? this.add.text(76, 150, `상시가 ${won(deal.base)}`, font9(10, '#a1b2b6')) : null;
     if (was) { b.add(was); b.add(this.add.rectangle(76, 157, was.width, 1, 0xa1b2b6).setOrigin(0, 0.5)); }
-    b.add(this.add.text(was ? 82 + was.width : 76, 150, '하루 1번', font9(10, '#ff9ad0')));
-    buyBtn(W - 52, 154, deal, deal.got);
+    buyBtn(W - 52, 154, deal, deal.got, false);
     // 성장 꾸러미
     b.add(this.add.text(16, 180, '성장 꾸러미', font(12, '#9ae0ff')));
     if (grow) {
@@ -1074,16 +1117,16 @@ export class Lobby extends Phaser.Scene {
       buyBtn(W - 52, 313, st, sold);
       return;
     }
-    b.add(this.add.text(16, 262, '큰 꾸러미', font(12, '#ffb050')));
-    b.add(this.add.text(W - 16, 265, '보석 첫 구매 2배와 따로', font9(9, '#7d8f94')).setOrigin(1, 0));
+    b.add(this.add.text(16, 254, '큰 꾸러미', font(12, '#ffb050')));
+    b.add(this.add.text(W - 16, 257, '보석 첫 구매 2배와 따로', font9(9, '#7d8f94')).setOrigin(1, 0));
     D.BIG_PACKS.forEach((it, i) => {
-      const y = 280 + i * 70, sold = soldOut(sv, it);
-      b.add(panel(this, 12, y, W - 24, 66, { line: sold ? COLOR.line : 0xffb050 }));
-      b.add(gemIcon(this, 30, y + 33, 18));
-      b.add(this.add.text(46, y + 4, it.name, font(11, '#ffb050')));
-      const dt = this.add.text(46, y + 19, nb(it.desc), { ...font9(9, '#f2e4bc'), wordWrap: { width: W - 136 } }); b.add(dt);
-      b.add(this.add.text(46, y + 21 + dt.height, sold ? '이번 달은 샀다' : it.tag, font9(9, '#ff9ad0')));
-      buyBtn(W - 52, y + 33, it, sold);
+      const y = 270 + i * 54, sold = soldOut(sv, it);   // 49차: 꾸러미가 셋으로 늘어 한 칸을 50으로 줄인다
+      b.add(panel(this, 12, y, W - 24, 50, { line: sold ? COLOR.line : 0xffb050 }));
+      b.add(gemIcon(this, 30, y + 25, 16));
+      b.add(this.add.text(46, y + 1, it.name, font(10, '#ffb050')));
+      const dt = this.add.text(46, y + 14, nb(it.desc), { ...font9(9, '#f2e4bc'), wordWrap: { width: W - 136 } }); b.add(dt);
+      b.add(this.add.text(46, y + 15 + dt.height, sold ? '이번 달은 샀다' : it.tag, font9(9, '#ff9ad0')));
+      buyBtn(W - 52, y + 25, it, sold);
     });
   }
 
@@ -1138,7 +1181,7 @@ export class Lobby extends Phaser.Scene {
           sv.ads[k] = (sv.ads[k] || 0) + 1; grant(sv, ad.give);
           track('ad_reward', { kind: k, n: sv.ads[k] });
           after(`${ad.name} 받았다`);
-        }, { size: 10, color: 0x2f6b3a });
+        }, { size: 10, color: 0x2f6b3a, ghost: i > 0 });   // 49차: 광고 버튼은 첫 줄만 채운 주황, 나머지는 테두리형
         bt.setEnabled(left > 0); b.add(bt);
       });
       const info = [`매일 접속하면 보석 +${D.GEM_FREE.daily}`, `스테이지 첫 클리어 보석 +${D.GEM_FREE.stageFirst} · 보스 +${D.GEM_FREE.bossFirst}`];
@@ -1151,7 +1194,10 @@ export class Lobby extends Phaser.Scene {
     // 48차: 패키지를 보석 / 꾸러미 / 정기로 나눈다
     const grp = this.packSub && D.PACK_GROUPS[this.packSub] ? this.packSub : 'gem';
     [['gem', '보석'], ['bundle', '꾸러미'], ['sub', '정기']].forEach(([id, name], i) => b.add(button(this, 52 + i * 83, 86, 78, 22, name, () => { this.packSub = id; track('pack_sub', { sub: id }); this.show('shop'); }, { size: 10, color: grp === id ? 0x7a5a1a : 0x2a2440 })));
-    D.PACK_GROUPS[grp].map(id => D.IAP.find(x => x.id === id)).filter(Boolean).forEach((it, i) => {
+    const list = D.PACK_GROUPS[grp].map(id => D.IAP.find(x => x.id === id)).filter(Boolean);
+    // 49차: 한 화면에 채운 주황 버튼은 하나만. 보석은 gem2, 꾸러미는 안 산 첫 항목, 정기는 월정액이 추천이고 나머지는 테두리형
+    const main = grp === 'gem' ? 'gem2' : (list.find(x => !soldOut(sv, x)) || list[0] || {}).id;
+    list.forEach((it, i) => {
       const y = 100 + i * 50, sold = soldOut(sv, it);
       const hot = it.id === 'starter' || it.id === 'pass' || it.id === 'cosm';
       b.add(panel(this, 12, y, W - 24, 46, { line: hot && !sold ? 0xffd75e : COLOR.line }));
@@ -1166,7 +1212,7 @@ export class Lobby extends Phaser.Scene {
         const ok = await buy(this, sv, it);
         this.busy = false;
         if (ok && this.scene.isActive()) after(`${it.name} 구매 완료!`);
-      }, { size: 9, color: 0x2f6b3a });
+      }, { size: 9, color: 0x2f6b3a, ghost: it.id !== main });
       bt.setEnabled(!sold); b.add(bt);
     });
   }

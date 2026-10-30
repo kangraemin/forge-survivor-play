@@ -40,22 +40,24 @@ export function panel(scene, x, y, w, h, { fill = COLOR.panel, line = COLOR.line
 // 색은 셋만 쓴다: 주 행동 초록 0x2f6b3a, 위험(분해·포기·초기화) 빨강 0x8a2f3a, 그 밖은 기본 회색 0x3a3846
 // 그리는 색은 디자인 인계 토큰으로 바꿔 칠한다: 주 행동 = 불빛 주황(ink 글자), 기본 = iron 면 + line 테두리
 const BTN_FILL = { 0x2f6b3a: 0xffb85c, 0x3a3846: 0x293845 };
-export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size = 12, textColor = '#ffffff', onDeny } = {}) {
+// ghost: 주황 테두리만 있는 보조 버튼(한 화면에 채운 주황 버튼은 하나만, 나머지는 이 모양 — 49차)
+export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size = 12, textColor = '#ffffff', onDeny, ghost = false } = {}) {
   const c = scene.add.container(x, y);
   const g = scene.add.graphics();
   const draw = (col, down) => {
     g.clear();
     const f = BTN_FILL[col] ?? col, oy = down ? 1 : 0;
-    g.fillStyle(f, 1).fillRect(-w / 2, -h / 2 + oy, w, h);
-    g.lineStyle(1, f === 0xffb85c ? 0x111923 : 0x475c66, 1).strokeRect(-w / 2 + 0.5, -h / 2 + 0.5 + oy, w - 1, h - 1);
+    const gh = ghost && f === 0xffb85c;
+    g.fillStyle(gh ? 0x111923 : f, 1).fillRect(-w / 2, -h / 2 + oy, w, h);
+    g.lineStyle(gh ? 2 : 1, gh ? 0xffb85c : f === 0xffb85c ? 0x111923 : 0x475c66, 1).strokeRect(-w / 2 + (gh ? 1 : 0.5), -h / 2 + (gh ? 1 : 0.5) + oy, w - (gh ? 2 : 1), h - (gh ? 2 : 1));
   };
-  const primary = color === 0x2f6b3a && textColor === '#ffffff';
-  const t = scene.add.text(0, 0, label, font(size, primary ? '#111923' : textColor, primary ? 0 : 3)).setOrigin(0.5);
+  const primary = color === 0x2f6b3a && textColor === '#ffffff' && !ghost;
+  const t = scene.add.text(0, 0, label, font(size, primary ? '#111923' : ghost && textColor === '#ffffff' ? '#ffd9a0' : textColor, primary ? 0 : 3)).setOrigin(0.5);
   c.add([g, t]); c.setSize(w, h).setInteractive({ useHandCursor: true });
   c.label = t; c.enabled = true; c.col = color; c.isBtn = true;
   c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x221f2a, false); t.setAlpha(v ? 1 : 0.45); return c; };
   // 주 행동 색(주황)일 때만 글자를 진한 잉크로, 아니면 흰 글자 + 외곽선
-  const ink = col => { if (textColor !== '#ffffff') return; const p = col === 0x2f6b3a; t.setColor(p ? '#111923' : '#ffffff').setStroke('#0a0710', p ? 0 : 3); };
+  const ink = col => { if (textColor !== '#ffffff') return; const p = col === 0x2f6b3a && !ghost; t.setColor(p ? '#111923' : ghost ? '#ffd9a0' : '#ffffff').setStroke('#0a0710', p ? 0 : 3); };
   c.setColor = col => { c.col = col; ink(col); draw(col, false); return c; };
   draw(color, false);
   c.on('pointerdown', (p, lx, ly, ev) => { ev?.stopPropagation?.(); c.armed = true; draw(c.enabled ? c.col : 0x3a3a44, true); t.y = 2; });

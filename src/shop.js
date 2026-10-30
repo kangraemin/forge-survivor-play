@@ -115,6 +115,7 @@ export function applyPurchase(sv, item) {
 
 // 결제. 성공하면 상품을 지급하고 true
 function buyRaw(scene, sv, item) {
+  if (item.stop) return Promise.resolve({ ok: false, granted: false });   // 판매 중지 상품(49차)
   return new Promise(res => {
     let applied = false, granted = false;
     const apply = orderId => {

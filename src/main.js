@@ -6,8 +6,13 @@ import { PX } from './ui.js';
 import { Boot } from './Boot.js';
 import { Lobby } from './Lobby.js';
 import { Battle } from './Battle.js';
+import { load } from './save.js';
+import { captureRef, deviceId } from './share.js';
 
 const start = () => {
+  // 초대 링크(?ref=)는 첫 실행 때 한 번만 저장한다. 기기 식별값도 미리 받아 둔다(공유 버튼이 바로 열리게)
+  try { captureRef(load()); } catch { /* 저장소 문제는 게임을 막지 않는다 */ }
+  deviceId().catch(() => {});
   window.game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: 'game',

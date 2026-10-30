@@ -1,7 +1,7 @@
 // 보스: 패턴을 돌아가며 쓴다. 모든 공격은 빨간 예고 표시가 먼저 뜨고, 체력 절반 이하면 빨라진다
 import * as D from './data.js';
 import { sfx } from './sfx.js';
-import { font, toast } from './ui.js';
+import { font, toast, viewRect } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
 import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has } from './fx2.js';
 
@@ -12,15 +12,20 @@ const PHASE_LINE = ['크윽… 이 정도로!', '이제 진심이다!'];
 export class BossAI {
   constructor(s, key, hpMul, mid = false) {
     this.s = s; this.key = key; this.b = D.BOSSES[key]; this.mid = mid;
-    const p = s.spawnPoint(150, 170);
+    // 49차: 화면 안 위쪽 1/3에 나타난다(150~170px 밖에서 나와 화면 밖이라 안 보였다)
+    const vr = viewRect(s), hx = s.hero.x, hy = s.hero.y;
+    const p = { x: Phaser.Math.Clamp(hx + R(-70, 70), 40, 1600 - 40), y: Phaser.Math.Clamp(Math.max(vr.y + vr.height * 0.22, 60), 60, 1600 - 40) };
     const m = this.m = s.mobs.create(p.x, p.y, null).play(key);
     const fb = s.registry.get('fallback')[key];
-    m.setScale(fb ? 2.6 : 1).setDepth(12);
+    m.setScale(fb ? 3.0 : 1.3).setDepth(12);
+    m.preFX?.addGlow(0x000000, 2.5, 0, false, 0.1, 8);   // 49차: 짙은 외곽선으로 바닥·효과 속에서도 읽힌다
     if (fb) m.setTint(this.b.color);
     m.isBoss = true; m.bossAI = this; m.kind = key; m.kbRes = 0; m.color = this.b.color; m.hitBy = {}; m.baseTint = m.tintTopLeft;
     // 3장부터 챕터 보스는 15% 덜 단단하게: 권장의 135%로도 체력 1~16%를 남기고 졌다
     // 마지막 마왕은 할인 없이: 권장 116%에서 11초 만에 죽어 패턴·분노를 못 봤다(37차)
-    m.maxHp = m.hp = this.b.hp * hpMul * (!mid && s.c >= 2 && !s.endless && key !== 'demonlord' ? 0.85 : 1);
+    const tune = !mid && !s.endless && !s.dungeon && !s.hard && !s.practice ? D.BOSS_TUNE(s.c) : { hp: 1, sh: [0, 0] };
+    this.tune = tune;
+    m.maxHp = m.hp = this.b.hp * hpMul * tune.hp * (!mid && s.c >= 2 && !s.endless && key !== 'demonlord' ? 0.85 : 1);
     // 1장 보스는 첫 보스라 20% 덜 아프게: 권장을 넘고도 체력 26% 남기고 졌다
     m.dmg = this.b.dmg * s.mobDmgMul * (!mid && s.c === 0 && !s.endless ? 0.8 : 1);
     m.body.setSize(m.width * 0.6, m.height * 0.55).setOffset(m.width * 0.2, m.height * 0.4);
@@ -28,9 +33,17 @@ export class BossAI {
     this.shadow = s.add.image(m.x, m.y, 'shadow').setScale(m.displayWidth / 10, 2.5).setDepth(9);
     this.t = 1800; this.pi = 0; this.busy = 0; this.tele = s.add.graphics().setDepth(9);
     // 등장: 위에서 떨어져 쿵
-    m.y -= 120; m.setAlpha(0);
+    m.y -= 60; m.setAlpha(0);
     s.tweens.add({ targets: m, y: p.y, alpha: 1, duration: 500, ease: 'Quad.In', onComplete: () => this.thud(m.x, m.y, 0) });
-    if (!mid) this.makeBar();
+    if (!mid) { this.makeBar(); this.pull0 = s.bt; }   // 등장 1.5초 동안 카메라를 보스 쪽으로 살짝 끌었다 돌려놓는다
+  }
+
+  // 49차: 등장 연출 — 400ms에 걸쳐 보스 쪽으로 40% 끌고, 700ms 머물고, 400ms에 돌아온다
+  camPull() {
+    const s = this.s, t = s.bt - this.pull0, cam = s.cameras.main;
+    if (t >= 1500) { cam.setFollowOffset(D.W / 2, D.H / 2); this.pull0 = null; return; }
+    const f = 0.4 * (t < 400 ? t / 400 : t < 1100 ? 1 : (1500 - t) / 400), m = this.m;
+    cam.setFollowOffset(D.W / 2 - (m.x - s.hero.x) * f, D.H / 2 - (m.y - s.hero.y) * f);
   }
 
   makeBar() {
@@ -51,6 +64,7 @@ export class BossAI {
     const s = this.s, m = this.m;
     if (!m.active || m.dead) return;
     const h = s.hero, enraged = m.hp < m.maxHp * 0.5;
+    if (this.pull0 != null) this.camPull();
     // 오래 버티면 지친다: 받는 피해 증가(보스전이 3분 가까이 늘어졌다)
     this.age = (this.age || 0) + dt;
     if (this.bar && !this.tired && this.age > D.BOSS_TIRED.ms) {
@@ -66,6 +80,11 @@ export class BossAI {
         this.mark.setPosition(m.x, m.y - m.displayHeight * 0.1).setScale(sc);
         this.markTxt?.setPosition(m.x, m.y - m.displayHeight * 0.1 - 22 * Math.max(1, sc * 0.6)).setAlpha(0.6 + 0.4 * Math.abs(Math.sin(s.bt / 120)));
       } else { this.mark.destroy(); this.mark = null; this.markTxt?.destroy(); this.markTxt = null; this.wborder?.destroy(); this.wborder = null; }
+    }
+    if (m.shield > 0) {
+      if (s.bt >= this.shNext) { this.openWeak(2200); this.shNext = s.bt + 2200 + 2400; }
+      this.shGfx?.setPosition(m.x, m.y).setAlpha(m.expose > s.bt ? 0.35 : 1);
+      if (this.shBar) this.shBar[1].width = 200 * Math.max(0, m.shield / m.shieldMax);
     }
     if (enraged && !this.rage) {
       this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; this.aura = rageAura(s, m); phaseBorder(s, 800, 0xff4040); s.cameras.main.shake(300, 0.005); sfx('bossIn');
@@ -125,7 +144,6 @@ export class BossAI {
     const s = this.s, m = this.m;
     // 47차: 0.7초 완전 정지(보스·움직임), 화면 번쩍임, 말풍선, 약점 표식
     this.phase = i; this.busy = Math.max(this.busy, 1100); m.setVelocity(0, 0);
-    m.expose = s.bt + 4200;
     s.hitstop = Math.max(s.hitstop || 0, 700);
     s.flashFx.setAlpha(0.45); s.tweens.add({ targets: s.flashFx, alpha: 0, duration: 450 });
     phaseBorder(s, 900);
@@ -134,16 +152,62 @@ export class BossAI {
     const ring = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(30).setScale(0.4);
     s.tweens.add({ targets: ring, scale: m.displayWidth / 28 + 1.4, alpha: 0, duration: 520, onComplete: () => ring.destroy() });
     s.tweens.add({ targets: m, scaleX: m.scaleX * 1.15, scaleY: m.scaleY * 0.9, duration: 160, yoyo: true });
+    this.openWeak(4200, true);
+    const sh = this.tune.sh[i - 1] || 0;
+    if (sh > 0) this.addShield(sh);
+    s.banner(`페이즈 ${i + 1}!`, sh > 0 ? '방어막! 약점이 열릴 때 쳐서 깨라' : '약점이 드러났다 · 지금 몰아쳐라 (추가 피해)');
+    s.log?.('boss_phase', { boss: this.key, phase: i + 1, at: f });
+  }
+
+  // 약점을 ms 동안 연다: 과녁 그림 + (페이즈 전환이면) 화면 테두리와 효과음. 맞으면 추가 피해, 쉴드는 이때만 깎인다
+  openWeak(ms, border = false) {
+    const s = this.s, m = this.m;
+    m.expose = s.bt + ms;
     this.mark?.destroy();
-    // 48차: 약점 과녁은 fx2 그림(반복 깜빡임), 약점 구간 동안 화면 테두리와 효과음
+    // 48차: 약점 과녁은 fx2 그림(반복 깜빡임)
     this.mark = has(s, 'weakpoint') ? s.add.sprite(m.x, m.y, 'x_weakpoint').setDepth(41).setScale(2.4).play('x_weakpoint')
       : s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(41).setAlpha(1);
     this.markTxt?.destroy();
     this.markTxt = s.add.text(m.x, m.y, '약점!', font(11, '#ffe060', 3)).setOrigin(0.5).setDepth(41);
-    this.wborder?.destroy(); this.wborder = weakBorder(s);
+    if (border) { this.wborder?.destroy(); this.wborder = weakBorder(s); }
     sfx('weak');
-    s.banner(`페이즈 ${i + 1}!`, '약점이 드러났다 · 지금 몰아쳐라 (추가 피해)');
-    s.log?.('boss_phase', { boss: this.key, phase: i + 1, at: f });
+  }
+
+  // 쉴드: 약점이 닫혀 있는 동안은 전부 막힌다. 열린 2.2초에 쳐서 깬다(지치면 늘 열려 있어 막히지 않는다)
+  addShield(frac) {
+    const s = this.s, m = this.m;
+    m.shield = m.shieldMax = m.maxHp * frac;
+    this.shNext = s.bt + 4600;   // 페이즈 전환 약점(4.2초)이 끝난 뒤부터 열고 닫기를 되풀이
+    const w = m.displayWidth * 1.15, h = m.displayHeight * 1.1;
+    this.shGfx?.destroy();
+    this.shGfx = s.add.ellipse(m.x, m.y, w, h, 0x66ccff, 0.2).setStrokeStyle(2, 0xbff0ff, 0.95).setDepth(m.depth + 0.5);
+    if (this.bar) {
+      this.shBar?.forEach(o => o.destroy());
+      this.shBar = [s.add.rectangle(35, 99, 200, 4, 0x0a1a24).setOrigin(0, 0.5), s.add.rectangle(35, 99, 200, 4, 0x66ccff).setOrigin(0, 0.5)];
+      this.shBar.forEach(o => o.setScrollFactor(0).setDepth(100));
+    }
+  }
+  absorb(dealt, open) {
+    const s = this.s, m = this.m;
+    if (open || this.tired) {
+      m.shield -= dealt;
+      if (m.shield <= 0) this.breakShield();
+    } else if (s.bt - (this.blockT || 0) > 450) {
+      this.blockT = s.bt; sfx('deny', 120);
+      const t = s.add.text(m.x + R(-14, 14), m.y - m.displayHeight * 0.3, '막힘! 약점이 열릴 때', font(9, '#9ae0ff', 3)).setOrigin(0.5).setDepth(40);
+      s.tweens.add({ targets: t, y: t.y - 16, alpha: 0, duration: 600, onComplete: () => t.destroy() });
+    }
+    return 0;
+  }
+  breakShield() {
+    const s = this.s, m = this.m;
+    m.shield = 0;
+    this.shGfx?.destroy(); this.shGfx = null; this.shBar?.forEach(o => o.destroy()); this.shBar = null;
+    s.cameras.main.shake(200, 0.006); s.hitstop = Math.max(s.hitstop || 0, 120); sfx('boom', 80);
+    const ring = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9ae0ff).setDepth(30).setScale(0.4);
+    s.tweens.add({ targets: ring, scale: m.displayWidth / 28 + 1.2, alpha: 0, duration: 420, onComplete: () => ring.destroy() });
+    toast(s, '방어막 파괴!', '#9ae0ff', 200);
+    s.log?.('boss_shield_break', { boss: this.key });
   }
 
   // 예고: fx2 원형 그림이 차오른 뒤 터진다(48차). 소환 자리는 마법진 그림
@@ -317,7 +381,7 @@ export class BossAI {
 
   die() {
     const s = this.s, m = this.m;
-    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy(); this.markTxt?.destroy(); this.wborder?.destroy(); this.aura?.destroy();
+    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy(); this.markTxt?.destroy(); this.wborder?.destroy(); this.aura?.destroy(); this.shGfx?.destroy(); this.shBar?.forEach(o => o.destroy());
     this.bar?.forEach(o => o.destroy());
     s.hitstop = 260;
     // 48차: 막타는 0.4초 슬로모션(실제 시간 기준)
