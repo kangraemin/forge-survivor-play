@@ -274,8 +274,9 @@ export class Battle extends Phaser.Scene {
     this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#f2e4bc')));
     // 콤보는 가운데 위(오른쪽 숫자 밑에 붙어 처치 수와 헷갈렸다)
     this.comboTxt = sf(this.add.text(W / 2, 72, '', font(12, '#ffb347')).setOrigin(0.5).setAlpha(0));
-    this.timeTxt = sf(this.add.text(W / 2, 16, '', font(14)).setOrigin(0.5));
-    this.waveTxt = sf(this.add.text(W / 2, 31, '', font(9, '#a1b2b6')).setOrigin(0.5));
+    // 시간은 HP 칸(끝 108)과 처치 칸(시작 182) 사이 가운데: 화면 가운데(135)면 '남은 0:33'이 HP 칸에 붙었다(40차)
+    this.timeTxt = sf(this.add.text(145, 16, '', font(14)).setOrigin(0.5));
+    this.waveTxt = sf(this.add.text(145, 31, '', font(9, '#a1b2b6')).setOrigin(0.5));
     // 처치·은화: 점 아이콘만으로는 무슨 숫자인지 몰랐다. 글자 이름을 붙인다
     sf(this.add.rectangle(W - 88, 7, 62, 34, 0x000000, 0.45).setOrigin(0));
     sf(this.add.text(W - 85, 17, '처치', font9(10, '#a1b2b6')).setOrigin(0, 0.5));

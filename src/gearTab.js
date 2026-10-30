@@ -88,7 +88,8 @@ export const GearTab = {
     b.add(this.add.text(14, 206, `장비 가방 ${inv.length}/${INV_MAX}`, font(10)));
     const toStat = () => { if (this.busy) return; sfx('click'); track('sp_hint_go'); this.gearPage = 'stat'; this.show('gear'); };
     if (!inv.length) {
-      b.add(this.add.text(W / 2, 258, '스테이지를 깨면 장비가 나온다\n빈 칸에는 알아서 낀다', { ...font9(11, '#a1b2b6'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
+      // 언제 얻는지 막연했다(40차): 판을 깨면 1개 확정이라는 걸 숫자로 말한다
+      b.add(this.add.text(W / 2, 258, sv.cleared ? '스테이지를 깰 때마다 장비 1개 확정\n빈 칸에는 알아서 낀다' : '1-1을 처음 깨면 장비 1개 확정\n빈 칸에는 알아서 낀다', { ...font9(11, '#a1b2b6'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
       // 탭의 빨간 점 = 찍을 스탯 포인트. 비었을 땐 가운데 버튼으로 바로 보낸다
       if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x3a3846 }));
       b.add(button(this, W / 2, spFree(sv) > 0 ? 334 : 310, 170, 26, '장비 얻으러 전투하기 →', () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
