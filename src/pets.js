@@ -3,6 +3,7 @@
 import { PETS, petPow, petFit, PET_GOOD } from './gear.js';
 import { sfx } from './sfx.js';
 import { font } from './ui.js';
+import { roleTick } from './petRoles.js';
 
 const D2 = (a, b) => Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
 
@@ -33,6 +34,7 @@ export class Pet {
     this.shieldFx?.setPosition(h.x, h.y);
     this.t += dt; this.t2 += dt;
     this[this.def.id](dt);
+    roleTick(this, dt);
   }
 
   near(maxD, n = 1, from = this) {

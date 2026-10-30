@@ -1,27 +1,56 @@
 // 효과음: 파일 없이 WebAudio로 합성한다. 같은 소리가 한 프레임에 몰리면 묶어서 한 번만 낸다
-let ctx = null, master = null, on = true, musicOn = true, vibOn = true;
+let ctx = null, master = null, on = true, musicOn = true, vibOn = true, held = false;
+let bgm = null;
 const last = {};
 
 function ac() {
   if (!ctx) {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return null;
-    ctx = new C(); master = ctx.createGain(); master.gain.value = 0.35; master.connect(ctx.destination);
+    ctx = new C(); master = ctx.createGain(); master.gain.value = held ? 0 : 0.35; master.connect(ctx.destination);
   }
   // 아이폰은 앱을 나갔다 오면 'interrupted'가 된다: running이 아니면 다시 깨운다
   if (ctx.state !== 'running') ctx.resume().catch(() => {});
   return ctx;
 }
-// 백그라운드에서 돌아오면 소리가 멈춰 있었다: 돌아올 때와 다음 터치 때마다 깨운다(아이폰은 터치 안에서만 깨워 준다)
-const wake = () => { if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); };
-document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
-window.addEventListener('pageshow', wake);
-['touchend', 'pointerup', 'keydown'].forEach(e => document.addEventListener(e, wake, true));
+// 백그라운드에서 돌아오면 소리가 멈춰 있었다. 50차: 'interrupted'·'suspended'를 모두 다시 깨우고, 돌아온 뒤 몇 번 더 재시도한다.
+// 깨워도 안 되거나 'closed'면 오디오를 새로 만들어 배경음을 이어 튼다(아이폰은 터치 안에서만 깨워 준다)
+let wakeTries = 0, wakeTimer = null;
+function rebuild() {
+  const had = bgm; const kind = had?.kind, ch = had?.ch;
+  if (had) { clearInterval(had.timer); bgm = null; }
+  try { ctx && ctx.close(); } catch { /* 무시 */ }
+  ctx = null; master = null; noiseBuf = null;
+  if (ac() && kind && musicOn) playBgm(kind, ch);
+}
+const wake = () => {
+  if (!ctx) return;
+  if (ctx.state === 'closed') { rebuild(); return; }
+  if (ctx.state === 'running') {
+    if (bgm && bgm.next < ctx.currentTime - 0.5) bgm.next = ctx.currentTime + 0.05;   // 멈춰 있던 사이 밀린 박자를 지금으로 당긴다
+    return;
+  }
+  ctx.resume().catch(() => {});
+};
+function wakeSoon() {
+  wake(); wakeTries = 0; clearInterval(wakeTimer);
+  wakeTimer = setInterval(() => {
+    wake();
+    if (ctx && ctx.state === 'running') { clearInterval(wakeTimer); return; }
+    if (++wakeTries >= 6) { clearInterval(wakeTimer); if (ctx && ctx.state !== 'running' && !document.hidden) rebuild(); }
+  }, 400);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeSoon(); });
+window.addEventListener('pageshow', wakeSoon);
+window.addEventListener('focus', wakeSoon);
+['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click', 'keydown'].forEach(e => document.addEventListener(e, wake, true));
 // 49차: 효과음·음악·진동을 따로 끈다(설정 창). 위쪽 ♪ 버튼은 셋 중 소리 둘을 함께 켜고 끈다
 export const setSound = v => { on = v; };
 export const setMusic = v => { musicOn = v; if (!v) stopBgm(); };
 export const setVib = v => { vibOn = v; };
 export const unlock = () => ac();
+// 포털판: 광고 중·사이트 음소거 설정일 때 전체 소리를 끈다(platform/crazygames.js)
+export const holdAudio = v => { held = !!v; if (master) master.gain.value = held ? 0 : 0.35; };
 
 let noiseBuf = null;
 function noise(c) {
@@ -104,7 +133,6 @@ export function buzz(ms) {
 const SEMI = [0, -4, 3, -2];                 // 화음 진행(으뜸음 기준 반음)
 const ARP = [0, 3, 7, 12, 7, 3, 7, 3];       // 단3화음 펼침
 const ROOT = [110, 98, 116.5, 92.5, 82.4];   // 장별 으뜸음(Hz)
-let bgm = null;
 export function playBgm(kind, chapter = 0) {
   // 첫 터치 전에는 오디오를 만들지 않는다(브라우저 자동재생 제한)
   if (!musicOn || !ctx) return;

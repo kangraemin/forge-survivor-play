@@ -6,7 +6,7 @@ export const KEY = 'forge-survivor-v1';
 export const BAK = [KEY + '.bak1', KEY + '.bak2'];   // 직전 저장 2개
 export const CORRUPT = KEY + '.corrupt';             // 읽지 못한 원본 문자열(지우지 않고 보관)
 // 저장 모양 버전. 저장 형식을 바꾸면 SCHEMA를 올리고 STEPS 끝에 한 단계를 더한다(앞 단계는 고치지 않는다)
-export const SCHEMA = 4;
+export const SCHEMA = 6;
 
 export const fresh = () => ({ schemaVersion: SCHEMA,
 
@@ -44,11 +44,12 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   ach: {}, title: '',      // 받은 업적, 낀 칭호
   // 한정 판매: 오늘의 특가 { day, id, off, got }, 성장 꾸러미 { c, at, shown }
   deal: null, grow: null,
-  modes: { clear: {} },    // 모드(지키기·점령·돌파·사냥) 깬 판: 'guard:1' 같은 키 -> 1
+  modes: { clear: {}, stars: {}, best: {} },    // 모드(지키기·점령·돌파·사냥) 깬 판: 'guard:1' 같은 키 -> 1 · stars: 키 -> 별 비트 마스크(1 깨기·2 시간 안에·4 피해 적게) · best: 키 -> { t 가장 빠른 초, hurt 가장 적은 피해 % }
   // 공유 보상(share.js): 자랑하기 받은 날·받은 적 있나, 내 초대 코드, 나를 초대한 코드(첫 실행에만 저장), 그 코드를 서버에 알렸나,
   // 초대로 받은 보석 수(친구 수), 확정 중인 보상 {key,n}, 서버가 알려 준 초대한 친구 수·받을 수
   shareDay: '', shared: false, inviteCode: '', invitedBy: '', refChecked: false, inviteClaimed: false,
   inviteRewards: 0, inviteAck: null, inviteTotal: 0, invitePending: 0,
+  bagAuto: 'salvage',      // 가방이 꽉 찼을 때 자동 정리: 'salvage'(분해) | 'sell'(판매)
 });
 
 // STEPS[i]: schemaVersion i -> i+1. 각 단계는 값을 지우지 않고 없는 것만 채우거나 옮긴다. 이미 한 변환은 플래그로 다시 하지 않는다
@@ -85,6 +86,20 @@ const STEPS = [
     mem.inviteCode ||= ''; mem.invitedBy ||= ''; mem.inviteClaimed = !!mem.inviteClaimed;
     mem.refChecked = !!(mem.refChecked || mem.cleared > 0 || mem.stats?.runs > 0);
     mem.inviteRewards |= 0; mem.inviteTotal |= 0; mem.invitePending |= 0; mem.inviteAck ??= null;
+  },
+  // 4 -> 5: 장비 잠금(it.lock)과 자동 정리 방식. 장비는 하나도 지우지 않고 없는 값만 채운다
+  mem => {
+    if (mem.bagAuto !== 'sell') mem.bagAuto = 'salvage';
+    if (Array.isArray(mem.inv)) for (const it of mem.inv) if (it && typeof it === 'object' && it.lock !== undefined) it.lock = it.lock ? 1 : 0;
+  },
+  // 5 -> 6: 모드 별 3개. 이미 깬 판은 별 1개(깨기)로 옮긴다. 기록(best)은 빈 칸. 깬 기록·보상은 그대로
+  mem => {
+    mem.modes = { ...mem.modes };
+    const m = mem.modes;
+    if (!m.clear || typeof m.clear !== 'object') m.clear = {};
+    if (!m.stars || typeof m.stars !== 'object' || Array.isArray(m.stars)) m.stars = {};
+    if (!m.best || typeof m.best !== 'object' || Array.isArray(m.best)) m.best = {};
+    for (const k of Object.keys(m.clear)) if (m.clear[k]) m.stars[k] = (m.stars[k] | 0) | 1;
   },
 ];
 export class SaveError extends Error {}

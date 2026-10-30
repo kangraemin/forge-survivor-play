@@ -22,7 +22,24 @@ export const CHAPTERS = [
   { name: '폭풍 평원', tiles: 'tile13', mobs: ['stormwolf', 'stormyeti', 'stormspirit'], boss: 'thunderdragon', dur: 288, dark: 0.4, light: 0x8ac8ff, deco: 0x90b0d0, env: 'storm', note: '피뢰침 기둥 곁에선 번개가 기둥에 떨어진다 · 기둥 둘레 몹이 함께 맞고 기둥에서 멀면 낙뢰가 나를 노린다 · 먹구름 설인 곁으로도 몰린다' },
   { name: '거울 궁전', tiles: 'tile14', mobs: ['mirrorknight', 'phantompriest', 'glassgarg'], boss: 'mirrorlord', dur: 296, dark: 0.35, light: 0x80ffe0, deco: 0x90e0d0, env: 'mirror', note: '거울 빛줄기 둘이 서로 반대로 돈다 · 빛나는 거울 기사를 치면 되받는다 · 환영 사제는 분신을 만든다' },
   { name: '원초의 대장간', tiles: 'tile15', mobs: ['anvilimp', 'flamegiant', 'starskull'], boss: 'forgegod', dur: 304, dark: 0.5, light: 0xffd75e, deco: 0xe0b060, env: 'forge', note: '모루 위에 2초 서면 화염이 터지고 5초간 피해 +100%(식은 모루는 6초 쉼) · 불 균열과 낙뢰도 온다' },
+  // 16장부터는 업데이트 장: 출시 때는 잠겨 있고(version.json contentChapters), 값을 올리면 열린다. 설계표 docs/chapters.md
+  { name: '얼어붙은 왕궁', tiles: 'tile16', mobs: ['frostguard', 'froshound', 'frostmage'], boss: 'frostking', dur: 312, dark: 0.4, light: 0x8ad8ff, deco: 0x90c0e8, env: 'palace', lateCh: 16, note: '얼음판 위에선 미끄러진다 · 서리 분출구가 터지면 나도 몹도 얼어붙는다 · 방패기사는 방패를 들고 돌진한다' },
+  { name: '하늘 고래 항로', tiles: 'tile17', mobs: ['harpooner', 'skyray', 'balloon'], boss: 'skywhale', dur: 320, dark: 0.3, light: 0xffc890, deco: 0xc89860, env: 'skyway', lateCh: 17, note: '돛 곁에 서면 바람에 실려 간다 · 갑판 분출구는 나를 날려 보낸다 · 작살병의 작살에 끌려간다' },
+  { name: '시간 시계탑', tiles: 'tile18', mobs: ['gearbeetle', 'duelist', 'alarmowl'], boss: 'clockwarden', dur: 328, dark: 0.45, light: 0xffd890, deco: 0xc0a060, env: 'clocktower', lateCh: 18, note: '멈춘 시계 둘레에선 나도 몹도 느려진다 · 모래시계 곁에 2초 서면 시간이 되감겨 체력이 찬다 · 알람 올빼미를 먼저 잡아라' },
 ];
+// 출시 본편 장 수. 16장부터는 업데이트로 연다(원격 설정 contentChapters, 기본 15). 웹/앱은 부팅 때 version.json 값을 받아 둔다
+export const MAIN_CHAPTERS = 15;
+const OPEN_KEY = 'forge-content-ch';
+let OPEN = MAIN_CHAPTERS;
+try { const v = Number(localStorage.getItem(OPEN_KEY)); if (Number.isInteger(v) && v >= MAIN_CHAPTERS && v <= CHAPTERS.length) OPEN = v; } catch { /* 저장소 없음 */ }
+export const openN = () => OPEN;                                   // 지금 열린 장 수(15~18)
+export const openTotal = () => OPEN * 3;                           // 열린 판 수
+export const setOpenN = n => {
+  const v = Math.max(MAIN_CHAPTERS, Math.min(CHAPTERS.length, Math.floor(Number(n)) || MAIN_CHAPTERS));
+  OPEN = v; try { localStorage.setItem(OPEN_KEY, String(v)); } catch { /* 저장소 없음 */ }
+  return v;
+};
+export const chapterOpen = c => c < OPEN;
 // 장마다 3판: 일반 → 일반(규칙·변종·중간 보스) → 보스. 6판일 땐 같은 맵·같은 몹이 이어져 x-5쯤 질렸다
 export const STAGES_PER_CHAPTER = 3;
 export const isBossS = s => s === STAGES_PER_CHAPTER - 1;
@@ -79,6 +96,16 @@ export const MOBS = {
   anvilimp: { sheet: 'z15', row: 0, hp: 20, spd: 36, dmg: 7, ai: 'chase', color: 0xe0b060, fx: 'anvil' },
   flamegiant: { sheet: 'z15', row: 1, hp: 60, spd: 21, dmg: 10, ai: 'tank', color: 0xf0b050, fx: 'firepool' },
   starskull: { sheet: 'z15', row: 2, hp: 18, spd: 32, dmg: 7, ai: 'ranged', color: 0xa0f0b0, fx: 'homing' },
+  // 16~18장(업데이트): sheet는 assets/ch16-18의 z<장>_r<행>(걷기)·_attack(공격 준비·발동). lateCh는 그 장이 열릴 때만 도감에 센다
+  frostguard: { sheet: 'z16', row: 0, hp: 66, spd: 22, dmg: 10.5, ai: 'tank', color: 0x8ad8ff, fx: 'bash', lateCh: 16 },
+  froshound: { sheet: 'z16', row: 1, hp: 24, spd: 50, dmg: 7.5, ai: 'charge', color: 0x70c8ff, fx: 'howl', lateCh: 16 },
+  frostmage: { sheet: 'z16', row: 2, hp: 17, spd: 28, dmg: 7, ai: 'ranged', color: 0xa0b8ff, fx: 'frostzone', lateCh: 16 },
+  harpooner: { sheet: 'z17', row: 0, hp: 18, spd: 30, dmg: 7, ai: 'ranged', color: 0xe08a50, fx: 'harpoon', lateCh: 17 },
+  skyray: { sheet: 'z17', row: 1, hp: 22, spd: 52, dmg: 7, ai: 'swarm', color: 0x70a0ff, fx: 'burstgust', lateCh: 17 },
+  balloon: { sheet: 'z17', row: 2, hp: 34, spd: 26, dmg: 7.5, ai: 'float', color: 0xf0d0a0, fx: 'bloat', lateCh: 17 },
+  gearbeetle: { sheet: 'z18', row: 0, hp: 68, spd: 28, dmg: 11, ai: 'chase', color: 0xd0a050, fx: 'rewind', lateCh: 18 },
+  duelist: { sheet: 'z18', row: 1, hp: 24, spd: 46, dmg: 8, ai: 'charge', color: 0xa0a0d0, fx: 'timeskip', lateCh: 18 },
+  alarmowl: { sheet: 'z18', row: 2, hp: 18, spd: 50, dmg: 7, ai: 'swarm', color: 0xe0d0b0, fx: 'alarm', lateCh: 18 },
 };
 
 export const MOB_NAMES = {
@@ -90,6 +117,8 @@ export const MOB_NAMES = {
   sandskel: '모래 해골', scorpion: '사막 전갈', mirage: '신기루 유령', clockimp: '태엽 임프', steelgiant: '강철 거신', steamskull: '증기 불해골',
   stormwolf: '번개 늑대', stormyeti: '먹구름 설인', stormspirit: '뇌운 정령', mirrorknight: '거울 기사', phantompriest: '환영 사제', glassgarg: '유리 가고일',
   anvilimp: '쇠모루 임프', flamegiant: '불꽃 거신', starskull: '별빛 불해골',
+  frostguard: '빙정 방패기사', froshound: '빙결 사냥개', frostmage: '궁정 서리술사', harpooner: '비행선 작살병', skyray: '구름 가오리', balloon: '풍선 해파리',
+  gearbeetle: '태엽 딱정벌레', duelist: '진자 결투사', alarmowl: '알람 올빼미',
 };
 // 변종: 스테이지마다 하나씩 새로 나와 판마다 몬스터가 달라 보이게 한다(같은 그림에 색·크기·행동을 바꾼다)
 export const VARIANTS = {
@@ -120,6 +149,7 @@ export const RAGE_WHAT = {
   sweep: '휩쓰는 광선', pools: '남는 장판', slam: '연속 내려찍기',
   tsunami: '삼중 해일', bloom: '독꽃', shatter: '수정 파편 폭발', cyclone: '회오리', eclipse: '일식과 틈 있는 탄 고리',
   sink: '모래 늪', overheat: '과열', tempest: '뇌우', reflect: '반사 방패', meteor: '유성우',
+  blizzard: '눈보라와 얼음 가시', squall: '돛 뒤집기 돌풍', stoptime: '멈춘 시간',
 };
 export const BOSSES = {
   kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'charge', 'summon', 'slam', 'ring'], rage: 'pools' },
@@ -138,6 +168,10 @@ export const BOSSES = {
   thunderdragon: { name: '뇌룡', sheet: 'boss5', row: 1, hp: 2400, dmg: 17, spd: 34, color: 0x9a8aff, pattern: ['bolt', 'charge', 'aimed', 'bolt'], rage: 'tempest' },
   mirrorlord: { name: '거울의 군주', sheet: 'boss5', row: 2, hp: 2550, dmg: 18, spd: 26, color: 0x90ffe8, pattern: ['mirror', 'ring', 'aimed', 'mirror'], rage: 'reflect' },
   forgegod: { name: '원초의 대장신', sheet: 'boss6', row: 0, hp: 2800, dmg: 19, spd: 24, color: 0xffd75e, pattern: ['hammer', 'ring', 'slam', 'hammer'], rage: 'meteor' },
+  // 16~18장 보스: 시트는 assets/ch16-18/boss<장>_r0(이동 2프레임)·_telegraph(패턴 예고 2프레임)
+  frostking: { name: '서리 왕', sheet: 'boss16', row: 0, hp: 3000, dmg: 20, spd: 26, color: 0x8ad8ff, pattern: ['icelance', 'charge', 'frostquake', 'icelance'], rage: 'blizzard', lateCh: 16 },
+  skywhale: { name: '하늘 고래 함선', sheet: 'boss17', row: 0, hp: 3250, dmg: 21, spd: 24, color: 0xe08a50, pattern: ['volley', 'skydive', 'broadside', 'volley'], rage: 'squall', lateCh: 17 },
+  clockwarden: { name: '시계탑 수호자', sheet: 'boss18', row: 0, hp: 3500, dmg: 22, spd: 22, color: 0xd0a050, pattern: ['chime', 'rewindpat', 'gearsaw', 'rewindpat'], rage: 'stoptime', lateCh: 18 },
   general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
 };
 
@@ -145,7 +179,10 @@ export const BOSSES = {
 // 6장부터는 장마다 REC_G배씩 오른다(무기 등급이 2장마다 오르므로 등급 한 칸 2.56배 = 장당 1.6배). 5장까지는 예전 그대로
 export const REC_G = 1.4;
 export const chapterHp = c => (c < 5 ? Math.pow(2.05, c) : Math.pow(2.05, 4) * Math.pow(REC_G, c - 4)) * GEAR_HP(c);           // c는 0부터
-export const chapterDmg = c => 0.65 * Math.pow(1.18, c);   // 1.25면 3장부터 무기 등급 체력 보너스를 앞질러 30초 만에 녹았다
+export const chapterDmgRaw = c => 0.65 * Math.pow(1.18, c);   // 어려움 모드는 이 값 그대로(어려움 표는 따로 맞춰 둠)
+// 50차: 10장부터 몹 피해가 장마다 18%씩 늘어 15장에선 주인공 체력(선형)이 몇 대에 녹았다. 권장 전투력 1.2배로도 보스에 못 닿았다
+// 10장부터는 장당 증가를 10%로 줄인다(몹 피해·지형 피해 둘 다 이 값에서 나온다). 플레이어 쪽은 건드리지 않는다
+export const chapterDmg = c => c <= 7 ? chapterDmgRaw(c) : chapterDmgRaw(7) * Math.pow(1.015, c - 7);   // 1.25면 3장부터 무기 등급 체력 보너스를 앞질러 30초 만에 녹았다
 // 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
 // s는 0~5. 1-2에서 바로 벽을 느끼게 크게 뛰고, 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
 // x-2가 읽는 칸(3)은 1.92→1.6: 2-1 32 → 2-2 84로 한 판에 2.6배 뛰었다(37차). 장 안 세 판이 고르게 오르게
@@ -223,6 +260,8 @@ export const FIRST_CLEAR_MUL = 2.5;
 // 새 장 도입 보상: 6장부터 장 첫 판(x-1)에 처음 들어가면 금화 꾸러미와 소탕권을 준다(6장부터 금화 쓸 곳이 갑자기 늘어 막히던 구간 완충). 기존 보상은 그대로
 // 마지막 장(15장) 보스를 처음 잡을 때 따로 받는 완주 보상(업적·무기·펫과 별개). 장비는 한 등급 위로 2개
 export const FINALE = { gem: 150, sweep: 3, guard: 2, stone: 40, items: 2 };
+// 16~18장 보스를 처음 잡을 때 받는 새 보상(장마다 하나씩). 18장은 마지막이라 크다. 세트 장비(palace·skyway·clock)는 gear.js
+export const LATE_FIRST = { 15: { gem: 100, stone: 30, guard: 2, items: 1, title: '서리 왕궁의 정복자' }, 16: { gem: 120, stone: 36, guard: 2, items: 1, sweep: 2 }, 17: { gem: 200, stone: 50, guard: 3, items: 2, sweep: 3 } };
 export const CHAPTER_INTRO = { from: 5, goldMul: 2, sweep: 1 };
 export const introOf = c => c >= CHAPTER_INTRO.from ? { gold: Math.round(clearGold(c, 0) * CHAPTER_INTRO.goldMul / 5) * 5, sweep: CHAPTER_INTRO.sweep } : null;
 export const clearStone = (c, s) => 3 + oldS(s) + c * 2;
@@ -234,6 +273,8 @@ export const FREE_REVIVE_RUNS = 3;   // 처음 세 판은 부활이 공짜(첫 �
 // 49차: 장 마지막 보스는 권장 전투력 105%에서 40~60초 걸리게 한다(15장은 15초에 죽었다). hp: 체력 배수, sh: 페이즈 1·2에서 생기는 쉴드(체력 대비 비율, 쉴드 구간엔 약점이 열렸을 때 맞혀야만 깎인다)
 // 1장 보스는 지금 길이(약 55초)를 유지한다
 export const BOSS_TUNE = c => c < 1 ? { hp: 1, sh: [0, 0] } : { hp: +(1 + 0.27 * (c - 1)).toFixed(2), sh: [0.4, 0.4] };   // 장이 깊을수록 체력 배수를 키운다(후반 장은 권장 전투력 대비 훨씬 빨리 잡혔다)
+// 50차: 보스 체력 = 최근 8초 실제 DPS x 목표 시간(초). 강화·장비가 올라도 순삭되지 않는다. K는 측정으로 맞춘 보정(단일 대상·약점·후반 성장)
+export const BOSS_SEC = { mid: 60, last: 105 };   // 보스가 최소한 버티는 시간(초). 시작 체력은 DPS x 이 시간, 싸우는 동안 이보다 빨리 닳으면 체력 틀을 키워 시간 곡선을 지킨다
 export const BOSS_TIRED = { ms: 75000, mul: 1.5 };
 export const FAIL_GOLD_RATE = 0.5;                         // 실패해도 버틴 시간 비율 × 클리어 금화의 50%를 준다
 // 은화는 판이 끝나면 사라진다(아껴 두지 말고 상점에서 바로 쓰게)
@@ -308,6 +349,15 @@ export const SKILLS = {
   area: { name: '넓은 칼날', type: 'passive', icon: 4, tint: 0x8affa0, desc: ['공격 범위 +10%'], bonus: '공격 범위 +10% 더' },
   magnet: { name: '자석', type: 'passive', icon: 13, desc: ['줍는 거리 +30%'], bonus: '줍는 거리 +40% 더' },
   vigor: { name: '활력', type: 'passive', icon: 14, desc: ['최대 체력 +20, 회복 +0.3/초'], bonus: '회복 +0.6/초 더' },
+  // 50차: 모드 전용 카드(그 모드 판에서만 나온다, 슬롯을 쓰지 않는다). 효과는 modes.js
+  mrepair: { name: '수레 수리', type: 'passive', mode: 'guard', icon: 14, tint: 0x7fd8ff, desc: ['수레 HP가 초당 0.8% 차오른다', '초당 1.6%', '초당 2.4%', '초당 3.2%', '초당 4%'] },
+  mthorn: { name: '수레 가시', type: 'passive', mode: 'guard', icon: 4, tint: 0xff7050, desc: ['수레 곁의 몹이 가시에 찔린다', '가시 피해 +50%', '가시 피해 +100%', '가시 범위 +30%', '가시 피해 +150%'] },
+  mcapspeed: { name: '점령 속도', type: 'passive', mode: 'capture', icon: 10, tint: 0x7ddc6a, desc: ['거점이 20% 빨리 차오른다', '40% 빨리', '60% 빨리', '80% 빨리', '2배 빨리'] },
+  mturret: { name: '거점 포탑', type: 'passive', mode: 'capture', icon: 11, tint: 0xffd75e, desc: ['거점마다 포탑이 몹을 쏜다', '쏘는 속도 +25%', '피해 +50%', '사거리 +30%', '두 발씩 쏜다'] },
+  mdash: { name: '질주', type: 'passive', mode: 'breach', icon: 10, tint: 0xffd75e, desc: ['달리는 속도 +6%', '+12%', '+18%', '+24%', '+30%'] },
+  mwallslow: { name: '벽 늦추기', type: 'passive', mode: 'breach', icon: 13, tint: 0xa070ff, desc: ['벽이 8% 느려진다', '16% 느려진다', '24% 느려진다', '32% 느려진다', '40% 느려진다'] },
+  mmark: { name: '추적 표식', type: 'passive', mode: 'hunt', icon: 15, tint: 0xff7070, desc: ['정예가 7% 느려진다', '14% 느려진다', '21% 느려진다', '28% 느려진다', '35% 느려진다'] },
+  mweaken: { name: '정예 약화', type: 'passive', mode: 'hunt', icon: 0, tint: 0xc890ff, desc: ['정예 체력이 12% 줄어든다', '또 12% 줄어든다', '또 12% 줄어든다', '또 12% 줄어든다', '또 12% 줄어든다'] },
 };
 export const PASSIVE_KEYS = ['might', 'haste', 'focus', 'area', 'magnet', 'vigor'];
 
@@ -482,14 +532,14 @@ export const loginMul = streak => 1 + 0.25 * Math.min(4, Math.floor(Math.max(0, 
 // k는 마지막 장 보스 권장 대비 배율. 판마다 4.5%씩, 장 첫 판은 조금 낮추고 보스 판은 높인다
 // 장이 늘어 한 바퀴가 45판이 됐다: 판마다 오르는 비율을 15판 시절(14%/3%)에서 45판(약 4.5%/1%)으로 풀어 끝 판 권장이 예전과 비슷한 배율로 오르게 한다
 // 열리는 때: 일반 모드를 끝까지 깬 뒤. 예전에 이미 어려움을 시작한 저장은 그대로 들어간다(hardOpen)
-export const HARD = { unlock: CHAPTERS.length * STAGES_PER_CHAPTER, start: 1, grow: 1.045, dmg: 1.05, dmgGrow: 1.01, firstGem: 10, bossGem: 80 };
+export const HARD = { unlock: MAIN_CHAPTERS * STAGES_PER_CHAPTER, start: 1, grow: 1.045, dmg: 1.05, dmgGrow: 1.01, firstGem: 10, bossGem: 80 };
 export const hardOpen = sv => sv.cleared >= HARD.unlock || (sv.hardCleared || 0) > 0;
-const LAST_C = CHAPTERS.length - 1, LAST_S = 2;
+const LAST_C = MAIN_CHAPTERS - 1, LAST_S = 2;   // 어려움 수치는 본편 마지막 판(15-3)을 기준으로 16장 이후에도 같은 식으로 늘린다
 export const hardK = (c, s) => HARD.start * Math.pow(HARD.grow, c * STAGES_PER_CHAPTER + s) * (isBossS(s) ? 1.12 : c > 0 && s === 0 ? 0.92 : 1);
 export const hardRec = (c, s) => Math.round(recPower(LAST_C, LAST_S) * hardK(c, s));
 // 몹 체력: 5-3 몹 체력 × k(보스 판이 아니면 권장의 보스 가산 1.25를 뺀다)
 export const hardHp = (c, s) => chapterHp(LAST_C) * stageMul(LAST_S) * spReq(LAST_C * STAGES_PER_CHAPTER + LAST_S) * hardK(c, s) * (isBossS(s) ? 1 : 1.25);
-export const hardDmg = (c, s) => chapterDmg(LAST_C) * stageDmg(LAST_S) * LATE_DMG * HARD.dmg * Math.pow(HARD.dmgGrow, c * STAGES_PER_CHAPTER + s);
+export const hardDmg = (c, s) => chapterDmgRaw(LAST_C) * stageDmg(LAST_S) * LATE_DMG * HARD.dmg * Math.pow(HARD.dmgGrow, c * STAGES_PER_CHAPTER + s);
 // 보상은 5-3의 1.2배에서 판마다 +8%p, 강화석은 판마다 +2(sim 어려움 완주 중앙 약 2.5h 더)
 export const hardGold = (c, s) => Math.round(clearGold(LAST_C, LAST_S) * (1.2 + 0.08 * (c * STAGES_PER_CHAPTER + s)) / 5) * 5;
 export const hardStone = (c, s) => clearStone(LAST_C, LAST_S) + 2 * (c * STAGES_PER_CHAPTER + s);
@@ -510,7 +560,7 @@ export const DUN_WEEK = ['gem', 'gold', 'stone', 'gear', 'gold', 'stone', 'gear'
 export const dunToday = (d = new Date()) => DUN_WEEK[d.getDay()];
 // 보상 기준: 지금 도전 중인 판(어려움을 시작했으면 어려움 판)의 클리어 보상
 export const dunBase = sv => {
-  const hard = (sv.hardCleared || 0) > 0, n = Math.min(hard ? sv.hardCleared : sv.cleared, CHAPTERS.length * STAGES_PER_CHAPTER - 1);
+  const hard = (sv.hardCleared || 0) > 0, n = Math.min(hard ? sv.hardCleared : sv.cleared, openTotal() - 1);
   const c = Math.floor(n / STAGES_PER_CHAPTER), s = n % STAGES_PER_CHAPTER;
   return { c, s, hard, gold: goldOf(c, s, hard), stone: stoneOf(c, s, hard) };
 };

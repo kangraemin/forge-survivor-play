@@ -5,6 +5,7 @@ import * as D from './data.js';
 import { sfx } from './sfx.js';
 import { font, viewRect } from './ui.js';
 import { warnDisc, warnStrip, warnFan, runWarn } from './fx2.js';
+import { Late, LATE_PATTERNS, LATE_FX4 } from './lateEnv.js';   // 16~18장 기믹·몹·보스 패턴
 
 const WORLD = 1600;
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
@@ -52,6 +53,7 @@ export class Env {
       for (let i = 0; i < 2; i++) { const a = i * Math.PI; this.pillars.push({ x: c + Math.cos(a) * 200, y: c + Math.sin(a) * 200, a: a + 1.6, w: i ? -0.55 : 0.55, len: 170, mirror: true }); }
       this.pillars.forEach(p => { p.img = s.add.ellipse(p.x, p.y, 14, 8, 0x80ffe0).setStrokeStyle(2, 0xffffff, 0.9).setDepth(10 + p.y / WORLD).setOrigin(0.5, 1); });
     }
+    this.late = new Late(this);   // 16~18장 장치(그 장이 아니면 비어 있다)
     // 이 장의 규칙을 처음에 한 번 알린다
     if (this.kind && !s.bot) s.time.delayedCall(2100, () => !s.over && s.banner('이 장의 규칙', s.ch.note.split(' · ')[0]));
   }
@@ -80,7 +82,7 @@ export class Env {
 
   // 대장간 모루: 2초 서 있으면 달궈져 터지고(화염 폭발), 이어 5초간 내 피해 +100%(단조). 달구는 중에도 최대 +50%
   atkMul() { return this.forged > 0 ? 2 : this.heat > 20 ? 1 + 0.5 * Math.min(1, this.heat / 100) : 1; }
-  spdMul() { return this.slowT > 0 && !this.petIs('tidewyrm') ? (this.fx4('tide4') ? 0.73 : 0.55) : 1; }
+  spdMul() { return (this.slowT > 0 && !this.petIs('tidewyrm') ? (this.fx4('tide4') ? 0.73 : 0.55) : 1) * (this.late?.slowMul() ?? 1); }
   vel() {
     let x = 0, y = 0;
     for (const i of this.imp) { x += i.x; y += i.y; }
@@ -106,6 +108,7 @@ export class Env {
     if (this.fx4('crystal4') && (src === 'laser' || src === 'bolt')) k *= 0.6;
     if (this.fx4('steam4') && (src === 'vent' || src === 'steam' || src === 'fire' || src === 'bolt')) k *= 0.6;
     if (this.fx4('mirror4') && (src === 'laser' || src === 'reflect')) k *= 0.6;
+    const f4 = LATE_FX4[src]; if (f4 && this.fx4(f4)) k *= 0.6;   // 16~18장 세트: 그 장의 기믹 피해 약 40% 경감
     s.hurt(this.base * mul * k, src);
   }
 
@@ -188,6 +191,7 @@ export class Env {
 
   updateMore(dt) {
     const s = this.s, h = s.hero, g = this.gfx;
+    this.late?.update(dt);
     // 유사 구덩이: 가운데로 끌어당기고 느려진다
     this.pits = this.pits.filter(p => p.life === Infinity || (p.life -= dt) > 0);
     for (const p of this.pits) {
@@ -353,6 +357,7 @@ export class Env {
 
   mobTick(m, dt) {
     const s = this.s, h = s.hero;
+    this.late?.mobTick(m, dt);
     if (!m.fx && this.kind !== 'abyss') return;
     const d = Math.hypot(h.x - m.x, h.y - m.y);
     // 심연: 멀리 있는 몹은 어둠에 묻힌다(시야 밖은 윤곽만)
@@ -454,6 +459,7 @@ export class Env {
   // 몹이 쓰러질 때
   mobKill(m) {
     const s = this.s;
+    this.late?.mobKill(m);
     switch (m.fx) {
       case 'pool': this.addPuddle(m.x, m.y + 6, 20, 5000); break;
       case 'revive': {
@@ -483,6 +489,7 @@ export class Env {
   // 원거리 몹 발사를 가로챈다(처리했으면 true)
   shot(m, ang) {
     const s = this.s;
+    if (this.late?.shot(m, ang)) return true;
     if (m.fx === 'aimline') {
       const g = warnStrip(s, m.x, m.y, ang, 200, 14) || s.add.graphics().setDepth(9).lineStyle(2, 0xff4050, 0.8).lineBetween(m.x, m.y, m.x + Math.cos(ang) * 200, m.y + Math.sin(ang) * 200);
       if (g.step) { const st = { f: 0 }; s.tweens.add({ targets: st, f: 1, duration: 550, onUpdate: () => g.active && g.step(st.f) }); }
@@ -810,3 +817,5 @@ export const BOSS_PATTERNS = {
     }
   },
 };
+
+Object.assign(BOSS_PATTERNS, LATE_PATTERNS);   // 16~18장 보스 패턴(lateEnv.js)

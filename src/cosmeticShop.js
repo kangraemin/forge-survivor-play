@@ -2,6 +2,7 @@ import { COS_TABS, COSMETICS, COS_PACKS, cosmetic, wardrobe, equippedLook, equip
 import { lookPreview } from './cosmeticView.js';
 import { font, font9, panel, button, toast } from './ui.js';
 import { buy, won } from './shop.js';
+import { cashHidden } from './platform/flags.js';   // 포털판: 결제 버튼 숨김
 import { save } from './save.js';
 import { track } from './log.js';
 import * as D from './data.js';
@@ -31,7 +32,7 @@ export function cosmeticPage(s) {
   b.add(s.add.text(105, 112, selected.name, { ...font(11), wordWrap: { width: 145 } }));
   b.add(s.add.text(105, 139, selected.desc, { ...font9(10, '#b4cfda'), wordWrap: { width: 143 } }));
   const sp0 = salePrice(sv, selected);
-  if (!state.owned[selected.id] && sp0.off) b.add(s.add.text(105, 171, sp0.why === 'today' ? `★ 오늘의 판매 ${SALE_OFF}%↓` : `체험 끝 · 첫 구매 ${SALE_OFF}%↓`, font9(10, '#ffd75e')));
+  if (!state.owned[selected.id] && sp0.off) b.add(s.add.text(105, 171, sp0.why === 'today' ? `★ 오늘의 특가 ${SALE_OFF}%↓` : `체험 끝 · 첫 구매 ${SALE_OFF}%↓`, font9(10, '#ffd75e')));
   else b.add(s.add.text(105, 171, kind === 'pet' ? '보스 펫과 함께 동행' : '외형·이펙트만 변경', font9(10, '#83d5c8')));
   const body = kind === 'character' || kind === 'costume', canTry = body && !state.owned[selected.id] && !state.tried[selected.id] && available(selected);
   if (canTry) b.add(button(s, 118, 192, 76, 18, '30초 체험', () => { if (startTrial(sv, selected.id)) { save(); s.scene.start('Battle', { chapter: 0, stage: 0, bot: false, practice: true }); } }, { size: 9, color: 0x1f5a4a }));
@@ -58,7 +59,7 @@ export function cosmeticPage(s) {
   }, { size: 11, color: 0x2f6b3a }).setEnabled(!on && (own || sale)));
   b.add(s.add.text(135, 387, isWinter(selected) ? WINTER.label : kind === 'costume' ? '의상은 기본 모험가용 · 선택하면 캐릭터가 전환돼요' : kind === 'character' ? '캐릭터 선택 시 의상 해제 · 장비 성능은 그대로' : '미리보기: 서기 → 걷기 → 베기 → 처치 효과', font9(9, '#a1b2b6')).setOrigin(0.5));
   const ts = todaySale();
-  b.add(button(s, 47, 410, 78, 24, '★오늘의 판매', () => { s.skinTab = ts.kind; s.cosSelected[ts.kind] = ts.id; redraw(); }, { size: 9, color: 0x6a4a1a }));
+  b.add(button(s, 47, 410, 78, 24, '★오늘의 특가', () => { s.skinTab = ts.kind; s.cosSelected[ts.kind] = ts.id; redraw(); }, { size: 9, color: 0x6a4a1a }));
   b.add(button(s, 135, 410, 78, 24, '묶음 20%', () => cosmeticPacks(s, tab === 'winter' ? COS_PACKS.findIndex(p => p.winter) : 0), { size: 9 }));
   b.add(button(s, 223, 410, 78, 24, '이전 꾸미기', () => { s.legacySkins = true; redraw(); }, { size: 9 }));
 }
@@ -68,13 +69,13 @@ export function cosmeticPacks(s, index = 0) {
   c.add(s.add.text(135, 116, pack.name, font(15, '#ffe0a0')).setOrigin(0.5));
   pack.give.cosmetics.forEach((id, i) => { const it = cosmetic(id); icon(s, c, it, 61 + i * 74, 166, 42); c.add(s.add.text(61 + i * 74, 201, it.name, font9(8, '#dae7ed')).setOrigin(0.5)); });
   c.add(s.add.text(135, 230, `따로 사면 ${packBase(pack)} → 묶음 ${pack.gemCost} 보석`, font9(11, '#ffe0a0')).setOrigin(0.5));
-  c.add(s.add.text(135, 250, (pack.winter ? '따로 사는 값보다 20% 저렴 · 겨울 기간 한정\n' : '따로 사는 값보다 20% 저렴 · 상시 판매\n') + '보석 10개 = 100원 기준이라 값어치는 같아요', { ...font9(10, '#b4cfda'), align: 'center' }).setOrigin(0.5));
+  c.add(s.add.text(135, 250, (pack.winter ? '따로 사는 값보다 20% 저렴 · 겨울 기간 한정\n' : '따로 사는 값보다 20% 저렴 · 상시 판매\n') + (cashHidden() ? '' : '보석 10개 = 100원 기준이라 값어치는 같아요'), { ...font9(10, '#b4cfda'), align: 'center' }).setOrigin(0.5));
   let purchasing = false;
   c.add(button(s, 135, 290, 210, 28, own ? '구성품 보유 · 개별 구매를 이용해요' : `${pack.gemCost} 보석으로 구매`, () => { if (purchasing) return; if (!buyCosmeticPack(sv, pack)) { toast(s, '보석이 부족해요'); return; } save(); c.close(); }, { color: 0x2f6b3a, size: 10 }).setEnabled(!own && inSeason));
   const cash = button(s, 135, 325, 210, 28, `${won(pack.price)} 결제로 구매`, async () => {
     if (purchasing) return; purchasing = true; cash.setEnabled(false); const ok = await buy(s, sv, pack); if (!c.active) return;
     if (ok) c.close(); else { purchasing = false; cash.setEnabled(true); }
-  }, { size: 11 }); c.add(cash.setEnabled(!own && inSeason));
+  }, { size: 11 }); c.add(cash.setEnabled(!own && inSeason)); if (cashHidden()) { cash.setVisible(false); cash.setEnabled(false); }   // 포털판은 현금 결제 버튼이 없다
   c.add(button(s, 78, 371, 100, 24, '다른 묶음', () => { if (purchasing) return; c.close(); cosmeticPacks(s, (index + 1) % COS_PACKS.length); }, { size: 10 }));
   c.add(button(s, 192, 371, 100, 24, '닫기', () => { if (!purchasing) c.close(); }, { size: 10 }));
 }

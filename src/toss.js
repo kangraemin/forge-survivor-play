@@ -15,15 +15,32 @@
 // 한 그룹을 모든 종류가 같이 써도 되고, 종류별로 나눠도 된다(없는 종류는 default)
 const AD_TEST = 'ait-ad-test-rewarded-id';
 export const TOSS_AD_GROUPS = {
-  default: AD_TEST,   // TODO(콘솔): 'forge_rewarded' 그룹 ID로 교체
+  default: 'ait.v2.live.b75ad9f6d7b74cda',   // 콘솔 'forge_rewarded' 보상형 그룹(앱 94606). 개발 중 테스트는 AD_TEST
   // gem: 'TODO', sweep: 'TODO', double: 'TODO', revive: 'TODO',
 };
 // 결제 상품 SKU = 게임 상품 id 그대로(data.js IAP/BIG_PACKS 의 id, 특가 deal_<꾸러미>_<할인율>, 성장 grow<장>). 콘솔에 이 이름으로 만든다
 // 꾸미기 묶음도 동일한 지급/미결 주문 복구 경로를 사용한다. 콘솔 등록 후 실제 SKU로 매핑한다.
-export const TOSS_COSMETIC_SKUS = { look_picnic: 'look_picnic', look_bath: 'look_bath', look_snow_trip: 'look_snow_trip', look_snow_friends: 'look_snow_friends' };
-// 보석·꾸러미·정기 상품(data.js IAP). 48차에 2,900(gem1b)·9,900(gem2b)·19,900(gem4)원 상품 추가. 49차: gem2b는 판매 중지(ID는 콘솔에 남겨 둔다), mid1(9,900원 중간 꾸러미) 추가 — 콘솔에 같은 이름으로 만든다
-export const TOSS_IAP_SKUS = Object.fromEntries(['starter', 'cosm', 'pass', 'noads', 'gem1', 'gem1b', 'gem2', 'gem2b', 'gem3', 'gem4', 'mid1', 'big1', 'big2'].map(id => [id, id]));
-export const tossSku = itemId => TOSS_COSMETIC_SKUS[itemId] || TOSS_IAP_SKUS[itemId] || itemId;
+// 콘솔 상품 ID는 자동 발급이라 게임 상품 id와 다르다 → 아래 표로 바꾼다(앱 94606, 2026-10-30 등록)
+const PID = 'ait.0000094606.';
+const PRODUCT_SUFFIX = {
+  starter: 'fce88ccd.7d99d30c25.3358577732', cosm: '0f84d69d.31f89a0c62.3358579049', pass: '9c779ffc.23ad6a419b.3358580287', noads: '795abd69.3ed6c9e84c.3358581531',
+  gem1: 'feea461e.3c19f67377.3358538965', gem1b: '35435a14.67ff08dad0.3358582844', gem2: '457c23ea.422b9959de.3358584110', gem3: '049fab91.9f98dc979f.3358585294', gem4: 'b4d6f5fa.66f6f4f17b.3358586555',
+  mid1: '506418b3.cae797a9bb.3358587788', big1: '5d0dd44d.875677a393.3358589031', big2: '85bdea09.41e0c24fa6.3358590310',
+  look_picnic: '0eca77b7.8fd6e65341.3358597157', look_bath: '0af2ec89.c9b5bbaf5c.3358598640', look_snow_trip: 'd933b3cb.3ba886f7b0.3358600330', look_snow_friends: 'bd8334c8.343e47a873.3358601645',
+  deal_dstone_30: 'acd0fe9b.d98977752a.3358603103', deal_dstone_40: '1097188c.c8d4f3d87d.3358604315', deal_dstone_50: 'b86a77df.287c6c9e03.3358605525',
+  deal_dguard_30: 'e6d2400f.7c3ba62f04.3358607093', deal_dguard_40: 'a262258d.1e733fadb6.3358608300', deal_dguard_50: 'b1e872f5.14762905ce.3358609453',
+  deal_dgem_30: 'b13c3c42.785f4f18ba.3358610745', deal_dgem_40: 'b147facd.d7d52bbe51.3358612102', deal_dgem_50: '24ce7704.9d596cf40d.3358613545',
+  deal_dgold_30: '1551c10b.e0f70cd0df.3358615154', deal_dgold_40: 'e6f95f2e.13f42a5199.3358616446', deal_dgold_50: '32d83204.ed0a69c033.3358617667',
+  deal_dluck_30: '882b4328.a29e7e044d.3358618802', deal_dluck_40: '46d556d1.4835aa0cee.3358620370', deal_dluck_50: 'fc369233.01a13d0ffa.3358621725',
+  grow1: 'd060c17d.4c01a9f765.3358627277', grow2: '5ec43166.f9b4a9928c.3358629170', grow3: '1eae7e7b.837c806db8.3358631037', grow4: 'a8963658.6188de1328.3358632933', grow5: '70ee78bd.90b81058b3.3358635047',
+  grow6: '09d5e463.2d85ca9548.3358637071', grow7: '92f4d05a.ebe4f7c4fe.3358639086', grow8: '8a3c9ad6.115712595c.3358641041', grow9: 'e757302d.129710db84.3358642888', grow10: '85391c58.3db10d3268.3358644897',
+  grow11: 'afbcf4e2.754f523da4.3358646783', grow12: '23303f0a.3f2ce83945.3358648735', grow13: 'efe25b5b.ee08582811.3358650836', grow14: 'f06faad6.ab39471499.3358652828', grow15: '9830768e.c6d1259bb5.3358654845',
+};
+// gem2b(9,900원)는 판매 중지라 콘솔에 등록하지 않았다
+export const TOSS_PRODUCT_IDS = Object.fromEntries(Object.entries(PRODUCT_SUFFIX).map(([id, s]) => [id, PID + s]));
+const SKU_TO_GAME = Object.fromEntries(Object.entries(TOSS_PRODUCT_IDS).map(([id, sku]) => [sku, id]));
+export const tossSku = itemId => TOSS_PRODUCT_IDS[itemId] || itemId;
+export const gameIdOfSku = sku => SKU_TO_GAME[sku] || sku;
 export const AD_LOAD_TIMEOUT_MS = 25000;   // AdMob은 로드에 5~20초(최대 60초)
 
 const sdk = () => window.__AIT_SDK || null;
@@ -93,19 +110,33 @@ function buy(id, grant) {
   });
 }
 // 앱을 켤 때: 결제는 됐는데 지급이 끝나지 못한 주문
-const pending = async () => ((await sdk().IAP.getPendingOrders())?.orders || []).map(o => ({ ...o, sku: Object.keys(TOSS_COSMETIC_SKUS).find(id => TOSS_COSMETIC_SKUS[id] === o.sku) || o.sku }));
+const pending = async () => ((await sdk().IAP.getPendingOrders())?.orders || []).map(o => ({ ...o, sku: gameIdOfSku(o.sku) }));
 const complete = orderId => sdk().IAP.completeProductGrant({ params: { orderId } });
+// 이미 결제가 끝난 주문(구매 복원). IAP.getCompletedOrRefundedOrders: 한 페이지 50개, hasNext/nextKey로 이어 받는다. 환불된 주문은 건너뛴다
+// 토스앱이 오래되어 undefined를 주면 빈 목록(공식: 최소 지원 버전 미만이면 undefined)
+const restore = async () => {
+  const out = []; let key = null;
+  for (let i = 0; i < 20; i++) {
+    const r = await sdk().IAP.getCompletedOrRefundedOrders(key ? { key } : undefined);
+    if (!r) break;
+    for (const o of r.orders || []) if (o.status === 'COMPLETED') out.push({ orderId: o.orderId, sku: gameIdOfSku(o.sku), status: o.status });
+    if (!r.hasNext || !r.nextKey) break;
+    key = r.nextKey;
+  }
+  return out;
+};
 
 // 토스 안일 때만 window.forgePlatform을 채운다(다른 앱판이 먼저 넣어 뒀으면 건드리지 않는다)
 export function installToss() {
   const s = sdk();
   if (!s || window.forgePlatform) return false;
-  const adOk = !!s.loadFullScreenAd?.isSupported?.() && !!s.showFullScreenAd;
-  const iapOk = !!s.IAP?.createOneTimePurchaseOrder && s.IAP.createOneTimePurchaseOrder.isSupported?.() !== false;
+  const safe = f => { try { return f(); } catch { return false; } };   // 토스 밖(브라우저)에서는 isSupported가 던진다
+  const adOk = safe(() => !!s.loadFullScreenAd?.isSupported?.() && !!s.showFullScreenAd);
+  const iapOk = safe(() => !!s.IAP?.createOneTimePurchaseOrder && s.IAP.createOneTimePurchaseOrder.isSupported?.() !== false);
   window.forgePlatform = {
     toss: true,
     ...(adOk ? { showAd } : {}),   // 미지원이면 showAd가 없어 shop.js의 웹 체험판으로 떨어진다
-    ...(iapOk ? { buy, pending, complete } : {}),
+    ...(iapOk ? { buy, pending, complete, ...(s.IAP.getCompletedOrRefundedOrders ? { restore } : {}) } : {}),
   };
   if (adOk) loadAd(groupOf('default'));
   return true;

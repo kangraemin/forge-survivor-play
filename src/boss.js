@@ -1,17 +1,19 @@
 // 보스: 패턴을 돌아가며 쓴다. 모든 공격은 빨간 예고 표시가 먼저 뜨고, 체력 절반 이하면 빨라진다
 import * as D from './data.js';
 import { sfx } from './sfx.js';
+import { insetsGame } from './safeArea.js';
 import { font, toast, viewRect } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
 import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has } from './fx2.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
-const PAT_NAME = { jump: '내려찍기!', charge: '돌진!', slam: '장판!', ring: '탄막!', aimed: '조준 사격!', summon: '소환!', sweep: '광선!', pools: '독 웅덩이!', wave: '파도!', tsunami: '해일!', spore: '포자!', bloom: '개화!', prism: '프리즘!', shatter: '파편!', gale: '돌풍!', cyclone: '회오리!', void: '공허!', eclipse: '일식!', burrow: '잠복!', sink: '함몰!', vent: '증기 분출!', overheat: '과열!', bolt: '낙뢰!', tempest: '폭풍!', mirror: '거울!', reflect: '반사!', hammer: '망치!', meteor: '운석!' };
+const PAT_NAME = { jump: '내려찍기!', charge: '돌진!', slam: '장판!', ring: '탄막!', aimed: '조준 사격!', summon: '소환!', sweep: '광선!', pools: '독 웅덩이!', wave: '파도!', tsunami: '해일!', spore: '포자!', bloom: '개화!', prism: '프리즘!', shatter: '파편!', gale: '돌풍!', cyclone: '회오리!', void: '공허!', eclipse: '일식!', burrow: '잠복!', sink: '함몰!', vent: '증기 분출!', overheat: '과열!', bolt: '낙뢰!', tempest: '폭풍!', mirror: '거울!', reflect: '반사!', hammer: '망치!', meteor: '운석!', icelance: '얼음 창!', frostquake: '서리 폭발!', blizzard: '눈보라!', volley: '작살 일제!', skydive: '급강하!', broadside: '옆구리 포격!', squall: '돌풍!', chime: '종소리!', rewindpat: '되감기!', gearsaw: '톱니!', stoptime: '멈춘 시간!' };
+const MID_EXTRA = ['ring', 'jump'];   // 50차: 중간보스 페이즈 1·2에서 늘어나는 새 패턴
 const PHASE_LINE = ['크윽… 이 정도로!', '이제 진심이다!'];
 
 export class BossAI {
-  constructor(s, key, hpMul, mid = false) {
-    this.s = s; this.key = key; this.b = D.BOSSES[key]; this.mid = mid;
+  constructor(s, key, hpMul, mid = false, formula = false) {
+    this.s = s; this.key = key; this.b = D.BOSSES[key]; this.mid = mid; this.PH = mid ? [0.66, 0.33] : [0.7, 0.4];
     // 49차: 화면 안 위쪽 1/3에 나타난다(150~170px 밖에서 나와 화면 밖이라 안 보였다)
     const vr = viewRect(s), hx = s.hero.x, hy = s.hero.y;
     const p = { x: Phaser.Math.Clamp(hx + R(-70, 70), 40, 1600 - 40), y: Phaser.Math.Clamp(Math.max(vr.y + vr.height * 0.22, 60), 60, 1600 - 40) };
@@ -26,6 +28,13 @@ export class BossAI {
     const tune = !mid && !s.endless && !s.dungeon && !s.hard && !s.practice ? D.BOSS_TUNE(s.c) : { hp: 1, sh: [0, 0] };
     this.tune = tune;
     m.maxHp = m.hp = this.b.hp * hpMul * tune.hp * (!mid && s.c >= 2 && !s.endless && key !== 'demonlord' ? 0.85 : 1);
+    // 50차: 체력은 최근 8초 실제 DPS x 목표 시간. 강화·장비가 올라도, 다시 하는 판·하드에서도 순삭되지 않는다(식 값의 절반이 바닥)
+    if (!formula) {
+      const dps = s.realDps?.() || 0;
+      if (dps > 0) m.maxHp = m.hp = Math.max(m.maxHp * 0.5, dps * (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last));
+      s.log?.('boss_hp', { boss: key, mid, dps: Math.round(dps), hp: Math.round(m.maxHp) });
+    }
+    this.T = formula ? 0 : (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last) * 1000;   // 최소 버티는 시간(ms)
     // 1장 보스는 첫 보스라 20% 덜 아프게: 권장을 넘고도 체력 26% 남기고 졌다
     m.dmg = this.b.dmg * s.mobDmgMul * (!mid && s.c === 0 && !s.endless ? 0.8 : 1);
     m.body.setSize(m.width * 0.6, m.height * 0.55).setOffset(m.width * 0.2, m.height * 0.4);
@@ -35,7 +44,8 @@ export class BossAI {
     // 등장: 위에서 떨어져 쿵
     m.y -= 60; m.setAlpha(0);
     s.tweens.add({ targets: m, y: p.y, alpha: 1, duration: 500, ease: 'Quad.In', onComplete: () => this.thud(m.x, m.y, 0) });
-    if (!mid) { this.makeBar(); this.pull0 = s.bt; }   // 등장 1.5초 동안 카메라를 보스 쪽으로 살짝 끌었다 돌려놓는다
+    this.makeBar();
+    if (!mid) this.pull0 = s.bt;   // 등장 1.5초 동안 카메라를 보스 쪽으로 살짝 끌었다 돌려놓는다
   }
 
   // 49차: 등장 연출 — 400ms에 걸쳐 보스 쪽으로 40% 끌고, 700ms 머물고, 400ms에 돌아온다
@@ -48,7 +58,7 @@ export class BossAI {
 
   makeBar() {
     // 스킬 아이콘 줄(최대 2줄, y 46~78) 아래에 둬 겹치지 않게 한다
-    const s = this.s, y = 92;
+    const s = this.s, y = 92 + insetsGame(s.game).top;
     this.bar = [
       s.add.rectangle(D.W / 2, y, 200, 9, 0x1a0a10).setStrokeStyle(1, 0x000000),
       s.add.rectangle(35, y, 200, 7, 0xffffff).setOrigin(0, 0.5),
@@ -56,8 +66,15 @@ export class BossAI {
       s.add.text(D.W / 2, y - 11, this.b.name, font(9, '#ffd75e')).setOrigin(0.5),
     ];
     // 등장 배너(1.5초)가 사라진 뒤에 떠서 글자끼리 겹치지 않는다
+    for (const f of this.PH) this.bar.push(s.add.rectangle(35 + 200 * f, y, 1, 9, 0xffffff, 0.9));   // 페이즈 눈금
     this.bar.forEach(o => o.setScrollFactor(0).setDepth(100).setAlpha(0));
     s.tweens.add({ targets: this.bar, alpha: 1, delay: 1700, duration: 250 });
+  }
+
+  // 시간 곡선 바닥: 한 방에 선 아래로 떨어져도 그 선에서 멈춘다(hitMob에서도 부른다)
+  holdFloor() {
+    const m = this.m;
+    if (this.T && (this.age || 0) < this.T && !m.dead) { const ex = Math.max(0.03, 1 - (this.age || 0) / this.T); if (m.hp < ex * m.maxHp) m.hp = ex * m.maxHp; }
   }
 
   update(dt) {
@@ -67,12 +84,14 @@ export class BossAI {
     if (this.pull0 != null) this.camPull();
     // 오래 버티면 지친다: 받는 피해 증가(보스전이 3분 가까이 늘어졌다)
     this.age = (this.age || 0) + dt;
-    if (this.bar && !this.tired && this.age > D.BOSS_TIRED.ms) {
+    // 50차: 시간 곡선 — 체력 비율이 (1 - 경과/목표시간)보다 빨리 닳으면 그 선까지 되채운다(보스가 숨을 고른다). 싸우는 중 레벨업·카드로 DPS가 늘어도, 고강화로 다시 해도 목표 시간 안엔 안 죽는다
+    this.holdFloor();
+    if (this.bar && !this.mid && !this.tired && this.age > D.BOSS_TIRED.ms) {
       this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(`${this.b.name} · 지쳤다! 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}%`).setColor('#ff9a5a');
       s.banner('보스가 지쳤다!', `받는 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}% · 몰아붙여라`);
     }
     // 46차: 체력 70%·40%에서 페이즈가 바뀐다 — 보스가 포효하며 잠깐 멈추고(색 번쩍·화면 흔들림), 3초 동안 약점이 드러난다(맞으면 추가 피해)
-    if (!this.mid && this.bar) for (const [i, f] of [[1, 0.7], [2, 0.4]]) if ((this.phase || 0) < i && m.hp <= m.maxHp * f) this.phaseShift(i, f);
+    if (this.bar) for (const [i, f] of [[1, this.PH[0]], [2, this.PH[1]]]) if ((this.phase || 0) < i && m.hp <= m.maxHp * f) this.phaseShift(i, f);
     if (this.mark) {
       if (m.expose > s.bt && m.active) {
         // 48차: fx2 약점 과녁을 크게(보스 몸 폭의 70%, 최소 1.8배)
@@ -109,7 +128,8 @@ export class BossAI {
     m.setVelocity(Math.cos(ang) * this.b.spd * sl, Math.sin(ang) * this.b.spd * sl);
     this.t -= dt * (sl < 1 ? 0.7 : 1);
     if (this.t <= 0) {
-      const list = enraged && this.b.rage ? [...this.b.pattern, this.b.rage] : this.b.pattern;
+      let list = enraged && this.b.rage ? [...this.b.pattern, this.b.rage] : this.b.pattern;
+      if (this.mid && this.phase) list = [...list, ...MID_EXTRA.slice(0, this.phase)];
       const pat = list[this.pi++ % list.length];
       // 47차: 초반 보스(1~2장)는 공격 간격을 줄여 피할 일이 생기게 한다
       this.t = (enraged ? 2400 : 3200) * (!this.mid && s.c <= 1 && !s.endless ? 0.8 : 1) + R(0, 600);
@@ -123,6 +143,8 @@ export class BossAI {
     const s = this.s, m = this.m, name = PAT_NAME[pat] || '공격!';
     const t = s.add.text(m.x, m.y - m.displayHeight * 0.62, name, font(10, '#ffe0a0', 3)).setOrigin(0.5).setDepth(41);
     s.tweens.add({ targets: t, y: t.y - 10, alpha: 0, duration: 900, delay: 350, onComplete: () => t.destroy() });
+    // 16~18장 보스: 패턴이 시작되면 예고 그림(_telegraph)으로 잠깐 바뀐다
+    if (this.b.lateCh && s.anims.exists(this.key + 'Tele')) { m.anims.play(this.key + 'Tele', true); s.time.delayedCall(1000, () => m.active && m.anims.play(this.key, true)); }
   }
 
   // 47차: 보스 머리 위 말풍선 한 줄
@@ -143,7 +165,7 @@ export class BossAI {
   phaseShift(i, f) {
     const s = this.s, m = this.m;
     // 47차: 0.7초 완전 정지(보스·움직임), 화면 번쩍임, 말풍선, 약점 표식
-    this.phase = i; this.busy = Math.max(this.busy, 1100); m.setVelocity(0, 0);
+    this.phase = i; this.busy = Math.max(this.busy, 1100); m.setVelocity(0, 0); m.invuln = s.bt + 900;
     s.hitstop = Math.max(s.hitstop || 0, 700);
     s.flashFx.setAlpha(0.45); s.tweens.add({ targets: s.flashFx, alpha: 0, duration: 450 });
     phaseBorder(s, 900);
@@ -183,7 +205,7 @@ export class BossAI {
     this.shGfx = s.add.ellipse(m.x, m.y, w, h, 0x66ccff, 0.2).setStrokeStyle(2, 0xbff0ff, 0.95).setDepth(m.depth + 0.5);
     if (this.bar) {
       this.shBar?.forEach(o => o.destroy());
-      this.shBar = [s.add.rectangle(35, 99, 200, 4, 0x0a1a24).setOrigin(0, 0.5), s.add.rectangle(35, 99, 200, 4, 0x66ccff).setOrigin(0, 0.5)];
+      this.shBar = [s.add.rectangle(35, 99 + insetsGame(s.game).top, 200, 4, 0x0a1a24).setOrigin(0, 0.5), s.add.rectangle(35, 99 + insetsGame(s.game).top, 200, 4, 0x66ccff).setOrigin(0, 0.5)];
       this.shBar.forEach(o => o.setScrollFactor(0).setDepth(100));
     }
   }
@@ -314,7 +336,7 @@ export class BossAI {
     // 47차: 소환 자리에 먼저 빨간 표시가 뜨고 0.7초 뒤 졸개가 나온다
     for (let i = 0; i < 6; i++) {
       const a = i / 6 * Math.PI * 2, x = m.x + Math.cos(a) * 50, y = m.y + Math.sin(a) * 50;
-      this.warnCircle(x, y, 14, 700, () => { if (m.active) s.spawn(false, s.ch.mobs[i % 3], { force: true, at: { x, y } }); }, true);
+      this.warnCircle(x, y, 14, 700, () => { if (m.active) { const mm = s.spawn(false, s.ch.mobs[i % 3], { force: true, at: { x, y } }); if (mm && this.mid) mm.orb = true; } }, true);
     }
   }
 

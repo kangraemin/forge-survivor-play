@@ -3,8 +3,10 @@ import { W, H, MOBS, BOSSES } from './data.js';
 import { font, hiCam } from './ui.js';
 import { makeWeaponTextures } from './wart.js';
 import { updateGate, startCheck } from './updateGate.js';
+import { bootSync } from './cloudSync.js';
 import { loadFx2, makeFx2Anims } from './fx2.js';
 import { MODE_SHEETS, MODE_IMAGES } from './modeArt.js';
+import { loadPetRoles, makePetRoleAnims } from './petRoles.js';
 import { BODY_LOOKS, COS_ROWS, WEAPON_LOOKS, HEAD_LOOKS, CASH_PETS, AURAS } from './cosmetics.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
@@ -16,6 +18,10 @@ const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2', 'boss3', 'boss4', 'b
   .concat(['boss6_r0'], NEW_CH.map(c => 'tile' + c), NEW_CH.map(c => 'prop' + c), [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(c => 'lobby_bg' + c))
   .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'lobby_bg', 'bell', 'tile2', 'tile3', 'tile4', 'tile5']);
 // 코드로 그리던 작은 그림을 대신하는 PNG(assets/icon). 있으면 makeTextures가 건너뛴다
+// 16~18장 그림(assets/ch16-18): 키는 다른 장과 같은 규칙(z16_r0·tile16·prop16·lobby_bg16·boss16_r0), 공격 시트는 _attack, 보스 예고는 _telegraph
+const LATE_CH = [16, 17, 18];
+const LATE_IMAGES = LATE_CH.flatMap(c => [0, 1, 2].flatMap(r => [`z${c}_r${r}`, `z${c}_r${r}_attack`]).concat([`tile${c}`, `prop${c}`, `lobby_bg${c}`, `boss${c}_r0`, `boss${c}_r0_telegraph`]))
+  .concat(['gimmick16_frost_vent', 'gimmick16_ice_patch', 'gimmick17_deck_vent', 'gimmick17_wind_sail', 'gimmick18_hourglass', 'gimmick18_stopped_clock']);
 const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'meat', 'silver',
   'magnetItem', 'gem1', 'gem2', 'gem3', 'ebullet', 'fireball', 'ice', 'hammer', 'wave', 'dagger', 'orb'];
 // 무기 그림 PNG(assets/weapon/<종류><등급>.png). 있으면 makeWeaponTextures가 건너뛴다
@@ -43,10 +49,13 @@ export class Boot extends Phaser.Scene {
     for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => this.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
     for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) this.load.image(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`);
     for (const it of CASH_PETS) { this.load.spritesheet(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`, { frameWidth: 28, frameHeight: 28 }); if (it.dir) this.load.spritesheet(`cos_${it.id}_slash`, `assets/${it.dir}/${it.id}_slash.png`, { frameWidth: 28, frameHeight: 28 }); }
-    this.load.spritesheet('cos_fx', 'assets/cosmetics/fx.png', { frameWidth: 16, frameHeight: 16 });
+    loadPetRoles(this);
+    this.load.image('ban_ch16', 'assets/banner/chapter16_96.png'); this.load.image('ban_ch16_big', 'assets/banner/chapter16_150.png');
+    this.load.spritesheet('cos_fx','assets/cosmetics/fx.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('cos_fx2', 'assets/cosmetics2/fx.png', { frameWidth: 16, frameHeight: 16 });
     for (const id of AURAS) this.load.spritesheet(`cos_aura_${id}`, `assets/cosmetics2/fx_${id}.png`, { frameWidth: 52, frameHeight: 52 });
     loadFx2(this);
+    for (const k of LATE_IMAGES) this.load.image(k, `assets/ch16-18/${k}.png`);
     for (const k of ICONS) this.load.image(k, `assets/icon/${k}.png`);
     for (const id of WEAPONS) for (let t = 0; t < 10; t++) this.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
   }
@@ -105,6 +114,7 @@ export class Boot extends Phaser.Scene {
       let sh = this.sheet(`${m.sheet}_r${m.row}`);
       if (!sh) { sh = this.sheet(`mob_r${m.row}`); fallback[key] = true; }
       A(key, sh, m.ai === 'swarm' ? 10 : m.ai === 'tank' ? 6 : 7);
+      if (m.lateCh) A(key + 'Atk', this.sheet(`${m.sheet}_r${m.row}_attack`), 9);   // 16~18장 몹의 공격 준비·발동 그림
       if (m.die !== undefined) {
         const d = this.sheet('mob2_r' + m.die);
         A(key + 'Hurt', d, 1, 0, [0]);
@@ -115,12 +125,14 @@ export class Boot extends Phaser.Scene {
       let sh = this.sheet(`${b.sheet}_r${b.row}`, 2);
       if (!sh) { sh = this.sheet('mob_r' + (b.row % 3)); fallback[key] = true; }
       A(key, sh, 3);
+      if (b.lateCh) A(key + 'Tele', this.sheet(`${b.sheet}_r${b.row}_telegraph`, 2), 5);   // 16~18장 보스의 패턴 예고 그림
     }
     for (const it of CASH_PETS) { A(`pet_${it.id}`, `cos_${it.id}`, 6); if (it.dir) A(`pet_${it.id}_slash`, `cos_${it.id}_slash`, 10, 0); }
+    makePetRoleAnims(this);
     for (const id of AURAS) A(`aura_${id}`, `cos_aura_${id}`, 8);
     this.registry.set('fallback', fallback);
     this.makeTextures();
-    updateGate(this, this.upd).then(go => { if (go) this.scene.start('Lobby'); });   // 강제 업데이트면 여기서 멈춘다
+    updateGate(this, this.upd).then(async go => { if (go && !(await bootSync().catch(() => false))) this.scene.start('Lobby'); });   // 서버 저장이 이 기기보다 앞서면 받아서 화면을 다시 불러온다   // 강제 업데이트면 여기서 멈춘다
   }
 
   // 픽셀 단위로 직접 그리는 작은 그림들

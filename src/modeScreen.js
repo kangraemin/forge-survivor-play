@@ -4,7 +4,7 @@ import { sfx } from './sfx.js';
 import { track } from './log.js';
 import { font, font9, panel, button, fmt, toast } from './ui.js';
 import { ensureModeArt, MODE_ICON } from './modeArt.js';
-import { MODE_IDS, MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward } from './modeData.js';
+import { MODE_IDS, MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward, repeatReward, modeStars, modeStarTotal, modeBest, starTexts, fmtT } from './modeData.js';
 
 const { W } = D;
 
@@ -46,7 +46,7 @@ export const ModeScreen = {
     });
     // 모드 설명 3줄
     b.add(this.add.image(24, 112, 'ma_' + MODE_ICON[id]).setDisplaySize(20, 20));
-    b.add(this.add.text(38, 112, `${def.name}  ${modeCount(sv, id)}/${MODE_N}판`, font(11, def.css)).setOrigin(0, 0.5));
+    b.add(this.add.text(38, 112, `${def.name}  ${modeCount(sv, id)}/${MODE_N}판  ★${modeStarTotal(sv, id)}/${MODE_N * 3}`, font(11, def.css)).setOrigin(0, 0.5));
     b.add(this.add.text(W - 14, 112, `완주 「${def.title}」`, font9(9, '#ffb050')).setOrigin(1, 0.5));
     def.desc.forEach((s, i) => b.add(this.add.text(24, 128 + i * 13, s, font9(10, '#d8d0e8'))));
     // 15판 격자(5열 x 3행)
@@ -56,7 +56,9 @@ export const ModeScreen = {
       const g = this.add.container(cx, cy);
       g.add(panel(this, -23, -15, 46, 30, { fill: !open || !made ? 0x100d16 : sel ? 0x2e2548 : 0x1c1729, line: sel ? 0xffd75e : 0x3a3150 }));
       g.add(this.add.text(0, -3, String(k + 1), font(11, open && made ? '#ffffff' : '#4a4060')).setOrigin(0.5));
-      g.add(this.add.text(0, 9, done ? '★' : !open ? '잠김' : made ? '' : '준비 중', font9(8, done ? '#ffd75e' : '#5a5070')).setOrigin(0.5));
+      const sc = modeStars(sv, id, k);
+      if (done) g.add(this.add.text(0, 9, '★'.repeat(Math.max(1, sc)) + '☆'.repeat(3 - Math.max(1, sc)), font9(8, '#ffd75e')).setOrigin(0.5));
+      else g.add(this.add.text(0, 9, !open ? '잠김' : made ? '' : '준비 중', font9(8, '#5a5070')).setOrigin(0.5));
       g.setSize(46, 30).setInteractive({ useHandCursor: true });
       g.on('pointerup', () => { sfx('click'); this.modeN = k; this.show('battle'); });
       b.add(g);
@@ -69,13 +71,18 @@ export const ModeScreen = {
     else {
       b.add(this.add.text(24, 294, cfg.goal, font9(10, '#ffffff')));
       cfg.note.split(' · ').forEach((s, i) => b.add(this.add.text(24, 308 + i * 13, s, font9(10, '#a1b2b6'))));
-      const rw = modeReward(cfg.c, !modeDone(sv, id, n));
-      b.add(this.add.text(24, 336, modeDone(sv, id, n) ? '다시 깨면' : '첫 클리어 보상', font9(10, '#f2e4bc')));
+      const rw = modeDone(sv, id, n) ? repeatReward(cfg.c, modeStars(sv, id, n) || 1) : modeReward(cfg.c, true);
+      b.add(this.add.text(24, 336, modeDone(sv, id, n) ? `다시 깨면 (별이 많을수록 더 줘요)` : '첫 클리어 보상', font9(10, '#f2e4bc')));
       b.add(this.add.text(24, 349, `금화 ${fmt(rw.gold)}  강화석 ${rw.stone}${rw.gem ? `  보석 ${rw.gem}` : ''}`, font9(10, '#f2e4bc')));
       if (!open) b.add(this.add.text(24, 364, `본편 ${n + 1}장을 깨면 열려요`, font9(10, '#ff9090')));
-      else canGo = true;
+      else {
+        canGo = true;
+        const k = modeStars(sv, id, n), bt = modeBest(sv, id, n), tx = starTexts(cfg);
+        b.add(this.add.text(24, 364, `별 ${'★'.repeat(k)}${'☆'.repeat(3 - k)}${bt ? `   최고 ${fmtT(bt.t)} · 피해 ${bt.hurt}%` : ''}`, font9(10, k ? '#ffd75e' : '#a1b2b6')));
+        b.add(this.add.text(24, 377, `★ ${tx[0]}  ★★ ${tx[1]}  ★★★ ${tx[2]}`, font9(9, '#8d86a0')));
+      }
     }
-    const go = button(this, W / 2, 398, 190, 32, '시작', () => this.startModeBattle(id, n), { size: 14, color: 0x2f6b3a });
+    const go = button(this, W / 2, 408, 190, 32, '시작', () => this.startModeBattle(id, n), { size: 14, color: 0x2f6b3a });
     go.setEnabled(canGo);
     b.add(go);
   },

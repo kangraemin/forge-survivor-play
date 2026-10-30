@@ -15,7 +15,7 @@ st.last = now; ls(KEY, JSON.stringify(st));
 
 // 테스트 봇·헤드리스 브라우저·로컬 개발은 보내지 않는다(통계가 더러워진다)
 const host = location.hostname;
-const off = navigator.webdriver || /Headless/.test(navigator.userAgent) || host === 'localhost' || host === '127.0.0.1' || location.protocol === 'file:' || /[?&]nolog/.test(location.search);
+const off = navigator.webdriver || /Headless/.test(navigator.userAgent) || host === 'localhost' || host === '127.0.0.1' || location.protocol === 'file:' || /[?&]nolog/.test(location.search) || !!window.forgePlatform?.noAnalytics;   // 포털판은 외부 로그를 보내지 않는다
 let seq = 0, lastT = now, first = true;
 const recent = [];
 export const logRecent = () => recent.slice();

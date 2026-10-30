@@ -2,7 +2,7 @@
 // 코드는 내려받아 실행하지 않는다(앱인토스는 외부 코드 실행 금지). 받는 것은 JSON뿐이다
 // 원격 주소: 웹은 같은 곳의 version.json. 토스·네이티브 번들은 REMOTE_BASE를 CDN/페이지 주소로 바꿔야 번들 밖 최신본을 본다
 export const BUILD = 1;            // 이 앱 코드의 빌드 번호. 코드·결제·저장 형식을 바꾼 배포마다 올린다
-export const REMOTE_BASE = '';     // 예: 'https://example.github.io/forge/'. 비면 상대 경로
+export const REMOTE_BASE = globalThis.__FORGE_REMOTE_BASE__ || '';     // 예: 'https://example.github.io/forge/'. 비면 상대 경로. 스토어 앱은 store/src/forge-platform.js 가 웹판 주소를 넣는다
 const FETCH_MS = 3500, MAX_BYTES = 2e6;
 const DATA_KEY = 'forge-data-cache', ASK_KEY = 'forge-update-asked';
 

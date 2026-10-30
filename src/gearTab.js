@@ -5,10 +5,12 @@ import { save } from './save.js';
 import { sfx } from './sfx.js';
 import { font, font9, panel, button, fmt, COLOR, toast, weaponIcon } from './ui.js';
 import { track } from './log.js';
+import { roleOf } from './petRoles.js';
 import {
   SLOTS, slotOf, RARITY, STATS, statText, SETS, EGGS, WTYPES, PETS, PET_MAX, petCost, petPow, SP, SP_RESET_GEM, SKILL_TAG, TAG_NAME,
   spFree, spTotal, gearStats, itemScore, INV_MAX, statMul, ownsW, SP_MILE, SP_MILE_DMG, SP_MILE_HP,
 } from './gear.js';
+import { sellPrice, tidyList, tidyTotals, tidyApply, sellOne, salvageOne } from './gearSell.js';
 
 const { W, H } = D;
 const PAGE = 24, COLS = 6, CELL = 40;
@@ -24,6 +26,10 @@ export function itemBox(scene, x, y, it, size = 34, on = false, appearance = fal
   else c.add(scene.add.image(0, 0, 'gs_' + it.s).setScale(Math.floor(size * 0.6 / 12 * 2) / 2).setTint(it.r === 0 ? 0xd8d2e8 : Phaser.Display.Color.HexStringToColor(rr.css).color));
   if (it.egg) c.add(scene.add.text(size / 2 - 3, -size / 2 + 1, '★', font(8, '#ff8ae0')).setOrigin(1, 0));
   if (on) c.add(scene.add.text(-size / 2 + 2, size / 2 - 2, 'E', font(8, '#5fdc6a')).setOrigin(0, 1));
+  if (it.lock) {   // 작은 자물쇠(왼쪽 위): 몸통 + 고리
+    c.add(scene.add.rectangle(-size / 2 + 6, -size / 2 + 9, 5, 4, 0xffd75e));
+    c.add(scene.add.rectangle(-size / 2 + 6, -size / 2 + 5.5, 3, 3).setStrokeStyle(1, 0xffd75e));
+  }
   c.setSize(size, size);
   return c;
 }
@@ -97,7 +103,7 @@ export const GearTab = {
       if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x3a3846 }));
       b.add(button(this, W / 2, spFree(sv) > 0 ? 334 : 310, 170, 26, '장비 얻으러 전투하기 →', () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
     } else if (spFree(sv) > 0) {
-      const t = this.add.text(W - 14, 207, `● 스탯 포인트 ${spFree(sv)} 찍기 →`, font9(10, '#ff8080')).setOrigin(1, 0);
+      const t = this.add.text(104, 207, `● 스탯 ${spFree(sv)}점 →`, font9(10, '#ff8080')).setOrigin(0, 0);
       t.setInteractive({ useHandCursor: true }).on('pointerup', toStat); b.add(t);
     }
     inv.slice(this.invPage * PAGE, this.invPage * PAGE + PAGE).forEach((it, i) => {
@@ -110,23 +116,56 @@ export const GearTab = {
       b.add(this.add.text(80, 404, `${this.invPage + 1}/${pages}`, font9(10, '#a1b2b6')).setOrigin(0.5));
       b.add(button(this, 120, 404, 40, 22, '▶', () => { if (this.busy) return; this.invPage = (this.invPage + 1) % pages; this.show('gear'); }, { size: 10 }));
     }
-    const junk = inv.filter(it => it.r === 0 && !on.has(it.u));
-    const sb = button(this, W - 62, 404, 104, 22, `일반 ${junk.length}개 분해`, () => {
-      if (this.busy || !junk.length) return;
-      const st = junk.length * RARITY[0].salvage;
-      sv.inv = sv.inv.filter(it => !junk.includes(it)); sv.stone += st; save();
-      track('gear_salvage_all', { n: junk.length, stone: st });
-      sfx('coin'); this.refreshTop(); this.bump(1); toast(this, `강화석 +${st}`, '#9ae0ff'); this.show('gear');
-    }, { size: 9, color: 0x3a3846 });
-    // 빈 가방엔 분해 버튼을 안 둔다(탭 몸통에 안 넣으면 다른 탭까지 남는다: 바로 지운다)
-    sb.setEnabled(junk.length > 0); if (inv.length) b.add(sb); else sb.destroy();
+    // 가방 위 '한번에 정리': 등급을 골라 판매·분해(낀·잠근·숨겨진 장비는 뺀다). 빈 가방엔 두지 않는다
+    if (inv.length) b.add(button(this, W - 50, 206, 84, 18, '한번에 정리', () => { if (!this.busy) this.tidyWin(); }, { size: 9, color: 0x3a3846 }));
+  },
+
+  // 한번에 정리 창: 등급(일반·희귀·영웅)과 방식(판매·분해)을 고르고, 받을 금화·강화석 합계를 보고 확인한다
+  tidyWin() {
+    const sv = this.sv, c = this.modal();
+    this.tidyR ||= [0]; this.tidyMode ||= 'sell';
+    const rs = this.tidyR.slice().sort(), list = tidyList(sv, rs), t = tidyTotals(list), sell = this.tidyMode === 'sell';
+    const reopen = () => { c.destroy(); this.busy = false; this.tidyWin(); };
+    c.add(panel(this, 14, 96, W - 28, 334, { fill: 0x1a1426, line: COLOR.line }));
+    c.add(this.add.text(W / 2, 114, '한번에 정리', font(13)).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 134, '정리할 등급', font9(10, '#a1b2b6')).setOrigin(0.5));
+    [0, 1, 2].forEach(r => {
+      const on = rs.includes(r), n = tidyList(sv, [r]).length;
+      c.add(button(this, 55 + r * 80, 154, 72, 24, `${RARITY[r].name} ${n}`, () => {
+        this.tidyR = on ? this.tidyR.filter(x => x !== r) : [...this.tidyR, r]; sfx('click'); reopen();
+      }, { size: 10, color: on ? 0x5a3f8a : 0x2a2440 }));
+    });
+    c.add(this.add.text(W / 2, 182, '처리 방식', font9(10, '#a1b2b6')).setOrigin(0.5));
+    c.add(button(this, W / 2 - 50, 202, 92, 24, '판매 (금화)', () => { this.tidyMode = 'sell'; sfx('click'); reopen(); }, { size: 10, color: sell ? 0x5a3f8a : 0x2a2440 }));
+    c.add(button(this, W / 2 + 50, 202, 92, 24, '분해 (강화석)', () => { this.tidyMode = 'salvage'; sfx('click'); reopen(); }, { size: 10, color: !sell ? 0x5a3f8a : 0x2a2440 }));
+    c.add(this.add.rectangle(W / 2, 226, W - 60, 1, 0x293845));
+    c.add(this.add.text(W / 2, 240, `${t.n}개`, font(14)).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 262, `판매하면 금화 +${fmt(t.gold)}`, font9(11, sell ? '#ffd75e' : '#6a6080')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 280, `분해하면 강화석 +${fmt(t.stone)}`, font9(11, !sell ? '#9ae0ff' : '#6a6080')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 302, '낀 장비·잠근 장비·숨겨진 장비는 빠진다', font9(9, '#a1b2b6')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 318, '전설 장비는 한 개씩 직접 정리한다', font9(9, '#a1b2b6')).setOrigin(0.5));
+    // 가방이 꽉 찼을 때 알아서 정리하는 방식
+    const auto = sv.bagAuto === 'sell';
+    c.add(this.add.text(W / 2, 338, '가방이 꽉 차면', font9(10, '#a1b2b6')).setOrigin(0.5));
+    const ab = button(this, W / 2, 358, 120, 22, auto ? '자동 판매 (바꾸기)' : '자동 분해 (바꾸기)', () => {
+      sv.bagAuto = auto ? 'salvage' : 'sell'; save(); sfx('click'); track('bag_auto', { mode: sv.bagAuto }); reopen();
+    }, { size: 10 });
+    c.add(ab);
+    const ok = button(this, W / 2 - 52, 408, 92, 28, sell ? '판매하기' : '분해하기', () => {
+      if (!list.length) return;
+      const r = tidyApply(sv, rs, this.tidyMode); save();
+      track('gear_tidy', { mode: this.tidyMode, n: r.n, gold: sell ? r.gold : 0, stone: sell ? 0 : r.stone, rarities: rs.join(',') });
+      sfx('coin'); c.close(); toast(this, sell ? `금화 +${fmt(r.gold)}` : `강화석 +${fmt(r.stone)}`, sell ? '#ffd75e' : '#9ae0ff');
+    }, { size: 11, color: 0x2f6b3a });
+    ok.setEnabled(list.length > 0); c.add(ok);
+    c.add(button(this, W / 2 + 52, 408, 92, 28, '닫기', () => c.close(), { size: 10 }));
   },
 
   // 장비 한 개 창: 옵션, 낀 것과 비교, 끼기·빼기·분해
   itemWin(it) {
     const sv = this.sv, c = this.modal(), rr = RARITY[it.r], sl = slotOf(it.s);
     const curU = sv.eq?.[it.s], cur = curU && curU !== it.u ? sv.inv.find(v => v.u === curU) : null, isOn = curU === it.u;
-    c.add(panel(this, 22, 96, W - 44, 302, { fill: 0x1a1426, line: rr.color }));
+    c.add(panel(this, 12, 96, W - 24, 334, { fill: 0x1a1426, line: rr.color }));
     c.add(itemBox(this, W / 2, 130, it, 40));
     c.add(this.add.text(W / 2, 160, it.n, font(13, rr.css)).setOrigin(0.5));
     c.add(this.add.text(W / 2, 177, `${rr.name} ${sl.name}${it.egg ? '' : ` · ${it.c + 1}장`}`, font9(10, '#a1b2b6')).setOrigin(0.5));
@@ -153,21 +192,35 @@ export const GearTab = {
       // 두 칸씩 줄을 나눠 글자가 중간에서 잘리지 않게
       diff.forEach(([t, col], i) => c.add(this.add.text(W / 2 + (i % 2 ? 6 : -6), y + Math.floor(i / 2) * 13, t, font9(9, col)).setOrigin(i % 2 ? 0 : 1, 0)));
     }
-    const eb = button(this, 72, 372, 88, 26, isOn ? '빼기' : '끼기', () => {
+    // 자물쇠: 잠그면 판매·분해·자동 정리에서 빠진다
+    const lk = button(this, W - 50, 130, 56, 20, it.lock ? '잠금 해제' : '잠그기', () => {
+      if (it.lock) delete it.lock; else it.lock = 1;
+      save(); sfx('click'); track('gear_lock', { on: !!it.lock, rarity: it.r }); c.destroy(); this.busy = false; this.itemWin(it);
+    }, { size: 9, color: it.lock ? 0x5a3f8a : 0x2a2440 });
+    c.add(lk);
+    const eb = button(this, 62, 414, 88, 26, isOn ? '빼기' : '끼기', () => {
       sv.eq ||= {};
       if (isOn) delete sv.eq[it.s]; else sv.eq[it.s] = it.u;
       save(); sfx('buy'); track('gear_equip', { on: !isOn, slot: it.s, rarity: it.r, set: it.set || 'none', egg: it.egg || 'none', power: D.powerOf(sv) });
       c.close();
     }, { size: 11, color: 0x2f6b3a });
     c.add(eb);
-    const salv = RARITY[it.r].salvage;
-    const xb = button(this, W / 2 + 8, 372, 72, 26, it.egg ? '분해 불가' : `분해 +${salv}`, () => {
-      if (it.egg || isOn) return;
-      sv.inv = sv.inv.filter(v => v !== it); sv.stone += salv; save();
+    // 분해와 판매는 나란히: 강화석이 필요하면 분해, 금화가 급하면 판매
+    const salv = RARITY[it.r].salvage, price = sellPrice(it), can = !it.egg && !isOn && !it.lock;
+    const xb = button(this, W / 2 - 54, 372, 100, 26, it.egg ? '분해 불가' : `분해 +${salv} 강화석`, () => {
+      if (!can) return;
+      salvageOne(sv, it); save();
       track('gear_salvage', { rarity: it.r, stone: salv }); sfx('coin'); c.close(); toast(this, `강화석 +${salv}`, '#9ae0ff');
     }, { size: 10, color: 0x8a2f3a });
-    xb.setEnabled(!it.egg && !isOn); c.add(xb);
-    c.add(button(this, W - 52, 372, 44, 26, '닫기', () => c.close(), { size: 10 }));
+    xb.setEnabled(can); c.add(xb);
+    const sb = button(this, W / 2 + 54, 372, 100, 26, it.egg ? '판매 불가' : `판매 +${fmt(price)} 금화`, () => {
+      if (!can) return;
+      sellOne(sv, it); save();
+      track('gear_sell', { rarity: it.r, gold: price }); sfx('coin'); c.close(); toast(this, `금화 +${fmt(price)}`, '#ffd75e');
+    }, { size: 10, color: 0x5a4a1f });
+    sb.setEnabled(can); c.add(sb);
+    if (it.lock && !it.egg) c.add(this.add.text(W / 2, 394, '잠근 장비는 팔거나 분해할 수 없다', font9(9, '#a1b2b6')).setOrigin(0.5));
+    c.add(button(this, W - 62, 414, 88, 26, '닫기', () => c.close(), { size: 10 }));
   },
 
   // ── 펫: 잡은 보스가 작아져 따라온다. 맵마다 잘 듣는 펫이 달라 바꿔 데려간다 ──
@@ -191,6 +244,8 @@ export const GearTab = {
       else if (this.anims.exists(p.id)) { const sp = this.add.sprite(34, y + 23, null).play(p.id).setScale(fb[p.id] ? 0.8 : 0.36); if (fb[p.id]) sp.setTint(p.color); b.add(sp); }
       b.add(this.add.text(56, y + 5, open ? `${p.name}  Lv ${lv}` : `??? · ${p.hint}`, font(11, open ? '#ffffff' : '#6a6080')));
       if (!open) { b.add(this.add.text(56, y + 23, '보스를 잡으면 따라온다', font9(10, '#5c6e76'))); return; }
+      const rl = roleOf(p.id);
+      if (rl && this.textures.exists(rl.icon)) { b.add(this.add.image(W - 91, y + 23, rl.icon).setScale(0.62)); b.add(this.add.text(W - 91, y + 37, rl.name, font9(8, rl.color)).setOrigin(0.5, 0)); }
       b.add(this.add.text(56, y + 20, p.desc, font9(10, '#f2e4bc')));
       const fit = `강함 ${[...(p.good || []).map(chN), ...(p.id === 'demonlord' ? ['탑'] : [])].join('·') || '-'}${p.weak ? `  약함 ${p.weak.map(chN).join('·')}` : ''}`;
       b.add(this.add.text(56, y + 33, fit, font9(9, '#8fdc8a')));

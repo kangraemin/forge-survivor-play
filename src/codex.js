@@ -1,16 +1,18 @@
 // 도감·업적·칭호. 도감 칸을 채우면 영구 보너스(gearStats가 sv.dexB를 읽는다)
-import { MOBS, MOB_NAMES, BOSSES, HARD } from './data.js';
+import { MOBS, MOB_NAMES, BOSSES, HARD, chapterOpen } from './data.js';
 import { MODE_DEFS, MODE_N, MODE_IDS, modeCount } from './modeData.js';
 import { WTYPES, PETS, SETS, EGGS, ownsW } from './gear.js';
 
 export const DEX_KILL = 100;                 // 몬스터 칸은 이만큼 잡아야 찬다
 export const DEX_HP = 0.005, DEX_SET_ATK = 0.02;   // 칸 하나 최대 체력 +0.5%, 묶음 하나 다 채우면 모든 피해 +2%
 
+// 16~18장 몹·보스는 그 장이 열린 뒤에만 도감·업적에 센다(잠긴 동안 도감 전부가 막히지 않게)
+const shown = o => !o.lateCh || chapterOpen(o.lateCh - 1);
 const kills = (sv, k) => sv.dex?.m?.[k] || 0;
 // 묶음: 칸마다 이름·찼나·진행 글자
 export const DEX_GROUPS = [
-  { id: 'mob', name: '몬스터', cells: sv => Object.keys(MOBS).map(k => ({ id: k, name: MOB_NAMES[k], anim: k, on: kills(sv, k) >= DEX_KILL, sub: `${Math.min(DEX_KILL, kills(sv, k))}/${DEX_KILL}` })) },
-  { id: 'boss', name: '보스', cells: sv => Object.keys(BOSSES).map(k => ({ id: k, name: BOSSES[k].name, anim: k, on: kills(sv, k) >= 1, sub: kills(sv, k) ? `${kills(sv, k)}번` : '못 잡음' })) },
+  { id: 'mob', name: '몬스터', cells: sv => Object.keys(MOBS).filter(k => shown(MOBS[k])).map(k => ({ id: k, name: MOB_NAMES[k], anim: k, on: kills(sv, k) >= DEX_KILL, sub: `${Math.min(DEX_KILL, kills(sv, k))}/${DEX_KILL}` })) },
+  { id: 'boss', name: '보스', cells: sv => Object.keys(BOSSES).filter(k => shown(BOSSES[k])).map(k => ({ id: k, name: BOSSES[k].name, anim: k, on: kills(sv, k) >= 1, sub: kills(sv, k) ? `${kills(sv, k)}번` : '못 잡음' })) },
   { id: 'weapon', name: '무기', cells: sv => WTYPES.map(w => ({ id: w.id, name: w.name, on: ownsW(sv, w.id), sub: ownsW(sv, w.id) ? '가짐' : '없음' })) },
   { id: 'pet', name: '펫', cells: sv => PETS.map(p => ({ id: p.id, name: p.name, anim: p.id, on: sv.cleared >= p.unlock, sub: sv.cleared >= p.unlock ? '합류' : p.hint })) },
   { id: 'set', name: '세트', cells: sv => Object.entries(SETS).map(([k, s]) => ({ id: k, name: s.name, on: !!sv.dex?.s?.[k], sub: sv.dex?.s?.[k] ? '얻음' : '없음' })) },
@@ -31,7 +33,7 @@ export function dexRefresh(sv) {
 // 처치 기록(전투 중). 세트 획득은 gear.js addItems가 남긴다
 export const dexKill = (sv, kind) => { const m = ((sv.dex ||= {}).m ||= {}); m[kind] = (m[kind] || 0) + 1; };
 
-export const DEX_ALL = Object.keys(MOBS).length + Object.keys(BOSSES).length + WTYPES.length + PETS.length + Object.keys(SETS).length + Object.keys(EGGS).length;
+export const dexAllN = () => Object.values(MOBS).filter(shown).length + Object.values(BOSSES).filter(shown).length + WTYPES.length + PETS.length + Object.keys(SETS).length + Object.keys(EGGS).length;
 
 // ── 업적: 값(v)이 need에 닿으면 받기. title이 있으면 칭호도 열린다 ──
 const st = (sv, k) => sv.stats?.[k] || 0;
@@ -47,6 +49,9 @@ export const ACHIEVES = [
   { id: 'ch10', name: '심연을 건너다', desc: '10장 공허 군주 격파', need: 30, v: sv => sv.cleared, gem: 120, title: '심연의 방랑자' },
   { id: 'hard1', name: '붉은 길', desc: '어려움 1장 보스 격파', need: 3, v: sv => sv.hardCleared || 0, gem: 50 },
   { id: 'ch15', name: '대장간의 끝', desc: '15장 원초의 대장신 격파', need: 45, v: sv => sv.cleared, gem: 200, title: '원초의 대장장이' },
+  { id: 'ch16', name: '서리 왕궁의 정복자', desc: '16장 보스 격파', need: 48, v: sv => sv.cleared, gem: 120, late: 16 },
+  { id: 'ch17', name: '하늘 고래의 항해사', desc: '17장 보스 격파', need: 51, v: sv => sv.cleared, gem: 150, late: 17 },
+  { id: 'ch18', name: '멈춘 시계의 주인', desc: '18장 보스 격파', need: 54, v: sv => sv.cleared, gem: 200, title: '시간의 대장장이', late: 18 },
   { id: 'hard5', name: '지옥의 정복자', desc: '어려움 마지막 장 보스 격파', need: HARD.unlock, v: sv => sv.hardCleared || 0, gem: 150, title: '지옥의 정복자' },
   { id: 'tower10', name: '탑 오르기', desc: '무한의 탑 10층', need: 10, v: sv => sv.endBest || 0, gem: 30 },
   { id: 'tower25', name: '탑의 주인', desc: '무한의 탑 25층', need: 25, v: sv => sv.endBest || 0, gem: 100, title: '탑의 주인' },
@@ -57,7 +62,8 @@ export const ACHIEVES = [
   { id: 'dun10', name: '보물 사냥꾼', desc: '일일 던전 10번', need: 10, v: sv => st(sv, 'dun'), gem: 40 },
   { id: 'gob10', name: '고블린 잡이', desc: '보물 고블린 10마리', need: 10, v: sv => st(sv, 'gob'), gem: 40 },
   { id: 'dex25', name: '수집가', desc: '도감 25칸', need: 25, v: sv => dexState(sv).n, gem: 50 },
-  { id: 'dexAll', name: '박물관장', desc: '도감 전부', need: DEX_ALL, v: sv => dexState(sv).n, gem: 150, title: '박물관장' },
+  { id: 'dexAll', name: '박물관장', desc: '도감 전부', get need() { return dexAllN(); }, v: sv => dexState(sv).n, gem: 150, title: '박물관장' },
 ];
-export const achReady = sv => ACHIEVES.filter(a => !sv.ach?.[a.id] && a.v(sv) >= a.need).length;
+export const achList = () => ACHIEVES.filter(a => !a.late || chapterOpen(a.late - 1));
+export const achReady = sv => achList().filter(a => !sv.ach?.[a.id] && a.v(sv) >= a.need).length;
 export const titles = sv => ACHIEVES.filter(a => a.title && sv.ach?.[a.id]).map(a => a.title);

@@ -1,5 +1,6 @@
 import { cosmeticPage } from './cosmeticShop.js';
 import { openSettings } from './settingsPanel.js';
+import { cashHidden, shareHidden, adWord, trialInfo, openFull } from './platform/flags.js';   // 포털판(CrazyGames·itch): 현금 상품·공유 숨김
 import { shareBrag, braggable, bragGem, lobbyShareTick } from './share.js';
 import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmetics.js';
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
@@ -10,6 +11,7 @@ import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedCont
 import { showAd, buy, grant, giveText, adsLeft, adsDaily, won, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
+import { inTossShell } from './safeArea.js';
 import { ContentTab } from './contentTab.js';
 import { ModeScreen } from './modeScreen.js';
 import { dexRefresh } from './codex.js';
@@ -80,7 +82,7 @@ export class Lobby extends Phaser.Scene {
 
   // 지금 난이도에서 깬 판 수, 그 다음 도전할 판을 고른다
   get prog() { return this.hard ? this.sv.hardCleared || 0 : this.sv.cleared; }
-  selTop() { const top = Math.min(this.prog, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1); this.selC = Math.floor(top / D.STAGES_PER_CHAPTER); this.selS = top % D.STAGES_PER_CHAPTER; }
+  selTop() { const top = Math.min(this.prog, D.openTotal() - 1); this.selC = Math.floor(top / D.STAGES_PER_CHAPTER); this.selS = top % D.STAGES_PER_CHAPTER; }
 
   // 로비 위에 뜨는 창
   modal() {
@@ -192,7 +194,7 @@ export class Lobby extends Phaser.Scene {
     });
     c.add(gem ? this.add.text(W / 2, 268, `오래 기다렸다! 보석 +${gem}`, font(10, '#ff9ad0')).setOrigin(0.5) : this.add.text(W / 2, 268, `최대 ${D.IDLE.capH}시간까지 쌓인다`, font9(9, '#7d8f94')).setOrigin(0.5));
     if (adsLeft(sv, 'double') > 0) {
-      const db = button(this, W / 2, 296, 180, 24, sv.noAds ? '2배 받기' : '광고 보고 2배 ▶', async () => {
+      const db = button(this, W / 2, 296, 180, 24, sv.noAds ? '2배 받기' : adWord('광고 보고 2배 ▶', '2배 받기'), async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(this, sv, 'double');
         if (!ok || !this.scene.isActive()) { db.used = false; db.setEnabled(true); return; }
@@ -206,7 +208,7 @@ export class Lobby extends Phaser.Scene {
     c.add(button(this, W / 2, 330, 110, 26, '좋아', () => c.close(), { size: 11, color: 0x2f6b3a }));
   }
 
-  offerOk() { const sv = this.sv; return sv.offerDay !== sv.day && (sv.popRun ?? -1) < sv.stats.runs; }
+  offerOk() { const sv = this.sv; return !cashHidden() && sv.offerDay !== sv.day && (sv.popRun ?? -1) < sv.stats.runs; }
   // 새 보스 펫 합류(클리어 카드를 닫은 뒤 로비에서)
   petWin() {
     const sv = this.sv, p = PETS.find(x => x.id === sv.petJoinPending);
@@ -309,19 +311,21 @@ export class Lobby extends Phaser.Scene {
       return t;
     });
     // 알림 종·소리·설정(48차): 종 44px, 소리 30px, 설정 톱니 44px로 따로 떨어뜨린다
+    // 50차: 토스 안에서는 오른쪽 위 X 버튼과 겹치지 않게 세 아이콘을 왼쪽으로 모은다(누르는 칸도 좁힌다)
+    const toss = inTossShell(), bx = toss ? 166 : 176, sx = toss ? 190 : 212, gx = toss ? 214 : 248, hw = toss ? 24 : 44;
     if (this.textures.exists('bell') && sv.cleared > 0) {
-      const bell = this.add.image(176, 17, 'bell').setDepth(51);
-      this.add.rectangle(176, 22, 44, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); track('bell_tap'); this.missionWin(); });
-      this.bellDot = this.add.circle(186, 10, 3, 0xed786f).setDepth(52);
+      const bell = this.add.image(bx, 17, 'bell').setDepth(51);
+      this.add.rectangle(bx, 22, hw, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); track('bell_tap'); this.missionWin(); });
+      this.bellDot = this.add.circle(bx + 10, 10, 3, 0xed786f).setDepth(52);
       // 점만으론 무슨 알림인지 모른다(42차): 종 아래에 한 줄로 뭘 받는지 작게 보여 준다
-      this.bellHint = this.add.text(198, 31, '', font(8, '#ffd75e', 2)).setOrigin(1, 0.5).setDepth(52);
+      this.bellHint = this.add.text(bx + 22, 31, '', font(8, '#ffd75e', 2)).setOrigin(1, 0.5).setDepth(52);
     }
     // 소리 켜고 끄기
-    const snd = this.add.text(212, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(0.5).setDepth(51);
-    this.add.rectangle(212, 22, 30, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { sv.sound = !sv.sound; sv.musicOff = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); setMusic(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
+    const snd = this.add.text(sx, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(0.5).setDepth(51);
+    this.add.rectangle(sx, 22, toss ? 26 : 30, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { sv.sound = !sv.sound; sv.musicOff = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); setMusic(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
     // 설정(저장 내보내기·가져오기, 구매 복원, 이펙트 간단히): 톱니 아이콘, 누르는 칸 44px
-    this.add.image(248, 17, 'gear').setDepth(51);
-    this.add.rectangle(248, 22, 44, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); openSettings(this); });
+    this.add.image(gx, 17, 'gear').setDepth(51);
+    this.add.rectangle(gx, 22, hw, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); openSettings(this); });
     this.refreshTop();
     lobbyShareTick(this).catch(() => {});   // 친구 초대 보상 확인(서버가 죽었으면 조용히 넘어간다)
   }
@@ -353,7 +357,7 @@ export class Lobby extends Phaser.Scene {
       // 장비 탭: 찍을 스탯이 남았으면 빨간 점
       if (id === 'gear' && !locked() && spFree(this.sv) > 0) c.add(this.add.circle(tw / 2 - 10, -16, 4, 0xff5050));
       // 상점 탭: 성장 꾸러미(24시간 한정)가 열려 있으면 빨간 점
-      if (id === 'shop' && !locked() && growOffer(this.sv)) c.add(this.add.circle(tw / 2 - 10, -16, 4, 0xff5050));
+      if (id === 'shop' && !locked() && !cashHidden() && growOffer(this.sv)) c.add(this.add.circle(tw / 2 - 10, -16, 4, 0xff5050));
       c.id = id; return c;
     });
   }
@@ -369,7 +373,7 @@ export class Lobby extends Phaser.Scene {
     [this.body, this.bg].forEach(kill);
     this.body.removeAll(true); this.bg.removeAll(true);
     this.banner(id);
-    if (id === 'battle') this.battleTab();
+    if (id === 'battle') { this.battleTab(); this.trialLink(); }
     if (id === 'forge') this.forgeTab();
     if (id === 'gear') this.gearTab();
     if (id === 'shop') this.shopTab();
@@ -377,11 +381,25 @@ export class Lobby extends Phaser.Scene {
   }
 
   // 49차: 가변 높이 화면(H>480)에서 남는 높이를 채우는 배너. 상점은 위(본문을 아래로 민다), 나머지 탭은 본문 아래 탭바 위
-  // 왼쪽 '겨울 꾸미기'(행사 기간만), 오른쪽 '오늘의 판매'. 높이가 모자라면(480) 아예 만들지 않는다
+  // 왼쪽 '겨울 꾸미기'(행사 기간만), 오른쪽 '오늘의 특가'. 높이가 모자라면(480) 아예 만들지 않는다
   banner(id) {
     this.bn?.destroy(); this.bn = null; this.body.y = 0;
     const extra = H - 480, sv = this.sv, top = id === 'shop';
     const bh = Math.min(top ? extra - 4 : extra - 10, 50);
+    // 50차: 모드 선택 화면에서는 겨울·오늘의 특가 배너를 숨긴다(시작 버튼 아래가 광고처럼 보였다)
+    if (id === 'battle' && this.modeScr) return;
+    // 50차: 처음 시작한 계정(1판도 못 깸): 비는 자리에 첫 목표 한 줄과 모드 예고 카드를 둔다
+    if (id === 'battle' && sv.cleared < 1 && !this.tower && bh >= 34) {
+      const c = this.bn = this.add.container(0, 436).setDepth(10), w = W - 24;
+      const card = (y, line, title, tc, sub) => {
+        c.add(panel(this, 12, y, w, bh, { fill: 0x141b27, line }));
+        c.add(this.add.text(20, y + 6, title, font(11, tc)));
+        c.add(this.add.text(20, y + 22, sub, font9(10, '#a1b2b6')));
+      };
+      card(0, 0xffd75e, '첫 목표', '#ffd75e', '1-1과 1-2를 깨면 보스가 나와요.');
+      card(bh + 6, 0x475c66, '모드 4종', '#ffffff', '본편 1장을 깨면 열려요.');
+      return;
+    }
     if (bh < 34 || sv.cleared < 1) return;
     const y0 = top ? 38 : 436, ts = todaySale(), win = available({ winter: true });
     if (top) this.body.y = bh + 4;
@@ -394,9 +412,24 @@ export class Lobby extends Phaser.Scene {
       c.add(this.add.text(x + w - 8, bh - 6, '보러 가기 ▶', font9(9, '#7d8f94')).setOrigin(1, 1));
       c.add(this.add.rectangle(x, 0, w, bh, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy) fn(); }));
     };
+    // 15장을 다 깼고 16장이 아직 안 열렸으면 '16장 예고' 배너가 자리를 차지한다(탭하면 안내)
+    if (sv.cleared >= D.MAIN_CHAPTERS * D.STAGES_PER_CHAPTER && D.openN() <= D.MAIN_CHAPTERS && !top && this.textures.exists('ban_ch16')) {
+      const im = this.add.image(12, 0, 'ban_ch16').setOrigin(0); im.setScale((W - 24) / im.width); c.add(im);
+      c.add(this.add.text(24, 8, '16장 예고', font(11, '#9ae0ff')));
+      c.add(this.add.text(24, 24, '얼어붙은 왕궁 · 곧 열립니다', font9(9, '#ffffff')));
+      c.add(this.add.rectangle(12, 0, W - 24, im.displayHeight, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy) toast(this, '16장 얼어붙은 왕궁 · 곧 열립니다', '#9ae0ff', 112); }));
+      return;
+    }
     const half = (W - 24 - 6) / 2;
     card(12, half, win ? 0x7ad0ff : COLOR.line, win ? '겨울 꾸미기' : '꾸미기 상점', win ? '#9ae0ff' : '#ffffff', win ? `${winterItems().length}종 · 12월 31일까지` : '머리·무기·캐릭터', () => goSkin(win ? 'winter' : 'character'));
-    card(12 + half + 6, half, 0xff9ad0, '오늘의 판매', '#ff9ad0', `${ts.name} ${SALE_OFF}% 할인`, () => goSkin(ts.kind, ts.id));
+    card(12 + half + 6, half, 0xff9ad0, '오늘의 특가', '#ff9ad0', `${ts.name} ${SALE_OFF}% 할인`, () => goSkin(ts.kind, ts.id));
+  }
+
+  // itch.io 체험판: 전체판 링크(토스·스토어). 다른 판에서는 아무것도 그리지 않는다
+  trialLink() {
+    const t = trialInfo(); if (!t) return;
+    const b = button(this, W / 2, H - 62, 170, 16, `${t.label} ▶`, () => { track('full_link', { from: 'lobby' }); openFull('lobby'); }, { size: 9, color: 0x3a3846 });
+    this.body.add(b);
   }
 
   // ── 전투 탭 ──
@@ -407,10 +440,10 @@ export class Lobby extends Phaser.Scene {
     const atk = D.powerOf(sv);
     // 챕터 제목과 화살표(어려움은 붉게)
     b.add(this.add.text(W / 2, 56, `${hard ? '어려움 ' : ''}${c + 1}장  ${ch.name}`, font(15, hard ? '#ff7070' : '#ffd75e')).setOrigin(0.5));
-    const unlockedC = Math.floor(Math.min(prog, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1) / D.STAGES_PER_CHAPTER);
+    const unlockedC = Math.floor(Math.min(prog, D.openTotal() - 1) / D.STAGES_PER_CHAPTER);
     const arrow = (x, d, ok) => {
       const t = this.add.text(x, 56, d < 0 ? '◀' : '▶', font(14, ok ? '#ffffff' : '#3a3450')).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      t.on('pointerup', () => { if (!ok) return; sfx('click'); this.selC += d; this.selS = Math.min(this.selS, this.selC < unlockedC ? D.STAGES_PER_CHAPTER - 1 : prog % D.STAGES_PER_CHAPTER); if (this.selC === unlockedC) this.selS = Math.min(prog, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1) % D.STAGES_PER_CHAPTER; this.show('battle'); });
+      t.on('pointerup', () => { if (!ok) return; sfx('click'); this.selC += d; this.selS = Math.min(this.selS, this.selC < unlockedC ? D.STAGES_PER_CHAPTER - 1 : prog % D.STAGES_PER_CHAPTER); if (this.selC === unlockedC) this.selS = Math.min(prog, D.openTotal() - 1) % D.STAGES_PER_CHAPTER; this.show('battle'); });
       b.add(t);
     };
     arrow(22, -1, c > 0);
@@ -466,7 +499,7 @@ export class Lobby extends Phaser.Scene {
     b.add(panel(this, 12, 244, W - 24, 132, { fill: 0x15111f }));   // 아래 버튼이 탭 바에 붙지 않게 짧게
     const vr = D.stageVariant(c, s), mod = D.stageMod(c);
     const head = boss ? `보스 ${D.BOSSES[ch.boss].name}` : s === 1 ? `${mod.name} 규칙 + 중간 보스` : vr ? `새 몬스터 ${D.VARIANTS[vr[1]].pre} ${D.MOB_NAMES[ch.mobs[vr[0]]]}` : '기본 몬스터';
-    const last = idx >= D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1;
+    const last = idx >= D.openTotal() - 1;
     const sub = hard ? (boss ? (last ? '어려움 마지막 보스다' : `잡으면 어려움 ${c + 2}장이 열린다`) : '몹이 훨씬 세고 보상이 크다')
       : boss ? (last ? '마지막 보스. 잡으면 어려움이 열린다' : `잡으면 ${c + 2}장과 새 무기가 열린다`) : s === 1 ? `${mod.desc}. 깨면 다음은 보스` : vr ? D.VARIANTS[vr[1]].desc : '2판 깨면 보스가 나온다';
     b.add(this.add.text(24, 254, `${hard ? '어려움 ' : ''}${c + 1}-${s + 1}  ${head}`, font(12, boss || hard ? '#ff9090' : '#ffffff')));
@@ -514,14 +547,14 @@ export class Lobby extends Phaser.Scene {
   // 보석이 모자라면 패키지 탭으로 보낸다(첫 구매 2배를 같이 알린다)
   gemShort(need) {
     const sv = this.sv, first = D.FIRST_BUY_X2.some(id => !sv.bought?.[id]);
-    this.shopPage = 'pack'; this.show('shop');
-    toast(this, `보석 ${need - sv.gem} 부족${first ? ' · 첫 구매는 2배' : ''}`, '#ff9a8a');
+    this.shopPage = cashHidden() ? 'gem' : 'pack'; this.show('shop');
+    toast(this, `보석 ${need - sv.gem} 부족${first && !cashHidden() ? ' · 첫 구매는 2배' : ''}`, '#ff9a8a');
   }
 
   // ── 무한의 탑 ──
   towerPage() {
     const sv = this.sv, b = this.body;
-    const c = Math.floor(Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1) / D.STAGES_PER_CHAPTER);
+    const c = Math.floor(Math.min(sv.cleared, D.openTotal() - 1) / D.STAGES_PER_CHAPTER);
     b.add(this.add.text(W / 2, 56, '무한의 탑', font(15, '#c8a0ff')).setOrigin(0.5));
     const back = this.add.text(22, 56, '◀', font(14)).setOrigin(0.5).setInteractive({ useHandCursor: true });
     back.on('pointerup', () => { sfx('click'); this.tower = false; this.show('battle'); });
@@ -571,7 +604,7 @@ export class Lobby extends Phaser.Scene {
       this.tweens.add({ targets: p, x: 18, y: 17, duration: 450, delay: i * 40, ease: 'Quad.In', onComplete: () => { p.destroy(); if (i === 9) { this.refreshTop(); this.bump(0); this.bump(1); this.bump(3); } } });
     }
     // 소탕도 절반 확률로 장비 하나(대부분 일반)
-    const it = Math.random() < 0.5 ? makeItem(this.hard ? D.CHAPTERS.length - 1 : c, { rarity: Math.random() < 0.75 ? 0 : 1 }) : null;
+    const it = Math.random() < 0.5 ? makeItem(this.hard ? D.openN() - 1 : c, { rarity: Math.random() < 0.75 ? 0 : 1 }) : null;
     if (it) { addItems(sv, [it]); save(); }
     toast(this, `금화 +${fmt(gold)}  강화석 +${stone}${it ? `  ·  ${RARITY[it.r].name} ${it.n}` : ''}`, '#ffd75e');
     this.time.delayedCall(500, () => this.show('battle'));
@@ -744,6 +777,7 @@ export class Lobby extends Phaser.Scene {
   clearBrag() { this.bragB?.destroy(); this.bragB = null; this.bragT?.remove(); }
   bragEnh(lv) {
     this.clearBrag();
+    if (shareHidden()) return;   // 포털판은 링크 공유를 하지 않는다
     const sv = this.sv;
     const b = this.bragB = button(this, W / 2, 224, 132, 22, braggable() ? `자랑하기 보석+${bragGem()}` : '자랑하기', async () => {
       b.setEnabled(false);
@@ -872,13 +906,13 @@ export class Lobby extends Phaser.Scene {
     // 부서진 바로 그 자리에서만 되살릴 수 있다(창을 닫으면 끝)
     const rb = button(this, W / 2, 240, 190, 30, `+${from}으로 되살리기  보석 ${back}`, () => {
       track('shatter_restore_click', { from, enough: sv.gem >= back });
-      if (sv.gem < back) { c.close(); this.shopPage = 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
+      if (sv.gem < back) { c.close(); this.shopPage = cashHidden() ? 'gem' : 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
       sv.gem -= back; sv.enh = from; sv.stats.destroyed--; save(); sfx('win'); c.close(); this.refreshTop(); this.show('forge'); toast(this, `+${from} 칼이 돌아왔다!`, '#ffd75e');
     }, { size: 11, color: 0x2f6b3a });
     c.add([rb, gemIcon(this, W / 2 - 80, 240, 12)]);
     const bt = button(this, W / 2, 280, 190, 28, `방지권 사기  보석 ${cost}`, () => {
       track('shatter_guard_click', { enough: sv.gem >= cost });
-      if (sv.gem < cost) { c.close(); this.shopPage = 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
+      if (sv.gem < cost) { c.close(); this.shopPage = cashHidden() ? 'gem' : 'pack'; this.show('shop'); toast(this, '보석이 모자라다', '#ff9a8a'); return; }
       sv.gem -= cost; sv.guard++; save(); sfx('buy'); c.close(); toast(this, '파괴 방지권 +1', '#9ae0ff');
     }, { size: 11, color: 0x3a3846 });
     c.add([bt, gemIcon(this, W / 2 - 80, 280, 12)]);
@@ -1132,14 +1166,15 @@ export class Lobby extends Phaser.Scene {
 
   // ── 상점 탭: 보석으로 사기·광고 보상 / 패키지(결제) ──
   shopTab() {
-    const sv = this.sv, b = this.body, page = this.shopPage || 'deal';   // 맨 앞 칸은 특가
+    const sv = this.sv, b = this.body, cashOff = cashHidden(), page = (cashOff && (!this.shopPage || this.shopPage === 'deal' || this.shopPage === 'pack')) ? 'gem' : (this.shopPage || 'deal');   // 맨 앞 칸은 특가
     const sub = (x, id, name) => {
       const bt = button(this, x, 54, 50, 24, name, () => { this.shopPage = id; track('shop_page', { page: id, gem: sv.gem }); this.show('shop'); }, { size: 11, color: page === id ? 0x7a5a1a : id === 'deal' ? 0x5a2a3a : 0x2a2440 });
       b.add(bt);
       // 특가 칸: 오늘 특가를 안 샀거나 성장 꾸러미가 열려 있으면 빨간 점
-      if (id === 'deal' && (growOffer(sv) || !todayDeal(sv).got)) b.add(this.add.circle(x + 21, 45, 3.5, 0xff3a3a));
+      if (id === 'deal' && !cashOff && (growOffer(sv) || !todayDeal(sv).got)) b.add(this.add.circle(x + 21, 45, 3.5, 0xff3a3a));
     };
-    [['deal', '특가'], ['gem', '보석'], ['skin', '꾸미기'], ['book', '비급'], ['pack', '패키지']].forEach(([id, name], i) => sub(32 + i * 51.5, id, name));
+    const pages = [['deal', '특가'], ['gem', '보석'], ['skin', '꾸미기'], ['book', '비급'], ['pack', '패키지']].filter(([id]) => !(cashOff && (id === 'deal' || id === 'pack')));
+    pages.forEach(([id, name], i) => sub(cashOff ? 56 + i * 79 : 32 + i * 51.5, id, name));   // 포털판은 특가·패키지 칸이 없다
     if (page === 'deal') return this.dealPage();
     if (page === 'skin') return this.skinPage();
     if (page === 'book') return this.bookPage();
@@ -1166,13 +1201,13 @@ export class Lobby extends Phaser.Scene {
           after(`${it.name} 구매!`);
         });
       });
-      b.add(this.add.text(16, 262, '무료 보상 (광고)', font(11, '#9ae0ff')));
+      b.add(this.add.text(16, 262, adWord('무료 보상 (광고)', '무료 보상'), font(11, '#9ae0ff')));
       Object.entries(D.ADS).filter(([k]) => k !== 'double').forEach(([k, ad], i) => {
         const y = 296 + i * 40, left = adsLeft(sv, k);
         b.add(panel(this, 16, y - 18, W - 32, 36));
         b.add(this.add.text(28, y - 14, ad.name, font(11)));
         b.add(this.add.text(28, y + 1, left ? (adsDaily(sv, k) > ad.daily ? `첫 7일 하루 ${adsDaily(sv, k)}번 · ${left}번 남음` : `오늘 ${left}번 더 받을 수 있다`) : '오늘은 다 받았다', font9(10, left ? '#a1b2b6' : '#7d8f94')));
-        const bt = button(this, W - 52, y, 64, 24, !left ? '내일' : sv.noAds ? '받기' : '보기 ▶', async () => {
+        const bt = button(this, W - 52, y, 64, 24, !left ? '내일' : sv.noAds ? '받기' : adWord('보기 ▶', '받기'), async () => {
           if (this.busy || adsLeft(sv, k) <= 0) return;
           this.busy = true;
           const ok = await showAd(this, sv, k);

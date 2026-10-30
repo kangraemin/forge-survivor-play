@@ -51,6 +51,10 @@ export const SETS = {
   sky: { name: '폭풍 순례자', pre: '폭풍 순례자의', css: '#e8f4ff', two: { spd: 0.08 }, twoTxt: '이동 속도 +8%', fourTxt: '바람에 밀리는 힘이 약 40% 줄고 어둠 속 시야가 넓다', minC: 9 },
   steam: { name: '증기 기술자', pre: '증기 기술자의', css: '#e08a50', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '분출구·불·번개 피해를 약 40% 덜 받는다', minC: 11 },
   mirror: { name: '거울 수호자', pre: '거울 수호자의', css: '#90ffe8', two: { atk: 0.08 }, twoTxt: '모든 피해 +8%', fourTxt: '거울 빛줄기·되받기 피해를 약 40% 덜 받는다', minC: 13 },
+  // 16~18장 세트: 장 열릴 때만 나온다(minC가 그 장). 4세트는 그 장의 기믹 피해를 약 40% 줄인다
+  palace: { name: '서리 왕궁 근위', pre: '서리 근위의', css: '#8ad8ff', two: { def: 0.07 }, twoTxt: '받는 피해 -7%', fourTxt: '얼음 가시·서리 분출 피해를 약 40% 덜 받고 얼음판에서 덜 미끄러진다', minC: 15 },
+  skyway: { name: '하늘 항해사', pre: '하늘 항해사의', css: '#ffc890', two: { spd: 0.1 }, twoTxt: '이동 속도 +10%', fourTxt: '작살·포격·돌풍 피해를 약 40% 덜 받고 바람에 덜 밀린다', minC: 16 },
+  clock: { name: '시계탑 정비사', pre: '시계 정비사의', css: '#e8d090', two: { cd: 0.09 }, twoTxt: '재사용 대기 -9%', fourTxt: '멈춘 시계 감속이 약 40% 줄고 종소리·톱니 피해도 40% 줄어든다', minC: 17 },
   thorn: { name: '가시 덩굴', pre: '가시 덩굴', css: '#7fd06a', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '맞으면 주변 적에게 가시가 박힌다', minC: 0 },
   gold: { name: '황금 상인', pre: '황금 상인의', css: '#ffd75e', two: { mag: 0.3 }, twoTxt: '줍는 거리 +30%', fourTxt: '은화 +50%, 상인 물건 20% 할인', minC: 1 },
   // 무기 전용 세트: 그 무기를 들고 싸울 때만 나온다(상인도 판다)
@@ -202,7 +206,7 @@ export function rollRarity(boost = 0) {
 export function makeItem(c, opt = {}) {
   const r = opt.rarity ?? rollRarity(opt.boost || 0);
   const slot = slotOf(opt.slot || pick(SLOTS.map(s => s.id)));
-  const ci = Math.min(c, 14), ni = c < 5 ? c : Math.min(slot.names.length - 1, 5 + Math.floor((c - 5) / 2));   // ci: 장(수치), ni: 이름 칸(두 장에 한 칸)
+  const ci = Math.min(c, 17), ni = c < 5 ? c : Math.min(slot.names.length - 1, 5 + Math.floor((c - 5) / 2));   // ci: 장(수치), ni: 이름 칸(두 장에 한 칸)
   // 희귀 이상은 55% 확률로 세트(든 무기의 전용 세트 60%, 나머지는 그 챕터 공용 세트). 4세트가 너무 안 모였다
   const sets = Object.entries(SETS).filter(([, s]) => !s.w && s.minC <= c).map(([k]) => k);
   const wset = opt.w && SETS[opt.w] ? opt.w : null;
@@ -249,11 +253,20 @@ export function gearStats(sv) {
   return out;
 }
 
-// 인벤토리에 넣는다. 꽉 차면 끼지 않은 가장 약한 것을 분해해 강화석으로 바꾼다
+// 인벤토리에 넣는다. 꽉 차면 끼지 않은·잠그지 않은 가장 약한 것을 자동 정리한다(분해 또는 판매: sv.bagAuto)
 export const INV_MAX = 60;
+// 판매가 식은 data.js에 기대서 gearSell.js가 등록한다(data.js가 gear.js를 불러와 순환을 피한다)
+let sellFn = () => 0;
+export const setSellFn = f => { sellFn = f; };
+export const sellOf = it => (it.egg ? 0 : sellFn(it));
+// 방금 addItems가 자동 정리한 결과 { n, gold, stone }
+let tidyLast = { n: 0, gold: 0, stone: 0 };
+export const lastTidy = () => tidyLast;
 export function addItems(sv, items) {
   sv.inv ||= []; let stone = 0;
   sv.eq ||= {};
+  tidyLast = { n: 0, gold: 0, stone: 0 };
+  const sell = sv.bagAuto === 'sell';
   for (const it of items) {
     if (it.egg) { if (sv.eggs?.[it.egg]) continue; (sv.eggs ||= {})[it.egg] = true; }
     if (sv.inv.some(x => x.u === it.u)) continue;   // 판 안에서 이미 끼운 장비
@@ -263,8 +276,12 @@ export function addItems(sv, items) {
     if (!sv.eq[it.s] && !it.bag) sv.eq[it.s] = it.u;   // 판에서 '가방에'를 고른 건 끼지 않는다
     if (sv.inv.length > INV_MAX) {
       const on = new Set(Object.values(sv.eq || {}));
-      const worst = sv.inv.filter(x => !on.has(x.u) && !x.egg).sort((a, b) => itemScore(a) - itemScore(b))[0];
-      if (worst) { sv.inv.splice(sv.inv.indexOf(worst), 1); stone += RARITY[worst.r].salvage; }
+      const worst = sv.inv.filter(x => !on.has(x.u) && !x.egg && !x.lock).sort((a, b) => itemScore(a) - itemScore(b))[0];
+      if (worst) {
+        sv.inv.splice(sv.inv.indexOf(worst), 1); tidyLast.n++;
+        if (sell) { const g = sellOf(worst); sv.gold += g; tidyLast.gold += g; }
+        else { const st = RARITY[worst.r].salvage; stone += st; tidyLast.stone += st; }
+      }
     }
   }
   sv.stone += stone;

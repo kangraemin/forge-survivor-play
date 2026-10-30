@@ -10,13 +10,16 @@ import { sfx } from './sfx.js';
 import { font, font9, panel, button, fixedContainer } from './ui.js';
 import { COS_PACKS, cosmetic, wardrobe } from './cosmetics.js';
 import { installToss } from './toss.js';
+import { restoreCompleted } from './purchaseRestore.js';
+import { cashHidden } from './platform/flags.js';
 
 // 토스 미니앱 안이면 window.forgePlatform을 채운다(웹에서는 아무 일도 안 한다)
 installToss();
 
 const W = 270, H = D.H;
 const devpay = () => { try { return new URLSearchParams(location.search).has('devpay'); } catch { return false; } };
-export const won = n => n.toLocaleString('ko-KR') + '원';
+// 스토어 앱은 스토어가 알려 준 현지화 가격 문자열을 그대로 보여 준다(forgePlatform.priceText, 같은 기준 원화 가격이면 같은 등급). 없으면 원화
+export const won = n => { try { const t = window.forgePlatform?.priceText?.(n); if (t) return t; } catch { /* 어댑터 오류는 무시 */ } return n.toLocaleString('ko-KR') + '원'; };
 
 // 보상 지급. goldStage는 지금 도전 중인 스테이지 클리어 금화의 배수
 // 지금 도전 중인 판(어려움을 시작했으면 어려움 판)의 클리어 금화
@@ -115,7 +118,7 @@ export function applyPurchase(sv, item) {
 
 // 결제. 성공하면 상품을 지급하고 true
 function buyRaw(scene, sv, item) {
-  if (item.stop) return Promise.resolve({ ok: false, granted: false });   // 판매 중지 상품(49차)
+  if (item.stop || cashHidden()) return Promise.resolve({ ok: false, granted: false });   // 판매 중지 상품(49차) · 포털판은 현금 결제 없음
   return new Promise(res => {
     let applied = false, granted = false;
     const apply = orderId => {
@@ -204,3 +207,14 @@ export async function recoverPurchases() {
   return n;
 }
 if (window.forgePlatform?.pending) setTimeout(recoverPurchases, 4000);
+// 이미 결제가 끝난 주문 내역(forgePlatform.restore가 준다)에서 영구 상품만 되살린다. 규칙은 purchaseRestore.js
+export function restoreCompletedOrders(orders) {
+  const sv = load();
+  const n = restoreCompleted(sv, orders, {
+    itemBySku, applyPurchase,
+    ownsAll: (s, item) => !!item.give?.cosmetics?.length && item.give.cosmetics.every(id => wardrobe(s).owned[id]),
+  });
+  save();
+  if (n) { logUser({ payer: true, paid_total: sv.paidTotal }); track('iap_restore', { n }); }
+  return n;
+}

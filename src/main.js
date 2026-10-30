@@ -1,5 +1,6 @@
 // 게임 시작점: 270x480 세로 화면, 픽셀아트, 화면에 맞춰 늘림
 // 그리는 판은 기기 픽셀에 맞춘 PX배로 두고 카메라를 PX배로 당긴다: 좌표는 그대로 270x480
+import { portalReady } from './platform/index.js';   // 포털판(CrazyGames·itch) 깃발: 다른 모듈보다 먼저
 import './log.js';
 import { W, H } from './data.js';
 import { PX } from './ui.js';
@@ -8,8 +9,10 @@ import { Lobby } from './Lobby.js';
 import { Battle } from './Battle.js';
 import { load } from './save.js';
 import { captureRef, deviceId } from './share.js';
+import { initSafeArea } from './safeArea.js';
 
 const start = () => {
+  initSafeArea();
   // 초대 링크(?ref=)는 첫 실행 때 한 번만 저장한다. 기기 식별값도 미리 받아 둔다(공유 버튼이 바로 열리게)
   try { captureRef(load()); } catch { /* 저장소 문제는 게임을 막지 않는다 */ }
   deviceId().catch(() => {});
@@ -33,4 +36,4 @@ const start = () => {
   window.visualViewport?.addEventListener('resize', () => window.game.scale.refresh());
 };
 // 픽셀 글꼴을 먼저 받아야 첫 화면 글자가 기본 글꼴로 안 나온다
-Promise.all(['G11', 'G9'].map(f => document.fonts.load(`12px ${f}`))).catch(() => {}).finally(start);
+Promise.all(['G11', 'G9'].map(f => document.fonts.load(`12px ${f}`))).catch(() => {}).then(() => portalReady()).catch(() => {}).finally(start);

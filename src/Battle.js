@@ -5,6 +5,7 @@ import { sfx, playBgm, stopBgm, buzz } from './sfx.js';
 import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx, setBackdrop, clearBackdrop } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
+import { insetsGame } from './safeArea.js';
 import { Overlay } from './overlay.js';
 import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF, recPets, heroSkin } from './gear.js';
 import { Pet } from './pets.js';
@@ -250,7 +251,8 @@ export class Battle extends Phaser.Scene {
       if (this.textures.exists(pk)) { if (!this.textures.exists(pk + '_f')) { const ps = this.textures.get(pk).getSourceImage(); this.textures.addSpriteSheet(pk + '_f', ps, { frameWidth: ps.width / 3, frameHeight: ps.height }); } this.add.image(x, y, pk + '_f', R(0, 2)).setOrigin(0.5, 1).setDepth(10 + y / WORLD); }
       else this.add.image(x, y, 'decos', R(0, 2)).setOrigin(0.5, 1).setDepth(10 + y / WORLD).setTint(decoTint);
     }
-    for (let a = 0; a < 8; a++) {
+    // 50차: 지키기·점령에서는 가운데 둘레의 장식 횃불을 치운다(거점·수레와 똑같이 보여 헷갈렸다)
+    for (let a = 0; a < 8 && !(this.mode && (this.mode.id === 'guard' || this.mode.id === 'capture')); a++) {
       const x = c + Math.cos(a * Math.PI / 4) * 200, y = c + Math.sin(a * Math.PI / 4) * 200;
       this.add.image(x, y, 'decos', 3).setOrigin(0.5, 1).setDepth(10 + y / WORLD);
       this.torches.push({ x, y: y - 40 });
@@ -330,6 +332,15 @@ export class Battle extends Phaser.Scene {
 
   // ── HUD ──
   makeHud() {
+    const n0 = this.children.length, ins = insetsGame(this.game);
+    this.makeHud0(ins);
+    // 50차: 안전 영역·토스 X 버튼 회피 — 왼쪽 HUD는 인셋만큼, 오른쪽 HUD(처치·은화·일시정지)는 X 버튼 아래로 내린다
+    for (const o of this.children.list.slice(n0)) {
+      if (o.scrollFactorX !== 0 || o.y == null || o.y <= 0.5 || o.y >= 70) continue;
+      o.y += o.x >= 170 ? ins.xTop : ins.top;
+    }
+  }
+  makeHud0(ins) {
     const d = 100, sf = o => o.setScrollFactor(0).setDepth(d);
     sf(this.add.rectangle(0, 0, W, 4, 0x000000, 0.7).setOrigin(0));
     this.xpBar = sf(this.add.rectangle(0, 0, 0, 4, 0x6fd3ff).setOrigin(0));
@@ -358,7 +369,7 @@ export class Battle extends Phaser.Scene {
     // 보유 스킬 아이콘 줄
     this.skillRow = this.add.container(8, 46).setScrollFactor(0).setDepth(d);
     // 궁극기 버튼(마나)
-    const ux = W - 32, uy = H - 40;
+    const ux = W - 32, uy = H - 40 - ins.bottom;
     this.ultBase = sf(this.add.circle(ux, uy, 22, 0x1c2935, 0.9).setStrokeStyle(2, 0x475c66));
     this.ultFill = sf(this.add.graphics());
     this.ultIcon = sf(icon(this, ux, uy, 4, 22));
@@ -513,7 +524,7 @@ export class Battle extends Phaser.Scene {
     if (v?.ai) m.ai = v.ai;
     m.kbRes = v?.kb ?? (m.ai === 'tank' ? 0.45 : elite ? 0.3 : 1);
     m.variant = opt.mini ? null : vk; m.bs = (elite ? 1.5 : 1) * (v?.scale || 1) * (opt.mini ? 0.65 : 1);
-    m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.curse = 0; m.tint0 = undefined; m.phase = RF(0, 6); m.t = 0;
+    m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.curse = 0; m.marked = 0; m.tint0 = undefined; m.phase = RF(0, 6); m.t = 0;
     m.hitBy = {};
     this.env?.mobInit(m);
     if (this.registry.get('fallback')[kind] && this.c > 0) m.setTint(m0.color);
@@ -590,6 +601,20 @@ export class Battle extends Phaser.Scene {
     return { dmg: Math.round(base * (crit ? 2 : 1)), crit };
   }
 
+  // 50차: 최근 8초 실제 DPS(250ms 칸으로 묶고, 한 칸에 여러 마리를 때린 만큼 나눠 다수 타격을 보정)
+  trackDps(d) {
+    const k = (this.bt / 250) | 0, a = this.dpsBk || (this.dpsBk = []);
+    let e = a[a.length - 1];
+    if (!e || e.k !== k) { e = { k, d: 0, n: 0 }; a.push(e); if (a.length > 40) a.shift(); }
+    e.d += d; e.n++;
+  }
+  realDps() {
+    const a = this.dpsBk; if (!a || !a.length) return 0;
+    const k = (this.bt / 250) | 0; let sum = 0;
+    for (const e of a) if (e.k > k - 32) sum += e.d / (1 + 0.35 * (e.n - 1));
+    return sum / Math.max(2, Math.min(8, this.bt / 1000));
+  }
+
   // src: 같은 무기가 같은 몹을 너무 자주 때리지 않게 하는 키. kb: 밀려나는 세기
   // tag: 스킬 갈래(근접·원거리·마법·펫). 스탯 힘·민첩·지능이 갈래별 피해를 올린다
   hitMob(m, mult, { src = 'x', cd = 0, kb = 60, fx = 'small', from, tag } = {}) {
@@ -599,9 +624,12 @@ export class Battle extends Phaser.Scene {
     const { dmg, crit } = this.dmgCalc(mult, tag);
     const open = m.isBoss && m.expose > this.bt;   // 46차: 보스 페이즈 전환 뒤 짧게 약점이 드러난다 — 이때 맞으면 추가 피해
     if (open && this.bt - (this.weakAt || -1e9) > 260) { this.weakAt = this.bt; sfx('weak', 120); playOnce(this, 'weakpoint_break', m.x, m.y - m.displayHeight * 0.1, { sx: Math.max(1.4, m.displayWidth * 0.45 / 48), depth: 43 }); }
-    let dealt = dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (open ? D.WEAK_MUL : 1);
+    let dealt = dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (m.marked > this.bt ? 1.4 : 1) * (open ? D.WEAK_MUL : 1);
     if (m.isBoss && m.shield > 0) dealt = m.bossAI.absorb(dealt, open);   // 49차: 쉴드 구간엔 약점이 열렸을 때 맞혀야 깎인다
+    if (m.isBoss && m.invuln > this.bt) dealt = 0;   // 50차: 페이즈 전환 연출 동안 무적(1초 이내)
+    this.trackDps(Math.min(dealt, Math.max(0, m.hp)));   // 과잉 피해는 뺀다
     m.hp -= dealt;
+    if (m.isBoss) m.bossAI?.holdFloor?.();
     if (open && this.bt - (m.exposeTxt || 0) > 260) {
       m.exposeTxt = this.bt;
       const wt = this.add.text(m.x + RF(-14, 14), m.y - m.displayHeight * 0.35, '약점!', font(10, '#ffe060', 3)).setOrigin(0.5).setDepth(39);
@@ -693,7 +721,7 @@ export class Battle extends Phaser.Scene {
     this.popN = (this.popN || 0) + 1;
     const major = crit || (this.popN > 12 && n >= this.popRef * 2.5);
     // 44차: 상단 HUD 줄(82px) 안쪽엔 폭 전체에 띄우지 않는다('만' 글자가 '남은 1:16'에 걸렸다)
-    if (y - vr.y < 82) return;
+    if (y - vr.y < 82) y = vr.y + 82;   // 50차: HUD 줄 안쪽이면 버리지 않고 바로 아래로 내려 띄운다
     const pp = m && m._pop;
     if (pp && pp.t.active && pp.t.pop === pp && this.bt - pp.at < 650) {   // 45차: 같은 몹 합산 창 0.4→0.65초
       pp.n += n; pp.at = this.bt; pp.crit = pp.crit || crit;
@@ -710,22 +738,28 @@ export class Battle extends Phaser.Scene {
       this.tweens.add({ targets: pl.t, scale: 1, duration: 90 });
       return;
     }
-    if (!major && Math.random() > 0.3) return;   // 작은 숫자는 세 번에 한 번만, 다른 숫자 곁에선 접는다
-    if (!major && this.popups.some(o => o.active && Math.abs(o.x - x) < 44 && Math.abs(o.y - y) < 16)) return;
-    // 45차: 동시 4개 상한, 새 숫자는 0.12초에 하나씩만(치명타는 예외)
-    if (!crit && this.bt - (this.popAt || -1e9) < 120) return;
-    this.popAt = this.bt;
-    if (this.popups.length >= 4) this.popFree_(this.popups.shift());
+    // 50차: 숫자를 버리지 않는다 — 위의 합치기로 줄이고, 동시 8개를 넘으면 가장 오래된 것부터 지운다
+    if (this.popups.length >= 8) this.popFree_(this.popups.shift());
     // 44차: 다른 몹의 숫자와 겹치면('7754 7779') 위로 비켜 띄운다. 세 칸을 올려도 겹치면 일반 타격은 접는다
     for (let k = 0; k < 4; k++) {
       const hit = this.popups.some(o => o.active && Math.abs(o.x - x) < 38 && Math.abs(o.y - y) < 11);
       if (!hit) break;
-      if (k === 3) { if (!crit) return; break; }
+      if (k === 3) break;
       y -= 12;
     }
     // 46차: 큰 숫자가 주인공을 가렸다 — 주인공 반경(34px) 안에서 뜨는 숫자는 머리 위로 밀어 올린다
-    { const hh = this.hero, hr = 34; if (Math.hypot(x - hh.x, y - hh.y) < hr) y = hh.y - hr - 6 - Math.abs(x - hh.x) * 0.1; }
-    if (y - vr.y < 82) return;
+    { const hh = this.hero, hr = 34; if (Math.hypot(x - hh.x, y - hh.y) < hr) y = hh.y - hr - 6 - Math.abs(x - hh.x) * 0.1;
+      // 50차: 큰 숫자(치명타·큰 한방)는 주인공 몸 위에 겹쳐 떴다 — 몸 가로폭 안이면 머리·무기 위로 띄운다
+      if ((major || crit) && Math.abs(x - hh.x) < 52 && y > hh.y - 74 && y < hh.y + 30) y = hh.y - 74; }
+    // 50차: 같은 시점의 큰 숫자는 하나만 — 0.5초 안에 또 큰 숫자가 뜨면 더 큰 쪽 하나만 남긴다
+    if (major || crit) {
+      const bl = this.bigLast;
+      if (bl && bl.t.active && bl.t.visible && this.bt - bl.at < 500) {
+        if (n > bl.n) { bl.n = n; bl.at = this.bt; bl.t.setText(fmt(n)).setPosition(x, Math.min(y, bl.t.y)); if (crit) bl.t.setColor('#ffd23f'); }
+        return;
+      }
+    }
+    if (y - vr.y < 82) y = vr.y + 82;
     const st = font(crit ? 14 : major ? 12 : 8, crit ? '#ffd23f' : major ? '#ffffff' : '#c9d2de', crit ? 3 : major ? 2 : 1);
     let t = this.popFree.pop();
     const a0 = major ? 1 : 0.55, s0 = crit ? 1.6 : major ? 1.3 : 1;
@@ -734,6 +768,7 @@ export class Battle extends Phaser.Scene {
     this.popups.push(t);
     t.pop = null;
     t.pop = this.popLast = { t, n, at: this.bt, crit, major };
+    if (major || crit) this.bigLast = { t, n, at: this.bt };
     if (m) m._pop = t.pop;
     this.tweens.add({ targets: t, scale: 1, duration: 110, ease: 'Back.Out' });
     this.tweens.add({
@@ -806,6 +841,7 @@ export class Battle extends Phaser.Scene {
     sm.once('animationcomplete', () => this.fxFree_(sm));
     if (m.goblin) this.goblinDown(m);
     this.drop(m);
+    if (m.orb) this.addGem(m.x, m.y, Math.max(10, Math.ceil(D.xpNeed(this.run.lv) * 0.35)));   // 50차: 중간보스 소환 졸개는 레벨업 구슬
     this.tweens.killTweensOf(m);   // 폭탄 변종의 반복 맥박이 지운 몹을 붙잡지 않게
     m.destroy();
   }
@@ -993,7 +1029,7 @@ export class Battle extends Phaser.Scene {
     sfx('heal');
     const t = this.add.text(this.hero.x, this.hero.y - 26, '+' + Math.round(n), font(10, '#5fdc6a')).setOrigin(0.5).setDepth(40);
     this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 700, onComplete: () => t.destroy() });
-    this.hero.setTint(0x9dff9d); this.time.delayedCall(120, () => this.hero.clearTint());
+    this.hero.setTint(0x9dff9d); this.heroWeapon?.setTint(0x9dff9d); this.time.delayedCall(120, () => { this.hero.clearTint(); this.heroWeapon?.clearTint(); });
   }
 
   gainXp(v) {
@@ -1027,7 +1063,7 @@ export class Battle extends Phaser.Scene {
     this.cameras.main.shake(90, 0.004);
     // 폰에서는 짧게 떨어 맞은 걸 손으로도 느끼게 한다(38차: 위험이 안 느껴졌다)
     buzz(30);
-    this.hero.setTint(0xff7070); this.time.delayedCall(90, () => this.hero.clearTint());
+    this.hero.setTint(0xff7070); this.heroWeapon?.setTint(0xff7070); this.time.delayedCall(90, () => { this.hero.clearTint(); this.heroWeapon?.clearTint(); });
     this.hurtUntil = this.bt + 160; this.hero.play('hurtPose');
     const t = this.add.text(this.hero.x, this.hero.y - 26, '-' + d, font(10, '#ff5050')).setOrigin(0.5).setDepth(40);
     this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 600, onComplete: () => t.destroy() });
@@ -1187,7 +1223,9 @@ export class Battle extends Phaser.Scene {
     if (this.mode) this.mode.update(dt);
     else if (!this.bossPhase) {
       this.waveT += dt;
-      if (this.waveT >= this.waveLen) { this.waveT = 0; this.endWave(); return; }
+      // 50차: 중간 보스가 아직 살아 있으면 웨이브를 끝내지 않고 기다린다(보스가 약 1분 버티는데 웨이브 시간이 먼저 끝났다). 최대 100초까지
+      if (this.waveT >= this.waveLen && this.midBoss && !this.endless && (this.midWait = (this.midWait || 0) + dt) < 100000) this.waveT = this.waveLen - 1;
+      else if (this.waveT >= this.waveLen) { this.waveT = 0; this.endWave(); return; }
       // 스폰: 초당 2.5 → 끝날 즈음 5.5마리(초반 몹은 약하고 많게)
       const f = this.progress();
       // x-1은 판 시작 20초에 초당 2마리를 더 내보낸다: 첫 판 초반 화면이 비어 지루했다(뒤 스테이지는 원래 많다)
@@ -1223,7 +1261,7 @@ export class Battle extends Phaser.Scene {
       // 처음 판(1-1)도 마지막 웨이브 후반에 약한 해골 장군이 나온다: 끝이 밋밋하게 시간만 다 됐다(40차)
       const easyBoss = this.easy && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.45;
       if (easyBoss || (towerBoss || this.s === 1 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
-        this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true);
+        this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true, easyBoss);
         this.banner('해골 장군', '중간 보스'); sfx('bossIn');
       }
     } else {
@@ -1343,6 +1381,7 @@ export class Battle extends Phaser.Scene {
       m.anims.timeScale = m.slow > 0 ? 0.5 : 1;
       if (m.slow > 0) m.slow -= dt;
       if (m.kb > 0) { m.kb -= dt; m.body.velocity.scale(0.86); return; }
+      if (this.env?.late?.move(m, dt)) return;   // 16~18장 몹의 돌진·정지 행동
       if (this.mode?.steer(m, dt)) return;   // 모드: 물건 노리기·거점 파수·도망 사냥감은 자기 움직임을 쓴다
       const spd = m.spd * (m.slow > 0 ? 0.5 : 1);
       let dx = h.x - m.x, dy = h.y - m.y;

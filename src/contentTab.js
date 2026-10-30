@@ -6,7 +6,7 @@ import { sfx } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, toast, gemIcon, skillIcon } from './ui.js';
 import { grant, giveText } from './shop.js';
 import { track } from './log.js';
-import { dexState, ACHIEVES, achReady, titles, DEX_HP, DEX_SET_ATK } from './codex.js';
+import { dexState, achList, achReady, titles, DEX_HP, DEX_SET_ATK } from './codex.js';
 import { WTYPES, SETS } from './gear.js';
 
 const { W } = D;
@@ -183,7 +183,7 @@ export const ContentTab = {
     tb.setEnabled(own.length > 0); body.add(tb);
     // 받을 것 → 진행 중 → 받은 것 순서
     const rank = a => sv.ach[a.id] ? 2 : a.v(sv) >= a.need ? 0 : 1;
-    const list = ACHIEVES.slice().sort((a, b) => rank(a) - rank(b));
+    const list = achList().sort((a, b) => rank(a) - rank(b));
     const pages = Math.ceil(list.length / ACH_PAGE);
     list.slice(this.achP * ACH_PAGE, (this.achP + 1) * ACH_PAGE).forEach((a, i) => {
       const y = 108 + i * 36, got = !!sv.ach[a.id], v = a.v(sv), done = v >= a.need;

@@ -15,41 +15,23 @@ import { track } from './log.js';
 import { font, font9, panel, button, toast, gemIcon } from './ui.js';
 import { sfx } from './sfx.js';
 import { inviteCodeOf, CODE_RE } from './inviteCode.js';
+import { deviceId, peekDeviceId } from './deviceKey.js';
 export { inviteCodeOf, CODE_RE };
 
 // ── 설정 한 곳 ──
 export const INVITE_URL = 'https://forge-invite.remin1994.workers.dev';   // 초대 서버(Cloudflare Worker)
-export const TOSS_APP_NAME = 'forge-survivor';   // TODO(콘솔): 앱인토스에 등록한 앱 이름(toss/granite.config.ts appName과 같게)
+export const TOSS_APP_NAME = 'forge-survivor';   // 콘솔 등록 앱 이름(앱 94606). toss/granite.config.ts appName과 같다
 export const TOSS_OG_IMAGE = SHARE_URL + 'assets/og.png';   // 공유 미리보기 그림(https 절대 경로)
 export const INVITE_GEM = 30;     // 친구 한 명이 1-3을 깰 때 나와 친구가 각각 받는 보석(자랑하기 보석보다 크고 광고 3번쯤)
 export const INVITE_CAP = 10;     // 보상을 받는 친구 수 상한(서버도 같다)
 export const INVITE_NEED = 3;     // 친구가 깨야 하는 스테이지 수(1-3 = sv.cleared 3)
 const TICK_GAP_MS = 15000;
 
-// ── 기기 식별: 토스 사용자 키 -> 없으면 저장소 uuid. 개인정보는 보내지 않는다(해시/무작위 값뿐) ──
-const DEV_KEY = 'forge-device-v1';
-const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } };
+// ── 기기 식별: game/src/deviceKey.js (토스 사용자 키 -> 없으면 저장소 uuid) ──
+export { deviceId };
 const sdk = () => window.__AIT_SDK || null;
-const clean = s => String(s).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64);
 const uuid = () => (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9]/g, '');
-let dev = null, devP = null;
-export function deviceId() {
-  if (dev) return Promise.resolve(dev);
-  return devP ||= (async () => {
-    let id = null;
-    const s = sdk();
-    try {
-      const f = s?.getUserKeyForGame || s?.User?.getAnonymousKey || s?.getAnonymousKey;
-      const r = f && await f();
-      if (r && r !== 'ERROR' && r.type === 'HASH' && r.hash) id = 't' + clean(r.hash);
-    } catch { /* 미지원 앱 버전: 저장소 값으로 */ }
-    id ||= ls(DEV_KEY) || 'w' + uuid();
-    if (id.length < 8) id = id.padEnd(8, '0');
-    ls(DEV_KEY, id);
-    return dev = id;
-  })();
-}
-export const myCode = () => (dev ? inviteCodeOf(dev) : load().inviteCode || '');
+export const myCode = () => (peekDeviceId() ? inviteCodeOf(peekDeviceId()) : load().inviteCode || '');
 
 // ── 받은 ?ref= : 첫 실행 때 한 번만 저장하고 이후엔 바꾸지 않는다 ──
 export function parseRef(text) {
@@ -119,6 +101,7 @@ export const bragGem = () => (load().shared ? SHARE_GEM : SHARE_GEM_FIRST);
 // ── 초대 보상: 로비에 들어올 때 부른다 ──
 let lastTick = 0, busyTick = false;
 export async function lobbyShareTick(scene, force = false) {
+  if (window.forgePlatform?.noShare) return;   // 포털판은 초대 서버를 부르지 않는다
   const sv = load();
   if (busyTick || (!force && Date.now() - lastTick < TICK_GAP_MS)) return;
   busyTick = true; lastTick = Date.now();

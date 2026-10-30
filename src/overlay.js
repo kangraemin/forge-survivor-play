@@ -1,4 +1,5 @@
 import { shareBrag } from './share.js';
+import { shareHidden, adWord, trialInfo, openFull, midgameBeforeBattle } from './platform/flags.js';   // 포털판 분기
 import { cosmeticResultCard } from './cosmeticShop.js';
 import { cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 // 전투 위에 뜨는 창: 레벨업 3택, 스킬 상자, 웨이브 사이 상점, 일시정지, 결과
@@ -7,7 +8,7 @@ import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
-import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW } from './gear.js';
+import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, lastTidy, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW } from './gear.js';
 import { itemBox } from './gearTab.js';
 import { dexRefresh, DEX_HP } from './codex.js';
 const R = Phaser.Math.Between;
@@ -125,12 +126,17 @@ export class Overlay {
   choices(skip) {
     const sk = this.s.run.skills;
     const act = Object.keys(sk).filter(k => D.SKILLS[k].type === 'active').length;
-    const pas = Object.keys(sk).filter(k => D.SKILLS[k].type === 'passive').length;
+    const pas = Object.keys(sk).filter(k => D.SKILLS[k].type === 'passive' && !D.SKILLS[k].mode).length;
     const first = this.s.sv.stats.runs <= 1 && this.s.run.lv === 2;
     const pool = [];
     for (const [k, def] of Object.entries(D.SKILLS)) {
       const lv = sk[k] || 0;
       if (lv >= D.SKILL_MAX || this.s.run.banned?.[k] || skip?.has(k)) continue;
+      if (def.mode) {   // 50차: 모드 전용 카드는 그 모드 판에서만, 일반 카드보다 훨씬 자주
+        if (def.mode !== this.s.mode?.id) continue;
+        pool.push({ k, w: lv ? 3.5 : 7 });
+        continue;
+      }
       if (!lv && (def.type === 'active' ? act >= D.ACTIVE_SLOTS : pas >= D.PASSIVE_SLOTS)) continue;
       // 처음 하는 사람의 첫 레벨업은 바로 눈에 보이는 공격 스킬만 보여 준다
       if (first && def.type !== 'active') continue;
@@ -247,6 +253,7 @@ export class Overlay {
       const k = own[0];
       sk[k]++;
       if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
+      s.mode?.onCard?.(k, sk[k]);
       s.refreshSkillRow();
       s.log('skill_auto', { skill: k, skill_lv: sk[k], lv: r.lv });
       toast(s, `Lv ${r.lv} · ${D.SKILLS[k].name} Lv ${sk[k]} 자동 강화`, '#9ae0ff', 96);
@@ -272,8 +279,8 @@ export class Overlay {
     // 기본 공격 이름은 든 무기를 따른다(창 찌르기·도끼 찍기)
     const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : k === 'sword' ? { sword: def.name, spear: '창 찌르기', axe: '도끼 찍기', bow: '활 쏘기', gun: '사격', knuckle: '주먹 연타', staff: '마력탄' }[s.wtype.id] : def.name;
     const nm = s.add.text(-60, -24, name, font(12, '#ffb85c', 0)); c.add(nm);
-    if (!special) c.add(s.add.text(-60 + nm.width + 5, -23, lv ? `Lv ${lv}→${lv + 1}` : isAct ? '공격' : '보조', font9(10, '#a1b2b6')));
-    let desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
+    if (!special) c.add(s.add.text(-60 + nm.width + 5, -23, lv ? `Lv ${lv}→${lv + 1}` : isAct ? '공격' : def.mode ? '모드' : '보조', font9(10, def.mode ? '#ffd75e' : '#a1b2b6')));
+    let desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' && !def.mode ? def.desc[0] : def.desc[lv];
     if (def?.bonus && lv + 1 === D.PASSIVE_LV3) desc += `\n+ Lv3 보너스: ${def.bonus}`;
     c.add(s.add.text(-60, -6, desc, { ...font9(11, '#f2e4bc'), wordWrap: { width: 165 } }).setLineSpacing(1));
     // 레벨 칸
@@ -346,6 +353,7 @@ export class Overlay {
       const syn = r.skills[k] === 1 ? D.synOf(k, r.skills) : [];
       if (syn.length) s.time.delayedCall(250, () => s.banner(syn[0].name, '시너지! 두 스킬이 더 자주 나간다'));
       if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
+      s.mode?.onCard?.(k, r.skills[k]);
       s.refreshSkillRow();
     }
     sfx('buy');
@@ -540,7 +548,7 @@ export class Overlay {
     let busy = false;
     const up = () => { this.end(c); s.reviveNow(); };
     const free = !sv.noAds && sv.stats.runs <= D.FREE_REVIVE_RUNS;   // 판 수는 전투 시작 때 오른다(첫 판 = 1)
-    const ad = button(s, W / 2, 232, 170, 28, sv.noAds ? '무료 부활' : free ? `무료 부활 (처음 ${D.FREE_REVIVE_RUNS}판)` : '광고 보고 부활 ▶', async () => {
+    const ad = button(s, W / 2, 232, 170, 28, sv.noAds ? '무료 부활' : free ? `무료 부활 (처음 ${D.FREE_REVIVE_RUNS}판)` : adWord('광고 보고 부활 ▶', '무료 부활'), async () => {
       if (busy || c !== this.c) return; busy = true;
       const ok = free || await showAd(s, sv, 'revive');
       busy = false;
@@ -569,6 +577,7 @@ export class Overlay {
     const s = this.s, sv = s.sv, r = s.run;
     if (this.done) return; this.done = true;
     s.over = true; s.physics.pause();
+    midgameBeforeBattle(s, sv);   // CrazyGames: 다음 판으로 갈 때 중간 광고
     if (s.mode) return s.mode.result(win, this);   // 모드 판은 모드 전용 결과창(modes.js)
     const idx = s.c * D.STAGES_PER_CHAPTER + s.s, hard = s.hard, dun = s.dungeon;
     const prog = hard ? sv.hardCleared : sv.cleared;   // 어려움은 따로 센다
@@ -612,11 +621,11 @@ export class Overlay {
     // 장비: 이기면 1개(보스는 2개, 한 등급 위로), 무한의 탑은 3층부터 1개. 판에서 주운 것은 져도 남는다
     const loot = r.loot.slice();
     // 마지막 장 보스를 처음 잡으면 완주 보상
-    const finale = first && !hard && s.isBoss && s.c === D.CHAPTERS.length - 1;
+    const finale = first && !hard && s.isBoss && s.c === D.MAIN_CHAPTERS - 1;
     if (finale) { gem += D.FINALE.gem; sweep += D.FINALE.sweep; guard += D.FINALE.guard; stone += D.FINALE.stone; for (let i = 0; i < D.FINALE.items; i++) loot.push(makeItem(s.c, { boost: 2 })); }
     // 처음 깬 판은 한 등급 위로(판마다 받는 게 손에 잡히게)
     // 어려움은 5장 수치 장비가 한 등급 위로 나온다
-    if (win && !s.endless && !dun) for (let i = 0; i < (s.isBoss ? 2 : 1); i++) loot.push(makeItem(hard ? D.CHAPTERS.length - 1 : s.c, { boost: hard || s.isBoss || first ? 1 : 0 }));
+    if (win && !s.endless && !dun) for (let i = 0; i < (s.isBoss ? 2 : 1); i++) loot.push(makeItem(hard ? D.openN() - 1 : s.c, { boost: hard || s.isBoss || first ? 1 : 0 }));
     if (s.endless && floors >= 3) loot.push(makeItem(s.c, { boost: 1 }));
     for (let i = 0; i < dunItems; i++) loot.push(makeItem(s.c, { boost: 1, w: sv.wtype }));
     if (!win && !s.endless && !dun) {
@@ -624,7 +633,8 @@ export class Overlay {
       // 할머니 뜨개 모자: 열 번째 쓰러졌을 때
       if (sv.stats.losses >= 10) { const e = grantEgg(sv, 'granny', false); if (e) loot.push(e); }
     }
-    const salvaged = addItems(sv, loot);
+    addItems(sv, loot);
+    const tidy = { ...lastTidy() };
     // 1-1을 처음 깼을 땐 얻은 장비 중 지금 낀 것보다 좋은 것을 알아서 낀다(처음 하는 사람은 장비 탭을 열 줄 모른다)
     const autoEq = [];
     if (first && !hard && idx === 0) {
@@ -698,7 +708,7 @@ export class Overlay {
     // 자랑하기: 이겼거나 탑 기록을 넘으면 공유(친구가 들어올 길이 없었다). 하루 한 번 보석
     // 48차: 첫 3판은 보상과 '다음 판'만 보여 준다. 광고 2배·자랑하기·장착 안내는 4판째부터
     const early = sv.stats.runs <= 3 && !dun && !s.endless;
-    const brag = !early && !s.bot && !dun && (win || (s.endless && floors > best));
+    const brag = !shareHidden() && !early && !s.bot && !dun && (win || (s.endless && floors > best));
     // 45차: 광고 2배·자랑하기는 한 줄 보조 버튼(둘 다 있으면 반반, 하나면 가운데). 주 버튼은 아래 '다음 판' 하나
     const adOn = !early && !s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0;
     const sw = adOn && brag ? 112 : 170, sx = adOn && brag ? 58 : 0;
@@ -713,9 +723,12 @@ export class Overlay {
       }, { size: 10, color: 0x3a3846 });
       c.add(sb);
     }
+    // itch.io 체험판: 전체판 링크(결과창 맨 아래 작은 글씨)
+    const tl = trialInfo();
+    if (tl) c.add(button(s, W / 2, 462, 170, 16, `${tl.label} ▶`, () => { s.log('full_link', { from: 'result' }); openFull('result'); }, { size: 9, color: 0x3a3846 }));
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (adOn) {
-      const db = button(s, W / 2 - sx, 306, sw, 24, sv.noAds ? '보상 2배 받기' : '광고 2배 받기 ▶', async () => {
+      const db = button(s, W / 2 - sx, 306, sw, 24, sv.noAds ? '보상 2배 받기' : adWord('광고 2배 받기 ▶', '보상 2배 받기'), async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         s.log('double_reward', { ok, gold, stone });
@@ -733,9 +746,13 @@ export class Overlay {
     const egg = loot.find(it => it.egg), top = loot.reduce((a, it) => Math.max(a, it.r < 4 ? it.r : -1), -1);
     // 장 보스를 처음 잡으면 새 무기가 열린다(장마다 받는 큰 보상)
     const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
-    const head = autoEq.length && !early && !wNew && !egg && !newPet ? `${autoEq[0].n}${autoEq.length > 1 ? ` 외 ${autoEq.length - 1}개` : ''} 자동 장착!` : wNew ? `새 무기 「${wNew.name}」 획득!` : s.run.dupW ? `무기를 다 모아 강화석 +${D.DUP_W_STONE}` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
+    const head = autoEq.length && !early && !wNew && !egg && !newPet ? `${autoEq[0].n}${autoEq.length > 1 ? ` 외 ${autoEq.length - 1}개` : ''} 자동 장착!` : wNew ? `새 무기 「${wNew.name}」 획득!` : s.run.dupW ? `무기를 다 모아 강화석 +${D.DUP_W_STONE}` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다` : '';
     // 보스를 처음 잡으면 새 무기와 보스 펫이 같이 온다: 펫은 한 줄 위에 따로
     if (wNew && newPet) c.add(s.add.text(W / 2, 326, `새 펫 「${newPet.name}」 합류!`, font9(10, '#ffb050')).setOrigin(0.5));
+    if (tidy.n) {   // 가방이 꽉 차서 알아서 정리한 것 한 줄
+      const tt = s.add.text(W / 2, wNew && newPet ? 316 : 326, `가방이 꽉 차서 ${tidy.n}개를 자동 정리했어요 (+${tidy.gold ? '금화 ' + fmt(tidy.gold) : '강화석 ' + fmt(tidy.stone)})`, font9(10, '#9ae0ff')).setOrigin(0.5);
+      tt.setScale(Math.min(1, (W - 24) / tt.width)); c.add(tt);
+    }
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : autoEq.length ? font(11, '#5fdc6a') : font9(10, '#a1b2b6')).setOrigin(0.5));
     // 보스 펫 합류는 결과 창 위에 따로 크게 띄운다(한 줄 글씨로는 못 보고 지나갔다)
     // 47차: 새 펫 합류 창은 클리어 카드 위에 겹쳐 뜨지 않는다 — 로비에서 팝업 순서대로(펫 → 꾸러미) 하나씩
@@ -755,7 +772,7 @@ export class Overlay {
       s.tweens.add({ targets: box, scale: 1, duration: 220, delay: 450 + i * 90, ease: 'Back.Out', onStart: () => it.r >= 2 && sfx('level') });
     });
     if (!wNew && loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#a1b2b6')).setOrigin(0, 0.5));
-    const nextIdx = Math.min(hard ? sv.hardCleared : sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
+    const nextIdx = Math.min(hard ? sv.hardCleared : sv.cleared, D.openTotal() - 1);
     const nextName = `${Math.floor(nextIdx / D.STAGES_PER_CHAPTER) + 1}-${nextIdx % D.STAGES_PER_CHAPTER + 1}`;   // 다음 판 이름을 버튼에 적어 어디로 가는지 보이게(42차)
     // 던전: 남은 횟수가 있으면 바로 한 번 더
     if (dun) {
@@ -780,11 +797,12 @@ export class Overlay {
       return;
     }
     // 마지막 보스까지 잡았으면 끝: 같은 판을 다시 시작하지 않고 무한의 탑으로
-    const total = D.CHAPTERS.length * D.STAGES_PER_CHAPTER;
+    const total = D.openTotal();
     if (win && !s.endless && !hard && sv.cleared >= total && idx === total - 1) {
       c.add(s.add.text(W / 2, 404, '모든 장 정복!', font(12, '#ffd75e')).setOrigin(0.5));
-      c.add(button(s, 68, 432, 76, 28, '로비', () => { s.log('result_action', { act: 'lobby', win }); s.scene.start('Lobby', { tab: 'battle' }); }, { color: 0x3a3846 }));
-      c.add(button(s, 176, 432, 136, 32, '무한의 탑 ▶', () => { s.log('result_action', { act: 'tower', win }); s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot }); }, { color: 0x2f6b3a }));
+      if (D.openN() <= D.MAIN_CHAPTERS) c.add(s.add.text(W / 2, 418, '16장 얼어붙은 왕궁 · 곧 열립니다', font9(9, '#9ae0ff')).setOrigin(0.5, 0));   // 16장은 업데이트로 열린다: 예고
+      c.add(button(s, 68, 440, 76, 28, '로비', () => { s.log('result_action', { act: 'lobby', win }); s.scene.start('Lobby', { tab: 'battle' }); }, { color: 0x3a3846 }));
+      c.add(button(s, 176, 440, 136, 32, '무한의 탑 ▶', () => { s.log('result_action', { act: 'tower', win }); s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot }); }, { color: 0x2f6b3a }));
       s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
       return;
     }
