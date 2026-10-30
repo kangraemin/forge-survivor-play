@@ -162,7 +162,7 @@ export class Battle extends Phaser.Scene {
     // 46차: 9장부터는 시작 10초 동안 처치가 없어 조용했다 — 약한 몹(체력 12%, 보상은 그대로)을 가까이 먼저 보내 첫 베기에 바로 쓰러지게 한다
     if (this.c >= 8 && !this.endless && !this.dungeon && !this.isBoss) for (let i = 0; i < 5; i++) this.spawn(true, this.ch.mobs[0], { weak: 0.12, force: true, at: this.spawnPoint(55 + i * 8, 95 + i * 8) });
     for (let i = 0; i < total - first; i++) this.time.delayedCall(700 + i * (7000 / (total - first)), () => !this.over && this.spawn(false, null, { at: this.spawnPoint(250, 300) }));
-    if (!this.bot) playBgm('battle', this.c);
+    if (!this.bot) playBgm(this.mode ? 'mode' : 'battle', this.c);   // 모드 판은 파일 음악 없이 절차 BGM
     this.events.once('shutdown', stopBgm);
     // 앱을 내리거나 화면이 꺼지면 일시정지 창을 띄워 둔다(돌아왔을 때 이미 맞고 있지 않게)
     const onHide = () => { if (!this.over && !this.paused && !this.bot) this.ui.pauseMenu(); };
