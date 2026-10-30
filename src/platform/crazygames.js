@@ -78,7 +78,8 @@ function watch() {
   let playing = false, loaded = false;
   setInterval(() => {
     const g = window.game; if (!g?.scene || !ready) return;
-    if (!loaded && (g.scene.isActive('Lobby') || g.scene.isActive('Battle'))) { loaded = true; try { sdk.game.loadingStop(); } catch { /* 무시 */ } }
+    // 첫 실행 '탭해서 시작' 화면이 뜬 순간도 로딩 끝이다(사람 탭을 기다리는 시간은 로딩이 아니다)
+    if (!loaded && (g.scene.isActive('Lobby') || g.scene.isActive('Battle') || g.registry.get('tapGate'))) { loaded = true; try { sdk.game.loadingStop(); } catch { /* 무시 */ } }
     const b = g.scene.getScene('Battle');
     const now = !!(b && g.scene.isActive('Battle') && b.run && !b.over && !b.paused && !b.bot && !b.ui?.open && !adBusy);
     if (now !== playing) { playing = now; try { now ? sdk.game.gameplayStart() : sdk.game.gameplayStop(); } catch { /* 무시 */ } }
