@@ -146,7 +146,7 @@ export class Battle extends Phaser.Scene {
     this.eventKind = Phaser.Utils.Array.GetRandom(D.EVENTS.kinds);
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
     // 44차: 6장부터는 시작 몹 28마리가 곧바로 에워싸 무기 1개인 첫 30초에 쓰러졌다 → 일부만 두고 나머지는 화면 밖에서 차례로 들어온다
-    const total = this.easy ? 24 : 28, first = this.endless || this.dungeon || this.c === 0 ? total : this.c >= 5 ? 8 : 16;
+    const total = this.easy ? 24 : 28, first = this.endless || this.dungeon ? total : this.c === 0 ? (this.easy ? 10 : 16) : this.c >= 5 ? 8 : 16;   // 45차: 1-1도 시작 24마리가 이미 화면에 있었다 → 10(처음 판)·16마리만 두고 나머지는 7초에 걸쳐 들어온다(첫 레벨업 2.4초는 가까운 몹으로 유지)
     for (let i = 0; i < first; i++) this.spawn(true, null, first < total ? { at: this.spawnPoint(150, 230) } : {});   // 40이면 무기 1~2개인 첫 30초가 가장 위험했다(37차)
     for (let i = 0; i < total - first; i++) this.time.delayedCall(700 + i * (7000 / (total - first)), () => !this.over && this.spawn(false, null, { at: this.spawnPoint(250, 300) }));
     if (!this.bot) playBgm('battle', this.c);
@@ -278,7 +278,7 @@ export class Battle extends Phaser.Scene {
     this.heroSword = this.wtype.id === 'sword' || !!this.cosLook.weapon;
     if (this.heroWeapon) {
       // 검은 등급마다 다른 그림(w_sword0~9)을 손잡이 끝으로 쥔다. +5·+10·+15를 넘으면 검이 커지고 강화 색으로 빛난다
-      const eb = sv.enh >= 15 ? 3 : sv.enh >= 10 ? 2 : sv.enh >= 5 ? 1 : 0, sz = this.heroSword ? 18 + 2 * eb : 16;
+      const eb = sv.enh >= 15 ? 3 : sv.enh >= 10 ? 2 : sv.enh >= 5 ? 1 : 0, sz = this.heroSword ? 17 + 1.6 * sv.tier + 2 * eb : 16;   // 45차: 검 단계가 오를수록 손에 든 검이 눈에 띄게 커진다(0단계 17 → 9단계 31+)
       this.heroWeapon.setScale(sz / Math.max(this.heroWeapon.width, this.heroWeapon.height));   // 6단계 이후 그림은 16칸보다 크다
       if (this.heroSword) {
         this.heroWeapon.setOrigin(0.2, 0.8);
@@ -390,7 +390,10 @@ export class Battle extends Phaser.Scene {
     const y = 150;
     const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.7).setScrollFactor(0).setDepth(110).setScale(1, 0).setAlpha(0);   // 글자보다 띠가 먼저 떠 '가로 어두운 띠'로 보였다(43차): 띠도 글자와 함께 나타난다
     const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e', 4)).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
-    const t2 = this.add.text(W / 2, y + 12, small, font9(11, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
+    // 45차: 긴 규칙 글(15장 모루 등)이 좌우로 잘렸다 — 폭 안에서 줄을 바꾸고 띠를 글 높이만큼 키운다
+    const t2 = this.add.text(W / 2, y + 5, small, { ...font9(11, '#ffffff'), wordWrap: { width: W - 28 }, align: 'center' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(111).setAlpha(0);
+    const extra = Math.max(0, t2.height - 14);
+    b.setSize(W, 46 + extra).setPosition(W / 2, y + extra / 2);
     this.tweens.add({ targets: b, scaleY: 1, alpha: 0.7, duration: 160, ease: 'Back.Out' });
     this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 200, delay: 0 });
     this.bannerObjs = [b, t1, t2];
@@ -644,7 +647,7 @@ export class Battle extends Phaser.Scene {
     // 44차: 상단 HUD 줄(82px) 안쪽엔 폭 전체에 띄우지 않는다('만' 글자가 '남은 1:16'에 걸렸다)
     if (y - vr.y < 82) return;
     const pp = m && m._pop;
-    if (pp && pp.t.active && pp.t.pop === pp && this.bt - pp.at < 400) {
+    if (pp && pp.t.active && pp.t.pop === pp && this.bt - pp.at < 650) {   // 45차: 같은 몹 합산 창 0.4→0.65초
       pp.n += n; pp.at = this.bt; pp.crit = pp.crit || crit;
       pp.t.setText(fmt(pp.n)).setAlpha(1).setScale(1.25);
       if (pp.crit) pp.t.setColor('#ffd23f');
@@ -652,7 +655,10 @@ export class Battle extends Phaser.Scene {
       return;
     }
     if (!crit && n < 100 && Math.random() > 0.25) return;   // 일반 타격도 네 번에 한 번은 보여 강화 차이가 숫자로 보인다
-    if (this.popups.length >= 5) this.popFree_(this.popups.shift());
+    // 45차: 동시 4개 상한, 새 숫자는 0.12초에 하나씩만(치명타는 예외)
+    if (!crit && this.bt - (this.popAt || -1e9) < 120) return;
+    this.popAt = this.bt;
+    if (this.popups.length >= 4) this.popFree_(this.popups.shift());
     // 44차: 다른 몹의 숫자와 겹치면('7754 7779') 위로 비켜 띄운다. 세 칸을 올려도 겹치면 일반 타격은 접는다
     for (let k = 0; k < 4; k++) {
       const hit = this.popups.some(o => o.active && Math.abs(o.x - x) < 38 && Math.abs(o.y - y) < 11);
@@ -1068,6 +1074,8 @@ export class Battle extends Phaser.Scene {
     this.rebuildMobs();
     const r = this.run;
     if (this.fightXp > 0) { const fx = this.fightXp; this.fightXp = 0; if (r.lv < 3) this.gainXp(fx); }
+    // 45차: 장과 무관하게 첫 레벨업은 늦어도 약 12초 안에 온다. 9장은 순풍에 떠밀려 몹 곁에 못 서 38초 Lv1이었다(7장 19초·10장 16초). 4초부터 8초 동안 Lv2분(3) 경험치가 시간으로 찬다
+    if (r.lv < 2 && !this.endless && !this.dungeon && this.bt > 4000) { this.trickXp = (this.trickXp || 0) + dt * 3 / 8000; if (this.trickXp >= 0.3) { const tx = this.trickXp; this.trickXp = 0; this.gainXp(tx); } }
 
     // 웨이브 시간
     if (!this.bossPhase) {
@@ -1218,7 +1226,13 @@ export class Battle extends Phaser.Scene {
       if (m.slow > 0) m.slow -= dt;
       if (m.kb > 0) { m.kb -= dt; m.body.velocity.scale(0.86); return; }
       const spd = m.spd * (m.slow > 0 ? 0.5 : 1);
-      const dx = h.x - m.x, dy = h.y - m.y, d = Math.hypot(dx, dy) || 1;
+      let dx = h.x - m.x, dy = h.y - m.y;
+      const d = Math.hypot(dx, dy) || 1;
+      // 45차: 멀리서는 영웅 한 점이 아니라 몹마다 다른 각도의 링(반지름 34px)을 향해 와서 한 점에 40~60마리가 뭉치지 않는다. 가까워지면(50px) 영웅을 곧장 향한다
+      if (d > 50 && !m.goblin && m.ai !== 'ranged') {
+        const k = Math.min(1, (d - 50) / 60) * 34, ex = h.x + Math.cos(m.phase * 1.05) * k - m.x, ey = h.y + Math.sin(m.phase * 1.05) * k - m.y, ed = Math.hypot(ex, ey) || 1;
+        dx = ex / ed * d; dy = ey / ed * d;
+      }
       // 보물 고블린은 반대로 달아나다 12초가 지나면 사라진다
       if (m.goblin) {
         m.goblinT -= dt;
@@ -1257,7 +1271,30 @@ export class Battle extends Phaser.Scene {
         m.cd = (m.cd ?? 1500 + R(0, 1500)) - dt;
         if (m.cd <= 0 && d < 200) { m.cd = 3000; if (!this.env?.shot(m, Math.atan2(dy, dx))) this.enemyShot(m.x, m.y, Math.atan2(dy, dx), 75, m.dmg); }
       } else m.setVelocity(dx / d * spd, dy / d * spd);
+      this.separate(m);
     });
+  }
+
+  // 45차: 겹친 몹끼리 약하게 밀어낸다(기존 몹 격자 3x3칸 재사용, 이웃 6마리까지만 봐 저사양도 가볍다)
+  separate(m) {
+    const cells = this.gridCells, cx = Math.floor(m.x / 64) + 2, cy = Math.floor(m.y / 64) + 2, R = 22;
+    let px = 0, py = 0, n = 0;
+    for (let ix = -1; ix <= 1 && n < 6; ix++) for (let iy = -1; iy <= 1 && n < 6; iy++) {
+      const c = cells.get((cx + ix) * 128 + cy + iy);
+      if (!c) continue;
+      for (let i = 0; i < c.length && n < 6; i++) {
+        const o = c[i];
+        if (o === m || o.dead) continue;
+        let ox = m.x - o.x, oy = m.y - o.y;
+        const d2 = ox * ox + oy * oy;
+        if (d2 >= R * R) continue;
+        let d = Math.sqrt(d2);
+        if (d < 0.5) { ox = Math.cos(m.phase * 3); oy = Math.sin(m.phase * 3); d = 1; }
+        const w = (R - d) / R / d;
+        px += ox * w; py += oy * w; n++;
+      }
+    }
+    if (n) { const b = m.body, f = m.spd * 1.0; b.velocity.x += px * f; b.velocity.y += py * f; }
   }
 
   enemyShot(x, y, ang, spd, dmg) {

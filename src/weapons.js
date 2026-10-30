@@ -2,7 +2,7 @@ import { cosmetic } from './cosmetics.js';
 // 액티브 스킬 8종 + 무기 전용 7종(검기·투창·지진·화살비·수류탄·기공파·유도 마탄). 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
 import { sfx } from './sfx.js';
 import { skinFx, viewRect } from './ui.js';
-import { SKILLS, PASSIVE_LV3, SKINS, synOf, SYN_CD } from './data.js';
+import { SKILLS, PASSIVE_LV3, SKINS, synOf, SYN_CD, TIERS } from './data.js';
 import { cashW } from './gear.js';
 
 const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
@@ -106,7 +106,9 @@ export class Weapons {
     const tag = s.wtype.tag, flame = s.gear.fx.has('flame4');
     const slash = (a, delay) => s.time.delayedCall(delay, () => {
       // 강화 단계가 판 안에서도 보이게: +5 파랑, +10 불꽃, +15 보라로 궤적이 커지고 물든다
-      const g = this.enhGlow();
+      const g0 = this.enhGlow(), tier = s.sv.tier;
+      // 45차: 무기 단계가 전투에서 보이게(표현만, 판정 범위·피해는 그대로) — 단계마다 궤적이 커지고, 3단계부터 검 고유색, 6단계부터 한 겹 더 깐다
+      const tt = TIERS[tier]?.tint, g = { ...g0, scale: g0.scale * (1 + 0.05 * tier), tint: g0.tint || (tier >= 3 ? tt : 0), glow: g0.glow || tier >= 6 };
       const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.85)
         .setScale(0.85 * area * g.scale * (spear ? 1.5 : axe ? 1.3 : 1), 0.85 * area * g.scale * (spear ? 0.35 : axe ? 1.3 : 1)).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
       if (g.skin) skinFx(fx, g.skin).setAlpha(1);
