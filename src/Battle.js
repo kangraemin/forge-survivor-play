@@ -12,10 +12,11 @@ import { track, logCtx } from './log.js';
 import { dexKill } from './codex.js';
 import { makeEnv } from './envfx.js';
 
-import { consumeTrial } from './cosmetics.js';
+import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 import { dressHero, CosmeticActor, weaponKey, placeHeld } from './cosmeticView.js';
 const { W, H } = D;
 const WORLD = 1600;
+const HERO_D = 33;   // 47차: 주인공은 몹·불꽃·베기 효과(28~32)보다 위 층, 피해 숫자(40)·어둠(50)보다 아래
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 
 export class Battle extends Phaser.Scene {
@@ -25,9 +26,10 @@ export class Battle extends Phaser.Scene {
     this.c = data.chapter; this.s = data.stage;
     this.ch = D.CHAPTERS[this.c];
     this.endless = !!data.endless;
+    this.practice = !!data.practice;                    // 47차: 꾸미기 체험 30초 연습장(몹 약함·보상 없음)
     this.hard = !!data.hard && !this.endless;           // 어려움: 같은 판을 센 몹으로
     this.dungeon = data.dungeon || null;                // 일일 던전 종류(gold·stone·gear·gem)
-    this.isBoss = !this.endless && !this.dungeon && this.s === D.STAGES_PER_CHAPTER - 1;
+    this.isBoss = !this.practice && !this.endless && !this.dungeon && this.s === D.STAGES_PER_CHAPTER - 1;
     this.sv = load();
     const outfit = consumeTrial(this.sv); this.cosLook = outfit.look; this.cosTrial = outfit.trial; save();
     const q = new URLSearchParams(location.search);
@@ -55,7 +57,7 @@ export class Battle extends Phaser.Scene {
     // 장면 인스턴스는 판끼리 재사용된다: 이벤트·축복·던전 고블린 상태를 비운다
     this.ultTip = null; this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
     // 보스 단계도 비운다(앞 판이 보스전으로 끝나면 다음 판이 웨이브 없이 영원히 이어졌다)
-    this.bossPhase = false; this.midBoss = null; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.spawnAcc = 0;
+    this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.spawnAcc = 0;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -90,6 +92,8 @@ export class Battle extends Phaser.Scene {
     // 던전은 많이 잡는 판: 몹이 약하고 조금 덜 아프다
     if (this.dungeon) { this.mobHpMul *= D.DUNGEON.hp; this.mobDmgMul *= 0.8; }
 
+    // 47차: 연습장은 30초 한 웨이브, 몹은 약하고 덜 아프다. 보상·상인·이벤트·규칙 없음
+    if (this.practice) { this.waveCount = 1; this.waveLen = D.PRACTICE_SEC * 1000; this.mobHpMul *= 0.25; this.mobDmgMul *= 0.25; this.easy = false; this.firstRun = false; }
     this.makeMap();
     this.makeHero();
     this.makeFx();
@@ -137,12 +141,12 @@ export class Battle extends Phaser.Scene {
     const firstTry = !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s >= (this.hard ? sv.hardCleared : sv.cleared);
     // 어려움은 늘 판 규칙이 붙는다(같은 맵에 바닥만 붉어 새 판으로 안 느껴졌다)
     // 1-1 두 번째 판은 떼를 붙인다: 처음 두 판에 판 규칙이 안 보여 매번 같은 게임 같았다(40차). 질풍은 바로 다음 1-2 몫(41차)
-    this.mod = this.easy && sv.stats.runs === 1 ? D.RUN_MODS.find(m => m.id === 'horde') : this.easy || this.isBoss || this.endless || this.dungeon ? null : this.s === 1 && firstTry ? D.stageMod(this.c)
+    this.mod = this.practice ? null : this.easy && sv.stats.runs === 1 ? D.RUN_MODS.find(m => m.id === 'horde') : this.easy || this.isBoss || this.endless || this.dungeon ? null : this.s === 1 && firstTry ? D.stageMod(this.c)
       : this.hard ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s)))
       : sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s))) : null;   // 변종이 없는 판엔 '변종 소굴'은 빼고 뽑는다
     this.hordeKind = this.mod?.id === 'horde' ? this.ch.mobs[R(0, 2)] : null;
     // 깜짝 이벤트: 보스·무한의 탑·처음 판·던전이 아니면 판 중간에 하나(보물 고블린·황금 박쥐 떼·축복의 제단)
-    this.eventAt = !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
+    this.eventAt = !this.practice && !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
     this.eventKind = Phaser.Utils.Array.GetRandom(D.EVENTS.kinds);
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
     // 44차: 6장부터는 시작 몹 28마리가 곧바로 에워싸 무기 1개인 첫 30초에 쓰러졌다 → 일부만 두고 나머지는 화면 밖에서 차례로 들어온다
@@ -156,8 +160,10 @@ export class Battle extends Phaser.Scene {
     // 앱을 내리거나 화면이 꺼지면 일시정지 창을 띄워 둔다(돌아왔을 때 이미 맞고 있지 않게)
     const onHide = () => { if (!this.over && !this.paused && !this.bot) this.ui.pauseMenu(); };
     this.game.events.on('hidden', onHide); this.events.once('shutdown', () => this.game.events.off('hidden', onHide));
-    if (sv.stats.runs < 2 && !this.bot) this.dragHint();
-    if (this.endless) this.banner('무한의 탑', `1층  ·  최고 ${sv.endBest}층`);
+    if (sv.stats.runs < 2 && !this.bot && !this.practice) this.dragHint();
+    if (this.practice) this.practiceStart();
+    if (this.practice) { /* 연습장 안내는 practiceStart */ }
+    else if (this.endless) this.banner('무한의 탑', `1층  ·  최고 ${sv.endBest}층`);
     else if (this.dungeon) this.banner(`일일 던전 · ${D.DUN_TYPES[this.dungeon].name}`, `${D.DUNGEON.sec}초 안에 ${D.DUNGEON.killNeed}마리를 잡아라`);
     else if (this.hard) this.banner(`어려움 ${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}  ·  몹이 훨씬 세다`);
     else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}  ·  ${this.s === 1 ? '깨면 다음은 보스!' : '2판 깨면 보스'}`);
@@ -174,7 +180,7 @@ export class Battle extends Phaser.Scene {
     const aw = D.awakenText(sv.enh);
     if (aw && !this.dungeon) this.time.delayedCall(this.mod ? 7600 : 3400, () => !this.over && this.banner(aw[0], aw[1]));
     if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(`새 몬스터: ${D.VARIANTS[nv[1]].pre} ${D.MOB_NAMES[this.ch.mobs[nv[0]]]}`, D.VARIANTS[nv[1]].desc));
-    sv.stats.runs++; save();
+    if (!this.practice) { sv.stats.runs++; save(); }
     logCtx({ stage: this.endless ? 'tower' : this.dungeon ? 'dungeon' : `${this.hard ? 'H' : ''}${this.c + 1}-${this.s + 1}`, idx: this.endless || this.dungeon ? -1 : this.c * D.STAGES_PER_CHAPTER + this.s });
     this.log('battle_start', { power: D.powerOf(sv), rec: this.endless || this.dungeon ? undefined : D.recOf(this.c, this.s, this.hard), hard: this.hard, dungeon: this.dungeon || 'none', tier: sv.tier, enh: sv.enh, mod: this.mod?.id || 'none', easy: this.easy, runs: sv.stats.runs, replay: !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s < sv.cleared, boss_stage: this.isBoss });
   }
@@ -262,17 +268,20 @@ export class Battle extends Phaser.Scene {
     this.hero.body.setSize(this.hero.width * 0.45 / this.HS, this.hero.height * 0.35 / this.HS).setOffset(this.hero.width * (0.5 - 0.225 / this.HS), this.hero.height * (0.775 - 0.175 / this.HS));
     this.hero.setCollideWorldBounds(true);
     this.heroShadow = this.add.image(0, 0, 'shadow').setScale(1.6 * 1.3, 1.4 * 1.3);
+    // 47차: 증기·불꽃 속에서도 보이게 — 발밑 어두운 그림자 원을 늘 깔고, 몸에 1px 어두운 외곽선을 두른다(주인공은 효과보다 위 층)
+    this.heroDisc = this.add.ellipse(0, 0, 30 * 1.3, 11 * 1.3, 0x000000, 0.6).setDepth(HERO_D - 0.6);
+    this.hero.preFX?.addGlow(0x000000, 1.5, 0, false, 0.1, 6);
     // 몹 떼 속에서도 내 캐릭터가 바로 보이게 발밑에 밝은 고리
     // 고리 색은 강화 단계를 따른다(+5 파랑, +10 주황, +15 보라). +10부터는 몸에도 빛이 돈다
     const rc = sv.enh >= 15 ? 0xd06bff : sv.enh >= 10 ? 0xff8a2a : sv.enh >= 5 ? 0x5fc8ff : 0x9ae6ff;
-    this.heroRing = this.add.ellipse(0, 0, 24 * 1.3, 10 * 1.3, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(11.5);
+    this.heroRing = this.add.ellipse(0, 0, 24 * 1.3, 10 * 1.3, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(HERO_D - 0.4);
     // +10 각성부터 발밑에 강화 색 기운이 맥박친다(+15는 더 크고 잔상이 남는다)
     if (sv.enh >= 10) {
       this.heroAura = this.add.image(0, 0, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(rc).setDepth(9.5).setAlpha(0.5).setScale(sv.enh >= 15 ? 1.2 : 0.9, sv.enh >= 15 ? 0.55 : 0.42);
       this.tweens.add({ targets: this.heroAura, alpha: 0.2, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     }
     // 몹 더미에 몸이 가려도 머리 위 작은 화살표로 어디 있는지 보인다
-    this.heroMark = this.add.triangle(0, 0, 0, 0, 8, 0, 4, 5, rc).setStrokeStyle(1, 0x000000, 0.6).setDepth(12);
+    this.heroMark = this.add.triangle(0, 0, 0, 0, 8, 0, 4, 5, rc).setStrokeStyle(1, 0x000000, 0.6).setDepth(HERO_D + 2);
     // 영웅 스킨: 몸 색을 바꾼다
     if (!this.hero.cosBody && heroSkin(sv).id) skinFx(this.hero, heroSkin(sv));
     if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
@@ -527,8 +536,20 @@ export class Battle extends Phaser.Scene {
 
   // 뱀서식 포위: 떼거리가 원을 그리며 한꺼번에 몰려온다
   // 대열: 화면 한쪽 가장자리를 붉게 깜빡여 알린 뒤 그쪽에서 줄·떼로 나온다. 그만큼 일반 스폰을 덜어 난이도는 그대로
-  formation() {
-    const a = R(0, 3) * Math.PI / 2 + RF(-0.3, 0.3), p = a + Math.PI / 2, type = R(0, 2);
+  // 47차 새 이벤트 — 몹 습격: 한쪽 가장자리가 붉게 깜빡이며 경고, 2.5초 뒤부터 10초 동안 그쪽에서 대열이 계속 밀려온다(기존 몹 그림·대열 재사용)
+  raid() {
+    const a = R(0, 3) * Math.PI / 2;
+    this.banner('몹 습격!', `${['오른쪽', '아래쪽', '왼쪽', '위쪽'][a / (Math.PI / 2)]}에서 10초간 몰려온다`);
+    sfx('warn', 300);
+    const ex = Math.cos(a), ey = Math.sin(a), horiz = Math.abs(ex) > Math.abs(ey);
+    const bar = this.add.rectangle(horiz ? (ex > 0 ? W - 4 : 4) : W / 2, horiz ? H / 2 : (ey > 0 ? H - 4 : 4), horiz ? 8 : W, horiz ? H : 8, 0xff3030, 0.75).setScrollFactor(0).setDepth(60);
+    this.tweens.add({ targets: bar, alpha: 0.15, duration: 180, yoyo: true, repeat: 6, onComplete: () => bar.destroy() });
+    for (let k = 0; k < 8; k++) this.time.delayedCall(2500 + k * 1250, () => { if (!this.over && !this.bossPhase) this.formation(a + RF(-0.25, 0.25)); });
+    this.time.delayedCall(2500 + 8 * 1250, () => !this.over && toast(this, '습격을 막아냈다!', '#5fdc6a', 96));
+  }
+
+  formation(ang) {
+    const a = ang ?? (R(0, 3) * Math.PI / 2 + RF(-0.3, 0.3)), p = a + Math.PI / 2, type = R(0, 2);
     const cx = this.hero.x + Math.cos(a) * 200, cy = this.hero.y + Math.sin(a) * 200;
     const at = (u, v) => ({ x: Phaser.Math.Clamp(cx + Math.cos(p) * u + Math.cos(a) * v, 10, WORLD - 10), y: Phaser.Math.Clamp(cy + Math.sin(p) * u + Math.sin(a) * v, 10, WORLD - 10) });
     const kind = Phaser.Utils.Array.GetRandom(this.ch.mobs), pts = [];
@@ -858,6 +879,7 @@ export class Battle extends Phaser.Scene {
   surprise(kind) {
     this.log('event', { kind });
     if (kind === 'goblin') return this.spawnGoblin();
+    if (kind === 'raid') return this.raid();
     if (kind === 'bats') {
       // 황금 박쥐 떼: 빠르고 약하다. 8초 안에 잡으면 은화·경험치가 쏟아진다
       for (let i = 0; i < 6; i++) {
@@ -972,6 +994,7 @@ export class Battle extends Phaser.Scene {
   }
 
   die(final = false) {
+    if (this.practice) return this.practiceEnd(false);
     if (!final && this.run.revive > 0) {
       this.run.revive--;
       this.log('revive_done', { via: 'train' });
@@ -1031,8 +1054,25 @@ export class Battle extends Phaser.Scene {
     this.ebullets.clear(true, true);
   }
 
+  // ── 47차: 꾸미기 체험 연습장(30초) ──
+  practiceStart() {
+    const it = cosmetic(this.cosTrial);
+    this.banner(`체험 연습장 · ${it ? it.name : ''}`, `${D.PRACTICE_SEC}초 · 몹이 약하다 · 보상 없음`);
+    this.pracTxt = this.add.text(W / 2, 34, '', font(10, '#9ae0ff', 3)).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+    this.events.on('update', () => { if (this.pracTxt?.active && !this.over) this.pracTxt.setText(`연습장 ${Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000))}초`); });
+    this.log('practice_start', { id: this.cosTrial });
+  }
+  practiceEnd(done) {
+    if (this.over) return; this.over = true;
+    const sv = this.sv, it = cosmetic(this.cosTrial), id = this.cosTrial;
+    this.physics.pause(); this.ebullets.clear(true, true); stopBgm();
+    this.log('practice_end', { id, done });
+    this.time.delayedCall(done ? 500 : 900, () => this.ui.practiceCard(it, done));
+  }
+
   // ── 웨이브 ──
   endWave() {
+    if (this.practice) return this.practiceEnd(true);
     this.wave++;
     this.log('wave_clear', { wave: this.wave, of: this.endless ? undefined : this.waveCount, kills: this.run.kills, silver: this.run.silver });
     // 남은 몹은 흩어지고 보석은 다 끌려온다(브로타토식 자동 수거)
@@ -1047,13 +1087,14 @@ export class Battle extends Phaser.Scene {
     this.time.delayedCall(700, () => {
       if (this.over) return;
       if (this.wave >= this.waveCount) {
-        if (this.isBoss) { this.ui.shop(() => this.startBoss()); }
+        if (this.isBoss) { this.shopShown = true; this.ui.shop(() => this.startBoss()); }
         else this.ui.result(true);
       } else if (this.endless) this.ui.shop(() => this.banner(`${this.wave + 1}층`, this.wave % 3 === 2 ? '해골 장군이 온다' : '더 세진다'));
       else {
         const next = () => this.banner(`웨이브 ${this.wave + 1} / ${this.waveCount}`, this.wave === this.waveCount - 1 ? '마지막 웨이브' : '버텨라');
         // 맨 처음 판은 상인을 건너뛴다: 80초 판 한가운데 4칸 상점이 흐름을 끊었다(41차)
-        if (this.firstRun) next(); else this.ui.shop(next);
+        // 47차: 상인 창은 판당 한 번 — 일반 판은 첫 웨이브 뒤, 보스 판은 보스 직전(아래 분기)에만
+        if (this.firstRun || this.shopShown || this.isBoss || this.wave !== 1) next(); else { this.shopShown = true; this.ui.shop(next); }
       }
     });
   }
@@ -1192,7 +1233,7 @@ export class Battle extends Phaser.Scene {
     // 휘두를 때의 늘어남(weapons.js)을 덮어쓰지 않게 그동안은 손대지 않는다
     if (!slashing) h.setScale(this.HS, this.HS * (moving ? 1 : 1 + Math.sin(this.walkT) * 0.025));
     h.setAlpha(this.bt < this.iframe && Math.floor(this.bt / 60) % 2 ? 0.55 : 1);
-    h.setDepth(10 + h.y / WORLD);
+    h.setDepth(HERO_D + h.y / WORLD);
     if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.displayHeight / 2 - 3); }
     this.heroRing.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
     if (this.heroAura) this.heroAura.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
@@ -1203,7 +1244,8 @@ export class Battle extends Phaser.Scene {
       this.tweens.add({ targets: gh, alpha: 0, duration: 260, onComplete: () => gh.destroy() });
     }
     this.heroMark.setPosition(h.x, h.y - h.displayHeight / 2 - 4 + Math.sin(this.bt / 160) * 1.5);
-    this.heroShadow.setPosition(h.x, h.y + h.displayHeight / 2 - 2).setScale(1.6 * 1.3 * (1 - bob * 2), 1.4 * 1.3).setDepth(9);
+    this.heroShadow.setPosition(h.x, h.y + h.displayHeight / 2 - 2).setScale(1.6 * 1.3 * (1 - bob * 2), 1.4 * 1.3).setDepth(HERO_D - 0.5);
+    this.heroDisc.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
     if (this.heroWeapon) {
       const k = h.anims.currentAnim?.key, f = h.flipX ? -1 : 1;
       if (this.heroSword) {

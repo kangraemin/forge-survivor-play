@@ -1,4 +1,5 @@
 import { cosmeticPage } from './cosmeticShop.js';
+import { openSettings } from './settingsPanel.js';
 import { cosmetic } from './cosmetics.js';
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
 import * as D from './data.js';
@@ -10,7 +11,7 @@ import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
 import { ContentTab } from './contentTab.js';
 import { dexRefresh } from './codex.js';
-import { gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, hasW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
+import { PETS, gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, hasW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -65,11 +66,13 @@ export class Lobby extends Phaser.Scene {
     const idle = this.idleReward();
     if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
     else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e', 112));
+    // 47차: 팝업은 한 번에 하나, 순서는 새 펫 → 출석 → 꾸러미. 구매 유도(성장·첫 결제 꾸러미)는 하루 한 번, 직전에 다른 팝업이 뜬 뒤 한 판은 더 해야 뜬다
+    else if (sv.petJoinPending && this.tab === 'battle') { sv.popRun = sv.stats.runs; this.time.delayedCall(250, () => this.petWin()); }
     // 세 판을 하고 난 뒤부터(처음엔 창이 연달아 뜨지 않게): 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
-    else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin(true)); }
+    else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; sv.popRun = sv.stats.runs; save(); this.time.delayedCall(250, () => this.missionWin(true)); }
     // 장 보스를 처음 잡고 오면 24시간 성장 꾸러미를 한 번 띄운다
-    else if (growOffer(sv) && !sv.grow.shown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && !this.busy && this.growWin());
-    else if (sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
+    else if (this.offerOk() && growOffer(sv) && !sv.grow.shown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && !this.busy && this.growWin());
+    else if (this.offerOk() && sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
   }
 
   // 지금 난이도에서 깬 판 수, 그 다음 도전할 판을 고른다
@@ -200,9 +203,32 @@ export class Lobby extends Phaser.Scene {
     c.add(button(this, W / 2, 330, 110, 26, '좋아', () => c.close(), { size: 11, color: 0x2f6b3a }));
   }
 
+  offerOk() { const sv = this.sv; return sv.offerDay !== sv.day && (sv.popRun ?? -1) < sv.stats.runs; }
+  // 새 보스 펫 합류(클리어 카드를 닫은 뒤 로비에서)
+  petWin() {
+    const sv = this.sv, p = PETS.find(x => x.id === sv.petJoinPending);
+    delete sv.petJoinPending; save();
+    if (!p) return;
+    const c = this.modal();
+    c.add(panel(this, 30, 120, W - 60, 230, { fill: 0x1a1426, line: p.color }));
+    c.add(this.add.text(W / 2, 142, '새 펫 합류!', font(15, '#ffd75e')).setOrigin(0.5));
+    c.add(this.add.image(W / 2, 192, 'disc').setScale(1.1).setTint(p.color).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD));
+    const fb = this.registry.get('fallback')?.[p.id];
+    const g = this.add.sprite(W / 2, 192, null).play(p.id).setScale(fb ? 1.4 : 0.7);
+    if (fb) g.setTint(p.color);
+    c.add(g);
+    c.add(this.add.text(W / 2, 236, p.name, font(14, '#ffffff')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 256, p.desc, font9(10, '#a1b2b6')).setOrigin(0.5));
+    const chN = i => `${i + 1}장`;
+    c.add(this.add.text(W / 2, 274, `잘 듣는 곳: ${[...(p.good || []).map(chN), ...(p.id === 'demonlord' ? ['무한의 탑'] : [])].join(' · ') || '-'}`, font9(10, '#5fdc6a')).setOrigin(0.5));
+    c.add(button(this, W / 2 + 46, 320, 84, 28, '데려가기', () => { sv.pet = p.id; save(); sfx('buy'); track('pet_join_take', { pet: p.id }); c.close(); }, { size: 11, color: 0x2f6b3a }));
+    c.add(button(this, W / 2 - 50, 320, 76, 28, sv.pet === p.id ? '확인' : '나중에', () => { track('pet_join_later', { pet: p.id }); c.close(); }, { size: 10, color: 0x3a3846 }));
+  }
+
   // 1-3을 깬 뒤 한 번만: 첫 결제 꾸러미
   starterWin() {
     const sv = this.sv, it = D.IAP.find(x => x.id === 'starter'), c = this.modal();
+    sv.offerDay = sv.day; sv.popRun = sv.stats.runs;
     sv.starterShown = true; save(); track('starter_offer_show', { cleared: sv.cleared });
     c.add(panel(this, 24, 130, W - 48, 210, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(this.add.text(W / 2, 152, '처음 온 대장장이에게만', font9(10, '#ff9ad0')).setOrigin(0.5));
@@ -224,6 +250,7 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, it = growOffer(sv);
     if (!it) return;
     const c = this.modal();
+    sv.offerDay = sv.day; sv.popRun = sv.stats.runs;
     sv.grow.shown = true; save(); track('grow_offer_show', { c: it.c });
     c.add(panel(this, 24, 130, W - 48, 210, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(this.add.text(W / 2, 152, `${it.c + 1}장 보스 격파 축하!`, font9(10, '#ff9ad0')).setOrigin(0.5));
@@ -282,6 +309,9 @@ export class Lobby extends Phaser.Scene {
     // 소리 켜고 끄기
     const snd = this.add.text(W - 8, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
     snd.on('pointerup', () => { sv.sound = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
+    // 설정(저장 내보내기·가져오기, 구매 복원)
+    const cfg = this.add.text(W - 8, 40, '설정', font(8, '#a1b2b6', 2)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
+    cfg.on('pointerup', () => { if (this.busy) return; sfx('click'); openSettings(this); });
     this.refreshTop();
   }
   refreshTop() { this.topTxt.forEach(t => t.setText(t.get())); this.bellDot?.setVisible(this.missionReady() > 0); this.bellHint?.setText(this.bellText()); }

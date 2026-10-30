@@ -120,7 +120,7 @@ export const RAGE_WHAT = {
   sink: '모래 늪', overheat: '과열', tempest: '뇌우', reflect: '반사 방패', meteor: '유성우',
 };
 export const BOSSES = {
-  kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'summon', 'jump', 'ring'], rage: 'pools' },
+  kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'charge', 'summon', 'slam', 'ring'], rage: 'pools' },
   lich: { name: '리치 왕', sheet: 'boss1', row: 1, hp: 1500, dmg: 12, spd: 22, color: 0x9dff7a, pattern: ['ring', 'summon', 'aimed', 'ring'], rage: 'sweep' },
   lavagolem: { name: '용암 거신', sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
   wyrm: { name: '서리 용', sheet: 'boss2', row: 0, hp: 1450, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
@@ -518,7 +518,8 @@ export const WEEKLY_GIVE = { gem: 20, stone: 10 };
 export const WEEKLY_ALL = { gem: 50, guard: 1 };
 
 // ── 깜짝 이벤트: 보스·탑·처음 두 판이 아니면 판마다 하나가 나올 수 있다 ──
-export const EVENTS = { chance: 0.55, kinds: ['goblin', 'bats', 'shrine'], shrineBuff: { dmg: 0.3, spd: 0.15, ms: 20000 }, shrineStand: 2000 };
+export const PRACTICE_SEC = 30;   // 47차: 꾸미기 체험 연습장 길이
+export const EVENTS = { chance: 0.55, kinds: ['goblin', 'bats', 'shrine', 'raid'], shrineBuff: { dmg: 0.3, spd: 0.15, ms: 20000 }, shrineStand: 2000 };
 // 진 판이 이만큼 넘게 버텼으면 '조금만 더'를 띄운다
 export const CLOSE_LOSS = 0.6;
 

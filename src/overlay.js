@@ -1,4 +1,5 @@
 import { cosmeticResultCard } from './cosmeticShop.js';
+import { cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 // 전투 위에 뜨는 창: 레벨업 3택, 스킬 상자, 웨이브 사이 상점, 일시정지, 결과
 import * as D from './data.js';
 import { save, mission } from './save.js';
@@ -37,6 +38,30 @@ export class Overlay {
     c.add(button(s, W / 2 + 46, 320, 84, 28, '데려가기', () => { sv.pet = p.id; save(); sfx('buy'); s.log('pet_join_take', { pet: p.id }); close(); }, { size: 11, color: 0x2f6b3a }));
     c.add(button(s, W / 2 - 50, 320, 76, 28, sv.pet === p.id ? '확인' : '나중에', () => { s.log('pet_join_later', { pet: p.id }); close(); }, { size: 10, color: 0x3a3846 }));
     c.setAlpha(0); s.tweens.add({ targets: c, alpha: 1, duration: 250, delay: 600 });
+  }
+
+  // 47차: 체험 연습장이 끝나면 바로 구매 카드(졌어도 같은 카드). 주 버튼은 구매 하나
+  practiceCard(it, done) {
+    const s = this.s, sv = s.sv;
+    if (this.c) { this.c.destroy(); this.c = null; this.open = null; }
+    const c = this.begin('practice');
+    const sp = it ? salePrice(sv, it) : null, owned = !!(it && wardrobe(sv).owned[it.id]);
+    c.add(panel(s, 24, 110, W - 48, 250, { fill: 0x142a31, line: 0x507b89 }));
+    c.add(s.add.text(W / 2, 134, done ? '체험 끝!' : '체험 중단…', font(16, '#ffd75e')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 154, done ? '어때요? 보상 없는 연습이었어요' : '괜찮아요, 연습장이라 잃은 건 없어요', font9(10, '#b4cfda')).setOrigin(0.5));
+    if (it) {
+      const body = it.kind === 'character' || it.kind === 'costume';
+      const im = s.add.image(W / 2, 205, body ? `cos_${it.id}_4` : `cos_${it.id}`, body ? 2 : 0); im.setScale(56 / Math.max(im.width, im.height)); c.add(im);
+      c.add(s.add.text(W / 2, 244, it.name, font(13)).setOrigin(0.5));
+      if (sp?.off) c.add(s.add.text(W / 2, 262, `첫 구매 ${sp.off}% 할인 · 정가 ${it.cost} → ${sp.price} 보석`, font9(10, '#ffd75e')).setOrigin(0.5));
+      else c.add(s.add.text(W / 2, 262, `${it.cost} 보석`, font9(10, '#ffd75e')).setOrigin(0.5));
+      const enough = sv.gem >= (sp?.price ?? it.cost);
+      if (!owned) c.add(button(s, W / 2, 298, 200, 32, enough ? `${sp.price} 보석으로 구매하기` : `보석 ${sp.price} · 상점에서 구매하기`, () => {
+        if (enough) { if (buyCosmetic(sv, it.id)) { save(); sfx('buy'); s.log('cosmetic_buy', { id: it.id, cost: sp.price, from: 'practice' }); s.scene.start('Lobby', { tab: 'shop', cosmetic: it.id }); } }
+        else s.scene.start('Lobby', { tab: 'shop', cosmetic: it.id });
+      }, { size: 12, color: 0x2f6b3a }));
+    }
+    c.add(button(s, W / 2, 338, 120, 24, '로비로', () => s.scene.start('Lobby', { tab: 'shop', cosmetic: it?.id }), { size: 10, color: 0x3a3846 }));
   }
 
   // 마지막 장 클리어 연출: 금빛 불꽃비와 큰 글씨(누르는 곳 없이 3초 뒤 걷힌다)
@@ -337,9 +362,18 @@ export class Overlay {
 
   // ── 스킬 상자: 가진 스킬 중 하나가 무료로 오른다 ──
   chest() {
-    if (this.open) { this.queue.push(() => this.chest()); return; }
     const s = this.s, sk = s.run.skills;
     const can = Object.keys(sk).filter(k => sk[k] < D.SKILL_MAX);
+    // 47차: 상자 창은 판당 한 번 — 두 번째부터는 창 없이 같은 보상(스킬 한 단계)을 바로 받고 알림만 띄운다
+    if (s.run.chestShown) {
+      const k = Phaser.Utils.Array.GetRandom(can);
+      if (k) { sk[k]++; if (k === 'vigor') { s.maxHp += 20; s.hp += 20; } s.refreshSkillRow(); toast(s, `상자: ${D.SKILLS[k].name} Lv ${sk[k]}`, '#ffd75e', 112); }
+      else { s.run.silver += 40; toast(s, '상자: 은화 +40', '#ffd75e', 112); }
+      s.log('chest_open', { skill: k || '_silver', quiet: true }); sfx('success');
+      return;
+    }
+    if (this.open) { this.queue.push(() => this.chest()); return; }
+    s.run.chestShown = true;
     const c = this.begin('chest');
     sfx('success');
     const box = s.add.image(W / 2, 210, 'chest').setScale(4);
@@ -677,7 +711,8 @@ export class Overlay {
     if (wNew && newPet) c.add(s.add.text(W / 2, 326, `새 펫 「${newPet.name}」 합류!`, font9(10, '#ffb050')).setOrigin(0.5));
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : autoEq.length ? font(11, '#5fdc6a') : font9(10, '#a1b2b6')).setOrigin(0.5));
     // 보스 펫 합류는 결과 창 위에 따로 크게 띄운다(한 줄 글씨로는 못 보고 지나갔다)
-    if (newPet && !s.bot) this.petJoin(newPet);
+    // 47차: 새 펫 합류 창은 클리어 카드 위에 겹쳐 뜨지 않는다 — 로비에서 팝업 순서대로(펫 → 꾸러미) 하나씩
+    if (newPet && !s.bot) { sv.petJoinPending = newPet.id; save(); }
     if (finale && !s.bot) this.finale();
     // 새 무기는 장비 아이콘 대신 무기 이름 칸으로 보여 준다(장비 그림이 나와 무엇을 얻었는지 헷갈렸다)
     if (wNew) {

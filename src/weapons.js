@@ -21,8 +21,8 @@ const SKIN_SLASH = {
   guitar: { frames: [9], n: 3, mode: 'rise' },
   hammer: { frames: [1], n: 3, mode: 'rise' },
   candy: { spin: 360, frames: [7, 1], n: 4, mode: 'arc' },
-  dragon: { frames: [11], n: 5, mode: 'arc' },
-  light: { frames: [2, 7], n: 5, mode: 'arc' },
+  dragon: { frames: [11], n: 3, mode: 'arc' },
+  light: { frames: [2, 7], n: 3, mode: 'arc' },
 };
 
 export class Weapons {
@@ -96,12 +96,12 @@ export class Weapons {
     const h = s.hero, dir = Math.cos(a) >= 0 ? 1 : -1, ox = h.x, oy = h.y - 6;
     if (def.spin) {   // 바람개비·빗자루: 무기 그림이 베기 자리에서 휙 돈다
       const sp = s.add.image(ox + Math.cos(a) * 34 * area, oy + Math.sin(a) * 26 * area, `cos_${id}`).setDepth(29).setAlpha(0.95);
-      sp.setScale(26 / Math.max(sp.width, sp.height));
-      s.tweens.add({ targets: sp, angle: dir * def.spin, scale: sp.scaleX * 1.9, alpha: 0, duration: 320, ease: 'Cubic.Out', onComplete: () => sp.destroy() });
+      sp.setScale(20 / Math.max(sp.width, sp.height)); sp.setAlpha(0.6);
+      s.tweens.add({ targets: sp, angle: dir * def.spin, scale: sp.scaleX * 1.5, alpha: 0, duration: 280, ease: 'Cubic.Out', onComplete: () => sp.destroy() });
     }
     for (let i = 0; i < def.n; i++) {
       const f = def.frames[i % def.frames.length], k = def.n > 1 ? i / (def.n - 1) - 0.5 : 0;
-      const p = s.add.image(ox, oy, 'cos_fx', f).setDepth(29).setScale(1.5).setAlpha(0.95);
+      const p = s.add.image(ox, oy, 'cos_fx', f).setDepth(29).setScale(1.0).setAlpha(0.6);   // 47차: 호를 가늘고 옅게
       let tx, ty, dur = 360;
       if (def.mode === 'drop') {   // 생선: 궤적을 따라 물방울이 튀고 아래로 떨어진다
         const r = (24 + 14 * (k + 0.5) * 2) * area; p.setPosition(ox + Math.cos(a) * r, oy + Math.sin(a) * r * 0.8);
@@ -111,10 +111,10 @@ export class Weapons {
         p.setAngle(RF(0, 360));
         s.tweens.add({ targets: p, angle: p.angle + dir * 260, duration: 420 });
       } else {   // 별·하트·음표·불꽃: 베는 호를 따라 반짝 퍼진다
-        const aa = a + k * 1.5, r = 40 * area; p.setPosition(ox + Math.cos(aa) * r * 0.5, oy + Math.sin(aa) * r * 0.4);
+        const aa = a + k * 1.5, r = 40 * area; p.setPosition(ox + Math.cos(aa) * r * 0.85, oy + Math.sin(aa) * r * 0.7);   // 47차: 몸 가운데(반지름 ~34 안쪽)는 비운다
         tx = ox + Math.cos(aa) * r * 1.35; ty = oy + Math.sin(aa) * r * 1.1 - (def.mode === 'rise' ? 14 : 0);
       }
-      s.tweens.add({ targets: p, x: tx, y: ty, alpha: 0, scale: def.mode === 'drop' ? 1.1 : 2.1, duration: dur, ease: def.mode === 'drop' ? 'Quad.In' : 'Cubic.Out', onComplete: () => p.destroy() });
+      s.tweens.add({ targets: p, x: tx, y: ty, alpha: 0, scale: def.mode === 'drop' ? 0.8 : 1.4, duration: dur, ease: def.mode === 'drop' ? 'Quad.In' : 'Cubic.Out', onComplete: () => p.destroy() });
     }
   }
 

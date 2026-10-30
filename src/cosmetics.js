@@ -68,10 +68,22 @@ export function equipCosmetic(sv, kind, id) {
   if (id && kind === 'costume') c.equip.character = '';
   return true;
 }
+// 47차: 오늘의 판매 — 머리·무기 꾸미기를 KST 날짜 번호로 하루 하나씩 돌려 노출(같은 날엔 늘 같은 것). 15% 할인
+export const SALE_OFF = 15;
+export const dayNo = (now = Date.now()) => Math.floor((now + 9 * 3600000) / 86400000);
+export const todaySale = (now = Date.now()) => { const pool = [...HEAD_LOOKS, ...WEAPON_LOOKS]; return pool[dayNo(now) % pool.length]; };
+// 가격: 정가(보석) 기준. 오늘의 판매이거나 체험을 끝낸 안 산 항목(첫 구매)이면 15% 할인 — 겹치지 않고 하나만 적용, 표기는 정확히
+export function salePrice(sv, it, now = Date.now()) {
+  const c = wardrobe(sv), why = c.owned[it.id] ? '' : todaySale(now).id === it.id ? 'today' : c.tried[it.id] ? 'trial' : '';
+  const off = why ? SALE_OFF : 0;
+  return { price: Math.round(it.cost * (100 - off) / 100), off, why };
+}
 export function buyCosmetic(sv, id, now = Date.now()) {
   const it = cosmetic(id), c = wardrobe(sv);
-  if (!it || !available(it, now) || c.owned[id] || sv.gem < it.cost) return false;
-  sv.gem -= it.cost; c.owned[id] = true; equipCosmetic(sv, it.kind, id); return true;
+  if (!it || !available(it, now) || c.owned[id]) return false;
+  const price = salePrice(sv, it, now).price;
+  if (sv.gem < price) return false;
+  sv.gem -= price; c.owned[id] = true; equipCosmetic(sv, it.kind, id); return true;
 }
 // 고정된 실제 행사 기간. 재접속으로 연장되는 타이머가 아니다. 산 아이템은 기간 뒤에도 착용 가능.
 export const WINTER = { from: Date.parse('2026-10-30T00:00:00+09:00'), until: Date.parse('2027-01-01T00:00:00+09:00'), label: '겨울 기념 판매 · 2026.10.30–12.31 KST' };

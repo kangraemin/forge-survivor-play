@@ -5,6 +5,8 @@ import { font, toast } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
+const PAT_NAME = { jump: '내려찍기!', charge: '돌진!', slam: '장판!', ring: '탄막!', aimed: '조준 사격!', summon: '소환!', sweep: '광선!', pools: '독 웅덩이!', wave: '파도!', tsunami: '해일!', spore: '포자!', bloom: '개화!', prism: '프리즘!', shatter: '파편!', gale: '돌풍!', cyclone: '회오리!', void: '공허!', eclipse: '일식!', burrow: '잠복!', sink: '함몰!', vent: '증기 분출!', overheat: '과열!', bolt: '낙뢰!', tempest: '폭풍!', mirror: '거울!', reflect: '반사!', hammer: '망치!', meteor: '운석!' };
+const PHASE_LINE = ['크윽… 이 정도로!', '이제 진심이다!'];
 
 export class BossAI {
   constructor(s, key, hpMul, mid = false) {
@@ -57,8 +59,10 @@ export class BossAI {
     // 46차: 체력 70%·40%에서 페이즈가 바뀐다 — 보스가 포효하며 잠깐 멈추고(색 번쩍·화면 흔들림), 3초 동안 약점이 드러난다(맞으면 추가 피해)
     if (!this.mid && this.bar) for (const [i, f] of [[1, 0.7], [2, 0.4]]) if ((this.phase || 0) < i && m.hp <= m.maxHp * f) this.phaseShift(i, f);
     if (this.mark) {
-      if (m.expose > s.bt && m.active) this.mark.setPosition(m.x, m.y - m.displayHeight * 0.1).setScale((m.displayWidth * 0.5 / 28) * (1 + 0.08 * Math.sin(s.bt / 90)));
-      else { this.mark.destroy(); this.mark = null; }
+      if (m.expose > s.bt && m.active) {
+        this.mark.setPosition(m.x, m.y - m.displayHeight * 0.1).setScale((m.displayWidth * 0.62 / 28) * (1 + 0.12 * Math.sin(s.bt / 80)));
+        this.markTxt?.setPosition(m.x, m.y - m.displayHeight * 0.1 - 1).setAlpha(0.6 + 0.4 * Math.abs(Math.sin(s.bt / 120)));
+      } else { this.mark.destroy(); this.mark = null; this.markTxt?.destroy(); this.markTxt = null; }
     }
     if (enraged && !this.rage) {
       this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; s.cameras.main.shake(300, 0.005); sfx('bossIn');
@@ -85,21 +89,49 @@ export class BossAI {
     if (this.t <= 0) {
       const list = enraged && this.b.rage ? [...this.b.pattern, this.b.rage] : this.b.pattern;
       const pat = list[this.pi++ % list.length];
-      this.t = (enraged ? 2400 : 3200) + R(0, 600);
+      // 47차: 초반 보스(1~2장)는 공격 간격을 줄여 피할 일이 생기게 한다
+      this.t = (enraged ? 2400 : 3200) * (!this.mid && s.c <= 1 && !s.endless ? 0.8 : 1) + R(0, 600);
+      this.callout(pat);
       this[pat](enraged);
     }
   }
 
+  // 47차: 공격이 시작될 때 이름을 머리 위에 띄워 무엇이 오는지 알린다(바닥 예고와 함께)
+  callout(pat) {
+    const s = this.s, m = this.m, name = PAT_NAME[pat] || '공격!';
+    const t = s.add.text(m.x, m.y - m.displayHeight * 0.62, name, font(10, '#ffe0a0', 3)).setOrigin(0.5).setDepth(41);
+    s.tweens.add({ targets: t, y: t.y - 10, alpha: 0, duration: 900, delay: 350, onComplete: () => t.destroy() });
+  }
+
+  // 47차: 보스 머리 위 말풍선 한 줄
+  bubble(text, ms = 1500) {
+    const s = this.s, m = this.m;
+    const t = s.add.text(0, 0, text, font(10, '#2a1a10')).setOrigin(0.5);
+    const w = t.width + 14, h = 18;
+    const bg = s.add.graphics().fillStyle(0xfff4d8, 1).lineStyle(2, 0x2a1a10, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 5).strokeRoundedRect(-w / 2, -h / 2, w, h, 5)
+      .fillTriangle(-4, h / 2 - 1, 4, h / 2 - 1, 0, h / 2 + 6);
+    const c = s.add.container(m.x, m.y - m.displayHeight * 0.75, [bg, t]).setDepth(42);
+    const follow = () => { if (!m.active || !c.active) return; c.setPosition(m.x, m.y - m.displayHeight * 0.75); };
+    s.events.on('update', follow);
+    s.time.delayedCall(ms, () => { s.events.off('update', follow); s.tweens.add({ targets: c, alpha: 0, duration: 200, onComplete: () => c.destroy() }); });
+  }
+
   phaseShift(i, f) {
     const s = this.s, m = this.m;
-    this.phase = i; this.busy = Math.max(this.busy, 900); m.setVelocity(0, 0);
-    m.expose = s.bt + 3200;
+    // 47차: 0.7초 완전 정지(보스·움직임), 화면 번쩍임, 말풍선, 약점 표식
+    this.phase = i; this.busy = Math.max(this.busy, 1100); m.setVelocity(0, 0);
+    m.expose = s.bt + 3600;
+    s.hitstop = Math.max(s.hitstop || 0, 700);
+    s.flashFx.setAlpha(0.75); s.tweens.add({ targets: s.flashFx, alpha: 0, duration: 450 });
+    this.bubble(PHASE_LINE[i - 1] || '이제부터 진짜다!');
     s.cameras.main.shake(260, 0.006); s.cameras.main.flash(180, 255, 240, 200); sfx('bossIn');
     const ring = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(30).setScale(0.4);
     s.tweens.add({ targets: ring, scale: m.displayWidth / 28 + 1.4, alpha: 0, duration: 520, onComplete: () => ring.destroy() });
     s.tweens.add({ targets: m, scaleX: m.scaleX * 1.15, scaleY: m.scaleY * 0.9, duration: 160, yoyo: true });
     this.mark?.destroy();
-    this.mark = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(m.depth + 1).setAlpha(0.9);
+    this.mark = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(41).setAlpha(1);
+    this.markTxt?.destroy();
+    this.markTxt = s.add.text(m.x, m.y, '약점!', font(10, '#ff5a4a', 3)).setOrigin(0.5).setDepth(41);
     s.banner(`페이즈 ${i + 1}!`, '약점이 드러났다 · 지금 몰아쳐라 (추가 피해)');
     s.log?.('boss_phase', { boss: this.key, phase: i + 1, at: f });
   }
@@ -189,11 +221,13 @@ export class BossAI {
   // 소환: 주변에 졸개를 부른다
   summon() {
     const s = this.s, m = this.m;
-    this.busy = 500; m.setVelocity(0, 0);
+    this.busy = 1000; m.setVelocity(0, 0);
     s.tweens.add({ targets: m, scaleY: m.scaleY * 1.15, duration: 180, yoyo: true });
+    sfx('warn');
+    // 47차: 소환 자리에 먼저 빨간 표시가 뜨고 0.7초 뒤 졸개가 나온다
     for (let i = 0; i < 6; i++) {
-      const a = i / 6 * Math.PI * 2;
-      s.spawn(false, s.ch.mobs[i % 3], { force: true, at: { x: m.x + Math.cos(a) * 50, y: m.y + Math.sin(a) * 50 } });
+      const a = i / 6 * Math.PI * 2, x = m.x + Math.cos(a) * 50, y = m.y + Math.sin(a) * 50;
+      this.warnCircle(x, y, 12, 700, () => { if (m.active) s.spawn(false, s.ch.mobs[i % 3], { force: true, at: { x, y } }); });
     }
   }
 
@@ -257,7 +291,7 @@ export class BossAI {
 
   die() {
     const s = this.s, m = this.m;
-    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy();
+    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy(); this.markTxt?.destroy();
     this.bar?.forEach(o => o.destroy());
     s.hitstop = 260;
     s.cameras.main.shake(600, 0.015);

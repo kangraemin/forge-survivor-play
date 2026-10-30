@@ -2,6 +2,7 @@
 import { W, H, MOBS, BOSSES } from './data.js';
 import { font, hiCam } from './ui.js';
 import { makeWeaponTextures } from './wart.js';
+import { updateGate, startCheck } from './updateGate.js';
 import { BODY_LOOKS, COS_ROWS, WEAPON_LOOKS, HEAD_LOOKS, CASH_PETS } from './cosmetics.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
@@ -21,8 +22,13 @@ const WEAPONS = ['sword', 'spear', 'axe', 'bow', 'gun', 'knuckle', 'staff'];
 export class Boot extends Phaser.Scene {
   constructor() { super('Boot'); }
 
+  init() { this.upd = startCheck(); }   // 버전 확인은 그림을 받는 동안 같이 돈다
+
   preload() {
     hiCam(this);
+    // 로딩 배경(맨 먼저 받아 깔고, 아래 막대·글자는 그 위에)
+    this.load.image('loading_bg', 'assets/loading_bg.png');
+    this.load.once('filecomplete-image-loading_bg', () => this.add.image(0, 0, 'loading_bg').setOrigin(0).setDisplaySize(W, H).setDepth(-10));
     const bar = this.add.rectangle(W / 2 - 80, H / 2, 0, 6, 0xffd75e).setOrigin(0, 0.5);
     this.add.rectangle(W / 2, H / 2, 164, 10).setStrokeStyle(1, 0x5b4f7a);
     this.add.text(W / 2, H / 2 - 20, '대장간 서바이버', font(16, '#ffd75e')).setOrigin(0.5);
@@ -105,7 +111,7 @@ export class Boot extends Phaser.Scene {
     for (const it of CASH_PETS) A(`pet_${it.id}`, `cos_${it.id}`, 6);
     this.registry.set('fallback', fallback);
     this.makeTextures();
-    this.scene.start('Lobby');
+    updateGate(this, this.upd).then(go => { if (go) this.scene.start('Lobby'); });   // 강제 업데이트면 여기서 멈춘다
   }
 
   // 픽셀 단위로 직접 그리는 작은 그림들

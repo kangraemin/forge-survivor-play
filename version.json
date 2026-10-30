@@ -1,0 +1,10 @@
+{
+  "app": "1.0.0",
+  "build": 1,
+  "minBuild": 1,
+  "recommendedBuild": 1,
+  "dataVersion": 1,
+  "data": [],
+  "store": { "android": "", "ios": "", "toss": "", "web": "" },
+  "notes": ""
+}
