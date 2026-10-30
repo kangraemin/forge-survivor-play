@@ -6,8 +6,9 @@ import { sfx } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, toast, gemIcon, skillIcon } from './ui.js';
 import { grant, giveText } from './shop.js';
 import { track } from './log.js';
-import { dexState, achList, achReady, titles, DEX_HP, DEX_SET_ATK } from './codex.js';
+import { dexState, achList, achReady, titles, titleName, DEX_HP, DEX_SET_ATK } from './codex.js';
 import { WTYPES, SETS } from './gear.js';
+import { t } from './i18n.js';
 
 const { W } = D;
 const ACH_PAGE = 8;
@@ -18,24 +19,24 @@ export const ContentTab = {
     const sv = this.sv, y = 223;
     const dot = (x, on) => on && b.add(this.add.circle(x + 25, y - 10, 4, 0xff3a3a));
     const doneN = D.MISSIONS.filter(m => sv.misGot[m.id]).length;
-    b.add(button(this, 41, y, 58, 24, `임무 ${doneN}/3`, () => !this.busy && this.missionWin(), { size: 10 }));
+    b.add(button(this, 41, y, 58, 24, t('contentTab.e17fd6', { doneN }), () => !this.busy && this.missionWin(), { size: 10 }));
     dot(41, this.missionReady() > 0);
     const dunOpen = sv.cleared >= D.DUNGEON.unlock, left = D.DUNGEON.daily - (sv.dunN || 0);
-    const db = button(this, 103, y, 58, 24, dunOpen ? `던전 ${left}/${D.DUNGEON.daily}` : '던전', () => !this.busy && this.dungeonWin(), { size: 10, color: 0x3a3846,
-      onDeny: () => { track('locked_menu_tap', { menu: 'dungeon' }); toast(this, '일일 던전 · 1장 보스를 잡으면 열린다', '#ff9a8a'); } });
+    const db = button(this, 103, y, 58, 24, dunOpen ? t('contentTab.ee276c', { left, daily: D.DUNGEON.daily }) : t('contentTab.51ae4b'), () => !this.busy && this.dungeonWin(), { size: 10, color: 0x3a3846,
+      onDeny: () => { track('locked_menu_tap', { menu: 'dungeon' }); toast(this, t('contentTab.3af480'), '#ff9a8a'); } });
     db.setEnabled(dunOpen); b.add(db);
     dot(103, dunOpen && left > 0);
-    b.add(button(this, 165, y, 58, 24, '기록', () => !this.busy && this.recordWin(), { size: 10 }));
+    b.add(button(this, 165, y, 58, 24, t('contentTab.d84b6f'), () => !this.busy && this.recordWin(), { size: 10 }));
     dot(165, achReady(sv) > 0);
     // 난이도: 마지막 장 보스를 잡으면 열린다(그 전엔 잠긴 채 목표로 보인다)
     const hardOpen = D.hardOpen(sv);
-    const hb = button(this, 227, y, 58, 24, this.hard ? '보통으로' : '어려움', () => {
+    const hb = button(this, 227, y, 58, 24, this.hard ? t('contentTab.de6344') : t('contentTab.485e4f'), () => {
       if (this.busy) return;
       this.hard = !this.hard; sv.hardOn = this.hard; save(); this.selTop();
       track('difficulty_toggle', { hard: this.hard, hardCleared: sv.hardCleared || 0 });
-      toast(this, this.hard ? '어려움 · 몹이 세고 보상이 크다' : '보통 난이도', this.hard ? '#ff9090' : '#ffffff');
+      toast(this, this.hard ? t('contentTab.75d817') : t('contentTab.b15bdb'), this.hard ? '#ff9090' : '#ffffff');
       this.show('battle');
-    }, { size: 10, color: this.hard ? 0x3a3846 : 0x8a2a3a, onDeny: () => { track('locked_menu_tap', { menu: 'hard' }); toast(this, '어려움 · 마지막 장 보스를 잡으면 열린다', '#ff9a8a'); } });
+    }, { size: 10, color: this.hard ? 0x3a3846 : 0x8a2a3a, onDeny: () => { track('locked_menu_tap', { menu: 'hard' }); toast(this, t('contentTab.0d80cb'), '#ff9a8a'); } });
     hb.setEnabled(hardOpen); b.add(hb);
   },
 
@@ -44,32 +45,32 @@ export const ContentTab = {
     const sv = this.sv, c = this.modal(), type = D.dunToday(), T = D.DUN_TYPES[type], left = D.DUNGEON.daily - (sv.dunN || 0);
     track('dungeon_open', { type, left });
     c.add(panel(this, 16, 70, W - 32, 344, { fill: 0x1a1426, line: T.tint }));
-    c.add(this.add.text(W / 2, 92, '일일 던전', font(14, '#ffd75e')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 92, t('contentTab.58c968'), font(14, '#ffd75e')).setOrigin(0.5));
     c.add(button(this, W - 38, 92, 26, 22, 'X', () => c.close(), { size: 11 }));
-    c.add(this.add.text(W / 2, 114, `오늘은 ${T.name}`, font(12, T.css)).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 114, t('contentTab.1cce8b', { name: T.name }), font(12, T.css)).setOrigin(0.5));
     c.add(this.add.text(W / 2, 131, T.desc, font9(10, '#a1b2b6')).setOrigin(0.5));
     // 요일표: 내일 무엇이 열리는지 보여 다시 올 이유를 만든다
-    const today = new Date().getDay(), SHORT = { gold: '금화', stone: '강화석', gear: '장비', gem: '보석' };
-    ['일', '월', '화', '수', '목', '금', '토'].forEach((d, i) => {
+    const today = new Date().getDay(), SHORT = { gold: t('contentTab.a3755a'), stone: t('contentTab.5bf71e'), gear: t('contentTab.e17b20'), gem: t('lobby.1fed91') };
+    [t('contentTab.06cf3e'), t('contentTab.754486'), t('contentTab.adb4a2'), t('contentTab.c04eb2'), t('contentTab.5664a6'), t('contentTab.cf5632'), t('contentTab.b9e406')].forEach((d, i) => {
       const x = W / 2 + (i - 3) * 32, t = D.DUN_TYPES[D.DUN_WEEK[i]], on = i === today;
       c.add(this.add.rectangle(x, 166, 29, 34, on ? 0x3b2f5c : 0x15111f).setStrokeStyle(1, on ? 0xffd75e : 0x293845));
       c.add(this.add.text(x, 157, d, font9(10, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5));
       c.add(this.add.text(x, 173, SHORT[D.DUN_WEEK[i]], font9(9, t.css)).setOrigin(0.5));
     });
-    c.add(this.add.text(28, 196, '규칙', font(11, '#c8a0ff')));
-    [`${D.DUNGEON.sec}초 동안 몹을 잡는다.`, `${D.DUNGEON.killNeed}마리를 채우면 보상을 다 받는다.`, '덜 잡아도 잡은 만큼 받는다.', `${D.DUNGEON.goblinSec}초마다 보물 고블린이 나온다.`].forEach((t, i) =>
+    c.add(this.add.text(28, 196, t('lobby.e4fa09'), font(11, '#c8a0ff')));
+    [t('contentTab.b628e1', { sec: D.DUNGEON.sec }), t('contentTab.d36dfc', { killNeed: D.DUNGEON.killNeed }), t('contentTab.73d5a8'), t('contentTab.b6411b', { goblinSec: D.DUNGEON.goblinSec })].forEach((t, i) =>
       c.add(this.add.text(28, 214 + i * 16, '- ' + t, font9(10, '#f2e4bc'))));
     // 다 채웠을 때 받는 것
-    c.add(this.add.text(28, 286, '다 채우면', font(11, '#c8a0ff')));
+    c.add(this.add.text(28, 286, t('contentTab.690c71'), font(11, '#c8a0ff')));
     const g = D.dunReward(type, D.dunBase(sv), 1);
-    const rw = [g.gold && [12, fmt(g.gold)], g.stone && [13, String(g.stone)], g.gem && [-1, String(g.gem)], g.items && [11, `장비 ${g.items}`]].filter(Boolean);
+    const rw = [g.gold && [12, fmt(g.gold)], g.stone && [13, String(g.stone)], g.gem && [-1, String(g.gem)], g.items && [11, t('contentTab.cd681c', { items: g.items })]].filter(Boolean);
     let rx = 36;
     rw.forEach(([ic, v]) => {
       c.add(ic < 0 ? gemIcon(this, rx, 312, 12) : icon(this, rx, 312, ic, 14));
       const t = this.add.text(rx + 10, 305, v, font(11)); c.add(t); rx += 24 + t.width;
     });
-    c.add(this.add.text(W / 2, 342, left > 0 ? `오늘 ${left}번 남았다` : '오늘은 다 했다. 내일 또 열린다', font9(10, left > 0 ? '#a1b2b6' : '#7d8f94')).setOrigin(0.5));
-    const go = button(this, W / 2, 380, 150, 30, left > 0 ? '입장' : '내일 다시', () => {
+    c.add(this.add.text(W / 2, 342, left > 0 ? t('contentTab.d65bbb', { left }) : t('contentTab.84ab4b'), font9(10, left > 0 ? '#a1b2b6' : '#7d8f94')).setOrigin(0.5));
+    const go = button(this, W / 2, 380, 150, 30, left > 0 ? t('contentTab.41ac9a') : t('contentTab.8036ad'), () => {
       if (left <= 0) return;
       sv.dunN = (sv.dunN || 0) + 1; save();
       track('dungeon_enter', { type, n: sv.dunN });
@@ -93,21 +94,21 @@ export const ContentTab = {
       body.add(panel(this, 26, y, W - 52, 34, { fill: got ? 0x141018 : 0x293845 }));
       body.add(this.add.text(36, y + 5, m.name, font9(10, got ? '#6a6080' : '#ffffff')));
       body.add(this.add.text(36, y + 19, `${fmt(have)}/${fmt(m.need)} · ${giveText(D.WEEKLY_GIVE)}`, font9(10, done ? '#5fdc6a' : '#a1b2b6')));
-      const bt = button(this, W - 60, y + 17, 52, 24, got ? '완료' : '받기', () => {
+      const bt = button(this, W - 60, y + 17, 52, 24, got ? t('lobby.8d8680') : t('lobby.98d0f0'), () => {
         if (got || !done) return;
         wk.got[m.id] = true; track('weekly_claim', { id: m.id }); grant(sv, D.WEEKLY_GIVE); sfx('coin'); this.refreshTop(); redraw();
       }, { size: 10, color: 0x2f6b3a });
       bt.setEnabled(done && !got); body.add(bt);
     });
     const allDone = D.WEEKLY.every(m => wk.got[m.id]);
-    const ab = button(this, W / 2, 278, 200, 24, wk.got.all ? '모두 완료 보너스 받음' : `넷 다 하면 ${giveText(D.WEEKLY_ALL)}`, () => {
+    const ab = button(this, W / 2, 278, 200, 24, wk.got.all ? t('lobby.96d0ce') : t('contentTab.1f39b1', { giveText: giveText(D.WEEKLY_ALL) }), () => {
       if (!allDone || wk.got.all) return;
       wk.got.all = true; track('weekly_claim', { id: 'all' }); grant(sv, D.WEEKLY_ALL); sfx('win'); this.refreshTop(); redraw();
     }, { size: 10, color: 0x2f6b3a });
     ab.setEnabled(allDone && !wk.got.all); body.add(ab);
     const left = (8 - new Date().getDay()) % 7 || 7;
-    body.add(this.add.text(W / 2, 312, `${left}일 뒤 월요일에 새 도전이 열린다`, font9(10, '#a1b2b6')).setOrigin(0.5));
-    body.add(this.add.text(W / 2, 330, '오늘의 임무와 같이 센다', font9(10, '#7d8f94')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 312, t('contentTab.d3baf4', { left }), font9(10, '#a1b2b6')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 330, t('contentTab.1ea30f'), font9(10, '#7d8f94')).setOrigin(0.5));
   },
 
   // ── 기록: 도감 / 업적 ──
@@ -119,7 +120,7 @@ export const ContentTab = {
     const body = this.add.container(0, 0); c.add(body);
     const draw = () => {
       body.removeAll(true);
-      [['dex', '도감'], ['ach', '업적']].forEach(([id, name], i) => {
+      [['dex', t('contentTab.7d7767')], ['ach', t('contentTab.62850c')]].forEach(([id, name], i) => {
         const x = 90 + i * 90, on = this.recPage === id;
         body.add(this.add.text(x, 64, name, font(on ? 13 : 11, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5));
         if (on) body.add(this.add.rectangle(x, 76, 44, 2, 0xffd75e));
@@ -136,8 +137,8 @@ export const ContentTab = {
 
   dexDraw(body, redraw) {
     const st = dexState(this.sv), fb = this.registry.get('fallback') || {};
-    body.add(this.add.text(W / 2, 92, `${st.n}/${st.all}칸 · 최대 체력 +${Math.round(st.hp * 1000) / 10}% · 피해 +${Math.round(st.atk * 100)}%`, font(10, '#9ae0ff')).setOrigin(0.5));
-    body.add(this.add.text(W / 2, 108, `칸마다 체력 +${DEX_HP * 100}% · 묶음을 다 채우면 피해 +${DEX_SET_ATK * 100}%`, font9(10, '#a1b2b6')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 92, t('contentTab.3e4c47', { n: st.n, all: st.all, v: Math.round(st.hp * 1000) / 10, round: Math.round(st.atk * 100) }), font(10, '#9ae0ff')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 108, t('contentTab.182d92', { v: DEX_HP * 100, v2: DEX_SET_ATK * 100 }), font9(10, '#a1b2b6')).setOrigin(0.5));
     // 묶음 고르기
     const gw = (W - 36) / st.groups.length;
     st.groups.forEach((g, i) => {
@@ -175,8 +176,8 @@ export const ContentTab = {
   achDraw(body, redraw) {
     const sv = this.sv, own = titles(sv);
     // 칭호: 가진 것 중에서 돌려 고른다
-    body.add(this.add.text(24, 86, `칭호  ${sv.title || '없음'}`, font(11, sv.title ? '#ffb050' : '#7d8f94')));
-    const tb = button(this, W - 56, 92, 64, 22, own.length ? '바꾸기' : '없음', () => {
+    body.add(this.add.text(24, 86, t('contentTab.b5a277', { v: titleName(sv.title) || t('codex.d58fa7') }), font(11, sv.title ? '#ffb050' : '#7d8f94')));
+    const tb = button(this, W - 56, 92, 64, 22, own.length ? t('contentTab.75b73b') : t('codex.d58fa7'), () => {
       const list = ['', ...own], i = list.indexOf(sv.title || '');
       sv.title = list[(i + 1) % list.length]; save(); track('title_set', { title: sv.title || 'none' }); redraw();
     }, { size: 10 });
@@ -188,14 +189,14 @@ export const ContentTab = {
     list.slice(this.achP * ACH_PAGE, (this.achP + 1) * ACH_PAGE).forEach((a, i) => {
       const y = 108 + i * 36, got = !!sv.ach[a.id], v = a.v(sv), done = v >= a.need;
       body.add(panel(this, 20, y, W - 40, 32, { fill: got ? 0x141018 : 0x293845, line: done && !got ? 0xffd75e : 0x475c66 }));
-      body.add(this.add.text(28, y + 4, a.name + (a.title ? '  · 칭호' : ''), font9(10, got ? '#6a6080' : a.title ? '#ffb050' : '#ffffff')));
+      body.add(this.add.text(28, y + 4, a.name + (a.title ? t('contentTab.80fb5e') : ''), font9(10, got ? '#6a6080' : a.title ? '#ffb050' : '#ffffff')));
       body.add(this.add.text(28, y + 17, `${a.desc} · ${fmt(Math.min(v, a.need))}/${fmt(a.need)}`, font9(10, done ? '#5fdc6a' : '#a1b2b6')));
-      const bt = button(this, W - 56, y + 16, 56, 22, got ? '받음' : `   ${a.gem}`, () => {
+      const bt = button(this, W - 56, y + 16, 56, 22, got ? t('contentTab.04032d') : `   ${a.gem}`, () => {
         if (got || !done) return;
         sv.ach[a.id] = true; grant(sv, { gem: a.gem }); track('achieve_claim', { id: a.id });
-        if (a.title && !sv.title) sv.title = a.title;   // 첫 칭호는 바로 낀다
+        if (a.title && !sv.title) sv.title = a.id;   // 첫 칭호는 바로 낀다
         save(); sfx('win'); this.refreshTop();
-        toast(this, a.title ? `칭호 「${a.title}」 획득!` : `보석 +${a.gem}`, '#ffd75e');
+        toast(this, a.title ? t('contentTab.06e9ef', { title: a.title }) : t('contentTab.4479a3', { gem: a.gem }), '#ffd75e');
         redraw();
       }, { size: 10, color: 0x2f6b3a });
       bt.setEnabled(done && !got); body.add(bt);

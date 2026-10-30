@@ -12,14 +12,42 @@ import { COS_PACKS, cosmetic, wardrobe } from './cosmetics.js';
 import { installToss } from './toss.js';
 import { restoreCompleted } from './purchaseRestore.js';
 import { cashHidden } from './platform/flags.js';
+import { t, tt, lang } from './i18n.js';
 
 // 토스 미니앱 안이면 window.forgePlatform을 채운다(웹에서는 아무 일도 안 한다)
 installToss();
 
 const W = 270, H = D.H;
 const devpay = () => { try { return new URLSearchParams(location.search).has('devpay'); } catch { return false; } };
-// 스토어 앱은 스토어가 알려 준 현지화 가격 문자열을 그대로 보여 준다(forgePlatform.priceText, 같은 기준 원화 가격이면 같은 등급). 없으면 원화
-export const won = n => { try { const t = window.forgePlatform?.priceText?.(n); if (t) return t; } catch { /* 어댑터 오류는 무시 */ } return n.toLocaleString('ko-KR') + '원'; };
+// 가격 표시는 전부 여기서 한다. 한국·앱인토스는 원화 그대로, 네이티브(플레이·앱스토어)는 스토어가 준 현지화 가격 문자열
+// (Play Billing formattedPrice / StoreKit displayPrice)을 window.forgePlatform.prices[상품id]로 받아 쓰고, 없으면 원화로 대신한다.
+// 보석 개수·보상은 나라와 무관하게 같다. 웹 해외 접속은 결제를 열지 않으므로 '앱에서 구매' 안내만 보인다.
+export const webForeign = () => lang !== 'ko' && !window.forgePlatform?.buy && !devpay();
+const krwOf = id => { const f = D.IAP.find(x => x.id === id) || COS_PACKS.find(x => x.id === id); return f?.price; };
+// 스토어 앱이 같은 기준 원화 가격의 현지 문자열(forgePlatform.priceText)을 주면 그대로 쓰고, 없으면 원화
+const wonText = n => { try { const p = window.forgePlatform?.priceText?.(n); if (p) return p; } catch { /* 어댑터 오류는 무시 */ } return t('shop.9d2fd6', { toLocaleString: n.toLocaleString('ko-KR') }); };
+export const won = wonText;
+// 스토어 문자열(예: "$4.99", "R$ 29,90", "1.200 ₫")의 숫자만 비율로 바꿔 같은 모양으로 돌려준다(정가·할인 표시용)
+function scaleStore(str, ratio) {
+  const m = str.match(/\d[\d.,\s\u00a0]*\d|\d/);
+  if (!m) return str;
+  const raw = m[0].replace(/[\s\u00a0]/g, ''), last = Math.max(raw.lastIndexOf('.'), raw.lastIndexOf(','));
+  const frac = last >= 0 && raw.length - last - 1 <= 2 ? raw.length - last - 1 : 0, dec = frac ? raw[last] : '', grp = dec === ',' ? '.' : ',';
+  const num = parseFloat(raw.replace(/[.,]/g, (c, i) => (frac && i === last ? '.' : '')));
+  if (!isFinite(num)) return str;
+  const v = (num * ratio).toFixed(frac), [ip, fp] = v.split('.');
+  const out = ip.replace(/\B(?=(\d{3})+(?!\d))/g, grp) + (fp ? dec + fp : '');
+  return str.replace(m[0], out);
+}
+// priceLabel(상품 또는 id, 원화 금액?): 금액을 생략하면 그 상품의 가격, 주면 같은 상품 기준 비율로 환산한 값(정가 등)
+export function priceLabel(item, krw) {
+  const id = typeof item === 'string' ? item : item?.id, own = typeof item === 'object' && item ? item.price : krwOf(id);
+  if (webForeign()) return krw == null ? t('shop.appBuy') : '';
+  const native = window.forgePlatform?.prices?.[id];
+  const amount = krw ?? own;
+  if (typeof native === 'string' && native && own > 0) return amount === own ? native : scaleStore(native, amount / own);
+  return wonText(amount);
+}
 
 // 보상 지급. goldStage는 지금 도전 중인 스테이지 클리어 금화의 배수
 // 지금 도전 중인 판(어려움을 시작했으면 어려움 판)의 클리어 금화
@@ -37,7 +65,7 @@ export function grant(sv, give) {
 // sv를 넘기면 goldStage를 '금화 ×2' 대신 실제 받을 금화로 보여 준다
 export const giveText = (give, sv) => Object.entries(give).map(([k, v]) => ({
   cosmetics: Array.isArray(v) ? v.map(id => cosmetic(id)?.name).join(' · ') : '',
-  gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, spReset: `스탯 초기화권 ${v}`, goldStage: sv ? `금화 ${Math.round(stageGold(sv) * v).toLocaleString()}` : `금화 ×${v}`, skin: D.SKINS.find(x => x.id === v)?.name, hskin: `${HERO_SKINS.find(x => x.id === v)?.name} 스킨`,
+  gem: t('shop.f6c4dc', { v }), gold: t('shop.4f71b1', { toLocaleString: v.toLocaleString() }), stone: t('shop.4645d8', { v }), guard: t('shop.6973ab', { v }), charm: t('shop.84de1f', { v }), sweep: t('shop.2b5fc9', { v }), spReset: t('shop.d5481f', { v }), goldStage: sv ? t('shop.4f71b1', { toLocaleString: Math.round(stageGold(sv) * v).toLocaleString() }) : t('shop.ff5167', { v }), skin: D.SKINS.find(x => x.id === v)?.name, hskin: t('shop.c71455', { v: HERO_SKINS.find(x => x.id === v)?.name }),
 }[k])).join(' · ');
 
 export const firstX2 = (sv, item) => D.FIRST_BUY_X2.includes(item.id) && !sv.bought[item.id];
@@ -69,7 +97,7 @@ export function growOffer(sv) {
   if (growLeft(sv) <= 0) return null;
   const c = sv.grow.c, id = `grow${c + 1}`;
   if (sv.bought[id]) return null;
-  return { id, name: `${c + 1}장 돌파 성장 꾸러미`, price: D.GROW.price[Math.min(c, D.GROW.price.length - 1)], once: true, c, give: D.growGive(c) };
+  return { id, name: t('shop.e0be96', { v: c + 1 }), price: D.GROW.price[Math.min(c, D.GROW.price.length - 1)], once: true, c, give: D.growGive(c) };
 }
 // 큰 꾸러미는 달마다 한 번
 export const soldOut = (sv, item) => item.month ? sv.bought[item.id] === monthKey() : !!(item.once && sv.bought[item.id]);
@@ -89,8 +117,8 @@ function showAdRaw(scene, sv, kind) {
     // 웹 체험판: 3초 카운트다운
     const c = modal(scene);
     c.add(panel(scene, 30, 170, W - 60, 130, { fill: 0x101018 }));
-    c.add(scene.add.text(W / 2, 196, '광고', font(14, '#ffd75e')).setOrigin(0.5));
-    c.add(scene.add.text(W / 2, 218, '(웹 체험판에서는 광고 대신 잠깐 기다린다)', font9(10, '#a1b2b6')).setOrigin(0.5));
+    c.add(scene.add.text(W / 2, 196, tt('shop.eb1892'), font(14, '#ffd75e')).setOrigin(0.5));
+    c.add(scene.add.text(W / 2, 218, tt('shop.47ce21'), font9(10, '#a1b2b6')).setOrigin(0.5));
     const t = scene.add.text(W / 2, 250, '3', font(22)).setOrigin(0.5); c.add(t);
     let n = 3;
     const tick = () => {
@@ -140,15 +168,15 @@ function buyRaw(scene, sv, item) {
     const c = modal(scene);
     c.add(panel(scene, 24, 160, W - 48, 160, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(scene.add.text(W / 2, 186, item.name, font(13, '#ffd75e')).setOrigin(0.5));
-    c.add(scene.add.text(W / 2, 210, (item.month ? item.desc + (item.give.skin ? ` · ${D.SKINS.find(x => x.id === item.give.skin)?.name}` : '') : giveText(item.give, sv)) + (item.passDays ? ` · ${item.passDays}일` : ''), { ...font9(10, '#f2e4bc'), wordWrap: { width: W - 70 }, align: 'center' }).setOrigin(0.5, 0));
+    c.add(scene.add.text(W / 2, 210, (item.month ? item.desc + (item.give.skin ? ` · ${D.SKINS.find(x => x.id === item.give.skin)?.name}` : '') : giveText(item.give, sv)) + (item.passDays ? t('shop.89c181', { passDays: item.passDays }) : ''), { ...font9(10, '#f2e4bc'), wordWrap: { width: W - 70 }, align: 'center' }).setOrigin(0.5, 0));
     if (!devpay()) {
-      c.add(scene.add.text(W / 2, 248, '웹 체험판에서는 결제가 열리지 않는다\n앱에서 구매할 수 있다', { ...font9(10, '#ff9a8a'), align: 'center' }).setOrigin(0.5));
-      c.add(button(scene, W / 2, 292, 120, 28, '닫기', () => { c.destroy(); done(false); }));
+      c.add(scene.add.text(W / 2, 248, t('shop.4606e5'), { ...font9(10, '#ff9a8a'), align: 'center' }).setOrigin(0.5));
+      c.add(button(scene, W / 2, 292, 120, 28, t('cosmeticShop.94b7db'), () => { c.destroy(); done(false); }));
       return;
     }
-    c.add(scene.add.text(W / 2, 248, `테스트 결제  ${won(item.price)}`, font(11)).setOrigin(0.5));
-    c.add(button(scene, 85, 292, 100, 28, '취소', () => { c.destroy(); done(false); }));
-    c.add(button(scene, 190, 292, 100, 28, '결제', () => { c.destroy(); done(true); }, { color: 0x2f6b3a }));
+    c.add(scene.add.text(W / 2, 248, t('shop.dc3091', { won: wonText(item.price) }), font(11)).setOrigin(0.5));
+    c.add(button(scene, 85, 292, 100, 28, t('shop.19b2d1'), () => { c.destroy(); done(false); }));
+    c.add(button(scene, 190, 292, 100, 28, t('shop.989a7a'), () => { c.destroy(); done(true); }, { color: 0x2f6b3a }));
   });
 }
 

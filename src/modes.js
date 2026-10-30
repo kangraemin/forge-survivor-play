@@ -7,6 +7,7 @@ import { addItems } from './gear.js';
 import { dexRefresh } from './codex.js';
 import { ensureModeArt, modeAnim, wallArt, WALL_FILL } from './modeArt.js';
 import { MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward, STAR_HURT, starTexts, starMask, starCount, starFirstReward, repeatReward, fmtT } from './modeData.js';
+import { t, tt } from './i18n.js';
 
 const WORLD = 1600, W = D.W, H = D.H;
 const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
@@ -53,7 +54,7 @@ export class ModeRun {
   intro() {
     const s = this.s;
     s.banner(`${this.def.name} ${this.n + 1}  ${s.ch.name}`, this.cfg.goal);
-    s.time.delayedCall(300, () => !s.over && s.banner('이번 판의 규칙', this.cfg.note));
+    s.time.delayedCall(300, () => !s.over && s.banner(t('modes.cb61ea'), this.cfg.note));
   }
 
   // 지점에 닿는 그림과 빛(어둠 속에서도 보이게)
@@ -88,7 +89,7 @@ export class ModeRun {
     sp.setScale(big);
     const sh = s.add.ellipse(MX, y + 14 * big / 1.3, 60, 16, 0x000000, 0.5).setDepth(9);
     const max = Math.round(D.PLAYER.hp * c.hp * 2);
-    this.item = { x: MX, y, sp, sh, hp: max, max, prog: 0, startY: y, flashT: 0, att: 0, big, glow: this.glowAt(MX, y, 0x9ad8ff, 1.3, 0.3), bar: s.add.graphics().setDepth(62), ico: s.add.image(0, 0, 'ma_mode_defend').setDisplaySize(15, 15).setDepth(62), lab: s.add.text(0, 0, c.go ? '수레' : '성물함', font(9, '#cfe8ff', 3)).setOrigin(0.5, 1).setDepth(62) };
+    this.item = { x: MX, y, sp, sh, hp: max, max, prog: 0, startY: y, flashT: 0, att: 0, big, glow: this.glowAt(MX, y, 0x9ad8ff, 1.3, 0.3), bar: s.add.graphics().setDepth(62), ico: s.add.image(0, 0, 'ma_mode_defend').setDisplaySize(15, 15).setDepth(62), lab: s.add.text(0, 0, c.go ? t('modes.4b9182') : t('modes.5599ae'), font(9, '#cfe8ff', 3)).setOrigin(0.5, 1).setDepth(62) };
     this.arrow = this.mkArrow(0x5fc8ff);
     h.setPosition(MX, y + 70);
     if (c.go) {   // 도착 지점 문과 길
@@ -99,7 +100,7 @@ export class ModeRun {
       g.lineStyle(2, 0xffe8a0, 0.28);
       for (let yy = y; yy > this.endY; yy -= 14) g.lineBetween(MX, yy, MX, yy - 7);
     }
-    this.barTxt = this.mkTxt(12, 46, c.go ? '수레' : '성물함', font9(10, '#cfe8ff'));
+    this.barTxt = this.mkTxt(12, 46, c.go ? t('modes.4b9182') : t('modes.5599ae'), font9(10, '#cfe8ff'));
     this.numTxt = this.mkTxt(0, 0, '', font(9, '#ffffff', 2)); this.numTxt.setOrigin(0.5);
   }
   guardUpdate(dt) {
@@ -127,7 +128,7 @@ export class ModeRun {
       }
       it.moving = near;
       if (it.y <= this.endY + 6) return this.finish(true);
-      s.waveT += dt; if (s.waveT >= this.limit) return this.finish(false, '시간이 다 됐다');
+      s.waveT += dt; if (s.waveT >= this.limit) return this.finish(false, t('modes.bd7fdd'));
     } else {
       s.waveT += dt; if (s.waveT >= this.limit) return this.finish(true);
     }
@@ -163,7 +164,7 @@ export class ModeRun {
       s.tweens.add({ targets: rg, scale: 2.2, alpha: 0, duration: 340, onComplete: () => rg.destroy() });
     }
     if (!it.popT || s.bt - it.popT > 450) { it.popT = s.bt; const t = s.add.text(it.x + R(-8, 8), it.y - 20, '-' + Math.round(d), font(9, '#ff7070')).setOrigin(0.5).setDepth(40); s.tweens.add({ targets: t, y: t.y - 12, alpha: 0, duration: 500, onComplete: () => t.destroy() }); sfx('hurt', 200); }
-    if (it.hp <= 0) { if (c.go) { it.sp.stop(); it.sp.setTexture('ma_cart_broken').clearTint(); } this.finish(false, c.go ? '수레가 부서졌다' : '성물함이 부서졌다'); }
+    if (it.hp <= 0) { if (c.go) { it.sp.stop(); it.sp.setTexture('ma_cart_broken').clearTint(); } this.finish(false, c.go ? tt('modes.61e6dd') : tt('modes.0cad2e')); }
   }
 
   // ═══ 점령 ═══
@@ -189,7 +190,7 @@ export class ModeRun {
     const anyIn = this.pts.some(p => !p.done && Math.hypot(h.x - p.x, h.y - p.y) < c.r);
     this.spawnTick(dt, anyIn ? 1.25 : 0.6);   // 50차: 점령 중엔 몹이 더 몰린다
     this.extras(dt);
-    s.waveT += dt; if (s.waveT >= this.limit) return this.finish(false, '시간이 다 됐다');
+    s.waveT += dt; if (s.waveT >= this.limit) return this.finish(false, t('modes.bd7fdd'));
     let all = true;
     this.g.clear();
     const tu = this.cl('mturret');
@@ -228,8 +229,8 @@ export class ModeRun {
         }
       }
       if (p.g >= 100) {
-        p.done = true; p.fill.setTint(0x7ddc6a).setAlpha(0.55); p.flag.setFrame(1).setTint(0x9dffa0); p.sp.setTint(0x9dffa0); p.tx.setText('점령'); p.num.setColor('#9dffa0'); p.glow.setTint(0x7ddc6a); sfx('level');
-        toast(s, `거점 점령  ${this.pts.filter(q => q.done).length}/${c.n}`, '#7ddc6a', 100);
+        p.done = true; p.fill.setTint(0x7ddc6a).setAlpha(0.55); p.flag.setFrame(1).setTint(0x9dffa0); p.sp.setTint(0x9dffa0); p.tx.setText(t('modeData.7b547e')); p.num.setColor('#9dffa0'); p.glow.setTint(0x7ddc6a); sfx('level');
+        toast(s, t('modes.668b49', { length: this.pts.filter(q => q.done).length, n: c.n }), '#7ddc6a', 100);
         return;
       }
       p.tx.setText(Math.floor(p.g) + '%');
@@ -260,7 +261,7 @@ export class ModeRun {
     this.wallSp = s.add.tileSprite(0, this.wallY, WORLD, 64, this.wallKey, 0).setOrigin(0, 1).setDepth(51).setTileScale(2, 2);
     this.wallBody = s.add.rectangle(0, this.wallY, WORLD, 700, WALL_FILL[wk], 0.96).setOrigin(0, 0).setDepth(51);
     this.wallEdge = s.add.rectangle(0, this.wallY, WORLD, 5, edge, 0.9).setOrigin(0, 0.5).setDepth(52).setBlendMode(Phaser.BlendModes.ADD);
-    this.wallLab = s.add.text(MX, this.wallY - 76, c.wallName || '죽음의 벽', font(12, '#ffd0c0', 3)).setOrigin(0.5, 1).setDepth(52);
+    this.wallLab = s.add.text(MX, this.wallY - 76, c.wallName || t('modes.65fef2'), font(12, '#ffd0c0', 3)).setOrigin(0.5, 1).setDepth(52);
     this.warn = s.add.rectangle(W / 2, H - 58, W, 116, 0xc01020, 0).setScrollFactor(0).setDepth(97);   // 벽이 가까우면 화면 아래가 붉게 뛴다
     this.warnTxt = this.mkTxt(W / 2, H - 84, '', font(15, '#ffffff', 4)); this.warnTxt.setOrigin(0.5).setAlpha(0);
     this.legTxt = this.mkTxt(W / 2, 128, '', font(14, '#ffe8a0', 4)); this.legTxt.setOrigin(0.5).setAlpha(0);
@@ -289,7 +290,7 @@ export class ModeRun {
     for (const o of this.items) if (o.kind === 'torch') { o.on = false; o.sp.clearTint(); o.glow.setAlpha(0.18); }
     s.mobs.getChildren().slice().forEach(m => { if (!m.dead && m.active && !m.isBoss) { m.dead = true; m.body.enable = false; s.tweens.add({ targets: m, alpha: 0, duration: 200, onComplete: () => m.destroy() }); } });
     sfx('level'); s.cameras.main.flash(250, 255, 232, 160);
-    this.legTxt.setText(`${this.leg + 1}구간  벽이 더 빨라요`).setAlpha(1); s.tweens.add({ targets: this.legTxt, alpha: 0, delay: 1500, duration: 500 });
+    this.legTxt.setText(t('modes.f7485c', { v: this.leg + 1 })).setAlpha(1); s.tweens.add({ targets: this.legTxt, alpha: 0, delay: 1500, duration: 500 });
   }
   breachUpdate(dt) {
     const s = this.s, c = this.cfg, h = s.hero, sec = dt / 1000;
@@ -306,13 +307,13 @@ export class ModeRun {
     const dist = this.wallY - h.y;
     const near = Phaser.Math.Clamp(1 - (dist - 40) / 260, 0, 1);
     this.warn.setFillStyle(0xc01020, near * (0.28 + 0.18 * Math.sin(s.bt / 110)));
-    this.warnTxt.setText(near > 0.05 ? `${c.wallName || '벽'}이 다가와요!` : '').setAlpha(near > 0.05 ? 0.6 + 0.4 * Math.sin(s.bt / 130) : 0);
+    this.warnTxt.setText(near > 0.05 ? t('modes.9900c5', { v: c.wallName || t('modes.8e939b') }) : '').setAlpha(near > 0.05 ? 0.6 + 0.4 * Math.sin(s.bt / 130) : 0);
     if ((this.wallAnim = (this.wallAnim || 0) + dt) > 170 && this.wallSp.texture.frameTotal > 2) { this.wallAnim = 0; this.wallF = (this.wallF + 1) % 4; this.wallSp.setFrame(this.wallF); }
     this.slowed = false;
     for (const o of this.items) {
       if (o.kind === 'torch' && !o.on && Math.hypot(h.x - o.x, h.y - o.y) < 34) {
         o.on = true; o.sp.setTint(0xffe070); o.glow.setAlpha(0.45); this.wallY += 150; sfx('level');
-        toast(s, '횃불이 켜졌다 · 벽이 물러난다', '#ffd75e', 100);
+        toast(s, t('modes.4e8154'), '#ffd75e', 100);
       }
       if (o.kind === 'web' && Math.hypot(h.x - o.x, h.y - o.y) < o.r) this.slowed = true;
     }
@@ -349,7 +350,7 @@ export class ModeRun {
     const s = this.s;
     this.spawnTick(dt, 0.55);
     this.extras(dt, true);
-    s.waveT += dt; if (s.waveT >= this.limit) return this.finish(false, '시간이 다 됐다');
+    s.waveT += dt; if (s.waveT >= this.limit) return this.finish(false, t('modes.bd7fdd'));
     for (const m of this.prey) {
       if (m.active && !m.dead) { m.lx = m.x; m.ly = m.y; m.mk.setPosition(m.x, m.y - m.displayHeight * 0.5 - 8); m.au.setPosition(m.x, m.y + m.displayHeight * 0.4); continue; }
       m.mk?.destroy(); m.au?.destroy(); m.mk = m.au = null;
@@ -465,17 +466,17 @@ export class ModeRun {
     const lim = this.limit, left = Math.max(0, Math.ceil((lim - s.waveT) / 1000));
     const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
     if (id === 'breach') { s.timeTxt.setText(''); }
-    else { s.timeTxt.setText(`남은 ${mmss}`).setColor(left <= 10 ? '#ffd75e' : '#ffffff'); }
+    else { s.timeTxt.setText(t('modes.8a295c', { mmss })).setColor(left <= 10 ? '#ffd75e' : '#ffffff'); }
     const bx = 8, bw = W - 16;
     if (id === 'guard') {
       const it = this.item, f = Math.max(0, it.hp / it.max);
       g.fillStyle(0x000000, 0.55).fillRect(bx, 44, bw, c.go ? 26 : 18);
       g.fillStyle(0x1c0709).fillRect(48, 47, bw - 44, 11);
       g.fillStyle(f > 0.5 ? 0x5fdc6a : f > 0.25 ? 0xffb347 : 0xe23a44).fillRect(48, 47, (bw - 44) * f, 11);
-      this.barTxt.setPosition(12, 46); this.barTxt.setText(c.go ? '수레' : '성물함');
+      this.barTxt.setPosition(12, 46); this.barTxt.setText(c.go ? t('modes.4b9182') : t('modes.5599ae'));
       this.numTxt.setPosition(48 + (bw - 44) / 2, 52.5).setText(`${Math.ceil(it.hp)}/${it.max}`);
-      s.waveTxt.setText(c.go ? `길 ${Math.round(it.prog * 100)}%` : '버텨라').setColor(it.moving ? '#5fdc6a' : '#a1b2b6');
-      if (c.go) { g.fillStyle(0x1a2430).fillRect(48, 61, bw - 44, 5); g.fillStyle(0x6fd3ff).fillRect(48, 61, (bw - 44) * Phaser.Math.Clamp(it.prog, 0, 1), 5); this.barTxt.setText('수레'); }
+      s.waveTxt.setText(c.go ? t('modes.693c73', { round: Math.round(it.prog * 100) }) : t('battle.39fc0b')).setColor(it.moving ? '#5fdc6a' : '#a1b2b6');
+      if (c.go) { g.fillStyle(0x1a2430).fillRect(48, 61, bw - 44, 5); g.fillStyle(0x6fd3ff).fillRect(48, 61, (bw - 44) * Phaser.Math.Clamp(it.prog, 0, 1), 5); this.barTxt.setText(t('modes.4b9182')); }
     } else if (id === 'capture') {
       const n = this.pts.length, gap = 4, sw = (bw - gap * (n - 1)) / n;
       g.fillStyle(0x000000, 0.55).fillRect(bx, 44, bw, 18);
@@ -484,7 +485,7 @@ export class ModeRun {
         g.fillStyle(0x1a2430).fillRect(x + 2, 47, sw - 4, 11);
         g.fillStyle(p.done ? 0x7ddc6a : p.inside ? 0xffd75e : 0x6fd3ff).fillRect(x + 2, 47, (sw - 4) * p.g / 100, 11);
       });
-      s.waveTxt.setText(`점령 ${this.pts.filter(p => p.done).length}/${n}`).setColor('#a1b2b6');
+      s.waveTxt.setText(t('modes.203ed7', { length: this.pts.filter(p => p.done).length, n })).setColor('#a1b2b6');
     } else if (id === 'breach') {
       const prog = Phaser.Math.Clamp((this.y0 - s.hero.y) / c.len, 0, 1), wp = Phaser.Math.Clamp((this.y0 - this.wallY) / c.len, -0.2, 1);
       g.fillStyle(0x000000, 0.55).fillRect(bx, 44, bw, 22);
@@ -493,15 +494,15 @@ export class ModeRun {
       g.fillStyle(0xffe8a0).fillRect(14 + (bw - 12) * prog - 2, 46, 4, 14);
       g.fillStyle(0xffe8a0).fillRect(bx + bw - 6, 44, 3, 22);
       const gap = Math.max(0, Math.round((this.wallY - s.hero.y) / 4));
-      s.timeTxt.setText(`남은 ${Math.max(0, Math.round((s.hero.y - this.goalY) / 4))}m`).setColor('#ffffff');
-      s.waveTxt.setText(`${this.leg + 1}/${c.legs || 1}구간 · ${c.wallName || '벽'} ${gap}m`).setColor(gap < 25 ? '#ff7070' : '#a1b2b6');
+      s.timeTxt.setText(t('modes.02f94d', { max: Math.max(0, Math.round((s.hero.y - this.goalY) / 4)) })).setColor('#ffffff');
+      s.waveTxt.setText(t('modes.63d525', { v: this.leg + 1, v2: c.legs || 1, v3: c.wallName || t('modes.8e939b'), gap })).setColor(gap < 25 ? '#ff7070' : '#a1b2b6');
       this.wallTxt.setText('').setPosition(0, 0);
     } else {
       const n = this.preyTotal, alive = this.prey.length;
       g.fillStyle(0x000000, 0.55).fillRect(bx, 44, bw, 18);
       for (let i = 0; i < n; i++) { const x = bx + 6 + i * 16; g.fillStyle(i < n - alive ? 0x5fdc6a : 0xe23a44).fillRect(x, 48, 12, 10); }
-      this.cnt.setPosition(bx + 8 + n * 16, 47).setText(`정예 ${alive}마리 남음`);
-      s.waveTxt.setText(`잡은 정예 ${n - alive}/${n}`).setColor('#a1b2b6');
+      this.cnt.setPosition(bx + 8 + n * 16, 47).setText(t('modes.a88df5', { alive }));
+      s.waveTxt.setText(t('modes.68296e', { v: n - alive, n })).setColor('#a1b2b6');
       this.huntArrows();
     }
   }
@@ -512,8 +513,8 @@ export class ModeRun {
     if (this.ended || s.over) return;
     this.ended = true; this.why = why;
     s.log('mode_end', { mode: this.id, n: this.n, win, why });
-    if (win) { sfx('win'); s.banner('성공!', this.def.one); }
-    else s.banner('실패…', why || '');
+    if (win) { sfx('win'); s.banner(t('modes.e7f866'), this.def.one); }
+    else s.banner(t('modes.f81efa'), why || '');
     s.mobs.getChildren().forEach(m => { if (!m.dead && m.body) m.body.enable = false; });
     s.over = true; s.physics.pause();
     s.time.delayedCall(900, () => { s.over = false; s.ui.result(win); });
@@ -559,39 +560,39 @@ export class ModeRun {
     ui.queue = []; ui.pendingLv = 0;
     const cc = ui.begin('result');
     cc.add(panel(s, 20, 96, W - 40, 356, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
-    cc.add(s.add.text(W / 2, 124, win ? '클리어!' : '실패…', font(18, win ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
+    cc.add(s.add.text(W / 2, 124, win ? t('modes.947667') : t('modes.f81efa'), font(18, win ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
     cc.add(s.add.text(W / 2, 148, `${this.def.name} ${this.n + 1}  ${s.ch.name}`, font9(10, '#a1b2b6')).setOrigin(0.5));
-    cc.add(s.add.text(W / 2, 166, win ? (first ? `첫 클리어 ×${D.FIRST_CLEAR_MUL}` : '다시 깼어요') : (this.why || '쓰러졌어요'), font9(11, win ? '#ffd75e' : '#ff9090')).setOrigin(0.5));
+    cc.add(s.add.text(W / 2, 166, win ? (first ? t('modes.4abc46', { FIRST_CLEAR_MUL: D.FIRST_CLEAR_MUL }) : t('modes.dd9ec7')) : (this.why || t('modes.89941f')), font9(11, win ? '#ffd75e' : '#ff9090')).setOrigin(0.5));
     // 가운데: 별 3개와 조건
     const tx = starTexts(c);
     for (let i = 0; i < 3; i++) {
       const x = W / 2 + (i - 1) * 78, got = mask & (1 << i), isNew = fresh & (1 << i);
       cc.add(s.add.text(x, 192, '★', font(22, got ? '#ffd75e' : '#4a4256', 3)).setOrigin(0.5));
       cc.add(s.add.text(x, 214, tx[i], { ...font9(9, got ? '#f2e4bc' : '#6a6078'), align: 'center', wordWrap: { width: 74 } }).setOrigin(0.5, 0));
-      if (isNew && i > 0) cc.add(s.add.text(x, 246, '새 별 보너스', font9(9, '#ffb050')).setOrigin(0.5));
+      if (isNew && i > 0) cc.add(s.add.text(x, 246, t('modes.25047d'), font9(9, '#ffb050')).setOrigin(0.5));
     }
     cc.add(s.add.rectangle(W / 2, 262, W - 80, 1, 0x293845));
     // 이번 판 기록
-    [['시간', fmtT(sec)], ['처치', fmt(r.kills)], ['받은 피해', Math.round(hurt * 100) + '%']].forEach(([a, b], i) => {
+    [[t('modes.6c3513'), fmtT(sec)], [t('battle.5e9c0f'), fmt(r.kills)], [t('modes.33dde2'), Math.round(hurt * 100) + '%']].forEach(([a, b], i) => {
       const x = W / 2 + (i - 1) * 78;
       cc.add(s.add.text(x, 278, a, font9(10, '#a1b2b6')).setOrigin(0.5));
       cc.add(s.add.text(x, 296, b, font(13)).setOrigin(0.5));
     });
     cc.add(s.add.rectangle(W / 2, 314, W - 80, 1, 0x293845));
-    const rows = [[12, '금화', rw.gold], [13, '강화석', rw.stone]];
-    if (rw.gem) rows.push([-1, '보석', rw.gem]);
+    const rows = [[12, t('contentTab.a3755a'), rw.gold], [13, t('contentTab.5bf71e'), rw.stone]];
+    if (rw.gem) rows.push([-1, t('lobby.1fed91'), rw.gem]);
     rows.forEach(([ic, name, n], i) => {
       const x = i % 2 ? 146 : 38, y = 330 + Math.floor(i / 2) * 22;
       cc.add(ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
       cc.add(s.add.text(x + 20, y, name, font9(10, '#a1b2b6')).setOrigin(0, 0.5));
       cc.add(s.add.text(x + 88, y, '+' + fmt(n), font(12)).setOrigin(1, 0.5));
     });
-    cc.add(s.add.text(W / 2, 372, `${this.def.name} ${cnt}/${MODE_N}판`, font9(10, '#a1b2b6')).setOrigin(0.5));
-    if (win && cnt >= MODE_N) cc.add(s.add.text(W / 2, 388, `완주! 기록 탭에서 「${this.def.title}」을 받아요`, font(11, '#ffb050')).setOrigin(0.5));
+    cc.add(s.add.text(W / 2, 372, t('modes.0b6006', { name: this.def.name, cnt, MODE_N }), font9(10, '#a1b2b6')).setOrigin(0.5));
+    if (win && cnt >= MODE_N) cc.add(s.add.text(W / 2, 388, t('modes.124143', { title: this.def.title }), font(11, '#ffb050')).setOrigin(0.5));
     // 버튼: 주황은 하나. 이기면 다음 판(열려 있고 만들어져 있을 때), 졌으면 다시
     const nextOk = win && modeStage(this.id, this.n + 1) && modeOpen(sv, this.n + 1);
     const go = (n) => s.scene.start('Battle', { mode: { id: this.id, n }, bot: s.bot });
-    cc.add(button(s, 68, 418, 92, 30, '모드 선택', () => s.scene.start('Lobby', { tab: 'battle', modeSel: this.id, modeN: this.n }), { color: 0x3a3846, size: 11 }));
-    cc.add(button(s, 188, 418, 120, 36, nextOk ? `다음 판 ${this.n + 2} ▶` : win ? '한 번 더' : '다시', () => go(nextOk ? this.n + 1 : this.n), { color: 0x2f6b3a, size: 13 }));
+    cc.add(button(s, 68, 418, 92, 30, t('modes.7add28'), () => s.scene.start('Lobby', { tab: 'battle', modeSel: this.id, modeN: this.n }), { color: 0x3a3846, size: 11 }));
+    cc.add(button(s, 188, 418, 120, 36, nextOk ? t('modes.d86221', { v: this.n + 2 }) : win ? t('modes.215120') : t('overlay.e671aa'), () => go(nextOk ? this.n + 1 : this.n), { color: 0x2f6b3a, size: 13 }));
   }
 }

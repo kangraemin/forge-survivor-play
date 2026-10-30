@@ -55,7 +55,7 @@ export class Env {
     }
     this.late = new Late(this);   // 16~18장 장치(그 장이 아니면 비어 있다)
     // 이 장의 규칙을 처음에 한 번 알린다
-    if (this.kind && !s.bot) s.time.delayedCall(2100, () => !s.over && s.banner('이 장의 규칙', s.ch.note.split(' · ')[0]));
+    if (this.kind && !s.bot) s.time.delayedCall(2100, () => !s.over && s.banner(t('envfx.3d6720'), s.ch.note.split(' · ')[0]));
   }
 
   farPoint(min, max) {
@@ -263,11 +263,11 @@ export class Env {
       if (this.forged > 0) {
         const bx = h.x - 14, by = h.y - 34, f = this.forged / 5000;
         hg.fillStyle(0x000000, 0.7).fillRect(bx - 1, by - 1, 30, 5).fillStyle(0xff3020, 1).fillRect(bx, by, 28 * f, 3);
-        this.heatTxt.setPosition(h.x, by - 6).setText('단조! 피해 +100%').setColor('#ff9a50');
+        this.heatTxt.setPosition(h.x, by - 6).setText(t('envfx.a40ba9')).setColor('#ff9a50');
       } else if (this.heat > 1) {
         const bx = h.x - 14, by = h.y - 34, f = this.heat / 100;
         hg.fillStyle(0x000000, 0.7).fillRect(bx - 1, by - 1, 30, 5).fillStyle(f > 0.2 ? 0xffa030 : 0x806040, 1).fillRect(bx, by, 28 * f, 3);
-        this.heatTxt.setPosition(h.x, by - 6).setText(f > 0.2 ? `달굼 +${Math.round(f * 50)}%` : '').setColor('#ffd75e');
+        this.heatTxt.setPosition(h.x, by - 6).setText(f > 0.2 ? t('envfx.710883', { round: Math.round(f * 50) }) : '').setColor('#ffd75e');
       } else this.heatTxt.setText('');
     }
     // 증기 분출구: 쉬다가 → 예고(1.1초) → 분출(0.6초)
@@ -325,7 +325,7 @@ export class Env {
     w.k += ((w.blow ? 1 : 0) - w.k) * Math.min(1, dt / 350);
     const warn = !w.blow && w.next < 1500, show = w.blow || warn;
     const a = warn ? w.pa : w.a, idx = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
-    this.windTxt.setAlpha(show ? 1 : 0).setText(`${w.blow ? (this.tail > 0.3 ? '순풍! 가속' : '바람 — 같은 쪽으로 달려라') : '곧 바람'} ${ar[idx]}`);
+    this.windTxt.setAlpha(show ? 1 : 0).setText(`${w.blow ? (this.tail > 0.3 ? t('envfx.86bc57') : t('envfx.0778b1')) : t('envfx.8ff6da')} ${ar[idx]}`);
     const g = this.streaks.clear();
     // 바람 줄: 부는 동안은 화면을 가로질러 길게 흐르고, 예고 땐 가는 줄이 먼저 그 방향으로 흐른다
     const wk = Math.max(w.k, warn ? 0.4 * (1 - w.next / 1500) + 0.15 : 0);
@@ -791,7 +791,7 @@ export const BOSS_PATTERNS = {
     const s = this.s, m = this.m;
     this.busy = 2600; m.setVelocity(0, 0); sfx('warn');
     m.parryUntil = s.bt + 2500; m.setTintFill(0xffffff);
-    s.banner('빛난다! 치지 마라', '2초 동안 맞히면 되받는다');
+    s.banner(t('envfx.6023ad'), t('envfx.2ba3c1'));
     s.time.delayedCall(2500, () => m.active && (m.clearTint(), m.baseTint && m.baseTint !== 0xffffff && m.setTint(m.baseTint)));
     for (let k = 0; k < 2; k++) s.time.delayedCall(700 + k * 800, () => { if (m.active) for (let i = 0; i < 18; i++) s.enemyShot(m.x, m.y, (i + k * 0.5) / 18 * Math.PI * 2, 70, m.dmg * 0.7).setTint(0x90ffe8); });
   },

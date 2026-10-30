@@ -16,6 +16,7 @@ import { font, font9, panel, button, toast, gemIcon } from './ui.js';
 import { sfx } from './sfx.js';
 import { inviteCodeOf, CODE_RE } from './inviteCode.js';
 import { deviceId, peekDeviceId } from './deviceKey.js';
+import { t } from './i18n.js';
 export { inviteCodeOf, CODE_RE };
 
 // ── 설정 한 곳 ──
@@ -80,9 +81,9 @@ export async function openShare(scene, text) {
     if (fp?.share) { await fp.share({ message: `${text}\n${url}`, text, url, code }); return true; }
     const s = sdk();
     if (s?.share) { await s.share({ message: `${text}\n${url}` }); return true; }
-    if (navigator.share) { await navigator.share({ title: '강화 서바이버', text, url }); return true; }
+    if (navigator.share) { await navigator.share({ title: t('overlay.609ac3'), text, url }); return true; }
     await navigator.clipboard.writeText(`${text} ${url}`);
-    toast(scene, '링크를 복사했어요', '#9ae0ff');
+    toast(scene, t('share.c040b8'), '#9ae0ff');
     return true;
   } catch { return false; }   // 공유 창을 닫았거나 복사가 막힘
 }
@@ -114,7 +115,7 @@ export async function lobbyShareTick(scene, force = false) {
     // 1) 내가 초대받았고 1-3을 깼으면 서버에 알리고 보석
     if (sv.invitedBy && !sv.inviteClaimed && sv.cleared >= INVITE_NEED) {
       const r = await api('/invite/claim', { code: sv.invitedBy, device });
-      if (r?.ok) { sv.inviteClaimed = true; sv.gem += INVITE_GEM; save(); track('invite_claim', { counted: !!r.counted }); say(`친구 초대 보상 보석 +${INVITE_GEM}`); scene.refreshTop?.(); }
+      if (r?.ok) { sv.inviteClaimed = true; sv.gem += INVITE_GEM; save(); track('invite_claim', { counted: !!r.counted }); say(t('share.b31455', { INVITE_GEM })); scene.refreshTop?.(); }
       else if (r && (r.error === 'self' || r.error === 'dup')) { sv.inviteClaimed = true; save(); }   // 다시 해도 안 되는 경우
     }
     // 2) 내가 초대한 친구가 깬 만큼 받는다(받는 중에 끊겨도 같은 키로 다시 확정하면 한 번만 지급)
@@ -125,7 +126,7 @@ export async function lobbyShareTick(scene, force = false) {
       const a = await api('/invite/ack', { device, key: sv.inviteAck.key, n: sv.inviteAck.n });
       if (a?.ok) {
         sv.inviteAck = null; sv.invitePending = Math.max(0, (sv.invitePending || 0) - a.n);
-        if (a.n > 0) { sv.gem += a.n * INVITE_GEM; sv.inviteRewards = (sv.inviteRewards || 0) + a.n; track('invite_reward', { n: a.n }); say(`초대한 친구 ${a.n}명 보상 보석 +${a.n * INVITE_GEM}`); scene.refreshTop?.(); }
+        if (a.n > 0) { sv.gem += a.n * INVITE_GEM; sv.inviteRewards = (sv.inviteRewards || 0) + a.n; track('invite_reward', { n: a.n }); say(t('share.d232fc', { n: a.n, v: a.n * INVITE_GEM })); scene.refreshTop?.(); }
         save();
       }
     }
@@ -136,9 +137,9 @@ export async function lobbyShareTick(scene, force = false) {
 export function openInvite(scene) {
   const sv = load(), c = scene.modal();
   c.add(panel(scene, 16, 70, W - 32, 330, { fill: 0x1a1426, line: 0xffd75e }));
-  c.add(scene.add.text(W / 2, 90, '친구 초대', font(14, '#ffd75e')).setOrigin(0.5));
+  c.add(scene.add.text(W / 2, 90, t('settingsPanel.bf6a10'), font(14, '#ffd75e')).setOrigin(0.5));
   c.add(button(scene, W - 38, 90, 26, 22, 'X', () => c.close(), { size: 11 }));
-  c.add(scene.add.text(W / 2, 118, '내 초대 코드', font9(10, '#a1b2b6')).setOrigin(0.5));
+  c.add(scene.add.text(W / 2, 118, t('share.fefed2'), font9(10, '#a1b2b6')).setOrigin(0.5));
   const code = scene.add.text(W / 2, 140, myCode() || '- - - -', font(20, '#ffffff')).setOrigin(0.5); c.add(code);
   c.add(scene.add.rectangle(W / 2, 162, W - 70, 1, 0x293845));
   const cnt = scene.add.text(W / 2, 182, '', font(13)).setOrigin(0.5), rew = scene.add.text(W / 2, 206, '', font9(11, '#f2e4bc')).setOrigin(0.5);
@@ -146,18 +147,18 @@ export function openInvite(scene) {
   const paint = () => {
     const tot = Math.min(INVITE_CAP, sv.inviteTotal || 0), pen = sv.invitePending || 0;
     code.setText(myCode() || '- - - -');
-    cnt.setText(`초대한 친구 ${tot}/${INVITE_CAP}명`);
-    rew.setText(pen > 0 ? `받을 보상 보석 ${pen * INVITE_GEM}` : `지금까지 받은 보석 ${(sv.inviteRewards || 0) * INVITE_GEM}`);
+    cnt.setText(t('share.b64196', { tot, INVITE_CAP }));
+    rew.setText(pen > 0 ? t('share.ece36a', { v: pen * INVITE_GEM }) : t('share.5c9c09', { v: (sv.inviteRewards || 0) * INVITE_GEM }));
   };
   paint();
-  [`친구가 내 링크로 들어와`, `1장 보스(1-3)를 깨면`, `친구와 나 둘 다 보석 ${INVITE_GEM}개를 받아요`, `친구는 최대 ${INVITE_CAP}명까지예요`].forEach((t, i) => c.add(scene.add.text(W / 2, 236 + i * 17, t, font9(10, i === 2 ? '#ffd75e' : '#a1b2b6')).setOrigin(0.5)));
-  const sb = button(scene, W / 2, 330, 190, 32, '링크 공유하기', async () => {
-    const r = await openShare(scene, `강화 서바이버 같이 해요! 내 초대 코드 ${myCode()}`);
+  [t('share.e91856'), t('share.011a06'), t('share.b1cc0b', { INVITE_GEM }), t('share.ec481b', { INVITE_CAP })].forEach((t, i) => c.add(scene.add.text(W / 2, 236 + i * 17, t, font9(10, i === 2 ? '#ffd75e' : '#a1b2b6')).setOrigin(0.5)));
+  const sb = button(scene, W / 2, 330, 190, 32, t('share.98b489'), async () => {
+    const r = await openShare(scene, t('share.6ee53a', { myCode: myCode() }));
     track('invite_share', { ok: r });
   }, { size: 13, color: 0x2f6b3a });
   c.add(sb);
   c.add(gemIcon(scene, W / 2 - 78, 366, 12));
-  c.add(scene.add.text(W / 2 - 66, 366, `친구 한 명당 +${INVITE_GEM}`, font9(10, '#a1b2b6')).setOrigin(0, 0.5));
+  c.add(scene.add.text(W / 2 - 66, 366, t('share.8cb10b', { INVITE_GEM }), font9(10, '#a1b2b6')).setOrigin(0, 0.5));
   // 열 때 서버에서 최신 숫자를 받아 와 받을 보상을 바로 받는다
   deviceId().then(() => { paint(); return lobbyShareTick(scene, true); }).then(() => { if (scene.scene?.isActive?.()) paint(); });
 }

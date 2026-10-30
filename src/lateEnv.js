@@ -5,6 +5,7 @@ import * as D from './data.js';
 import { sfx } from './sfx.js';
 import { font } from './ui.js';
 import { warnDisc, warnStrip } from './fx2.js';
+import { t } from './i18n.js';
 
 const WORLD = 1600;
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
@@ -91,7 +92,7 @@ export class Late {
       this.onIce = on;
       for (const v of this.fv) this.ventStep(v, dt, g, 0xff2030, 0x9ae8ff, q => {
         sfx('crit', 120);
-        if (env.inEll(q.x, q.y, q.r)) { env.hurtEnv(1.0, 'frost'); this.slow(env.fx4('palace4') ? 1300 : 2200, env.fx4('palace4') ? 0.78 : 0.6); say(s, h.x, h.y - 10, '얼었다! 느려진다', '#9ae8ff'); }
+        if (env.inEll(q.x, q.y, q.r)) { env.hurtEnv(1.0, 'frost'); this.slow(env.fx4('palace4') ? 1300 : 2200, env.fx4('palace4') ? 0.78 : 0.6); say(s, h.x, h.y - 10, t('lateEnv.23e79c'), '#9ae8ff'); }
         for (const m of s.mobs.getChildren()) if (m.active && !m.dead && !m.isBoss && Math.hypot(m.x - q.x, (m.y - q.y) / 0.75) < q.r * 1.1) { m.freeze = 1300; m.setTint(0x9ae8ff); s.time.delayedCall(1300, () => m.active && !m.dead && (m.clearTint(), m.baseTint !== 0xffffff && m.setTint(m.baseTint))); }
       });
     }
@@ -159,7 +160,7 @@ export class Late {
         }
         if (q.stand >= 2000) {
           q.stand = 0; q.cd = 25000;
-          s.heal(s.maxHp * 0.22); env.ripple(q.x, q.y, 0x70f0e0); sfx('level'); say(s, h.x, h.y - 10, '시간이 되감겼다! 체력 회복', '#70f0e0');
+          s.heal(s.maxHp * 0.22); env.ripple(q.x, q.y, 0x70f0e0); sfx('level'); say(s, h.x, h.y - 10, t('lateEnv.68f1ec'), '#70f0e0');
         }
       }
     }
@@ -178,7 +179,7 @@ export class Late {
     switch (m.fx) {
       case 'rewind':   // 태엽 딱정벌레: 체력이 40% 아래로 처음 떨어지면 시간을 되감아 70%까지 회복한다
         if (!m.rewound && !m.mini && m.hp > 0 && m.hp < m.maxHp * 0.4) {
-          m.rewound = true; m.hp = m.maxHp * 0.7; m.holdT = 650; atkAnim(m, 650); env.ripple(m.x, m.y, 0xffd870); say(s, m.x, m.y - 10, '되감기!', '#ffd870'); sfx('level', 100);
+          m.rewound = true; m.hp = m.maxHp * 0.7; m.holdT = 650; atkAnim(m, 650); env.ripple(m.x, m.y, 0xffd870); say(s, m.x, m.y - 10, t('boss.099f7b'), '#ffd870'); sfx('level', 100);
         }
         break;
       case 'timeskip': {   // 진자 결투사: 예고 원이 내 등 뒤에 뜨고, 0.7초 뒤 거기로 순간이동해 벤다
@@ -247,7 +248,7 @@ export class Late {
       case 'howl': {   // 빙결 사냥개: 쓰러지며 울부짖어 둘레 사냥개가 2.5초 빨라진다
         let n = 0;
         for (const o of s.mobs.getChildren()) if (o.active && !o.dead && o !== m && o.fx === 'howl' && Math.hypot(o.x - x, o.y - y) < 170) { this.boost(o, 1.6, 2500); n++; }
-        if (n) { env.ripple(x, y, 0x9ae8ff); say(s, x, y, '아우우!', '#9ae8ff'); sfx('warn', 120); }
+        if (n) { env.ripple(x, y, 0x9ae8ff); say(s, x, y, t('lateEnv.39cc18'), '#9ae8ff'); sfx('warn', 120); }
         break;
       }
       case 'burstgust':   // 구름 가오리: 쓰러진 자리에서 돌풍이 터져 가까이 있으면 밀려난다
@@ -387,7 +388,7 @@ export const LATE_PATTERNS = {
   squall() {
     const s = this.s, m = this.m, h = s.hero, e = s.env, k = e?.fx4('skyway4') ? 0.6 : 1;
     this.busy = 2400; m.setVelocity(0, 0); sfx('warn');
-    s.banner('돌풍! 바람 방향이 번갈아 바뀐다', '떨어지는 붉은 원을 피해라');
+    s.banner(t('lateEnv.c01229'), t('lateEnv.846b27'));
     e?.impulse(-130 * k, 0, 1300);
     s.time.delayedCall(1300, () => m.active && e?.impulse(130 * k, 0, 1300));
     for (let i = 0; i < 7; i++) s.time.delayedCall(i * 340, () => {
@@ -440,7 +441,7 @@ export const LATE_PATTERNS = {
   stoptime() {
     const s = this.s, m = this.m, h = s.hero;
     this.busy = 3000; m.setVelocity(0, 0); sfx('warn');
-    s.cameras.main.flash(300, 160, 200, 230); s.banner('시간이 멈춘다!', '탄 고리의 빈틈으로 빠져나가라');
+    s.cameras.main.flash(300, 160, 200, 230); s.banner(t('lateEnv.f7ecc6'), t('lateEnv.6c9b07'));
     for (let k = 0; k < 2; k++) s.time.delayedCall(k * 1400, () => {
       if (!m.active) return;
       const cx = h.x, cy = h.y, n = 16, gap = R(0, n - 1), bs = [];

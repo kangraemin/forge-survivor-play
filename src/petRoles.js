@@ -1,10 +1,11 @@
+import { t } from './i18n.js';
 // 펫 역할: 줍기(떨어진 것을 끌어온다) · 약화(적이 20% 더 아프게 맞는다) · 표식(센 적 하나를 찍어 40% 더 아프게) · 수호(피해를 막는다)
 // 펫마다 주 역할이 하나 있고, 맵 상성(fit)이 좋으면 범위·빈도가 늘어난다. 그림은 assets/pet2 (docs/pet2.md)
 export const ROLES = {
-  pickup: { name: '줍기', icon: 'role_pickup', color: '#ffd75e', desc: '떨어진 템과 보석을 주워 온다' },
-  weaken: { name: '약화', icon: 'role_weaken', color: '#c08aff', desc: '적이 20% 더 아프게 맞는다' },
-  mark: { name: '표식', icon: 'role_mark', color: '#ff7a7a', desc: '센 적 하나를 찍어 40% 더 아프게 한다' },
-  guard: { name: '수호', icon: 'role_guard', color: '#7ad0ff', desc: '피해를 막아 준다' },
+  pickup: { name: t('petRoles.10fbba'), icon: 'role_pickup', color: '#ffd75e', desc: t('petRoles.a01b38') },
+  weaken: { name: t('petRoles.69d8b7'), icon: 'role_weaken', color: '#c08aff', desc: t('petRoles.462087') },
+  mark: { name: t('petRoles.840ba0'), icon: 'role_mark', color: '#ff7a7a', desc: t('petRoles.819390') },
+  guard: { name: t('petRoles.0be109'), icon: 'role_guard', color: '#7ad0ff', desc: t('petRoles.9f506f') },
 };
 export const PET_ROLE = {
   general: 'guard', lavagolem: 'guard', crystcolossus: 'guard', sandcolossus: 'guard',

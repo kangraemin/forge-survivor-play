@@ -1,33 +1,34 @@
 // 모드 데이터(순수 값). 설계표는 docs/modes.md. Phaser·씬에 기대지 않아 codex.js·Lobby가 가볍게 불러 쓴다
 import * as D from './data.js';
+import { t } from './i18n.js';
 
 export const MODE_N = 15;   // 모드마다 판 수(본편 장 수와 같다)
 export const MODE_IDS = ['guard', 'capture', 'breach', 'hunt'];
 export const MODE_DEFS = {
-  guard: { name: '지키기', color: 0x5fc8ff, css: '#5fc8ff', one: '물건을 지켜라', desc: ['몹이 물건을 노려요.', '물건 HP가 0이 되면 져요.', '버티거나 끝까지 보내면 이겨요.'], title: '수호자', ach: '지키기 15판 완주' },
-  capture: { name: '점령', color: 0x7ddc6a, css: '#7ddc6a', one: '거점을 점령하라', desc: ['원 안에 서 있으면 게이지가 차요.', '벗어나면 천천히 빠져요.', '거점을 전부 차지하면 이겨요.'], title: '정복자', ach: '점령 15판 완주' },
-  breach: { name: '돌파', color: 0xff8a5a, css: '#ff8a5a', one: '끝까지 달려라', desc: ['위쪽 끝으로 달려요.', '뒤에서 죽음의 벽이 밀려와요.', '벽에 닿으면 큰 피해를 입어요.'], title: '돌파자', ach: '돌파 15판 완주' },
-  hunt: { name: '사냥', color: 0xffd75e, css: '#ffd75e', one: '정예를 잡아라', desc: ['정예가 도망 다녀요.', '화면 밖은 화살표가 알려 줘요.', '시간 안에 전부 잡으면 이겨요.'], title: '추적자', ach: '사냥 15판 완주' },
+  guard: { name: t('modeData.69c4bf'), color: 0x5fc8ff, css: '#5fc8ff', one: t('modeData.6ab7e7'), desc: [t('modeData.ae3cce'), t('modeData.558888'), t('modeData.d49757')], title: t('modeData.55655c'), ach: t('modeData.5b0ef0') },
+  capture: { name: t('modeData.7b547e'), color: 0x7ddc6a, css: '#7ddc6a', one: t('modeData.e08bcb'), desc: [t('modeData.dc9602'), t('modeData.67e0bf'), t('modeData.02429a')], title: t('modeData.bfc201'), ach: t('modeData.c96fad') },
+  breach: { name: t('modeData.b4d052'), color: 0xff8a5a, css: '#ff8a5a', one: t('modeData.b82968'), desc: [t('modeData.2ad3ec'), t('modeData.e7867c'), t('modeData.da21fd')], title: t('modeData.673268'), ach: t('modeData.51d65f') },
+  hunt: { name: t('modeData.05b381'), color: 0xffd75e, css: '#ffd75e', one: t('modeData.16caa3'), desc: [t('modeData.5e7aac'), t('modeData.3ab9cc'), t('modeData.96b4d9')], title: t('modeData.5dff0d'), ach: t('modeData.e3cf27') },
 };
 
 // 지금 만들어진 판. 나머지 판은 설계만 있고 로비에서 '준비 중'으로 보인다
 // c: 본편 장 번호(0부터). sec: 제한 시간(초). 나머지는 모드 규칙마다 다르다(modes.js)
 export const MODE_STAGES = {
   guard: [
-    { c: 0, goal: '수레 곁에 서서 끝까지 보내라', note: '수레 곁에 서야 간다 · 박쥐가 수레를 먼저 문다', obj: 'cart', go: true, hp: 2.8, route: 520, speed: 7.5, sec: 170, par: 125, raid: 0.7, cap: 5, raiders: ['slime', 'bat'] },
-    { c: 1, goal: '성물함을 105초 동안 지켜라', note: '유령은 겹쳐 통과해 갉는다 · 거미 돌진은 성물함에 크게 먹힌다', obj: 'altar', go: false, hp: 3, sec: 105, keep: 0.6, raid: 0.7, cap: 6, raiders: ['ghost', 'spider'], mult: { spider: 2.5 } },
+    { c: 0, goal: t('modeData.57102c'), note: t('modeData.ec9452'), obj: 'cart', go: true, hp: 2.8, route: 520, speed: 7.5, sec: 170, par: 125, raid: 0.7, cap: 5, raiders: ['slime', 'bat'] },
+    { c: 1, goal: t('modeData.848a4d'), note: t('modeData.ee5deb'), obj: 'altar', go: false, hp: 3, sec: 105, keep: 0.6, raid: 0.7, cap: 6, raiders: ['ghost', 'spider'], mult: { spider: 2.5 } },
   ],
   capture: [
-    { c: 0, goal: '횃불 터 3곳을 점령하라', note: '서 있으면 차오른다 · 점령 중엔 박쥐 떼가 쏟아진다', n: 3, rad: 230, r: 42, cap: 24, sec: 190, par: 105, spawnKind: 'bat' },
-    { c: 1, goal: '무덤 4곳을 점령하라', note: '무덤에서 좀비가 솟는다 · 비워 둔 무덤은 유령이 게이지를 갉는다', n: 4, rad: 250, r: 42, cap: 12, sec: 220, par: 125, spawnKind: 'zombie', ghosts: true },
+    { c: 0, goal: t('modeData.c46b8b'), note: t('modeData.2e5a65'), n: 3, rad: 230, r: 42, cap: 24, sec: 190, par: 105, spawnKind: 'bat' },
+    { c: 1, goal: t('modeData.1c8a59'), note: t('modeData.868936'), n: 4, rad: 250, r: 42, cap: 12, sec: 220, par: 125, spawnKind: 'zombie', ghosts: true },
   ],
   breach: [
-    { c: 0, goal: '위쪽 문까지 달려라', note: '이끼 어둠이 밀려온다 · 횃불에 닿으면 벽이 물러난다', wallName: '이끼 어둠', len: 1360, legs: 4, wall: 32, wallDmg: 0.22, torches: 3, par: 100 },
-    { c: 1, goal: '위쪽 문까지 달려라', note: '망자의 안개가 밀려온다 · 거미줄에서는 느려진다', wallName: '망자의 안개', len: 1360, legs: 5, wall: 38, wallDmg: 0.22, webs: 4, par: 100 },
+    { c: 0, goal: t('modeData.e76e1d'), note: t('modeData.6e29d4'), wallName: t('modeData.92af58'), len: 1360, legs: 4, wall: 32, wallDmg: 0.22, torches: 3, par: 100 },
+    { c: 1, goal: t('modeData.e76e1d'), note: t('modeData.a4b266'), wallName: t('modeData.3a0d36'), len: 1360, legs: 5, wall: 38, wallDmg: 0.22, webs: 4, par: 100 },
   ],
   hunt: [
-    { c: 0, goal: '도망치는 정예 5마리를 잡아라', note: '정예는 달리다 멈춘다 · 박쥐 대장은 빠르다', sec: 170, par: 110, prey: ['slime', 'bat', 'slime', 'bat', 'skel'] },
-    { c: 1, goal: '도망치는 정예 6마리를 잡아라', note: '유령 대장은 어둠에 숨는다 · 가까이 가야 보인다', sec: 200, par: 120, prey: ['ghost', 'spider', 'ghost', 'zombie', 'ghost', 'spider'] },
+    { c: 0, goal: t('modeData.7b3f57'), note: t('modeData.19263b'), sec: 170, par: 110, prey: ['slime', 'bat', 'slime', 'bat', 'skel'] },
+    { c: 1, goal: t('modeData.978760'), note: t('modeData.cb8474'), sec: 200, par: 120, prey: ['ghost', 'spider', 'ghost', 'zombie', 'ghost', 'spider'] },
   ],
 };
 
@@ -46,7 +47,7 @@ export const modeReward = (c, first) => ({
 // 저장 modes.stars[키]는 비트 마스크(1·2·4). 첫 클리어 보상은 ★1에 이미 들어 있고, ★2·★3은 처음 따는 순간 따로 준다
 export const STAR_HURT = 0.6;
 export const fmtT = sec => { const t = Math.max(0, Math.round(sec)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
-export const starTexts = cfg => ['클리어', cfg.par ? `${fmtT(cfg.par)} 안에` : `물건 ${Math.round((cfg.keep || 0.6) * 100)}% 이상`, `받은 피해 ${Math.round(STAR_HURT * 100)}% 이하`];
+export const starTexts = cfg => [t('modeData.330ccf'), cfg.par ? t('modeData.8db565', { fmtT: fmtT(cfg.par) }) : t('modeData.636a63', { round: Math.round((cfg.keep || 0.6) * 100) }), t('modeData.0f284f', { round: Math.round(STAR_HURT * 100) })];
 export const starMask = (sv, id, n) => sv.modes?.stars?.[`${id}:${n}`] | 0;
 export const starCount = m => (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1);
 export const modeStars = (sv, id, n) => starCount(starMask(sv, id, n));

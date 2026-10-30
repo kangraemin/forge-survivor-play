@@ -2,6 +2,7 @@
 import { W, H, setOpenN } from './data.js';
 import { font, panel, button } from './ui.js';
 import { checkVersion, syncData, markAsked } from './updater.js';
+import { t } from './i18n.js';
 
 // 스토어 앱(Capacitor)은 window.open이 스토어로 안 가므로 forgePlatform.openStore가 연다(주소가 비어도 앱 스토어 페이지로)
 const openStore = url => { try { const fp = window.forgePlatform; if (fp?.openStore) return fp.openStore(url); if (url) window.open(url, '_blank'); } catch { /* 열 수 없는 환경 */ } };
@@ -19,27 +20,27 @@ function dialog(scene, title, lines, buttons) {
 export async function updateGate(scene, started) {
   const status = scene.add.text(W / 2, H / 2 + 34, '', font(10, '#cfc6e0', 2)).setOrigin(0.5).setDepth(5);
   let r;
-  try { status.setText('업데이트 확인 중…'); r = await Promise.race([started, new Promise(res => setTimeout(() => res(null), 4500))]); } catch { r = null; }
+  try { status.setText(t('updateGate.4997a0')); r = await Promise.race([started, new Promise(res => setTimeout(() => res(null), 4500))]); } catch { r = null; }
   status.setText('');
   if (!r) return true;   // 네트워크 실패: 그냥 진행(열린 장 수는 마지막으로 받은 값을 쓴다)
   if (r.info?.contentChapters !== undefined) setOpenN(r.info.contentChapters);   // 16장부터는 이 값을 올리면 열린다(기본 15)
   if (r.action === 'force') {
-    dialog(scene, '업데이트가 필요해요', ['새 버전으로 업데이트해야', '계속할 수 있어요.', r.notes].filter(Boolean), [{ label: '업데이트', color: 0x2f6b3a, fn: () => openStore(r.store) }]);
+    dialog(scene, t('updateGate.fcef0c'), [t('updateGate.bab9f6'), t('updateGate.08411c'), r.notes].filter(Boolean), [{ label: t('updateGate.4f72dd'), color: 0x2f6b3a, fn: () => openStore(r.store) }]);
     return false;
   }
   if (r.action === 'optional') {
     markAsked();
     await new Promise(res => {
-      const d = dialog(scene, '새 버전이 있어요', ['업데이트하면 더 좋아져요.', r.notes].filter(Boolean), [
-        { label: '업데이트', color: 0x2f6b3a, fn: () => { openStore(r.store); d.destroy(); res(); } },
-        { label: '나중에', color: 0x3a3846, fn: () => { d.destroy(); res(); } }]);
+      const d = dialog(scene, t('updateGate.08b126'), [t('updateGate.952638'), r.notes].filter(Boolean), [
+        { label: t('updateGate.4f72dd'), color: 0x2f6b3a, fn: () => { openStore(r.store); d.destroy(); res(); } },
+        { label: t('lobby.0fcd14'), color: 0x3a3846, fn: () => { d.destroy(); res(); } }]);
     });
   }
   try {
     const want = Number(r.info?.dataVersion) || 0;
     if (want) {
-      status.setText('새 데이터 받는 중…');
-      await syncData(r.info, v => status.setText(`새 데이터 받는 중… ${Math.round(v * 100)}%`));
+      status.setText(t('updateGate.2d88be'));
+      await syncData(r.info, v => status.setText(t('updateGate.765a03', { round: Math.round(v * 100) })));
       status.setText('');
     }
   } catch { status.setText(''); }

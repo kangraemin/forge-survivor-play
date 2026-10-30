@@ -1,12 +1,13 @@
 // 저장 핵심(순수 로직): 버전 변환 체인, 백업·복구, 내보내기 코드. 브라우저·Phaser에 기대지 않아 node에서 시험한다(tools/save_test.mjs)
 import { SWEEP_DAILY } from './data.js';
 import { PET_OLD } from './gear.js';
+import { t } from './i18n.js';
 
 export const KEY = 'forge-survivor-v1';
 export const BAK = [KEY + '.bak1', KEY + '.bak2'];   // 직전 저장 2개
 export const CORRUPT = KEY + '.corrupt';             // 읽지 못한 원본 문자열(지우지 않고 보관)
 // 저장 모양 버전. 저장 형식을 바꾸면 SCHEMA를 올리고 STEPS 끝에 한 단계를 더한다(앞 단계는 고치지 않는다)
-export const SCHEMA = 6;
+export const SCHEMA = 7;
 
 export const fresh = () => ({ schemaVersion: SCHEMA,
 
@@ -49,6 +50,7 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   // 초대로 받은 보석 수(친구 수), 확정 중인 보상 {key,n}, 서버가 알려 준 초대한 친구 수·받을 수
   shareDay: '', shared: false, inviteCode: '', invitedBy: '', refChecked: false, inviteClaimed: false,
   inviteRewards: 0, inviteAck: null, inviteTotal: 0, invitePending: 0,
+  lang: '',                // 고른 언어(빈 값 = 기기 언어로 자동). 7부터
   bagAuto: 'salvage',      // 가방이 꽉 찼을 때 자동 정리: 'salvage'(분해) | 'sell'(판매)
 });
 
@@ -101,18 +103,25 @@ const STEPS = [
     if (!m.best || typeof m.best !== 'object' || Array.isArray(m.best)) m.best = {};
     for (const k of Object.keys(m.clear)) if (m.clear[k]) m.stars[k] = (m.stars[k] | 0) | 1;
   },
+  // 6 -> 7: 다국어. 언어 설정 칸을 만들고, 한글 글자로 저장돼 있던 칭호를 업적 id로 바꾼다(언어를 바꿔도 같은 칭호가 보이게)
+  mem => {
+    mem.lang ||= '';
+    const T = { '학살자': 'kill2', '강화 장인': 'enh15', '전설의 대장장이': 'enh20', '마왕 사냥꾼': 'demon', '심연의 방랑자': 'ch10', '원초의 대장장이': 'ch15', '지옥의 정복자': 'hard5', '탑의 주인': 'tower25', '대장간 식구': 'day30', '박물관장': 'dexAll', '시간의 대장장이': 'ch18', '수호자': 'mode_guard', '정복자': 'mode_capture', '돌파자': 'mode_breach', '추적자': 'mode_hunt' };   // i18n-ignore: 옛 저장의 칭호 글자
+    if (typeof mem.title === 'string' && T[mem.title]) mem.title = T[mem.title];
+    else if (typeof mem.title === 'string' && /[가-힣]/.test(mem.title)) mem.title = '';
+  },
 ];
 export class SaveError extends Error {}
 
 // 읽은 값을 현재 모양으로 변환. 모르는 필드는 그대로 둔다. 실패하면 SaveError
 export function migrate(raw) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new SaveError('저장이 객체가 아니다');
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new SaveError(t('saveCore.560504'));
   const from = Number.isInteger(raw.schemaVersion) && raw.schemaVersion >= 0 ? raw.schemaVersion : 0;
   const mem = { ...fresh(), ...raw };
   if (from > SCHEMA) return mem;   // 더 새 앱이 쓴 저장: 건드리지 않고 그대로 쓴다(schemaVersion도 낮추지 않는다)
   try {
     for (let v = from; v < SCHEMA; v++) STEPS[v](mem);
-  } catch (e) { throw new SaveError('변환 실패 v' + from + ': ' + (e?.message || e)); }
+  } catch (e) { throw new SaveError(t('saveCore.4772ec', { from, v: e?.message || e })); }
   mem.schemaVersion = SCHEMA;
   return mem;
 }
@@ -168,9 +177,9 @@ const unb64 = t => decodeURIComponent(escape(atob(t.replace(/-/g, '+').replace(/
 export function exportCode(mem) { const j = JSON.stringify(mem); const p = b64(j); return `FS1.${p}.${sum(p)}`; }
 export function importCode(code) {
   const m = /^FS1\.([A-Za-z0-9_-]+)\.([0-9a-f]{8})$/.exec(String(code).replace(/\s+/g, ''));
-  if (!m) throw new SaveError('코드 모양이 맞지 않다');
-  if (sum(m[1]) !== m[2]) throw new SaveError('체크섬이 맞지 않다(복사가 잘렸을 수 있다)');
-  let o; try { o = JSON.parse(unb64(m[1])); } catch { throw new SaveError('코드를 읽을 수 없다'); }
+  if (!m) throw new SaveError(t('saveCore.d84e80'));
+  if (sum(m[1]) !== m[2]) throw new SaveError(t('saveCore.e4686c'));
+  let o; try { o = JSON.parse(unb64(m[1])); } catch { throw new SaveError(t('saveCore.cfbfd4')); }
   return migrate(o);
 }
 // 코드의 재화가 지금 저장보다 크게 줄어드는지 보여 주는 요약(가져오기 확인 화면용)

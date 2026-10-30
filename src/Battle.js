@@ -7,7 +7,7 @@ import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { insetsGame } from './safeArea.js';
 import { Overlay } from './overlay.js';
-import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF, recPets, heroSkin } from './gear.js';
+import { itemName, gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF, recPets, heroSkin } from './gear.js';
 import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 import { dexKill } from './codex.js';
@@ -17,6 +17,7 @@ import { ModeRun } from './modes.js';   // 모드(지키기·점령·돌파·사
 
 import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 import { dressHero, CosmeticActor, weaponKey, placeHeld } from './cosmeticView.js';
+import { t, tt } from './i18n.js';
 const { W, H } = D;
 const WORLD = 1600;
 const HERO_D = 33;   // 47차: 주인공은 몹·불꽃·베기 효과(28~32)보다 위 층, 피해 숫자(40)·어둠(50)보다 아래
@@ -170,23 +171,23 @@ export class Battle extends Phaser.Scene {
     if (this.practice) this.practiceStart();
     if (this.practice) { /* 연습장 안내는 practiceStart */ }
     else if (this.mode) this.mode.intro();
-    else if (this.endless) this.banner('무한의 탑', `1층  ·  최고 ${sv.endBest}층`);
-    else if (this.dungeon) this.banner(`일일 던전 · ${D.DUN_TYPES[this.dungeon].name}`, `${D.DUNGEON.sec}초 안에 ${D.DUNGEON.killNeed}마리를 잡아라`);
-    else if (this.hard) this.banner(`어려움 ${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}  ·  몹이 훨씬 세다`);
-    else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? '보스 스테이지' : `웨이브 1 / ${this.waveCount}  ·  ${this.s === 1 ? '깨면 다음은 보스!' : '2판 깨면 보스'}`);
+    else if (this.endless) this.banner(t('battle.6304cf'), t('battle.c78e78', { endBest: sv.endBest }));
+    else if (this.dungeon) this.banner(t('battle.023b82', { name: D.DUN_TYPES[this.dungeon].name }), t('battle.f18dc3', { sec: D.DUNGEON.sec, killNeed: D.DUNGEON.killNeed }));
+    else if (this.hard) this.banner(t('battle.2188f1', { v: this.c + 1, v2: this.s + 1, name: this.ch.name }), this.isBoss ? t('battle.aae927') : t('battle.d46739', { waveCount: this.waveCount }));
+    else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? t('battle.aae927') : t('battle.0e4516', { waveCount: this.waveCount, v: this.s === 1 ? t('battle.6c34bd') : t('battle.a75122') }));
     // 펫 상성: 잘 듣는 펫이면 알려 주고, 없으면 이 장에 맞는 펫을 알려 준다(가진 것만)
     if (!this.endless && !this.dungeon) {
       const pf = this.pet.def && this.pet.fit, rs = recPets(this.sv, this.c).filter(p => this.sv.cleared >= p.unlock).map(p => p.name).join(' / ');
-      const msg = pf > 1 ? [`펫 상성 좋음! 효과 ×1.8${this.pet.def.tank ? ' · 받는 피해 -20%' : ''}`, '#5fdc6a'] : pf < 1 ? [`${this.pet.def.name}은 이 맵에서 약하다${rs ? ` · 추천 ${rs}` : ''}`, '#ff9070'] : rs ? [`이 맵 추천 펫: ${rs}`, '#ffd75e'] : null;
+      const msg = pf > 1 ? [t('battle.dbd648', { v: this.pet.def.tank ? t('battle.6935f3') : '' }), '#5fdc6a'] : pf < 1 ? [t('battle.009d79', { name: this.pet.def.name, v: rs ? t('battle.2d4406', { rs }) : '' }), '#ff9070'] : rs ? [t('battle.c7a9ca', { rs }), '#ffd75e'] : null;
       if (msg) this.time.delayedCall(2600, () => !this.over && toast(this, msg[0], msg[1], 96));
     }
-    if (this.mod) this.time.delayedCall(4200, () => !this.over && this.banner(`이번 판: ${this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : ''}${this.mod.name}`, this.mod.desc));
+    if (this.mod) this.time.delayedCall(4200, () => !this.over && this.banner(t('battle.da7b97', { v: this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : '', name: this.mod.name }), this.mod.desc));
     // 이번 스테이지에 처음 나오는 변종을 알려 준다
     const nv = !this.mode && !this.endless && !this.isBoss && !this.dungeon && !this.hard && D.stageVariant(this.c, this.s);
     // 각성한 무기는 판 시작 때 무엇이 달라졌는지 알려 준다
     const aw = D.awakenText(sv.enh);
     if (aw && !this.dungeon) this.time.delayedCall(this.mod ? 7600 : 3400, () => !this.over && this.banner(aw[0], aw[1]));
-    if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(`새 몬스터: ${D.VARIANTS[nv[1]].pre} ${D.MOB_NAMES[this.ch.mobs[nv[0]]]}`, D.VARIANTS[nv[1]].desc));
+    if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(t('battle.27535b', { pre: D.VARIANTS[nv[1]].pre, v: D.MOB_NAMES[this.ch.mobs[nv[0]]] }), D.VARIANTS[nv[1]].desc));
     if (!this.practice) { sv.stats.runs++; save(); }
     logCtx({ stage: this.mode ? `mode_${this.mode.id}_${this.mode.n + 1}` : this.endless ? 'tower' : this.dungeon ? 'dungeon' : `${this.hard ? 'H' : ''}${this.c + 1}-${this.s + 1}`, idx: this.endless || this.dungeon ? -1 : this.c * D.STAGES_PER_CHAPTER + this.s });
     this.log('battle_start', { power: D.powerOf(sv), rec: this.endless || this.dungeon ? undefined : D.recOf(this.c, this.s, this.hard), hard: this.hard, dungeon: this.dungeon || 'none', tier: sv.tier, enh: sv.enh, mod: this.mod?.id || 'none', easy: this.easy, runs: sv.stats.runs, replay: !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s < sv.cleared, boss_stage: this.isBoss });
@@ -359,8 +360,8 @@ export class Battle extends Phaser.Scene {
     this.waveTxt = sf(this.add.text(145, 31, '', font(9, '#a1b2b6')).setOrigin(0.5));
     // 처치·은화: 점 아이콘만으로는 무슨 숫자인지 몰랐다. 글자 이름을 붙인다
     sf(this.add.rectangle(W - 88, 7, 62, 34, 0x000000, 0.45).setOrigin(0));
-    sf(this.add.text(W - 85, 17, '처치', font9(10, '#a1b2b6')).setOrigin(0, 0.5));
-    sf(this.add.text(W - 85, 32, '은화', font9(10, '#a1b2b6')).setOrigin(0, 0.5));
+    sf(this.add.text(W - 85, 17, t('battle.5e9c0f'), font9(10, '#a1b2b6')).setOrigin(0, 0.5));
+    sf(this.add.text(W - 85, 32, t('battle.ce69a8'), font9(10, '#a1b2b6')).setOrigin(0, 0.5));
     this.killTxt = sf(this.add.text(W - 30, 17, '0', font(10, '#ffffff')).setOrigin(1, 0.5));
     this.silverTxt = sf(this.add.text(W - 30, 32, '0', font(10, '#ffffff')).setOrigin(1, 0.5));
     // 일시정지
@@ -373,7 +374,7 @@ export class Battle extends Phaser.Scene {
     this.ultBase = sf(this.add.circle(ux, uy, 22, 0x1c2935, 0.9).setStrokeStyle(2, 0x475c66));
     this.ultFill = sf(this.add.graphics());
     this.ultIcon = sf(icon(this, ux, uy, 4, 22));
-    this.ultTxt = sf(this.add.text(ux, uy + 28, '궁극기', font(9, '#a1b2b6')).setOrigin(0.5));
+    this.ultTxt = sf(this.add.text(ux, uy + 28, t('battle.f0a3b5'), font(9, '#a1b2b6')).setOrigin(0.5));
     this.ultBase.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.ult());
     this.ultPos = { x: ux, y: uy };
     this.showUlt = v => [this.ultBase, this.ultFill, this.ultIcon, this.ultTxt, this.ultTip, this.ultTip?.ring].forEach(o => o?.setVisible(v));
@@ -432,7 +433,7 @@ export class Battle extends Phaser.Scene {
 
   // 처음 두 판: 이동 방법을 3초 보여 준다
   dragHint() {
-    const t = this.add.text(W / 2, H - 120, '끌어서 이동 · 공격은 자동', font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
+    const t = this.add.text(W / 2, H - 120, tt('battle.04bd37'), font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
     const hand = this.add.circle(W / 2 - 30, H - 90, 9, 0xffffff, 0.5).setStrokeStyle(2, 0xffffff).setScrollFactor(0).setDepth(120);
     this.tweens.add({ targets: hand, x: W / 2 + 30, duration: 700, yoyo: true, repeat: 2, ease: 'Sine.InOut' });
     this.hint = [t, hand];
@@ -559,14 +560,14 @@ export class Battle extends Phaser.Scene {
   // 47차 새 이벤트 — 몹 습격: 한쪽 가장자리가 붉게 깜빡이며 경고, 2.5초 뒤부터 10초 동안 그쪽에서 대열이 계속 밀려온다(기존 몹 그림·대열 재사용)
   raid() {
     const a = R(0, 3) * Math.PI / 2;
-    this.banner('몹 습격!', `${['오른쪽', '아래쪽', '왼쪽', '위쪽'][a / (Math.PI / 2)]}에서 10초간 몰려온다`);
+    this.banner(t('battle.ca7fa0'), t('battle.d501f9', { v: [t('battle.16f66a'), t('battle.0ab5e2'), t('battle.2df94c'), t('battle.5eb553')][a / (Math.PI / 2)] }));
     sfx('warn', 300);
     const ex = Math.cos(a), ey = Math.sin(a), horiz = Math.abs(ex) > Math.abs(ey);
     const bar = this.add.rectangle(horiz ? (ex > 0 ? W - 4 : 4) : W / 2, horiz ? H / 2 : (ey > 0 ? H - 4 : 4), horiz ? 8 : W, horiz ? H : 8, 0xff3030, 0.75).setScrollFactor(0).setDepth(60);
     this.tweens.add({ targets: bar, alpha: 0.15, duration: 180, yoyo: true, repeat: 6, onComplete: () => bar.destroy() });
     raidFlag(this, ex, ey, 2600);
     for (let k = 0; k < 8; k++) this.time.delayedCall(2500 + k * 1250, () => { if (!this.over && !this.bossPhase) this.formation(a + RF(-0.25, 0.25)); });
-    this.time.delayedCall(2500 + 8 * 1250, () => !this.over && toast(this, '습격을 막아냈다!', '#5fdc6a', 96));
+    this.time.delayedCall(2500 + 8 * 1250, () => !this.over && toast(this, t('battle.b92bff'), '#5fdc6a', 96));
   }
 
   formation(ang) {
@@ -632,7 +633,7 @@ export class Battle extends Phaser.Scene {
     if (m.isBoss) m.bossAI?.holdFloor?.();
     if (open && this.bt - (m.exposeTxt || 0) > 260) {
       m.exposeTxt = this.bt;
-      const wt = this.add.text(m.x + RF(-14, 14), m.y - m.displayHeight * 0.35, '약점!', font(10, '#ffe060', 3)).setOrigin(0.5).setDepth(39);
+      const wt = this.add.text(m.x + RF(-14, 14), m.y - m.displayHeight * 0.35, t('battle.6fbdb2'), font(10, '#ffe060', 3)).setOrigin(0.5).setDepth(39);
       this.tweens.add({ targets: wt, y: wt.y - 18, alpha: 0, duration: 520, onComplete: () => wt.destroy() });
     }
     // 44차: 새 장은 몹 체력이 커서 첫 몹이 쓰러지기까지 30초가 걸려 Lv1에 머물렀다(9-1). 2장부터 Lv3 전까진 때릴 때마다 경험치가 조금씩 찬다(처치 경험치는 그대로, 70번 베면 1 → 첫 레벨업 15초 안팎)
@@ -785,7 +786,7 @@ export class Battle extends Phaser.Scene {
     if (!this.bArrow) {
       const g = this.add.graphics().setScrollFactor(0).setDepth(61);
       g.fillStyle(0xff4040, 0.95).lineStyle(2, 0x2a0a0a, 1).fillTriangle(10, 0, -8, -9, -8, 9).strokeTriangle(10, 0, -8, -9, -8, 9);
-      const t = this.add.text(0, 0, '보스', font(9, '#ffd0d0', 2)).setOrigin(0.5).setScrollFactor(0).setDepth(61);
+      const t = this.add.text(0, 0, tt('battle.792e7e'), font(9, '#ffd0d0', 2)).setOrigin(0.5).setScrollFactor(0).setDepth(61);
       this.bArrow = this.add.container(0, 0, [g, t]).setScrollFactor(0).setDepth(61);
       this.bArrowTxt = t; this.bArrow.g = g;
     }
@@ -816,7 +817,7 @@ export class Battle extends Phaser.Scene {
     this.env?.mobKill(m);
     // 연속 처치: 1.2초 안에 이어 잡으면 콤보가 쌓인다
     this.combo = this.bt - (this.lastKillT || -1e9) < 1200 ? (this.combo || 0) + 1 : 1; this.lastKillT = this.bt;
-    if (this.combo >= 10) { this.comboTxt.setText(`${this.combo} 콤보`).setAlpha(1).setScale(1.35); this.tweens.add({ targets: this.comboTxt, scale: 1, duration: 120 }); }
+    if (this.combo >= 10) { this.comboTxt.setText(t('battle.76126e', { combo: this.combo })).setAlpha(1).setScale(1.35); this.tweens.add({ targets: this.comboTxt, scale: 1, duration: 120 }); }
     // 정예를 잡으면 잠깐 멈추고 번쩍인다
     if (m.elite) { this.hitstop = 110; this.cameras.main.shake(140, 0.008); this.cameras.main.flash(90, 255, 230, 160); }
     // +10부터는 쓰러뜨린 자리에도 불티가 튄다(+15는 더 자주)
@@ -930,7 +931,7 @@ export class Battle extends Phaser.Scene {
     const sv = this.sv, cur = !item.egg && equipped(sv).find(x => x.s === item.s);
     if (!item.egg && (!cur || itemScore(item) > itemScore(cur))) this.ui.lootAsk(item, cur);
     const rr = RARITY[item.r];
-    const t = this.add.text(this.hero.x, this.hero.y - 34, `${rr.name} ${item.n}`, font(10, rr.css)).setOrigin(0.5).setDepth(40);
+    const t = this.add.text(this.hero.x, this.hero.y - 34, `${rr.name} ${itemName(item)}`, font(10, rr.css)).setOrigin(0.5).setDepth(40);
     this.tweens.add({ targets: t, y: t.y - 18, alpha: 0, delay: 600, duration: 700, onComplete: () => t.destroy() });
     sfx(item.r >= 2 ? 'level' : 'coin');
     this.log('loot', { rarity: item.r, slot: item.s, egg: item.egg || 'none' });
@@ -956,7 +957,7 @@ export class Battle extends Phaser.Scene {
     m.goblin = true; m.goblinT = 12000; m.maxHp = m.hp = m.hp * 6; m.spd = 62; m.kbRes = 0.25; m.dmg = 0;
     m.setTint(0xffd75e); m.baseTint = 0xffd75e; m.bs *= 1.25; m.setScale(m.bs);
     m.preFX?.addGlow(0xffd75e, 4, 0, false, 0.1, 10);
-    if (!quiet) this.banner('보물 고블린!', '도망치기 전에 잡아라');
+    if (!quiet) this.banner(t('battle.79680e'), t('battle.10bd3e'));
     sfx('warn', 300);
     this.log('goblin_spawn', { quiet });
   }
@@ -974,7 +975,7 @@ export class Battle extends Phaser.Scene {
         m.goblin = true; m.bat = true; m.goblinT = 8000; m.maxHp = m.hp = m.hp * 2; m.spd = 72; m.dmg = 0;
         m.setTint(0xffd75e); m.baseTint = 0xffd75e; m.preFX?.addGlow(0xffd75e, 2, 0, false, 0.1, 6);
       }
-      this.banner('황금 박쥐 떼!', '흩어지기 전에 잡아라'); sfx('warn', 300);
+      this.banner(tt('battle.504a24'), tt('battle.781e2f')); sfx('warn', 300);
       return;
     }
     // 축복의 제단: 근처에 빛 기둥. 그 안에 2초 서 있으면 버프
@@ -983,18 +984,18 @@ export class Battle extends Phaser.Scene {
     const glow = this.add.image(0, 0, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe08a).setScale(0.22).setAlpha(0.7);
     const ring = this.add.circle(0, 0, 22, 0xffd75e, 0.12).setStrokeStyle(2, 0xffd75e, 0.9);
     const arc = this.add.graphics();
-    const t = this.add.text(0, -32, '축복의 제단', font(9, '#ffd75e')).setOrigin(0.5);
+    const t = this.add.text(0, -32, tt('battle.0e1ee0'), font(9, '#ffd75e')).setOrigin(0.5);
     g.add([glow, ring, arc, t]);
     this.tweens.add({ targets: glow, scale: 0.28, alpha: 0.45, duration: 600, yoyo: true, repeat: -1 });
     this.shrine = { g, arc, x, y, t: 0, life: 15000 };
-    this.banner('축복의 제단!', '빛 안에 2초 서 있으면 강해진다'); sfx('level');
+    this.banner(tt('battle.1569b7'), tt('battle.f9e798')); sfx('level');
   }
   updateShrine(dt) {
     const r = this.run, sh = this.shrine;
     if (this.buffUntil && this.bt > this.buffUntil) {
       const b = D.EVENTS.shrineBuff; r.bDmg -= b.dmg; r.bSpd -= b.spd; this.buffUntil = 0; this.buffTxt?.setText('');
-      toast(this, '축복이 끝났다', '#a1b2b6', 96);
-    } else if (this.buffUntil) this.buffTxt?.setText(`축복 ${Math.ceil((this.buffUntil - this.bt) / 1000)}초`);
+      toast(this, t('battle.dc9f95'), '#a1b2b6', 96);
+    } else if (this.buffUntil) this.buffTxt?.setText(t('battle.ecc7c2', { ceil: Math.ceil((this.buffUntil - this.bt) / 1000) }));
     if (!sh) return;
     sh.life -= dt;
     const inside = Phaser.Math.Distance.Between(sh.x, sh.y, this.hero.x, this.hero.y) < 24;
@@ -1005,7 +1006,7 @@ export class Battle extends Phaser.Scene {
       const b = D.EVENTS.shrineBuff;
       r.bDmg += b.dmg; r.bSpd += b.spd; this.buffUntil = this.bt + b.ms;
       this.buffTxt ||= this.add.text(W - 57, 50, '', font(10, '#ffd75e')).setOrigin(0.5).setScrollFactor(0).setDepth(100);
-      this.banner('축복!', `${b.ms / 1000}초 동안 피해 +${b.dmg * 100}% · 이동 +${b.spd * 100}%`); sfx('level');
+      this.banner(t('battle.78424b'), t('battle.f0353b', { v: b.ms / 1000, v2: b.dmg * 100, v3: b.spd * 100 })); sfx('level');
       this.cameras.main.flash(150, 255, 230, 140);
       this.log('shrine_buff');
     }
@@ -1077,7 +1078,7 @@ export class Battle extends Phaser.Scene {
     // 가시 덩굴 4세트: 맞으면 주변 적에게 가시가 박힌다
     if (this.gear.fx.has('thorn4')) this.mobs.getChildren().slice().forEach(m => { if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, this.hero.x, this.hero.y) < 56) this.hitMob(m, 1.5, { kb: 120, src: 'thorn', cd: 300 }); });
     // 고무 오리: 꽥!
-    if (this.gear.fx.has('duck')) { const q = this.add.text(this.hero.x + 10, this.hero.y - 30, '꽥!', font(10, '#ffe066')).setOrigin(0.5).setDepth(40); this.tweens.add({ targets: q, y: q.y - 12, alpha: 0, duration: 600, onComplete: () => q.destroy() }); }
+    if (this.gear.fx.has('duck')) { const q = this.add.text(this.hero.x + 10, this.hero.y - 30, tt('battle.ecb167'), font(10, '#ffe066')).setOrigin(0.5).setDepth(40); this.tweens.add({ targets: q, y: q.y - 12, alpha: 0, duration: 600, onComplete: () => q.destroy() }); }
     if (this.hp <= 0) this.die();
   }
 
@@ -1088,7 +1089,7 @@ export class Battle extends Phaser.Scene {
       this.log('revive_done', { via: 'train' });
       this.hp = this.maxHp * 0.5;
       this.blast(6, true);
-      this.banner('부활!', '한 번 더 싸운다');
+      this.banner(t('battle.8117f7'), t('battle.8d93c5'));
       return;
     }
     // 부활을 포기해 다시 불린 것(final)은 이미 남겼다
@@ -1112,7 +1113,7 @@ export class Battle extends Phaser.Scene {
     this.hp = this.maxHp * 0.5;
     this.iframe = this.bt + 2000;
     this.blast(6, true);
-    this.banner('부활!', '한 번 더 싸운다');
+    this.banner(t('battle.8117f7'), t('battle.8d93c5'));
   }
 
   // ── 궁극기: 화면 전체 베기 + 2초 무적 ──
@@ -1145,9 +1146,9 @@ export class Battle extends Phaser.Scene {
   // ── 47차: 꾸미기 체험 연습장(30초) ──
   practiceStart() {
     const it = cosmetic(this.cosTrial);
-    this.banner(`체험 연습장 · ${it ? it.name : ''}`, `${D.PRACTICE_SEC}초 · 몹이 약하다 · 보상 없음`);
+    this.banner(t('battle.02ab04', { v: it ? it.name : '' }), t('battle.09ae55', { PRACTICE_SEC: D.PRACTICE_SEC }));
     this.pracTxt = this.add.text(W / 2, 34, '', font(10, '#9ae0ff', 3)).setOrigin(0.5).setScrollFactor(0).setDepth(100);
-    this.events.on('update', () => { if (this.pracTxt?.active && !this.over) this.pracTxt.setText(`연습장 ${Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000))}초`); });
+    this.events.on('update', () => { if (this.pracTxt?.active && !this.over) this.pracTxt.setText(t('battle.0e5133', { max: Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000)) })); });
     this.log('practice_start', { id: this.cosTrial });
   }
   practiceEnd(done) {
@@ -1177,9 +1178,9 @@ export class Battle extends Phaser.Scene {
       if (this.wave >= this.waveCount) {
         if (this.isBoss) { this.shopShown = true; this.ui.shop(() => this.startBoss()); }
         else this.ui.result(true);
-      } else if (this.endless) this.ui.shop(() => this.banner(`${this.wave + 1}층`, this.wave % 3 === 2 ? '해골 장군이 온다' : '더 세진다'));
+      } else if (this.endless) this.ui.shop(() => this.banner(t('battle.bb3f12', { v: this.wave + 1 }), this.wave % 3 === 2 ? t('battle.67af2f') : t('battle.e6d721')));
       else {
-        const next = () => this.banner(`웨이브 ${this.wave + 1} / ${this.waveCount}`, this.wave === this.waveCount - 1 ? '마지막 웨이브' : '버텨라');
+        const next = () => this.banner(t('battle.d3ec9b', { v: this.wave + 1, waveCount: this.waveCount }), this.wave === this.waveCount - 1 ? t('battle.0986a8') : t('battle.39fc0b'));
         // 맨 처음 판은 상인을 건너뛴다: 80초 판 한가운데 4칸 상점이 흐름을 끊었다(41차)
         // 47차: 상인 창은 판당 한 번 — 일반 판은 첫 웨이브 뒤, 보스 판은 보스 직전(아래 분기)에만
         if (this.firstRun || this.shopShown || this.isBoss || this.wave !== 1) next(); else { this.shopShown = true; this.ui.shop(next); }
@@ -1193,7 +1194,7 @@ export class Battle extends Phaser.Scene {
     sfx('bossIn');
     this.cameras.main.shake(800, 0.006);
     const b = D.BOSSES[this.ch.boss];
-    this.banner(b.name, '보스 등장 — 쓰러뜨려라');
+    this.banner(b.name, t('battle.b5263b'));
     if (!this.bot) playBgm('boss', this.c);
     this.boss = new BossAI(this, this.ch.boss, this.mobHpMul);
   }
@@ -1245,7 +1246,7 @@ export class Battle extends Phaser.Scene {
         const nx = D.CHAPTERS[1];
         if (nx) {
           for (let i = 0; i < 2; i++) { const m = this.spawn(false, nx.mobs[i % 2], { force: true }); if (m) { m.maxHp = m.hp = m.hp * 0.6; m.dmg *= 0.5; m.preFX?.addGlow(0xff6a8a, 2, 0, false, 0.1, 8); } }
-          this.banner('저건 뭐지?', `${nx.name}의 몹이 엿보인다`);
+          this.banner(t('battle.0b4f7f'), t('battle.ead9a5', { name: nx.name }));
           this.log('taste_next', { ch: 1 });
         }
       }
@@ -1262,7 +1263,7 @@ export class Battle extends Phaser.Scene {
       const easyBoss = this.easy && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.45;
       if (easyBoss || (towerBoss || this.s === 1 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
         this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true, easyBoss);
-        this.banner('해골 장군', '중간 보스'); sfx('bossIn');
+        this.banner(t('battle.20631e'), t('battle.a76043')); sfx('bossIn');
       }
     } else {
       // 보스전에도 졸개가 꾸준히 나온다(1.2마리면 화면이 비어 보였다)
@@ -1402,7 +1403,7 @@ export class Battle extends Phaser.Scene {
       // 보물 고블린은 반대로 달아나다 12초가 지나면 사라진다
       if (m.goblin) {
         m.goblinT -= dt;
-        if (m.goblinT <= 0) { m.dead = true; m.body.enable = false; this.tweens.add({ targets: m, alpha: 0, scale: 0.2, duration: 300, onComplete: () => m.destroy() }); if (!m.bat && !this.dungeon) this.banner('고블린이 도망쳤다', '다음엔 빨리 잡자'); this.log('goblin_escape', { bat: !!m.bat }); return; }
+        if (m.goblinT <= 0) { m.dead = true; m.body.enable = false; this.tweens.add({ targets: m, alpha: 0, scale: 0.2, duration: 300, onComplete: () => m.destroy() }); if (!m.bat && !this.dungeon) this.banner(t('battle.84781c'), t('battle.2fe850')); this.log('goblin_escape', { bat: !!m.bat }); return; }
         const wob = Math.sin(m.t / 300 + m.phase) * 0.8;
         m.setVelocity((-dx / d - dy / d * wob) * spd, (-dy / d + dx / d * wob) * spd);
         if (m.x < 30 || m.y < 30 || m.x > WORLD - 30 || m.y > WORLD - 30) m.setVelocity((WORLD / 2 - m.x) * 0.3, (WORLD / 2 - m.y) * 0.3);
@@ -1515,12 +1516,12 @@ export class Battle extends Phaser.Scene {
     this.hpBar.width = 76 * f;
     this.hpLag.width += (76 * f - this.hpLag.width) * 0.06;
     this.hpTxt.setText(`${Math.min(Math.ceil(Math.max(0, this.hp)), Math.round(this.maxHp))}/${Math.round(this.maxHp)}`);
-    if (this.bossPhase) { this.timeTxt.setText('보스'); this.waveTxt.setText(''); }
+    if (this.bossPhase) { this.timeTxt.setText(tt('battle.792e7e')); this.waveTxt.setText(''); }
     else {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));
-      this.timeTxt.setText(`남은 ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);   // 경과 시간으로 읽혔다
+      this.timeTxt.setText(tt('battle.ee07c6', { floor: Math.floor(left / 60), padStart: String(left % 60).padStart(2, '0') }));   // 경과 시간으로 읽혔다
       this.timeTxt.setColor(left <= 5 ? '#ffd75e' : '#ffffff');
-      this.waveTxt.setText(this.endless ? `${this.wave + 1}층` : this.dungeon ? `처치 ${r.kills} / ${D.DUNGEON.killNeed}` : `${this.hard ? '어려움 · ' : ''}웨이브 ${Math.min(this.wave + 1, this.waveCount)}/${this.waveCount}`);
+      this.waveTxt.setText(this.endless ? tt('battle.bb3f12', { v: this.wave + 1 }) : this.dungeon ? tt('battle.3e5a0b', { kills: r.kills, killNeed: D.DUNGEON.killNeed }) : tt('battle.7e0431', { v: this.hard ? tt('battle.79b7f1') : '', min: Math.min(this.wave + 1, this.waveCount), waveCount: this.waveCount }));
       if (this.dungeon) this.waveTxt.setColor(r.kills >= D.DUNGEON.killNeed ? '#5fdc6a' : '#a1b2b6');
     }
     this.mode?.hud();   // 모드 진행 표시(화면 위쪽)
@@ -1532,14 +1533,14 @@ export class Battle extends Phaser.Scene {
     this.ultIcon.setAlpha(full ? 1 : 0.45).setScale((full ? 1 + Math.sin(time / 120) * 0.08 : 1) * (this.ultIcon.baseScale ||= this.ultIcon.scaleX));
     // 궁극기를 한 번도 안 써 봤으면 처음 찼을 때 말풍선으로 짚어 준다
     if (full && !this.sv.tut.ult && !this.ultTip) {
-      this.ultTip = this.add.text(this.ultPos.x - 28, this.ultPos.y, '궁극기가 찼다! 눌러 봐 ▶', font(10, '#ffd75e')).setOrigin(1, 0.5).setBackgroundColor('#2a1e3a').setPadding(4, 2, 4, 2).setScrollFactor(0).setDepth(101);
+      this.ultTip = this.add.text(this.ultPos.x - 28, this.ultPos.y, tt('battle.4f5189'), font(10, '#ffd75e')).setOrigin(1, 0.5).setBackgroundColor('#2a1e3a').setPadding(4, 2, 4, 2).setScrollFactor(0).setDepth(101);
       this.tweens.add({ targets: this.ultTip, x: '-=4', duration: 400, yoyo: true, repeat: -1 });
       // 말풍선만으론 안 눌렀다(38차): 버튼 둘레로 금빛 고리가 계속 퍼진다
       const ur = this.add.circle(this.ultPos.x, this.ultPos.y, 24).setStrokeStyle(3, 0xffd75e).setScrollFactor(0).setDepth(101);
       this.tweens.add({ targets: ur, scale: 1.8, alpha: 0, duration: 700, repeat: -1 });
       this.ultTip.ring = ur;
     }
-    this.ultTxt.setText(full ? '눌러서 발동!' : `궁극기 ${Math.floor(mf * 100)}%`).setColor(full ? '#ffd75e' : '#a1b2b6');
+    this.ultTxt.setText(full ? tt('battle.621771') : tt('battle.612a31', { floor: Math.floor(mf * 100) })).setColor(full ? '#ffd75e' : '#a1b2b6');
     // 조명
     this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);
     const L = this.env?.lightK < 1 || this.env?.blackT > 0 ? this.env.light.setScale(this.env.blackT > 0 ? 0.4 : this.env.lightK) : null;   // 심연·일식은 밝히는 범위가 좁다

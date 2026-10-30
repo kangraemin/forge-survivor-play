@@ -5,11 +5,12 @@ import { insetsGame } from './safeArea.js';
 import { font, toast, viewRect } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
 import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has } from './fx2.js';
+import { t, tt } from './i18n.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
-const PAT_NAME = { jump: '내려찍기!', charge: '돌진!', slam: '장판!', ring: '탄막!', aimed: '조준 사격!', summon: '소환!', sweep: '광선!', pools: '독 웅덩이!', wave: '파도!', tsunami: '해일!', spore: '포자!', bloom: '개화!', prism: '프리즘!', shatter: '파편!', gale: '돌풍!', cyclone: '회오리!', void: '공허!', eclipse: '일식!', burrow: '잠복!', sink: '함몰!', vent: '증기 분출!', overheat: '과열!', bolt: '낙뢰!', tempest: '폭풍!', mirror: '거울!', reflect: '반사!', hammer: '망치!', meteor: '운석!', icelance: '얼음 창!', frostquake: '서리 폭발!', blizzard: '눈보라!', volley: '작살 일제!', skydive: '급강하!', broadside: '옆구리 포격!', squall: '돌풍!', chime: '종소리!', rewindpat: '되감기!', gearsaw: '톱니!', stoptime: '멈춘 시간!' };
+const PAT_NAME = { jump: t('boss.107f3a'), charge: t('boss.420d2b'), slam: t('boss.029568'), ring: t('boss.6d24cb'), aimed: t('boss.36fc49'), summon: t('boss.d66332'), sweep: t('boss.40236d'), pools: t('boss.ec0b01'), wave: t('boss.997e54'), tsunami: t('boss.814117'), spore: t('boss.5c693c'), bloom: t('boss.0768ac'), prism: t('boss.3e97bd'), shatter: t('boss.56758f'), gale: t('boss.071b3a'), cyclone: t('boss.3dbf66'), void: t('boss.a11889'), eclipse: t('boss.895396'), burrow: t('boss.15b7f0'), sink: t('boss.4af90f'), vent: t('boss.418165'), overheat: t('boss.5bbfb4'), bolt: t('boss.7e82c9'), tempest: t('boss.d7dac6'), mirror: t('boss.e70e4d'), reflect: t('boss.2c22c2'), hammer: t('boss.ecef39'), meteor: t('boss.8d6129'), icelance: t('boss.93e20a'), frostquake: t('boss.e480b8'), blizzard: t('boss.87a560'), volley: t('boss.15e4f0'), skydive: t('boss.81537e'), broadside: t('boss.054902'), squall: t('boss.071b3a'), chime: t('boss.3e801a'), rewindpat: t('boss.099f7b'), gearsaw: t('boss.1497d7'), stoptime: t('boss.cb1b40') };
 const MID_EXTRA = ['ring', 'jump'];   // 50차: 중간보스 페이즈 1·2에서 늘어나는 새 패턴
-const PHASE_LINE = ['크윽… 이 정도로!', '이제 진심이다!'];
+const PHASE_LINE = [t('boss.d58fa8'), t('boss.6bf13b')];
 
 export class BossAI {
   constructor(s, key, hpMul, mid = false, formula = false) {
@@ -87,8 +88,8 @@ export class BossAI {
     // 50차: 시간 곡선 — 체력 비율이 (1 - 경과/목표시간)보다 빨리 닳으면 그 선까지 되채운다(보스가 숨을 고른다). 싸우는 중 레벨업·카드로 DPS가 늘어도, 고강화로 다시 해도 목표 시간 안엔 안 죽는다
     this.holdFloor();
     if (this.bar && !this.mid && !this.tired && this.age > D.BOSS_TIRED.ms) {
-      this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(`${this.b.name} · 지쳤다! 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}%`).setColor('#ff9a5a');
-      s.banner('보스가 지쳤다!', `받는 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}% · 몰아붙여라`);
+      this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(t('boss.6683a5', { name: this.b.name, round: Math.round((D.BOSS_TIRED.mul - 1) * 100) })).setColor('#ff9a5a');
+      s.banner(t('boss.4fceda'), t('boss.94d38c', { round: Math.round((D.BOSS_TIRED.mul - 1) * 100) }));
     }
     // 46차: 체력 70%·40%에서 페이즈가 바뀐다 — 보스가 포효하며 잠깐 멈추고(색 번쩍·화면 흔들림), 3초 동안 약점이 드러난다(맞으면 추가 피해)
     if (this.bar) for (const [i, f] of [[1, this.PH[0]], [2, this.PH[1]]]) if ((this.phase || 0) < i && m.hp <= m.maxHp * f) this.phaseShift(i, f);
@@ -109,8 +110,8 @@ export class BossAI {
       this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; this.aura = rageAura(s, m); phaseBorder(s, 800, 0xff4040); s.cameras.main.shake(300, 0.005); sfx('bossIn');
       const what = D.RAGE_WHAT[this.b.rage];
       // 중간 보스는 배너 대신 짧은 알림(예고 없이 새 공격이 나왔다)
-      if (this.b.rage && !this.mid) s.banner(`${this.b.name}이 분노했다!`, `새 공격: ${what}`);
-      else if (this.b.rage) toast(s, `${this.b.name} 분노! 새 공격: ${what}`, '#ff9a8a', 200);   // 위쪽 배너와 겹치지 않게
+      if (this.b.rage && !this.mid) s.banner(t('boss.c0f034', { name: this.b.name }), t('boss.8ec513', { what }));
+      else if (this.b.rage) toast(s, t('boss.143eb7', { name: this.b.name, what }), '#ff9a8a', 200);   // 위쪽 배너와 겹치지 않게
     }
     m.setFlipX(h.x < m.x);
     m.setDepth(10 + m.y / 1600);
@@ -140,7 +141,7 @@ export class BossAI {
 
   // 47차: 공격이 시작될 때 이름을 머리 위에 띄워 무엇이 오는지 알린다(바닥 예고와 함께)
   callout(pat) {
-    const s = this.s, m = this.m, name = PAT_NAME[pat] || '공격!';
+    const s = this.s, m = this.m, name = PAT_NAME[pat] || tt('boss.d036d7');
     const t = s.add.text(m.x, m.y - m.displayHeight * 0.62, name, font(10, '#ffe0a0', 3)).setOrigin(0.5).setDepth(41);
     s.tweens.add({ targets: t, y: t.y - 10, alpha: 0, duration: 900, delay: 350, onComplete: () => t.destroy() });
     // 16~18장 보스: 패턴이 시작되면 예고 그림(_telegraph)으로 잠깐 바뀐다
@@ -169,7 +170,7 @@ export class BossAI {
     s.hitstop = Math.max(s.hitstop || 0, 700);
     s.flashFx.setAlpha(0.45); s.tweens.add({ targets: s.flashFx, alpha: 0, duration: 450 });
     phaseBorder(s, 900);
-    this.bubble(PHASE_LINE[i - 1] || '이제부터 진짜다!');
+    this.bubble(PHASE_LINE[i - 1] || t('boss.b2e8aa'));
     s.cameras.main.shake(260, 0.006); s.cameras.main.flash(180, 255, 240, 200); sfx('bossIn');
     const ring = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(30).setScale(0.4);
     s.tweens.add({ targets: ring, scale: m.displayWidth / 28 + 1.4, alpha: 0, duration: 520, onComplete: () => ring.destroy() });
@@ -177,7 +178,7 @@ export class BossAI {
     this.openWeak(4200, true);
     const sh = this.tune.sh[i - 1] || 0;
     if (sh > 0) this.addShield(sh);
-    s.banner(`페이즈 ${i + 1}!`, sh > 0 ? '방어막! 약점이 열릴 때 쳐서 깨라' : '약점이 드러났다 · 지금 몰아쳐라 (추가 피해)');
+    s.banner(t('boss.8c09ea', { v: i + 1 }), sh > 0 ? t('boss.2fda71') : t('boss.0b1a5d'));
     s.log?.('boss_phase', { boss: this.key, phase: i + 1, at: f });
   }
 
@@ -190,7 +191,7 @@ export class BossAI {
     this.mark = has(s, 'weakpoint') ? s.add.sprite(m.x, m.y, 'x_weakpoint').setDepth(41).setScale(2.4).play('x_weakpoint')
       : s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(41).setAlpha(1);
     this.markTxt?.destroy();
-    this.markTxt = s.add.text(m.x, m.y, '약점!', font(11, '#ffe060', 3)).setOrigin(0.5).setDepth(41);
+    this.markTxt = s.add.text(m.x, m.y, t('battle.6fbdb2'), font(11, '#ffe060', 3)).setOrigin(0.5).setDepth(41);
     if (border) { this.wborder?.destroy(); this.wborder = weakBorder(s); }
     sfx('weak');
   }
@@ -216,7 +217,7 @@ export class BossAI {
       if (m.shield <= 0) this.breakShield();
     } else if (s.bt - (this.blockT || 0) > 450) {
       this.blockT = s.bt; sfx('deny', 120);
-      const t = s.add.text(m.x + R(-14, 14), m.y - m.displayHeight * 0.3, '막힘! 약점이 열릴 때', font(9, '#9ae0ff', 3)).setOrigin(0.5).setDepth(40);
+      const t = s.add.text(m.x + R(-14, 14), m.y - m.displayHeight * 0.3, tt('boss.56a61b'), font(9, '#9ae0ff', 3)).setOrigin(0.5).setDepth(40);
       s.tweens.add({ targets: t, y: t.y - 16, alpha: 0, duration: 600, onComplete: () => t.destroy() });
     }
     return 0;
@@ -228,7 +229,7 @@ export class BossAI {
     s.cameras.main.shake(200, 0.006); s.hitstop = Math.max(s.hitstop || 0, 120); sfx('boom', 80);
     const ring = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9ae0ff).setDepth(30).setScale(0.4);
     s.tweens.add({ targets: ring, scale: m.displayWidth / 28 + 1.2, alpha: 0, duration: 420, onComplete: () => ring.destroy() });
-    toast(s, '방어막 파괴!', '#9ae0ff', 200);
+    toast(s, t('boss.cc92eb'), '#9ae0ff', 200);
     s.log?.('boss_shield_break', { boss: this.key });
   }
 

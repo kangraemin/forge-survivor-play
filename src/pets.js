@@ -4,6 +4,7 @@ import { PETS, petPow, petFit, PET_GOOD } from './gear.js';
 import { sfx } from './sfx.js';
 import { font } from './ui.js';
 import { roleTick } from './petRoles.js';
+import { t, tt } from './i18n.js';
 
 const D2 = (a, b) => Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
 
@@ -63,7 +64,7 @@ export class Pet {
   block() {
     const s = this.s; s.petShield = false; this.t = 0;
     this.shieldFx?.setVisible(false);
-    const t = s.add.text(s.hero.x, s.hero.y - 28, '막음!', font(10, '#e8e2c8')).setOrigin(0.5).setDepth(40);
+    const t = s.add.text(s.hero.x, s.hero.y - 28, tt('pets.957f6d'), font(10, '#e8e2c8')).setOrigin(0.5).setDepth(40);
     s.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 600, onComplete: () => t.destroy() });
     sfx('deny');
   }

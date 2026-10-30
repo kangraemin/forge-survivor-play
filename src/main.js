@@ -4,6 +4,7 @@ import { portalReady } from './platform/index.js';   // 포털판(CrazyGames·it
 import './log.js';
 import { W, H } from './data.js';
 import { PX } from './ui.js';
+import { installTextFit } from './textfit.js';
 import { Boot } from './Boot.js';
 import { Lobby } from './Lobby.js';
 import { Battle } from './Battle.js';
@@ -29,6 +30,7 @@ const start = () => {
     input: { activePointers: 2 },
     scene: [Boot, Lobby, Battle],
   });
+  installTextFit(window.game);   // 긴 번역 글자를 상자 안에 맞춘다(한국어는 아무 일도 안 한다)
   // 판이 화면보다 조금 크면 줄일 때 픽셀이 빠져 글자가 깨진다: 줄일 때는 매끄럽게
   const smooth = () => window.game.canvas && (window.game.canvas.style.imageRendering = 'auto');
   smooth(); window.game.events.once('ready', smooth);

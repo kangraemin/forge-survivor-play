@@ -8,6 +8,7 @@ import { loadFx2, makeFx2Anims } from './fx2.js';
 import { MODE_SHEETS, MODE_IMAGES } from './modeArt.js';
 import { loadPetRoles, makePetRoleAnims } from './petRoles.js';
 import { BODY_LOOKS, COS_ROWS, WEAPON_LOOKS, HEAD_LOOKS, CASH_PETS, AURAS } from './cosmetics.js';
+import { t, tt } from './i18n.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
@@ -39,7 +40,7 @@ export class Boot extends Phaser.Scene {
     this.load.once('filecomplete-image-loading_bg', () => this.add.image(0, 0, 'loading_bg').setOrigin(0).setDisplaySize(W, H).setDepth(-10));
     const bar = this.add.rectangle(W / 2 - 80, H / 2, 0, 6, 0xffd75e).setOrigin(0, 0.5);
     this.add.rectangle(W / 2, H / 2, 164, 10).setStrokeStyle(1, 0x5b4f7a);
-    this.add.text(W / 2, H / 2 - 20, '대장간 서바이버', font(16, '#ffd75e')).setOrigin(0.5);
+    this.add.text(W / 2, H / 2 - 20, tt('boot.e414a2'), font(16, '#ffd75e')).setOrigin(0.5);
     this.load.on('progress', v => { bar.width = 160 * v; });
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
     for (const k of REQUIRED.concat(OPTIONAL)) this.load.image(k, `assets/${k}.png`);

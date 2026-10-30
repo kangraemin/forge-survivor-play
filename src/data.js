@@ -1,4 +1,5 @@
 import { gearStats, wMul, wtypeOf, spReq, SP_RESET_GEM } from './gear.js';
+import { t } from './i18n.js';
 // 게임 데이터와 밸런스 수치. 숫자는 전부 여기서만 바꾼다. 근거는 docs/DESIGN.md
 // 세로는 폰 화면 비율에 맞춰 늘린다(48차): 480(16:9) ~ 585(19.5:9). 위아래 빈 띠 대신 HUD·조이스틱 영역으로 쓴다
 export const W = 270;
@@ -6,26 +7,26 @@ export const H = (() => { try { const r = innerHeight / innerWidth; return r > 0
 
 // 챕터: 몬스터 3종 + 보스. dur은 일반 스테이지 길이(초)
 export const CHAPTERS = [
-  { name: '이끼 폐허', tiles: 'tiles', mobs: ['slime', 'skel', 'bat'], boss: 'kingslime', dur: 150, dark: 0.45, light: 0xff9a3c },
-  { name: '망자의 묘지', tiles: 'tile2', mobs: ['zombie', 'ghost', 'spider'], boss: 'lich', dur: 165, dark: 0.48, light: 0x9ad8ff },
-  { name: '용암 동굴', tiles: 'tile3', mobs: ['imp', 'golem', 'fskull'], boss: 'lavagolem', dur: 180, dark: 0.5, light: 0xff6a2a },
-  { name: '얼어붙은 설원', tiles: 'tile4', mobs: ['wolf', 'yeti', 'icesp'], boss: 'wyrm', dur: 195, dark: 0.35, light: 0xbfe8ff },
-  { name: '마왕성', tiles: 'tile5', mobs: ['dknight', 'cultist', 'gargoyle'], boss: 'demonlord', dur: 210, dark: 0.5, light: 0xff4060 },
+  { name: t('data.46c389'), tiles: 'tiles', mobs: ['slime', 'skel', 'bat'], boss: 'kingslime', dur: 150, dark: 0.45, light: 0xff9a3c },
+  { name: t('data.50327f'), tiles: 'tile2', mobs: ['zombie', 'ghost', 'spider'], boss: 'lich', dur: 165, dark: 0.48, light: 0x9ad8ff },
+  { name: t('data.5575d2'), tiles: 'tile3', mobs: ['imp', 'golem', 'fskull'], boss: 'lavagolem', dur: 180, dark: 0.5, light: 0xff6a2a },
+  { name: t('data.6e942e'), tiles: 'tile4', mobs: ['wolf', 'yeti', 'icesp'], boss: 'wyrm', dur: 195, dark: 0.35, light: 0xbfe8ff },
+  { name: t('data.f5d844'), tiles: 'tile5', mobs: ['dknight', 'cultist', 'gargoyle'], boss: 'demonlord', dur: 210, dark: 0.5, light: 0xff4060 },
   // 6장부터: env는 장 고유 지형·환경(envfx.js), note는 '새로운 점' 한 줄(판 시작 때 알려 준다). 설계표 docs/chapters.md
-  { name: '가라앉은 신전', tiles: 'tile6', mobs: ['drowned', 'coral', 'wraith'], boss: 'tidewyrm', dur: 232, dark: 0.45, light: 0x5ae0d0, deco: 0x7ad8d0, env: 'tide', note: '바닥의 물웅덩이를 밟으면 느려진다 · 물귀신은 물속에 잠겨 피한다' },
-  { name: '독안개 늪', tiles: 'tile7', mobs: ['toxslime', 'rotgiant', 'sporespider'], boss: 'swampqueen', dur: 240, dark: 0.5, light: 0x9aff5a, deco: 0x9ac060, env: 'fog', note: '늪 물살이 몸을 실어 간다 · 독안개도 물살을 타고 떠다닌다 · 포자 거미는 지나간 길에 독구름을 남긴다' },
-  { name: '수정 광산', tiles: 'tile8', mobs: ['crystbat', 'crystgolem', 'prism'], boss: 'crystcolossus', dur: 248, dark: 0.5, light: 0xc080ff, deco: 0xb090ff, env: 'beam', note: '수정 기둥이 레이저를 쏘며 돈다 · 프리즘 정령의 탄은 갈라진다' },
-  { name: '하늘 성채', tiles: 'tile9', mobs: ['galewolf', 'citknight', 'galegarg'], boss: 'stormcaptain', dur: 256, dark: 0.3, light: 0xe8f4ff, deco: 0xd8e8ff, env: 'wind', note: '바람이 방향을 바꿔 가며 분다 · 돌풍 가고일이 밀어낸다' },
-  { name: '심연', tiles: 'tile10', mobs: ['voidslime', 'abysspider', 'voidpriest'], boss: 'voidlord', dur: 264, dark: 0.62, light: 0x6a5aff, deco: 0x6a70c0, env: 'abyss', note: '시야가 좁다 · 어둠 속 적은 가까이 와야 보인다' },
-  { name: '모래 폐도', tiles: 'tile11', mobs: ['sandskel', 'scorpion', 'mirage'], boss: 'sandcolossus', dur: 272, dark: 0.3, light: 0xffd070, deco: 0xe0c080, env: 'sand', note: '유사 구덩이가 끌어당긴다 · 모래 해골은 한 번 되살아나고 전갈은 모래에 숨었다 튀어나온다' },
-  { name: '증기 공방', tiles: 'tile12', mobs: ['clockimp', 'steelgiant', 'steamskull'], boss: 'steamgeneral', dur: 280, dark: 0.45, light: 0xff9a50, deco: 0xd09060, env: 'steam', note: '증기 분출구가 박자대로 뿜는다 · 태엽 임프는 오래 두면 빨라지고 강철 거신은 방어 자세를 취한다' },
-  { name: '폭풍 평원', tiles: 'tile13', mobs: ['stormwolf', 'stormyeti', 'stormspirit'], boss: 'thunderdragon', dur: 288, dark: 0.4, light: 0x8ac8ff, deco: 0x90b0d0, env: 'storm', note: '피뢰침 기둥 곁에선 번개가 기둥에 떨어진다 · 기둥 둘레 몹이 함께 맞고 기둥에서 멀면 낙뢰가 나를 노린다 · 먹구름 설인 곁으로도 몰린다' },
-  { name: '거울 궁전', tiles: 'tile14', mobs: ['mirrorknight', 'phantompriest', 'glassgarg'], boss: 'mirrorlord', dur: 296, dark: 0.35, light: 0x80ffe0, deco: 0x90e0d0, env: 'mirror', note: '거울 빛줄기 둘이 서로 반대로 돈다 · 빛나는 거울 기사를 치면 되받는다 · 환영 사제는 분신을 만든다' },
-  { name: '원초의 대장간', tiles: 'tile15', mobs: ['anvilimp', 'flamegiant', 'starskull'], boss: 'forgegod', dur: 304, dark: 0.5, light: 0xffd75e, deco: 0xe0b060, env: 'forge', note: '모루 위에 2초 서면 화염이 터지고 5초간 피해 +100%(식은 모루는 6초 쉼) · 불 균열과 낙뢰도 온다' },
+  { name: t('data.2cc3d4'), tiles: 'tile6', mobs: ['drowned', 'coral', 'wraith'], boss: 'tidewyrm', dur: 232, dark: 0.45, light: 0x5ae0d0, deco: 0x7ad8d0, env: 'tide', note: t('data.570308') },
+  { name: t('data.3d8de3'), tiles: 'tile7', mobs: ['toxslime', 'rotgiant', 'sporespider'], boss: 'swampqueen', dur: 240, dark: 0.5, light: 0x9aff5a, deco: 0x9ac060, env: 'fog', note: t('data.45d9c3') },
+  { name: t('data.0c1749'), tiles: 'tile8', mobs: ['crystbat', 'crystgolem', 'prism'], boss: 'crystcolossus', dur: 248, dark: 0.5, light: 0xc080ff, deco: 0xb090ff, env: 'beam', note: t('data.2edb78') },
+  { name: t('data.416257'), tiles: 'tile9', mobs: ['galewolf', 'citknight', 'galegarg'], boss: 'stormcaptain', dur: 256, dark: 0.3, light: 0xe8f4ff, deco: 0xd8e8ff, env: 'wind', note: t('data.5b1564') },
+  { name: t('data.e5a7aa'), tiles: 'tile10', mobs: ['voidslime', 'abysspider', 'voidpriest'], boss: 'voidlord', dur: 264, dark: 0.62, light: 0x6a5aff, deco: 0x6a70c0, env: 'abyss', note: t('data.0259b9') },
+  { name: t('data.edaa29'), tiles: 'tile11', mobs: ['sandskel', 'scorpion', 'mirage'], boss: 'sandcolossus', dur: 272, dark: 0.3, light: 0xffd070, deco: 0xe0c080, env: 'sand', note: t('data.6fb70a') },
+  { name: t('data.2a11eb'), tiles: 'tile12', mobs: ['clockimp', 'steelgiant', 'steamskull'], boss: 'steamgeneral', dur: 280, dark: 0.45, light: 0xff9a50, deco: 0xd09060, env: 'steam', note: t('data.826af1') },
+  { name: t('data.40296b'), tiles: 'tile13', mobs: ['stormwolf', 'stormyeti', 'stormspirit'], boss: 'thunderdragon', dur: 288, dark: 0.4, light: 0x8ac8ff, deco: 0x90b0d0, env: 'storm', note: t('data.9d1583') },
+  { name: t('data.3e6189'), tiles: 'tile14', mobs: ['mirrorknight', 'phantompriest', 'glassgarg'], boss: 'mirrorlord', dur: 296, dark: 0.35, light: 0x80ffe0, deco: 0x90e0d0, env: 'mirror', note: t('data.449728') },
+  { name: t('data.f42027'), tiles: 'tile15', mobs: ['anvilimp', 'flamegiant', 'starskull'], boss: 'forgegod', dur: 304, dark: 0.5, light: 0xffd75e, deco: 0xe0b060, env: 'forge', note: t('data.71c4c4') },
   // 16장부터는 업데이트 장: 출시 때는 잠겨 있고(version.json contentChapters), 값을 올리면 열린다. 설계표 docs/chapters.md
-  { name: '얼어붙은 왕궁', tiles: 'tile16', mobs: ['frostguard', 'froshound', 'frostmage'], boss: 'frostking', dur: 312, dark: 0.4, light: 0x8ad8ff, deco: 0x90c0e8, env: 'palace', lateCh: 16, note: '얼음판 위에선 미끄러진다 · 서리 분출구가 터지면 나도 몹도 얼어붙는다 · 방패기사는 방패를 들고 돌진한다' },
-  { name: '하늘 고래 항로', tiles: 'tile17', mobs: ['harpooner', 'skyray', 'balloon'], boss: 'skywhale', dur: 320, dark: 0.3, light: 0xffc890, deco: 0xc89860, env: 'skyway', lateCh: 17, note: '돛 곁에 서면 바람에 실려 간다 · 갑판 분출구는 나를 날려 보낸다 · 작살병의 작살에 끌려간다' },
-  { name: '시간 시계탑', tiles: 'tile18', mobs: ['gearbeetle', 'duelist', 'alarmowl'], boss: 'clockwarden', dur: 328, dark: 0.45, light: 0xffd890, deco: 0xc0a060, env: 'clocktower', lateCh: 18, note: '멈춘 시계 둘레에선 나도 몹도 느려진다 · 모래시계 곁에 2초 서면 시간이 되감겨 체력이 찬다 · 알람 올빼미를 먼저 잡아라' },
+  { name: t('data.e37437'), tiles: 'tile16', mobs: ['frostguard', 'froshound', 'frostmage'], boss: 'frostking', dur: 312, dark: 0.4, light: 0x8ad8ff, deco: 0x90c0e8, env: 'palace', lateCh: 16, note: t('data.724478') },
+  { name: t('data.f1967b'), tiles: 'tile17', mobs: ['harpooner', 'skyray', 'balloon'], boss: 'skywhale', dur: 320, dark: 0.3, light: 0xffc890, deco: 0xc89860, env: 'skyway', lateCh: 17, note: t('data.1d0e45') },
+  { name: t('data.d0cadf'), tiles: 'tile18', mobs: ['gearbeetle', 'duelist', 'alarmowl'], boss: 'clockwarden', dur: 328, dark: 0.45, light: 0xffd890, deco: 0xc0a060, env: 'clocktower', lateCh: 18, note: t('data.1cba79') },
 ];
 // 출시 본편 장 수. 16장부터는 업데이트로 연다(원격 설정 contentChapters, 기본 15). 웹/앱은 부팅 때 version.json 값을 받아 둔다
 export const MAIN_CHAPTERS = 15;
@@ -109,24 +110,24 @@ export const MOBS = {
 };
 
 export const MOB_NAMES = {
-  slime: '슬라임', skel: '해골', bat: '박쥐', zombie: '좀비', ghost: '유령', spider: '거미', imp: '임프', golem: '골렘', fskull: '불해골',
-  wolf: '늑대', yeti: '설인', icesp: '얼음 정령', dknight: '암흑 기사', cultist: '사교도', gargoyle: '가고일',
-  drowned: '익사한 병사', coral: '산호 수호상', wraith: '물귀신', toxslime: '독 점액', rotgiant: '부패 거인', sporespider: '포자 거미',
-  crystbat: '수정 박쥐', crystgolem: '수정 골렘', prism: '프리즘 정령', galewolf: '바람 늑대', citknight: '성채 기사', galegarg: '돌풍 가고일',
-  voidslime: '공허 점액', abysspider: '심연 거미', voidpriest: '공허 사제',
-  sandskel: '모래 해골', scorpion: '사막 전갈', mirage: '신기루 유령', clockimp: '태엽 임프', steelgiant: '강철 거신', steamskull: '증기 불해골',
-  stormwolf: '번개 늑대', stormyeti: '먹구름 설인', stormspirit: '뇌운 정령', mirrorknight: '거울 기사', phantompriest: '환영 사제', glassgarg: '유리 가고일',
-  anvilimp: '쇠모루 임프', flamegiant: '불꽃 거신', starskull: '별빛 불해골',
-  frostguard: '빙정 방패기사', froshound: '빙결 사냥개', frostmage: '궁정 서리술사', harpooner: '비행선 작살병', skyray: '구름 가오리', balloon: '풍선 해파리',
-  gearbeetle: '태엽 딱정벌레', duelist: '진자 결투사', alarmowl: '알람 올빼미',
+  slime: t('data.d4d298'), skel: t('data.5cbb9a'), bat: t('data.b1ed9c'), zombie: t('data.6d1c96'), ghost: t('data.f71cd6'), spider: t('data.680d7f'), imp: t('data.54ec56'), golem: t('data.473945'), fskull: t('data.e34e26'),
+  wolf: t('data.82faf9'), yeti: t('data.de142a'), icesp: t('data.68ada1'), dknight: t('data.47ee1c'), cultist: t('data.fa11ec'), gargoyle: t('data.563c96'),
+  drowned: t('data.c9ca2f'), coral: t('data.e51a88'), wraith: t('data.8b4d7b'), toxslime: t('data.46da7d'), rotgiant: t('data.9ee7d3'), sporespider: t('data.098cae'),
+  crystbat: t('data.a36156'), crystgolem: t('data.5af8ed'), prism: t('data.095bde'), galewolf: t('data.ae1c59'), citknight: t('data.d87de7'), galegarg: t('data.eda6c8'),
+  voidslime: t('data.dd614b'), abysspider: t('data.87a32a'), voidpriest: t('data.dce5af'),
+  sandskel: t('data.ed4455'), scorpion: t('data.c51875'), mirage: t('data.c77dc0'), clockimp: t('data.8ccba8'), steelgiant: t('data.5441ea'), steamskull: t('data.9137a4'),
+  stormwolf: t('data.29e4c4'), stormyeti: t('data.378016'), stormspirit: t('data.a99ef9'), mirrorknight: t('data.b3b475'), phantompriest: t('data.55fd9c'), glassgarg: t('data.7a4652'),
+  anvilimp: t('data.bb5bd7'), flamegiant: t('data.5db3d1'), starskull: t('data.59ee18'),
+  frostguard: t('data.20d4ce'), froshound: t('data.443dbb'), frostmage: t('data.2590f1'), harpooner: t('data.4ae714'), skyray: t('data.4ac09c'), balloon: t('data.ed8dfa'),
+  gearbeetle: t('data.59164c'), duelist: t('data.9357d2'), alarmowl: t('data.fbd14f'),
 };
 // 변종: 스테이지마다 하나씩 새로 나와 판마다 몬스터가 달라 보이게 한다(같은 그림에 색·크기·행동을 바꾼다)
 export const VARIANTS = {
-  split: { pre: '분열', desc: '쓰러지면 둘로 갈라진다', tint: 0xc070ff },
-  swift: { pre: '광폭', desc: '붉게 달아오르면 돌진한다', tint: 0xff5050, spd: 1.35, ai: 'charge' },
-  armor: { pre: '철갑', desc: '단단하고 잘 밀리지 않는다', tint: 0x8fa8d0, hp: 1.5, scale: 1.2, kb: 0.25 },
-  burst: { pre: '폭탄', desc: '쓰러지면 잠시 뒤 터진다 — 떨어져라', tint: 0xffa030 },
-  giant: { pre: '거대', desc: '크고 질기다', tint: 0xffe070, hp: 3, scale: 1.7, spd: 0.8, kb: 0.2 },
+  split: { pre: t('data.195f59'), desc: t('data.883ea4'), tint: 0xc070ff },
+  swift: { pre: t('data.830f2f'), desc: t('data.905865'), tint: 0xff5050, spd: 1.35, ai: 'charge' },
+  armor: { pre: t('data.f42428'), desc: t('data.16a142'), tint: 0x8fa8d0, hp: 1.5, scale: 1.2, kb: 0.25 },
+  burst: { pre: t('data.d7c9c6'), desc: t('data.a94ad9'), tint: 0xffa030 },
+  giant: { pre: t('data.4dfd4c'), desc: t('data.a98400'), tint: 0xffe070, hp: 3, scale: 1.7, spd: 0.8, kb: 0.2 },
 };
 // x-2에 새로 나오는 변종은 장마다 다르다: [챕터 몹 번호, 변종]. 2장부터 x-1엔 앞 장 변종이 섞인다. 보스 판은 없음
 const CH_VARIANT = [[0, 'split'], [2, 'swift'], [1, 'armor'], [0, 'burst'], [2, 'giant'], [2, 'swift'], [0, 'armor'], [2, 'burst'], [1, 'giant'], [0, 'swift']];
@@ -134,9 +135,9 @@ export const stageVariant = (c, s) => s === 1 ? CH_VARIANT[c % CH_VARIANT.length
 export const VARIANT_RATE = 0.22, VARIANT_OLD_RATE = 0.1;   // 이번 변종 / 앞 스테이지 변종이 섞이는 비율
 // 판 규칙: 같은 스테이지도 판마다 다르게 흘러가도록 시작할 때 하나를 뽑는다(안 뽑힐 수도 있다)
 export const RUN_MODS = [
-  { id: 'horde', name: '떼', desc: '한 종류가 몰려온다' },
-  { id: 'mutant', name: '변종 소굴', desc: '변종이 두 배로 나온다' },
-  { id: 'rush', name: '질풍', desc: '몹이 빠르지만 약하다', spd: 1.2, hp: 0.85 },
+  { id: 'horde', name: t('data.285d7e'), desc: t('data.fcb5e4') },
+  { id: 'mutant', name: t('data.08ab5a'), desc: t('data.05e932') },
+  { id: 'rush', name: t('data.96e711'), desc: t('data.2f2d43'), spd: 1.2, hp: 0.85 },
 ];
 export const RUN_MOD_CHANCE = 0.6;
 // x-2는 판 규칙이 정해져 있다(장마다 돌아가며). 다시 할 땐 위 확률로 다른 규칙이 섞인다
@@ -146,33 +147,33 @@ export const stageMod = c => RUN_MODS[[2, 0, 1, 0, 2, 1, 2, 0, 2, 1][c % 10]];  
 // rage: 체력 절반 아래에서 새로 섞여 나오는 공격(같은 패턴만 반복된다는 평가)
 // 보스 분노 때 알리는 새 공격 이름
 export const RAGE_WHAT = {
-  sweep: '휩쓰는 광선', pools: '남는 장판', slam: '연속 내려찍기',
-  tsunami: '삼중 해일', bloom: '독꽃', shatter: '수정 파편 폭발', cyclone: '회오리', eclipse: '일식과 틈 있는 탄 고리',
-  sink: '모래 늪', overheat: '과열', tempest: '뇌우', reflect: '반사 방패', meteor: '유성우',
-  blizzard: '눈보라와 얼음 가시', squall: '돛 뒤집기 돌풍', stoptime: '멈춘 시간',
+  sweep: t('data.02a265'), pools: t('data.b8e689'), slam: t('data.c17c6b'),
+  tsunami: t('data.a5cc13'), bloom: t('data.2b305f'), shatter: t('data.e6c7d9'), cyclone: t('data.2fab2d'), eclipse: t('data.ee87da'),
+  sink: t('data.be3ab6'), overheat: t('data.1c9ca0'), tempest: t('data.d60d02'), reflect: t('data.0db4d5'), meteor: t('data.1b6824'),
+  blizzard: t('data.2b095a'), squall: t('data.2ec769'), stoptime: t('data.087d4f'),
 };
 export const BOSSES = {
-  kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'charge', 'summon', 'slam', 'ring'], rage: 'pools' },
-  lich: { name: '리치 왕', sheet: 'boss1', row: 1, hp: 1500, dmg: 12, spd: 22, color: 0x9dff7a, pattern: ['ring', 'summon', 'aimed', 'ring'], rage: 'sweep' },
-  lavagolem: { name: '용암 거신', sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
-  wyrm: { name: '서리 용', sheet: 'boss2', row: 0, hp: 1450, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
-  demonlord: { name: '마왕', sheet: 'boss2', row: 1, hp: 3000, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'], rage: 'sweep' },
+  kingslime: { name: t('data.052600'), sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'charge', 'summon', 'slam', 'ring'], rage: 'pools' },
+  lich: { name: t('data.8938a1'), sheet: 'boss1', row: 1, hp: 1500, dmg: 12, spd: 22, color: 0x9dff7a, pattern: ['ring', 'summon', 'aimed', 'ring'], rage: 'sweep' },
+  lavagolem: { name: t('data.7464f1'), sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
+  wyrm: { name: t('data.05e151'), sheet: 'boss2', row: 0, hp: 1450, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
+  demonlord: { name: t('data.93df8f'), sheet: 'boss2', row: 1, hp: 3000, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'], rage: 'sweep' },
   // 6장~ 보스: 새 패턴(envfx.js BOSS_PATTERNS)이 섞인다. rage는 체력 절반 아래에서 끼어드는 새 공격
-  tidewyrm: { name: '해일의 수문룡', sheet: 'boss3', row: 0, hp: 1500, dmg: 14, spd: 30, color: 0x5ae0d0, pattern: ['wave', 'aimed', 'jump', 'wave'], rage: 'tsunami' },
-  swampqueen: { name: '늪의 여왕', sheet: 'boss3', row: 1, hp: 1650, dmg: 14, spd: 24, color: 0xb060e0, pattern: ['spore', 'summon', 'aimed', 'spore'], rage: 'bloom' },
-  crystcolossus: { name: '수정 거신', sheet: 'boss3', row: 2, hp: 1800, dmg: 15, spd: 18, color: 0xb080ff, pattern: ['prism', 'slam', 'charge', 'prism'], rage: 'shatter' },
-  stormcaptain: { name: '폭풍의 기사단장', sheet: 'boss4', row: 0, hp: 1700, dmg: 15, spd: 32, color: 0xd8e8ff, pattern: ['gale', 'charge', 'aimed', 'gale'], rage: 'cyclone' },
-  voidlord: { name: '공허 군주', sheet: 'boss4', row: 1, hp: 2000, dmg: 16, spd: 26, color: 0x7a6aff, pattern: ['void', 'ring', 'summon', 'void'], rage: 'eclipse' },
-  sandcolossus: { name: '모래 거신', sheet: 'boss4', row: 2, hp: 2100, dmg: 16, spd: 20, color: 0xe0c080, pattern: ['burrow', 'slam', 'summon', 'burrow'], rage: 'sink' },
-  steamgeneral: { name: '증기 장군', sheet: 'boss5', row: 0, hp: 2250, dmg: 17, spd: 28, color: 0xe08a50, pattern: ['vent', 'aimed', 'summon', 'vent'], rage: 'overheat' },
-  thunderdragon: { name: '뇌룡', sheet: 'boss5', row: 1, hp: 2400, dmg: 17, spd: 34, color: 0x9a8aff, pattern: ['bolt', 'charge', 'aimed', 'bolt'], rage: 'tempest' },
-  mirrorlord: { name: '거울의 군주', sheet: 'boss5', row: 2, hp: 2550, dmg: 18, spd: 26, color: 0x90ffe8, pattern: ['mirror', 'ring', 'aimed', 'mirror'], rage: 'reflect' },
-  forgegod: { name: '원초의 대장신', sheet: 'boss6', row: 0, hp: 2800, dmg: 19, spd: 24, color: 0xffd75e, pattern: ['hammer', 'ring', 'slam', 'hammer'], rage: 'meteor' },
+  tidewyrm: { name: t('data.2758f7'), sheet: 'boss3', row: 0, hp: 1500, dmg: 14, spd: 30, color: 0x5ae0d0, pattern: ['wave', 'aimed', 'jump', 'wave'], rage: 'tsunami' },
+  swampqueen: { name: t('data.782796'), sheet: 'boss3', row: 1, hp: 1650, dmg: 14, spd: 24, color: 0xb060e0, pattern: ['spore', 'summon', 'aimed', 'spore'], rage: 'bloom' },
+  crystcolossus: { name: t('data.c93590'), sheet: 'boss3', row: 2, hp: 1800, dmg: 15, spd: 18, color: 0xb080ff, pattern: ['prism', 'slam', 'charge', 'prism'], rage: 'shatter' },
+  stormcaptain: { name: t('data.0e877d'), sheet: 'boss4', row: 0, hp: 1700, dmg: 15, spd: 32, color: 0xd8e8ff, pattern: ['gale', 'charge', 'aimed', 'gale'], rage: 'cyclone' },
+  voidlord: { name: t('data.15bd71'), sheet: 'boss4', row: 1, hp: 2000, dmg: 16, spd: 26, color: 0x7a6aff, pattern: ['void', 'ring', 'summon', 'void'], rage: 'eclipse' },
+  sandcolossus: { name: t('data.134571'), sheet: 'boss4', row: 2, hp: 2100, dmg: 16, spd: 20, color: 0xe0c080, pattern: ['burrow', 'slam', 'summon', 'burrow'], rage: 'sink' },
+  steamgeneral: { name: t('data.37ac3b'), sheet: 'boss5', row: 0, hp: 2250, dmg: 17, spd: 28, color: 0xe08a50, pattern: ['vent', 'aimed', 'summon', 'vent'], rage: 'overheat' },
+  thunderdragon: { name: t('data.da6742'), sheet: 'boss5', row: 1, hp: 2400, dmg: 17, spd: 34, color: 0x9a8aff, pattern: ['bolt', 'charge', 'aimed', 'bolt'], rage: 'tempest' },
+  mirrorlord: { name: t('data.91fb7c'), sheet: 'boss5', row: 2, hp: 2550, dmg: 18, spd: 26, color: 0x90ffe8, pattern: ['mirror', 'ring', 'aimed', 'mirror'], rage: 'reflect' },
+  forgegod: { name: t('data.66d303'), sheet: 'boss6', row: 0, hp: 2800, dmg: 19, spd: 24, color: 0xffd75e, pattern: ['hammer', 'ring', 'slam', 'hammer'], rage: 'meteor' },
   // 16~18장 보스: 시트는 assets/ch16-18/boss<장>_r0(이동 2프레임)·_telegraph(패턴 예고 2프레임)
-  frostking: { name: '서리 왕', sheet: 'boss16', row: 0, hp: 3000, dmg: 20, spd: 26, color: 0x8ad8ff, pattern: ['icelance', 'charge', 'frostquake', 'icelance'], rage: 'blizzard', lateCh: 16 },
-  skywhale: { name: '하늘 고래 함선', sheet: 'boss17', row: 0, hp: 3250, dmg: 21, spd: 24, color: 0xe08a50, pattern: ['volley', 'skydive', 'broadside', 'volley'], rage: 'squall', lateCh: 17 },
-  clockwarden: { name: '시계탑 수호자', sheet: 'boss18', row: 0, hp: 3500, dmg: 22, spd: 22, color: 0xd0a050, pattern: ['chime', 'rewindpat', 'gearsaw', 'rewindpat'], rage: 'stoptime', lateCh: 18 },
-  general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
+  frostking: { name: t('data.3d46cb'), sheet: 'boss16', row: 0, hp: 3000, dmg: 20, spd: 26, color: 0x8ad8ff, pattern: ['icelance', 'charge', 'frostquake', 'icelance'], rage: 'blizzard', lateCh: 16 },
+  skywhale: { name: t('data.862fee'), sheet: 'boss17', row: 0, hp: 3250, dmg: 21, spd: 24, color: 0xe08a50, pattern: ['volley', 'skydive', 'broadside', 'volley'], rage: 'squall', lateCh: 17 },
+  clockwarden: { name: t('data.f3231a'), sheet: 'boss18', row: 0, hp: 3500, dmg: 22, spd: 22, color: 0xd0a050, pattern: ['chime', 'rewindpat', 'gearsaw', 'rewindpat'], rage: 'stoptime', lateCh: 18 },
+  general: { name: t('battle.20631e'), sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
 };
 
 // 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다. 4~5장 벽이 너무 높아 조금 낮췄다
@@ -196,30 +197,30 @@ export const timeHp = f => 0.75 + 0.8 * f + 0.45 * f * f;   // 초반 몹은 약
 // ── 무기·대장간 ──
 const tierAtk = t => Math.round(190 * Math.pow(REC_G, 2 * (t - 5) + 1));
 export const TIERS = [
-  { name: '녹슨 철검', atk: 10, icon: 0 },
-  { name: '강철검', atk: 21, icon: 1 },
-  { name: '미스릴검', atk: 44, icon: 2 },
-  { name: '룬 대검', atk: 92, icon: 2, tint: 0xffa0ff },
-  { name: '전설의 화염검', atk: 190, icon: 3 },
+  { name: t('data.1754a6'), atk: 10, icon: 0 },
+  { name: t('data.15368e'), atk: 21, icon: 1 },
+  { name: t('data.712653'), atk: 44, icon: 2 },
+  { name: t('data.8b8372'), atk: 92, icon: 2, tint: 0xffa0ff },
+  { name: t('data.c29e2a'), atk: 190, icon: 3 },
   // 6장부터 두 장마다 한 등급. atk은 그 등급을 처음 쓰는 장의 권장 기준(REC_BASE)과 같다
-  { name: '성광의 검', atk: tierAtk(5), icon: 3, tint: 0xfff0a0 },
-  { name: '용린 대검', atk: tierAtk(6), icon: 3, tint: 0x80ffd0 },
-  { name: '천공의 신검', atk: tierAtk(7), icon: 3, tint: 0xa0d8ff },
-  { name: '심연의 마검', atk: tierAtk(8), icon: 3, tint: 0x9a80ff },
-  { name: '창세의 대장검', atk: tierAtk(9), icon: 3, tint: 0xffe070 },
+  { name: t('data.90ab26'), atk: tierAtk(5), icon: 3, tint: 0xfff0a0 },
+  { name: t('data.2c337f'), atk: tierAtk(6), icon: 3, tint: 0x80ffd0 },
+  { name: t('data.9f785c'), atk: tierAtk(7), icon: 3, tint: 0xa0d8ff },
+  { name: t('data.1d806b'), atk: tierAtk(8), icon: 3, tint: 0x9a80ff },
+  { name: t('data.0b9bef'), atk: tierAtk(9), icon: 3, tint: 0xffe070 },
 ];
 // 승급에 필요한 깬 판 수(그 등급으로 올라가려면). 5장까지는 장마다, 6장부터는 두 장마다
 export const TIER_AT = [0, 3, 6, 9, 12, 15, 21, 27, 33, 39];
 // 그 장을 권장할 때 쓰는 무기 공격력 기준
 export const REC_BASE = c => c < 5 ? TIERS[c].atk : Math.round(190 * Math.pow(REC_G, c - 4));
 // 무기 종류마다 이름이 다르다(검은 원래 이름, 나머지는 등급 + 무기)
-const TIER_PRE = ['녹슨', '강철', '미스릴', '룬', '전설의', '성광의', '용린', '천공의', '심연의', '창세의'];
+const TIER_PRE = [t('data.a30c87'), t('data.5d91e5'), t('data.4834de'), t('data.967598'), t('data.40f556'), t('data.cafc55'), t('data.eeac0d'), t('data.c53ca8'), t('data.82267f'), t('data.8ec2bb')];
 export const tierName = (tier, w) => !w || w.id === 'sword' ? TIERS[tier].name : `${TIER_PRE[tier]} ${w.noun}`;
 // +5·+10·+15·+20을 넘을 때마다 칼이 한 번 더 깨어난다(×1.1). 한 단계 +10%만으론 강해진 게 안 느껴진다
 export const ENH_MILESTONE = 5, MILESTONE_MUL = 1.1;
 // 강화 각성(+5/+10/+15): 숫자만 오르지 않고 공격 모양이 바뀐다(weapons.js sword/shoot/enhWave)
-export const AWAKENINGS = [[5, '검기', '공격할 때 칼바람이 함께 날아간다'], [10, '불꽃 연쇄', '잡은 적이 터져 옆 적까지 쓸어버린다'], [15, '폭풍 베기', '두 번째 공격마다 사방을 베고 잔상이 남는다']];
-export const awakenText = enh => { const a = AWAKENINGS.filter(x => enh >= x[0]); return a.length ? [`+${a[a.length - 1][0]} 각성 · ${a.map(x => x[1]).join(' · ')}`, a[a.length - 1][2]] : null; };
+export const AWAKENINGS = [[5, t('data.632300'), t('data.4ee8e5')], [10, t('data.71dd53'), t('data.e6c04c')], [15, t('data.e63f67'), t('data.051ed7')]];
+export const awakenText = enh => { const a = AWAKENINGS.filter(x => enh >= x[0]); return a.length ? [t('data.33b2fe', { v: a[a.length - 1][0], join: a.map(x => x[1]).join(' · ') }), a[a.length - 1][2]] : null; };
 // +11부터는 한 단계마다 ×1.15: 더하기로는 단계가 오를수록 오름폭이 +10%→+8%로 줄어 파괴를 무릅쓸 이유가 없었다
 export const OVER10_MUL = 1.15;
 export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * Math.min(enh, 10)) * Math.pow(OVER10_MUL, Math.max(0, enh - 10)) * Math.pow(MILESTONE_MUL, Math.floor(enh / ENH_MILESTONE));
@@ -261,7 +262,7 @@ export const FIRST_CLEAR_MUL = 2.5;
 // 마지막 장(15장) 보스를 처음 잡을 때 따로 받는 완주 보상(업적·무기·펫과 별개). 장비는 한 등급 위로 2개
 export const FINALE = { gem: 150, sweep: 3, guard: 2, stone: 40, items: 2 };
 // 16~18장 보스를 처음 잡을 때 받는 새 보상(장마다 하나씩). 18장은 마지막이라 크다. 세트 장비(palace·skyway·clock)는 gear.js
-export const LATE_FIRST = { 15: { gem: 100, stone: 30, guard: 2, items: 1, title: '서리 왕궁의 정복자' }, 16: { gem: 120, stone: 36, guard: 2, items: 1, sweep: 2 }, 17: { gem: 200, stone: 50, guard: 3, items: 2, sweep: 3 } };
+export const LATE_FIRST = { 15: { gem: 100, stone: 30, guard: 2, items: 1, title: t('codex.93326b') }, 16: { gem: 120, stone: 36, guard: 2, items: 1, sweep: 2 }, 17: { gem: 200, stone: 50, guard: 3, items: 2, sweep: 3 } };
 export const CHAPTER_INTRO = { from: 5, goldMul: 2, sweep: 1 };
 export const introOf = c => c >= CHAPTER_INTRO.from ? { gold: Math.round(clearGold(c, 0) * CHAPTER_INTRO.goldMul / 5) * 5, sweep: CHAPTER_INTRO.sweep } : null;
 export const clearStone = (c, s) => 3 + oldS(s) + c * 2;
@@ -282,14 +283,14 @@ export const SWEEP_DAILY = 5, SWEEP_MAX = 12;
 
 // ── 훈련(영구 능력치). v는 레벨당 효과 ──
 export const TRAINING = [
-  { id: 'hp', name: '체력', desc: '최대 체력', v: 0.06, unit: '%', max: 15, base: 50 },
-  { id: 'atk', name: '근력', desc: '모든 피해', v: 0.03, unit: '%', max: 15, base: 60 },
-  { id: 'def', name: '갑옷', desc: '받는 피해 감소', v: 0.015, unit: '%', max: 20, base: 70 },
-  { id: 'spd', name: '신속', desc: '이동 속도', v: 0.02, unit: '%', max: 10, base: 60 },
-  { id: 'mag', name: '자력', desc: '줍는 거리', v: 0.1, unit: '%', max: 10, base: 40 },
-  { id: 'luck', name: '행운', desc: '은화·치명타', v: 0.04, unit: '%', max: 10, base: 80 },
-  { id: 'regen', name: '회복', desc: '초당 체력 회복', v: 0.1, unit: '', max: 10, base: 90 },
-  { id: 'revive', name: '부활', desc: '한 판에 한 번 되살아남', v: 1, unit: '회', max: 1, base: 2500 },
+  { id: 'hp', name: t('data.a45ea5'), desc: t('data.e36ea0'), v: 0.06, unit: '%', max: 15, base: 50 },
+  { id: 'atk', name: t('data.43ddf0'), desc: t('data.b6691c'), v: 0.03, unit: '%', max: 15, base: 60 },
+  { id: 'def', name: t('data.490212'), desc: t('data.ed39ed'), v: 0.015, unit: '%', max: 20, base: 70 },
+  { id: 'spd', name: t('data.5e9f2c'), desc: t('data.4affb5'), v: 0.02, unit: '%', max: 10, base: 60 },
+  { id: 'mag', name: t('data.0d4fff'), desc: t('data.7be700'), v: 0.1, unit: '%', max: 10, base: 40 },
+  { id: 'luck', name: t('data.413755'), desc: t('data.27110f'), v: 0.04, unit: '%', max: 10, base: 80 },
+  { id: 'regen', name: t('data.95ca12'), desc: t('data.9c422b'), v: 0.1, unit: '', max: 10, base: 90 },
+  { id: 'revive', name: t('data.dc6cc3'), desc: t('data.655c81'), v: 1, unit: 'once', max: 1, base: 2500 },
 ];
 // 5레벨마다 이정표: 한 레벨치 효과를 덤으로 준다(부활 같은 1회짜리는 제외)
 export const TRAIN_MILE = 5, TRAIN_MILE_BONUS = 1;
@@ -327,51 +328,51 @@ export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 
 // 액티브 스킬. lv별 수치는 Battle에서 lv로 계산한다
 export const SKILLS = {
-  sword: { name: '검 휘두르기', type: 'active', icon: 0, desc: ['가장 가까운 적을 벤다', '피해 +25%', '뒤쪽도 함께 벤다', '범위 +20%', '피해 +40%, 빨라진다'] },
-  spin: { name: '회전 베기', type: 'active', icon: 4, desc: ['주변을 한 바퀴 벤다', '피해 +30%', '범위 +20%', '더 자주 쓴다', '두 바퀴 돈다'] },
-  dagger: { name: '투척 단검', type: 'active', icon: 5, desc: ['가까운 적에게 단검을 던진다', '단검 +1', '피해 +30%', '단검 +1, 관통', '단검 +2'] },
-  bolt: { name: '번개', type: 'active', icon: 6, desc: ['무작위 적에게 벼락', '벼락 +1', '피해 +40%', '벼락 +1', '번개가 튄다'] },
-  holy: { name: '성역', type: 'active', icon: 7, desc: ['발밑의 빛이 계속 태운다', '범위 +20%', '피해 +30%', '적을 느리게 한다', '범위 +30%'] },
-  fireball: { name: '화염구', type: 'active', icon: 8, desc: ['터지는 불덩이를 쏜다', '피해 +30%', '폭발 범위 +30%', '불덩이 +1', '바닥에 불이 남는다'] },
-  ice: { name: '얼음 파편', type: 'active', icon: 9, desc: ['꿰뚫는 얼음을 쏜다', '파편 +1', '적을 얼린다', '피해 +40%', '파편 +2'] },
+  sword: { name: t('data.b48ea6'), type: 'active', icon: 0, desc: [t('data.719b5a'), t('data.d2ebf6'), t('data.b53fb2'), t('data.d55752'), t('data.d22185')] },
+  spin: { name: t('data.8712a7'), type: 'active', icon: 4, desc: [t('data.31a62c'), t('data.4822d1'), t('data.d55752'), t('data.d1ddd3'), t('data.419172')] },
+  dagger: { name: t('data.c0966c'), type: 'active', icon: 5, desc: [t('data.b4dc36'), t('data.ee9a86'), t('data.4822d1'), t('data.dfe38b'), t('data.d85f47')] },
+  bolt: { name: t('data.4c2786'), type: 'active', icon: 6, desc: [t('data.0f6f09'), t('data.abe428'), t('data.de7411'), t('data.abe428'), t('data.5df273')] },
+  holy: { name: t('data.fa5a03'), type: 'active', icon: 7, desc: [t('data.bfa191'), t('data.d55752'), t('data.4822d1'), t('data.898da6'), t('data.44af39')] },
+  fireball: { name: t('data.b0c495'), type: 'active', icon: 8, desc: [t('data.d7f7c3'), t('data.4822d1'), t('data.0b713c'), t('data.7fb3d1'), t('data.f675c1')] },
+  ice: { name: t('data.4ed23a'), type: 'active', icon: 9, desc: [t('data.a01586'), t('data.a3235b'), t('data.e7ba92'), t('data.de7411'), t('data.f2b42a')] },
   // 무기 전용 스킬: 그 무기를 든 판에서만 레벨업 카드에 나온다(진화 없음)
-  wave: { name: '검기', type: 'active', icon: 0, tint: 0x40a0ff, flip: true, own: 'sword', desc: ['베는 방향으로 검기를 날린다', '피해 +30%', '검기 +1', '꿰뚫는다', '검기 +2, 커진다'] },
-  javelin: { name: '투창', type: 'active', icon: 5, tint: 0xa8ffb0, own: 'spear', desc: ['가장 먼 적에게 창을 던진다', '피해 +30%', '창 +1', '맞은 적을 밀친다', '창 +2'] },
-  quake: { name: '지진', type: 'active', icon: 4, tint: 0xffb050, own: 'axe', desc: ['발밑에서 충격파가 퍼진다', '범위 +20%', '피해 +40%', '더 자주 쓴다', '두 번 퍼진다'] },
-  volley: { name: '화살비', type: 'active', icon: 5, tint: 0xffe0a0, own: 'bow', desc: ['화면의 적 위로 화살이 쏟아진다', '화살 +1', '피해 +30%', '화살 +2', '화살 +3, 빨라진다'] },
-  grenade: { name: '수류탄', type: 'active', icon: 8, tint: 0xffd75e, own: 'gun', desc: ['적 무리에 수류탄을 던진다', '피해 +30%', '폭발 범위 +30%', '수류탄 +1', '바닥에 불이 남는다'] },
-  palm: { name: '기공파', type: 'active', icon: 6, tint: 0xffe070, own: 'knuckle', desc: ['앞으로 큰 기운을 내지른다', '피해 +30%', '커진다', '꿰뚫는다', '두 번 내지른다'] },
-  missile: { name: '유도 마탄', type: 'active', icon: 11, tint: 0xc890ff, own: 'staff', desc: ['적을 쫓는 마탄 셋을 쏜다', '마탄 +1', '피해 +30%', '마탄 +2', '마탄 +3, 빨라진다'] },
-  orb: { name: '수호 구슬', type: 'active', icon: 11, tint: 0x9ad0ff, desc: ['구슬이 몸 주위를 돈다', '구슬 +1', '피해 +30%', '구슬 +1', '구슬 +1, 빨라진다'] },
-  might: { name: '숫돌', type: 'passive', icon: 0, tint: 0xff9a5a, desc: ['피해 +10%'], bonus: '피해 +10% 더' },
-  haste: { name: '신속 물약', type: 'passive', icon: 10, desc: ['이동 속도 +8%'], bonus: '이동 속도 +8% 더' },
-  focus: { name: '집중', type: 'passive', icon: 15, desc: ['재사용 대기 -8%'], bonus: '재사용 대기 -6% 더' },
-  area: { name: '넓은 칼날', type: 'passive', icon: 4, tint: 0x8affa0, desc: ['공격 범위 +10%'], bonus: '공격 범위 +10% 더' },
-  magnet: { name: '자석', type: 'passive', icon: 13, desc: ['줍는 거리 +30%'], bonus: '줍는 거리 +40% 더' },
-  vigor: { name: '활력', type: 'passive', icon: 14, desc: ['최대 체력 +20, 회복 +0.3/초'], bonus: '회복 +0.6/초 더' },
+  wave: { name: t('data.632300'), type: 'active', icon: 0, tint: 0x40a0ff, flip: true, own: 'sword', desc: [t('data.58bff1'), t('data.4822d1'), t('data.f67bb6'), t('data.3236a0'), t('data.602b96')] },
+  javelin: { name: t('data.931cad'), type: 'active', icon: 5, tint: 0xa8ffb0, own: 'spear', desc: [t('data.e94f2b'), t('data.4822d1'), t('data.34b2e4'), t('data.b79728'), t('data.97ea86')] },
+  quake: { name: t('data.9019f4'), type: 'active', icon: 4, tint: 0xffb050, own: 'axe', desc: [t('data.6c3adc'), t('data.d55752'), t('data.de7411'), t('data.d1ddd3'), t('data.0c9c0e')] },
+  volley: { name: t('data.180316'), type: 'active', icon: 5, tint: 0xffe0a0, own: 'bow', desc: [t('data.b85040'), t('data.f90aca'), t('data.4822d1'), t('data.7a50b6'), t('data.aa0e5f')] },
+  grenade: { name: t('data.841359'), type: 'active', icon: 8, tint: 0xffd75e, own: 'gun', desc: [t('data.22b330'), t('data.4822d1'), t('data.0b713c'), t('data.97dc58'), t('data.f675c1')] },
+  palm: { name: t('data.005d96'), type: 'active', icon: 6, tint: 0xffe070, own: 'knuckle', desc: [t('data.8b9c43'), t('data.4822d1'), t('data.6d8be2'), t('data.3236a0'), t('data.3e73e9')] },
+  missile: { name: t('data.946272'), type: 'active', icon: 11, tint: 0xc890ff, own: 'staff', desc: [t('data.f7db1e'), t('data.3fe27d'), t('data.4822d1'), t('data.b29034'), t('data.a40799')] },
+  orb: { name: t('data.6c97ca'), type: 'active', icon: 11, tint: 0x9ad0ff, desc: [t('data.37e5e9'), t('data.d87541'), t('data.4822d1'), t('data.d87541'), t('data.e8eea6')] },
+  might: { name: t('data.cff8ee'), type: 'passive', icon: 0, tint: 0xff9a5a, desc: [t('data.c83067')], bonus: t('data.5eedab') },
+  haste: { name: t('data.cb2ce0'), type: 'passive', icon: 10, desc: [t('data.3c4ccd')], bonus: t('data.e665d8') },
+  focus: { name: t('data.56fb80'), type: 'passive', icon: 15, desc: [t('data.fd5d9c')], bonus: t('data.a4398a') },
+  area: { name: t('data.7564f4'), type: 'passive', icon: 4, tint: 0x8affa0, desc: [t('data.27b348')], bonus: t('data.c94815') },
+  magnet: { name: t('data.c72afb'), type: 'passive', icon: 13, desc: [t('data.7703b8')], bonus: t('data.0a8ed0') },
+  vigor: { name: t('data.dce572'), type: 'passive', icon: 14, desc: [t('data.a45bcf')], bonus: t('data.9d8e4f') },
   // 50차: 모드 전용 카드(그 모드 판에서만 나온다, 슬롯을 쓰지 않는다). 효과는 modes.js
-  mrepair: { name: '수레 수리', type: 'passive', mode: 'guard', icon: 14, tint: 0x7fd8ff, desc: ['수레 HP가 초당 0.8% 차오른다', '초당 1.6%', '초당 2.4%', '초당 3.2%', '초당 4%'] },
-  mthorn: { name: '수레 가시', type: 'passive', mode: 'guard', icon: 4, tint: 0xff7050, desc: ['수레 곁의 몹이 가시에 찔린다', '가시 피해 +50%', '가시 피해 +100%', '가시 범위 +30%', '가시 피해 +150%'] },
-  mcapspeed: { name: '점령 속도', type: 'passive', mode: 'capture', icon: 10, tint: 0x7ddc6a, desc: ['거점이 20% 빨리 차오른다', '40% 빨리', '60% 빨리', '80% 빨리', '2배 빨리'] },
-  mturret: { name: '거점 포탑', type: 'passive', mode: 'capture', icon: 11, tint: 0xffd75e, desc: ['거점마다 포탑이 몹을 쏜다', '쏘는 속도 +25%', '피해 +50%', '사거리 +30%', '두 발씩 쏜다'] },
-  mdash: { name: '질주', type: 'passive', mode: 'breach', icon: 10, tint: 0xffd75e, desc: ['달리는 속도 +6%', '+12%', '+18%', '+24%', '+30%'] },
-  mwallslow: { name: '벽 늦추기', type: 'passive', mode: 'breach', icon: 13, tint: 0xa070ff, desc: ['벽이 8% 느려진다', '16% 느려진다', '24% 느려진다', '32% 느려진다', '40% 느려진다'] },
-  mmark: { name: '추적 표식', type: 'passive', mode: 'hunt', icon: 15, tint: 0xff7070, desc: ['정예가 7% 느려진다', '14% 느려진다', '21% 느려진다', '28% 느려진다', '35% 느려진다'] },
-  mweaken: { name: '정예 약화', type: 'passive', mode: 'hunt', icon: 0, tint: 0xc890ff, desc: ['정예 체력이 12% 줄어든다', '또 12% 줄어든다', '또 12% 줄어든다', '또 12% 줄어든다', '또 12% 줄어든다'] },
+  mrepair: { name: t('data.c53463'), type: 'passive', mode: 'guard', icon: 14, tint: 0x7fd8ff, desc: [t('data.42ccc8'), t('data.fe0790'), t('data.d991f4'), t('data.c3ea5f'), t('data.045982')] },
+  mthorn: { name: t('data.1c7aa0'), type: 'passive', mode: 'guard', icon: 4, tint: 0xff7050, desc: [t('data.74233a'), t('data.4046db'), t('data.2a2c8e'), t('data.9cace8'), t('data.a51ba6')] },
+  mcapspeed: { name: t('data.941806'), type: 'passive', mode: 'capture', icon: 10, tint: 0x7ddc6a, desc: [t('data.0f2f7d'), t('data.9e322d'), t('data.e807d0'), t('data.675aad'), t('data.2a9439')] },
+  mturret: { name: t('data.dbdf28'), type: 'passive', mode: 'capture', icon: 11, tint: 0xffd75e, desc: [t('data.daec8c'), t('data.81914c'), t('data.ce1aee'), t('data.5c944b'), t('data.32e3d5')] },
+  mdash: { name: t('data.de1a8a'), type: 'passive', mode: 'breach', icon: 10, tint: 0xffd75e, desc: [t('data.b6c778'), '+12%', '+18%', '+24%', '+30%'] },
+  mwallslow: { name: t('data.cd3357'), type: 'passive', mode: 'breach', icon: 13, tint: 0xa070ff, desc: [t('data.fb874e'), t('data.d12916'), t('data.549078'), t('data.4ddd65'), t('data.f80df5')] },
+  mmark: { name: t('data.acb76b'), type: 'passive', mode: 'hunt', icon: 15, tint: 0xff7070, desc: [t('data.f1e059'), t('data.fdd98b'), t('data.f174f2'), t('data.0e1bd0'), t('data.7ad7f1')] },
+  mweaken: { name: t('data.a1aec2'), type: 'passive', mode: 'hunt', icon: 0, tint: 0xc890ff, desc: [t('data.f4f57b'), t('data.a9804e'), t('data.a9804e'), t('data.a9804e'), t('data.a9804e')] },
 };
 export const PASSIVE_KEYS = ['might', 'haste', 'focus', 'area', 'magnet', 'vigor'];
 
 // ── 판 안 상점(웨이브 사이) ──
 // 가격 = 내림((기본가 + 회차×3) × (1 + 0.1×회차)) — 브로타토 가격 공식 변형. 회차는 이번 판에서 상점이 열린 횟수(0부터)
 export const SHOP_ITEMS = [
-  { id: 'meat', name: '회복 물약', icon: 14, price: 18, desc: '체력 40% 회복' },
-  { id: 'whet', name: '숫돌 갈기', icon: 0, price: 30, desc: '이번 판 피해 +8%' },
-  { id: 'boots', name: '신속 물약', icon: 10, price: 22, desc: '이번 판 이동 +6%' },
-  { id: 'heart', name: '철벽 방패', icon: 11, price: 34, desc: '이번 판 최대 체력 +15' },
-  { id: 'tome', name: '수련서', icon: 15, price: 40, desc: '즉시 레벨 업' },
-  { id: 'chest', name: '빛의 축복', icon: 7, price: 55, desc: '가진 스킬 하나 +1' },
-  { id: 'mana', name: '마나 수정', icon: 13, price: 20, desc: '궁극기 게이지 가득' },
-  { id: 'magnet', name: '탐욕의 동전', icon: 12, price: 16, desc: '이번 판 줍는 거리 +25%' },
+  { id: 'meat', name: t('data.b7ce4b'), icon: 14, price: 18, desc: t('data.b80db6') },
+  { id: 'whet', name: t('data.a21832'), icon: 0, price: 30, desc: t('data.2228b4') },
+  { id: 'boots', name: t('data.cb2ce0'), icon: 10, price: 22, desc: t('data.a45aab') },
+  { id: 'heart', name: t('data.3af434'), icon: 11, price: 34, desc: t('data.44bc3f') },
+  { id: 'tome', name: t('data.7620ce'), icon: 15, price: 40, desc: t('data.f54847') },
+  { id: 'chest', name: t('data.bca9df'), icon: 7, price: 55, desc: t('data.30fa5d') },
+  { id: 'mana', name: t('data.ba9f46'), icon: 13, price: 20, desc: t('data.0e1883') },
+  { id: 'magnet', name: t('data.a794e5'), icon: 12, price: 16, desc: t('data.2316ac') },
 ];
 export const SHOP_SLOTS = 3;   // 장비 1 + 나머지 2(4칸은 90초 판이 자꾸 끊겼다)(42차)
 // 상인이 파는 장비 기본가(일반·희귀·영웅·전설). 장비 칸은 매번 하나 나온다
@@ -407,20 +408,20 @@ export const WEAK_MUL = 2.2;
 // 보석으로는 '시간'과 '안전'을 산다(소탕권·방지권·강화석). 무기 공격력을 직접 팔지 않아 실력·강화의 재미를 지킨다
 export const GEM_FREE = { daily: 20, stageFirst: 5, bossFirst: 50 };
 export const IAP = [
-  { id: 'starter', name: '초보 대장장이 꾸러미', price: 1200, once: true, tag: '1회 한정 · 가치 10배', desc: '진홍 스킨·보석300·방지권3·강화석60', give: { hskin: 'crimson', gem: 300, guard: 3, stone: 60, gold: 3000 } },
+  { id: 'starter', name: t('data.1fcc55'), price: 1200, once: true, tag: t('data.85be3c'), desc: t('data.3ee4ff'), give: { hskin: 'crimson', gem: 300, guard: 3, stone: 60, gold: 3000 } },
   // 1,200원과 4,900원 사이가 비어 있었다: 꾸미기 둘을 한 번에(보석으로 사면 1,400)
-  { id: 'cosm', name: '꾸미기 세트', price: 3900, once: true, tag: '1회 한정 · 가치 4배', desc: '서리 칼빛 · 비취 수도승 스킨 · 보석100', give: { skin: 'frost', hskin: 'jade', gem: 100 } },
-  { id: 'pass', name: '대장장이 월정액', price: 4900, tag: '총 보석 2,700 · 매일 소탕권 +3', give: { gem: 300 }, passDays: 30 },
+  { id: 'cosm', name: t('data.69c6c8'), price: 3900, once: true, tag: t('data.5e6a58'), desc: t('data.aeeaa7'), give: { skin: 'frost', hskin: 'jade', gem: 100 } },
+  { id: 'pass', name: t('data.9385e1'), price: 4900, tag: t('data.c8f6f3'), give: { gem: 300 }, passDays: 30 },
   // 광고 제거: 보석이 아닌 현금 상품. 광고 버튼(보석·소탕권·보상 2배·부활)이 광고 없이 바로 보상을 준다
-  { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '1회 · 광고 버튼이 바로 보상', desc: '광고 없이 바로 보상 · 보석 100 덤', give: { gem: 100 }, noAds: true },
-  { id: 'gem1', name: '보석 한 줌', price: 1200, give: { gem: 120 } },
+  { id: 'noads', name: t('data.3720bb'), price: 5900, once: true, tag: t('data.a84b85'), desc: t('data.5f7e91'), give: { gem: 100 }, noAds: true },
+  { id: 'gem1', name: t('data.b8140f'), price: 1200, give: { gem: 120 } },
   // 48차 가격 사다리: 2,900·9,900·19,900원. 보석 10원/개 기준에 큰 묶음일수록 덤이 커진다(+7% → +10% → +16% → +17% → +18%)
-  { id: 'gem1b', name: '보석 한 자루', price: 2900, tag: '+7%', give: { gem: 310 } },
-  { id: 'gem2', name: '보석 주머니', price: 5900, tag: '인기 · +10%', give: { gem: 650 } },
+  { id: 'gem1b', name: t('data.064e59'), price: 2900, tag: '+7%', give: { gem: 310 } },
+  { id: 'gem2', name: t('data.67465b'), price: 5900, tag: t('data.231956'), give: { gem: 650 } },
   // 49차: 9,900원 보석은 12,000원과 겹쳐 판매 중지(stop). 이미 콘솔에 등록된 ID라 지우지 않고 남긴다(기존 구매·미결 주문 복구용). 9,900원 자리는 특가 칸 중간 꾸러미(mid1)가 쓴다
-  { id: 'gem2b', name: '보석 큰 주머니', price: 9900, stop: true, tag: '+16%', give: { gem: 1150 } },
-  { id: 'gem3', name: '보석 상자', price: 12000, tag: '+17%', give: { gem: 1400 } },
-  { id: 'gem4', name: '보석 큰 상자', price: 19900, tag: '+18% · 알뜰', give: { gem: 2350 } },
+  { id: 'gem2b', name: t('data.fb5726'), price: 9900, stop: true, tag: '+16%', give: { gem: 1150 } },
+  { id: 'gem3', name: t('data.3fe2a7'), price: 12000, tag: '+17%', give: { gem: 1400 } },
+  { id: 'gem4', name: t('data.327410'), price: 19900, tag: t('data.9e5e5e'), give: { gem: 2350 } },
 ];
 // 보석 묶음은 처음 살 때 보석 2배(특가·성장 꾸러미·큰 꾸러미는 해당 없음)
 export const FIRST_BUY_X2 = ['gem1', 'gem1b', 'gem2', 'gem2b', 'gem3', 'gem4'];
@@ -431,11 +432,11 @@ export const PACK_GROUPS = { gem: ['gem1', 'gem1b', 'gem2', 'gem3', 'gem4'], bun
 // ── 한정 판매(상점 '특가' 칸) ──
 // 오늘의 특가: 하루 한 번 아래 꾸러미 하나를 무작위 할인율로 판다. 기기 시간 자정에 바뀐다
 export const DEALS = [
-  { id: 'dstone', name: '강화석 꾸러미', give: { stone: 200, guard: 2 } },
-  { id: 'dguard', name: '안전 꾸러미', give: { guard: 5, charm: 2 } },
-  { id: 'dgem', name: '보석 꾸러미', give: { gem: 600, sweep: 10 } },
-  { id: 'dgold', name: '금화 꾸러미', give: { goldStage: 10, stone: 80 } },
-  { id: 'dluck', name: '행운 꾸러미', give: { charm: 5, gem: 150 } },
+  { id: 'dstone', name: t('data.b79db0'), give: { stone: 200, guard: 2 } },
+  { id: 'dguard', name: t('data.30b913'), give: { guard: 5, charm: 2 } },
+  { id: 'dgem', name: t('data.cf135e'), give: { gem: 600, sweep: 10 } },
+  { id: 'dgold', name: t('data.492bbd'), give: { goldStage: 10, stone: 80 } },
+  { id: 'dluck', name: t('data.1e59c2'), give: { charm: 5, gem: 150 } },
 ];
 export const DEAL_OFF = [30, 40, 50];   // 할인율(%)
 // 46차: 원가는 '실제 상시 판매가'(보석 상점 개당 보석값 x 10원)의 합. 상시 판매가 없는 구성품이 있으면 null(원가·할인 표시 안 함)
@@ -448,9 +449,9 @@ export const growGive = c => { const t = Math.min(c + 1, TIERS.length - 1); retu
 // 큰 꾸러미: 달마다 한 번(보석 상자보다 보석당 값이 싸고 방지권·부적이 붙는다)
 export const BIG_PACKS = [
   // 49차: 특가 칸 중간 꾸러미. 4,900~9,900원 사이가 비어 있었다(9,900원 보석 판매 중지 자리)
-  { id: 'mid1', name: '대장장이 정예 꾸러미', price: 9900, month: true, tag: '달마다 1번 · 보석 +11%', desc: '보석 1,100 · 방지권 6 · 행운 부적 3 · 강화석 150', give: { gem: 1100, guard: 6, charm: 3, stone: 150 } },
-  { id: 'big1', name: '대장장이 금고', price: 33000, month: true, tag: '달마다 1번 · 보석 +20%', desc: '보석 4,000 · 방지권 10 · 행운 부적 5 · 강화석 300', give: { gem: 4000, guard: 10, charm: 5, stone: 300 } },
-  { id: 'big2', name: '전설의 대장간', price: 55000, month: true, tag: '달마다 1번 · 보석 +27% · 칼빛 덤', desc: '보석 7,000 · 방지권 20 · 행운 부적 10 · 강화석 600', give: { gem: 7000, guard: 20, charm: 10, stone: 600, skin: 'void' } },
+  { id: 'mid1', name: t('data.bd6bed'), price: 9900, month: true, tag: t('data.d77bed'), desc: t('data.fd5d3f'), give: { gem: 1100, guard: 6, charm: 3, stone: 150 } },
+  { id: 'big1', name: t('data.e368f9'), price: 33000, month: true, tag: t('data.b2b222'), desc: t('data.9d0164'), give: { gem: 4000, guard: 10, charm: 5, stone: 300 } },
+  { id: 'big2', name: t('data.5fb40d'), price: 55000, month: true, tag: t('data.a8afad'), desc: t('data.fe3501'), give: { gem: 7000, guard: 20, charm: 10, stone: 600, skin: 'void' } },
 ];
 export const PASS_DAILY = { gem: 80, sweep: 3 };
 // 보석으로 사는 것. gold 꾸러미는 지금 도전 중인 스테이지 클리어 금화의 3배
@@ -466,14 +467,14 @@ export const LATE_DMG = 1.12;
 export const ENDLESS = { unlock: 3, floorSec: 50, maxF: 3, gemPerNewFloor: 5, stonePerFloor: 2, goldPerFloor: 0.3, hpGrow: 1.28, dmgGrow: 1.2 };
 // 칼빛(궤적 색) 꾸미기: 능력치는 그대로, 보이는 것만 바뀐다
 export const SKINS = [
-  { id: '', name: '기본 칼빛', desc: '강화 단계 색', cost: 0 },
-  { id: 'flame', name: '불꽃 칼빛', desc: '붉은 불길이 남는다', hue: 175, tint: 0xff5a2a, cost: 300 },
-  { id: 'silver', name: '은빛 칼빛', desc: '하얀 달빛이 남는다', gray: true, tint: 0xffffff, cost: 600 },
-  { id: 'gold', name: '황금 칼빛', desc: '금빛 궤적 + 불티', hue: -150, tint: 0xffd75e, cost: 1200, ember: true },
-  { id: 'frost', name: '서리 칼빛', desc: '푸른 냉기가 남는다', hue: -60, tint: 0x9ae8ff, cost: 600 },
-  { id: 'venom', name: '맹독 칼빛', desc: '초록 독안개가 남는다', hue: -120, tint: 0x6fe36a, cost: 600 },
-  { id: 'void', name: '공허 칼빛', desc: '보랏빛 틈 + 불티', hue: 100, tint: 0xb07aff, cost: 1200, ember: true },
-  { id: 'sakura', name: '벚꽃 칼빛', desc: '분홍 꽃잎 + 불티', hue: 60, tint: 0xff6ad0, cost: 1500, ember: true },
+  { id: '', name: t('data.291e56'), desc: t('data.a33a32'), cost: 0 },
+  { id: 'flame', name: t('data.306c35'), desc: t('data.0e25d3'), hue: 175, tint: 0xff5a2a, cost: 300 },
+  { id: 'silver', name: t('data.496450'), desc: t('data.7b5022'), gray: true, tint: 0xffffff, cost: 600 },
+  { id: 'gold', name: t('data.39a039'), desc: t('data.04e546'), hue: -150, tint: 0xffd75e, cost: 1200, ember: true },
+  { id: 'frost', name: t('data.8cfc05'), desc: t('data.5b33d3'), hue: -60, tint: 0x9ae8ff, cost: 600 },
+  { id: 'venom', name: t('data.6dfe2a'), desc: t('data.ffd9c1'), hue: -120, tint: 0x6fe36a, cost: 600 },
+  { id: 'void', name: t('data.cc5f98'), desc: t('data.356129'), hue: 100, tint: 0xb07aff, cost: 1200, ember: true },
+  { id: 'sakura', name: t('data.210952'), desc: t('data.0c62d4'), hue: 60, tint: 0xff6ad0, cost: 1500, ember: true },
 ];
 // 비급: 보석으로 산 스킬은 판을 시작할 때부터 높은 Lv로 들고 들어간다(한 권만 낀다)
 // 비급 Lv1(사기) 400 → Lv2 600 → Lv3 900(×1.5씩). 판 시작 스킬 Lv = 비급 Lv + 1(최대 Lv4, 스킬 최대 5는 판 안에서 올린다)
@@ -485,38 +486,38 @@ export const bookSkillLv = lv => lv + 1;
 export const DUP_W_STONE = 40;
 // 시너지: 짝 스킬을 둘 다 가지면 두 스킬 모두 더 자주 나간다
 export const SYNERGY = [
-  { a: 'bolt', b: 'ice', name: '빙뢰' },
-  { a: 'fireball', b: 'holy', name: '불의 성역' },
-  { a: 'spin', b: 'dagger', name: '칼춤' },
-  { a: 'dagger', b: 'bolt', name: '번개 단검' },
-  { a: 'spin', b: 'holy', name: '회전 성역' },
+  { a: 'bolt', b: 'ice', name: t('data.7ee23b') },
+  { a: 'fireball', b: 'holy', name: t('data.9965d7') },
+  { a: 'spin', b: 'dagger', name: t('data.3798c8') },
+  { a: 'dagger', b: 'bolt', name: t('data.11b32f') },
+  { a: 'spin', b: 'holy', name: t('data.11600d') },
 ];
 // 수호 구슬은 대기 시간 없이 늘 돌아서 '더 자주'가 효과가 없다: 시너지 짝에 넣지 않는다
 export const SYN_CD = 0.75;
 export const synOf = (k, skills) => SYNERGY.filter(x => (x.a === k && skills[x.b]) || (x.b === k && skills[x.a]));
 export const restoreGem = enh => 30 + enh * 10;
 export const GEM_SHOP = [
-  { id: 'guard', name: '파괴 방지권', icon: 11, cost: 80, give: { guard: 1 }, desc: '파괴를 막는다' },
-  { id: 'charm', name: '행운 부적', icon: 7, cost: 120, give: { charm: 1 }, desc: '확률 +5%p' },
-  { id: 'sweep', name: '소탕권 5장', icon: 15, cost: 40, give: { sweep: 5 }, desc: '바로 정산' },
-  { id: 'stone', name: '강화석 40개', icon: 13, cost: 60, give: { stone: 40 }, desc: '강화 재료' },
-  { id: 'gold', name: '금화 꾸러미', icon: 12, cost: 100, give: { goldStage: 3 } },
-  { id: 'spReset', name: '스탯 초기화권', icon: 14, cost: SP_RESET_GEM, give: { spReset: 1 }, desc: '다시 찍기' },
+  { id: 'guard', name: t('data.64e975'), icon: 11, cost: 80, give: { guard: 1 }, desc: t('data.a0ea65') },
+  { id: 'charm', name: t('lobby.c5e28a'), icon: 7, cost: 120, give: { charm: 1 }, desc: t('data.69385a') },
+  { id: 'sweep', name: t('data.eb8f10'), icon: 15, cost: 40, give: { sweep: 5 }, desc: t('data.57c9a7') },
+  { id: 'stone', name: t('data.f30c68'), icon: 13, cost: 60, give: { stone: 40 }, desc: t('data.2dd711') },
+  { id: 'gold', name: t('data.492bbd'), icon: 12, cost: 100, give: { goldStage: 3 } },
+  { id: 'spReset', name: t('data.4dc434'), icon: 14, cost: SP_RESET_GEM, give: { spReset: 1 }, desc: t('data.6e794d') },
 ];
 // 보상형 광고: 하루 횟수 제한
 export const ADS = {
   // 하루 60: 월정액(하루 80)보다 적게 두되 볼 맛은 나게(39차: +10은 볼 이유가 없다). early: 처음 7일은 하루 5번(40차)
-  gem: { name: '보석 +20', daily: 3, early: 5, give: { gem: 20 } },
-  sweep: { name: '소탕권 +2', daily: 2, give: { sweep: 2 } },
+  gem: { name: t('data.502e9d'), daily: 3, early: 5, give: { gem: 20 } },
+  sweep: { name: t('data.f37835'), daily: 2, give: { sweep: 2 } },
   double: { daily: 10 },   // 클리어 보상 2배
 };
 export const REVIVE_GEM = 30; // 쓰러졌을 때 보석 부활(판당 1번, 광고 부활과 같은 기회)
 
 // ── 매일 할 일: 임무 3개 + 출석 7일 ──
 export const MISSIONS = [
-  { id: 'kill', name: '몬스터 100마리 처치', need: 100 },
-  { id: 'clear', name: '스테이지 클리어·소탕 1번', need: 1 },
-  { id: 'enh', name: '대장간에서 강화 1번', need: 1 },
+  { id: 'kill', name: t('data.0c8b84'), need: 100 },
+  { id: 'clear', name: t('data.31ae7b'), need: 1 },
+  { id: 'enh', name: t('data.35b3d5'), need: 1 },
 ];
 export const MISSION_GIVE = { gem: 5, stone: 2 };
 export const MISSION_ALL = { gem: 10 };
@@ -551,10 +552,10 @@ export const stoneOf = (c, s, hard) => hard ? hardStone(c, s) : clearStone(c, s)
 // ── 일일 던전: 하루 2번, 60초. 요일마다 보상이 다르다(0 일요일) ──
 export const DUNGEON = { unlock: 3, daily: 2, sec: 60, killNeed: 150, minPay: 0.2, hp: 0.55, goblinSec: 15 };
 export const DUN_TYPES = {
-  gold: { name: '황금 금고', desc: '금화를 많이 준다', tint: 0xffd75e, css: '#ffd75e' },
-  stone: { name: '강화석 광맥', desc: '강화석을 많이 준다', tint: 0x9ae0ff, css: '#9ae0ff' },
-  gear: { name: '장비 보물고', desc: '좋은 장비를 준다', tint: 0xc890ff, css: '#c890ff' },
-  gem: { name: '보석 광산', desc: '보석과 강화석을 준다', tint: 0xff9ad0, css: '#ff9ad0' },
+  gold: { name: t('data.d73ae3'), desc: t('data.8c5ae3'), tint: 0xffd75e, css: '#ffd75e' },
+  stone: { name: t('data.18e4cd'), desc: t('data.831ebe'), tint: 0x9ae0ff, css: '#9ae0ff' },
+  gear: { name: t('data.ec6e5d'), desc: t('data.24795c'), tint: 0xc890ff, css: '#c890ff' },
+  gem: { name: t('data.53c260'), desc: t('data.f0e734'), tint: 0xff9ad0, css: '#ff9ad0' },
 };
 export const DUN_WEEK = ['gem', 'gold', 'stone', 'gear', 'gold', 'stone', 'gear'];
 export const dunToday = (d = new Date()) => DUN_WEEK[d.getDay()];
@@ -577,10 +578,10 @@ export const dunReward = (type, base, f) => {
 
 // ── 주간 도전: 월요일에 새로 연다 ──
 export const WEEKLY = [
-  { id: 'kill', name: '몬스터 3,000마리 처치', need: 3000 },
-  { id: 'clear', name: '클리어·소탕 15번', need: 15 },
-  { id: 'enh', name: '강화 10번', need: 10 },
-  { id: 'dun', name: '일일 던전 4번', need: 4 },
+  { id: 'kill', name: t('data.2f9c52'), need: 3000 },
+  { id: 'clear', name: t('data.8a2177'), need: 15 },
+  { id: 'enh', name: t('data.c72d7e'), need: 10 },
+  { id: 'dun', name: t('data.65c72e'), need: 4 },
 ];
 export const WEEKLY_GIVE = { gem: 20, stone: 10 };
 export const WEEKLY_ALL = { gem: 50, guard: 1 };
@@ -593,12 +594,12 @@ export const CLOSE_LOSS = 0.6;
 
 // ── 진화: 액티브 5레벨 + 짝 패시브를 가지면 레벨업 카드에 진화가 뜬다 ──
 export const EVOS = {
-  sword: { need: 'might', name: '폭풍검', desc: '사방을 베고 피해 2배' },
-  spin: { need: 'haste', name: '칼바람', desc: '세 바퀴 돌고 훨씬 자주' },
-  dagger: { need: 'focus', name: '천검', desc: '사방으로 단검 10개 관통' },
-  bolt: { need: 'area', name: '연쇄 번개', desc: '벼락 5개가 4마리씩 튄다' },
-  holy: { need: 'vigor', name: '심판의 땅', desc: '범위 넓게, 태우며 회복' },
-  fireball: { need: 'magnet', name: '용암 비', desc: '화면 곳곳에 불덩이 비' },
-  orb: { need: 'area', name: '태양 고리', desc: '큰 구슬 6개가 넓고 빠르게 돈다' },
-  ice: { need: 'focus', name: '눈보라', desc: '사방으로 얼음 12개, 맞으면 언다' },
+  sword: { need: 'might', name: t('data.1ed31f'), desc: t('data.c9d8ca') },
+  spin: { need: 'haste', name: t('data.f0a099'), desc: t('data.338f49') },
+  dagger: { need: 'focus', name: t('data.ccc7f4'), desc: t('data.effa56') },
+  bolt: { need: 'area', name: t('data.70813b'), desc: t('data.89767e') },
+  holy: { need: 'vigor', name: t('data.a3fc84'), desc: t('data.f149f9') },
+  fireball: { need: 'magnet', name: t('data.cbe54b'), desc: t('data.6fb598') },
+  orb: { need: 'area', name: t('data.9e8e53'), desc: t('data.a36eec') },
+  ice: { need: 'focus', name: t('data.1b7f24'), desc: t('data.e5f0ba') },
 };

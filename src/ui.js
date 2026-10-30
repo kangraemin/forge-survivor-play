@@ -1,6 +1,8 @@
 // 공통 UI: 글자 스타일, 패널, 누르는 버튼, 아이콘
 import { sfx } from './sfx.js';
 import { TIERS, SKILLS, H as GH } from './data.js';
+import { t, lang } from './i18n.js';
+import { wrapTo } from './textfit.js';
 
 // 그리는 배율. 카메라를 왼쪽 위 기준으로 PX배 당겨 게임 좌표(270x480)를 그대로 쓴다
 // 기기 실제 픽셀에 맞춘다(1080 폭 폰이면 4배): 화면에 맞추며 정수배가 아니게 늘리거나 줄이면 글자 획이 들쭉날쭉해진다
@@ -18,14 +20,43 @@ export const hiCam = scene => scene.cameras.main.setOrigin(0).setZoom(PX);
 // 카메라 기준점을 왼쪽 위로 옮겨 Phaser의 worldView(가운데 기준 계산)가 어긋난다 → 보이는 영역은 이걸로 구한다
 export const viewRect = scene => { const c = scene.cameras.main; return new Phaser.Geom.Rectangle(c.scrollX, c.scrollY, c.width / c.zoom, c.height / c.zoom); };
 
-// 큰 수는 한국식 단위로: 1.2만 · 54.8만 · 1230만 · 1.2억 (버림 — 반올림하면 9999.9가 1만이 되는 등 어긋난다)
+// 큰 수 줄임: 한·중·일은 만·억 단위(1.2만 · 54.8만 · 1230만 · 1.2억), 그 밖은 K·M·B (버림 — 반올림하면 9999.9가 1만이 되는 등 어긋난다)
+const EAST = lang === 'ko' || lang === 'ja' || lang.startsWith('zh');
 export const fmt = n => {
   n = Math.floor(n);
-  if (n >= 1e8) return (n >= 1e9 ? Math.floor(n / 1e8) : Math.floor(n / 1e7) / 10) + '억';
-  if (n >= 1e6) return Math.floor(n / 1e4) + '만';
-  if (n >= 1e4) return Math.floor(n / 1e3) / 10 + '만';
+  if (EAST) {
+    if (n >= 1e8) return t('ui.ced53e', { v: n >= 1e9 ? Math.floor(n / 1e8) : Math.floor(n / 1e7) / 10 });
+    if (n >= 1e6) return t('ui.aef12b', { floor: Math.floor(n / 1e4) });
+    if (n >= 1e4) return t('ui.6db3e3', { v: Math.floor(n / 1e3) / 10 });
+  } else {
+    if (n >= 1e9) return Math.floor(n / 1e8) / 10 + 'B';
+    if (n >= 1e6) return Math.floor(n / 1e5) / 10 + 'M';
+    if (n >= 1e4) return Math.floor(n / 100) / 10 + 'K';
+  }
   return String(n);
 };
+
+// 글자가 정해진 너비를 넘으면 글자 크기를 줄여 맞춘다(긴 언어: 독일어·러시아어 등). 바뀐 글자(setText)에도 다시 맞춘다
+// maxH를 주면(버튼 높이) 줄여도 안 들어갈 때 상자 폭 안에서 줄바꿈한다
+export function fitText(txt, maxW, minSize = 7, maxH = 0) {
+  const base = parseFloat(txt.style.fontSize) || 12;
+  let orig = txt.text;
+  const st = txt.setText.bind(txt);
+  const fit = () => {
+    let sz = base; txt.setFontSize(sz); st(orig);
+    while (txt.width > maxW && sz > (lang === 'ko' ? minSize : Math.max(minSize, base * 0.8))) { sz -= 0.5; txt.setFontSize(sz); }
+    if (txt.width > maxW && maxH && lang !== 'ko') {
+      for (sz = base; sz >= minSize; sz -= 0.5) { txt.setFontSize(sz); st(wrapTo(txt, orig, maxW)); if (txt.width <= maxW + 0.5 && txt.height <= maxH) return txt; }
+    }
+    while (txt.width > maxW && sz > minSize) { sz -= 0.5; txt.setFontSize(sz); }
+    return txt;
+  };
+  if (!txt.fitWrapped) {
+    txt.setText = v => { orig = v; return fit(); };
+    txt.fitWrapped = true;
+  }
+  return fit();
+}
 
 // 패널·버튼은 디자인 인계(잿불 성채 style_guide) 규격: 직각 면 + 1px 선, 그림자·광택 없음
 export function panel(scene, x, y, w, h, { fill = COLOR.panel, line = COLOR.line, alpha = 0.94 } = {}) {
@@ -53,6 +84,8 @@ export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size
   };
   const primary = color === 0x2f6b3a && textColor === '#ffffff' && !ghost;
   const t = scene.add.text(0, 0, label, font(size, primary ? '#111923' : ghost && textColor === '#ffffff' ? '#ffd9a0' : textColor, primary ? 0 : 3)).setOrigin(0.5);
+  t.isBtnLabel = true;
+  fitText(t, w - 6, 7, h - 2);   // 긴 번역은 줄여서 버튼 안에 넣는다
   c.add([g, t]); c.setSize(w, h).setInteractive({ useHandCursor: true });
   c.label = t; c.enabled = true; c.col = color; c.isBtn = true;
   c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x221f2a, false); t.setAlpha(v ? 1 : 0.45); return c; };

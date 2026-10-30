@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // 장비·펫·스탯·무기 종류
 // 드랍 장비는 등급마다 옵션 수가 다르고 수치가 무작위다. 세트는 2·4개를 맞추면 효과가 붙고, 숨겨진 템은 조건을 채워야 나온다
 // 수치 기준: 1장 일반 4칸이면 피해·체력 +5%쯤, 4장 전설 4칸이면 +40%쯤(몹 체력도 챕터마다 ×(1+0.2c) 올린다)
@@ -5,108 +6,108 @@ const RF = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
 // 6장부터 두 장마다 장비 이름이 한 등급 오른다(무기 등급과 같은 순서)
-const NEW_PRE = ['성광의', '용린', '천공의', '심연의', '창세의'];
+const NEW_PRE = [t('data.cafc55'), t('data.eeac0d'), t('data.c53ca8'), t('data.82267f'), t('data.8ec2bb')];
 export const SLOTS = [
-  { id: 'helm', name: '투구', main: 'hp', names: ['가죽 두건', '철 투구', '미스릴 투구', '룬 투구', '마왕의 뿔투구', ...NEW_PRE.map(p => p + ' 투구')] },
-  { id: 'armor', name: '갑옷', main: 'def', names: ['누빈 옷', '사슬 갑옷', '미스릴 갑옷', '룬 갑옷', '마왕의 흑갑', ...NEW_PRE.map(p => p + ' 갑옷')] },
-  { id: 'boots', name: '장화', main: 'spd', names: ['헌 장화', '철 장화', '미스릴 장화', '룬 장화', '마왕의 군화', ...NEW_PRE.map(p => p + ' 장화')] },
-  { id: 'ring', name: '반지', main: 'atk', names: ['구리 반지', '은 반지', '미스릴 반지', '룬 반지', '마왕의 인장', ...NEW_PRE.map(p => p + ' 반지')] },
-  { id: 'collar', name: '펫 목걸이', main: 'pet', pet: true, names: ['가죽 목걸이', '방울 목걸이', '미스릴 목걸이', '룬 목걸이', '마왕의 목줄', ...NEW_PRE.map(p => p + ' 목걸이')] },
+  { id: 'helm', name: t('gear.b9b0fb'), main: 'hp', names: [t('gear.e42bf1'), t('gear.35ae57'), t('gear.2a4ce4'), t('gear.8d644d'), t('gear.ab5d3d'), ...NEW_PRE.map(p => t('gear.563e8c', { p }))] },
+  { id: 'armor', name: t('data.490212'), main: 'def', names: [t('gear.a77b8d'), t('gear.b9a7c1'), t('gear.3a7ff1'), t('gear.a29ce4'), t('gear.2af0b7'), ...NEW_PRE.map(p => t('gear.7ba0fe', { p }))] },
+  { id: 'boots', name: t('gear.7f0de4'), main: 'spd', names: [t('gear.46b6c6'), t('gear.bbaaf2'), t('gear.cbda60'), t('gear.b01018'), t('gear.652428'), ...NEW_PRE.map(p => t('gear.1ae2eb', { p }))] },
+  { id: 'ring', name: t('gear.f8435c'), main: 'atk', names: [t('gear.edc528'), t('gear.f5ce27'), t('gear.3fd714'), t('gear.7ff559'), t('gear.cbe7bc'), ...NEW_PRE.map(p => t('gear.54cf95', { p }))] },
+  { id: 'collar', name: t('gear.bc3a88'), main: 'pet', pet: true, names: [t('gear.b74209'), t('gear.f4f229'), t('gear.72886c'), t('gear.1c5853'), t('gear.d3325b'), ...NEW_PRE.map(p => t('gear.0fe653', { p }))] },
 ];
 export const slotOf = id => SLOTS.find(s => s.id === id);
 
 export const RARITY = [
-  { name: '일반', color: 0x9a94a8, css: '#c8c2d8', mul: 1, subs: 0, salvage: 1 },
-  { name: '희귀', color: 0x4aa8ff, css: '#6fc0ff', mul: 1.25, subs: 1, salvage: 2 },
-  { name: '영웅', color: 0xb060ff, css: '#c890ff', mul: 1.55, subs: 2, salvage: 4 },
-  { name: '전설', color: 0xff9a2a, css: '#ffb050', mul: 1.9, subs: 3, salvage: 8 },
-  { name: '숨겨진', color: 0xff5ad0, css: '#ff8ae0', mul: 1, subs: 0, salvage: 1 },
+  { name: t('gear.aef1a1'), color: 0x9a94a8, css: '#c8c2d8', mul: 1, subs: 0, salvage: 1 },
+  { name: t('gear.402095'), color: 0x4aa8ff, css: '#6fc0ff', mul: 1.25, subs: 1, salvage: 2 },
+  { name: t('lobby.be8063'), color: 0xb060ff, css: '#c890ff', mul: 1.55, subs: 2, salvage: 4 },
+  { name: t('gear.72041d'), color: 0xff9a2a, css: '#ffb050', mul: 1.9, subs: 3, salvage: 8 },
+  { name: t('codex.a34b3f'), color: 0xff5ad0, css: '#ff8ae0', mul: 1, subs: 0, salvage: 1 },
 ];
 // 드랍 등급 가중치(일반·희귀·영웅·전설). 보스 판은 한 칸 위로 민다
 const RARITY_W = [56, 30, 11, 3];
 
 // 옵션 1회분 기준값(1장 일반). 챕터마다 ×(1+0.35c)
 export const STATS = {
-  hp: { name: '최대 체력', base: 0.04, pct: true },
-  atk: { name: '모든 피해', base: 0.025, pct: true },
-  def: { name: '받는 피해 감소', base: 0.012, pct: true },
-  spd: { name: '이동 속도', base: 0.02, pct: true },
-  mag: { name: '줍는 거리', base: 0.07, pct: true },
-  luck: { name: '치명·은화', base: 0.012, pct: true },
-  regen: { name: '초당 회복', base: 0.1 },
-  cd: { name: '재사용 대기 감소', base: 0.012, pct: true },
-  pet: { name: '펫 피해', base: 0.12, pct: true },
+  hp: { name: t('data.e36ea0'), base: 0.04, pct: true },
+  atk: { name: t('data.b6691c'), base: 0.025, pct: true },
+  def: { name: t('data.ed39ed'), base: 0.012, pct: true },
+  spd: { name: t('data.4affb5'), base: 0.02, pct: true },
+  mag: { name: t('data.7be700'), base: 0.07, pct: true },
+  luck: { name: t('gear.2388c3'), base: 0.012, pct: true },
+  regen: { name: t('gear.2e8e06'), base: 0.1 },
+  cd: { name: t('gear.cafd8d'), base: 0.012, pct: true },
+  pet: { name: t('gear.a27d0d'), base: 0.12, pct: true },
 };
 const SUB_KEYS = ['hp', 'atk', 'def', 'spd', 'mag', 'luck', 'regen', 'cd'];
 export const statText = (k, v) => STATS[k].pct ? `${STATS[k].name} +${(v * 100).toFixed(v < 0.1 ? 1 : 0)}%` : `${STATS[k].name} +${v.toFixed(2)}`;
 
 // 세트: 2개 효과는 능력치, 4개 효과는 전투 중 특수 효과(Battle·weapons에서 fx 이름으로 확인)
 export const SETS = {
-  flame: { name: '대장장이의 불꽃', pre: '불꽃 대장장이의', css: '#ff8a4a', two: { atk: 0.1 }, twoTxt: '모든 피해 +10%', fourTxt: '맞힌 적이 25% 확률로 폭발한다', minC: 0 },
-  frost: { name: '서리 수호자', pre: '서리 수호자의', css: '#9ae8ff', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '맞으면 주변 적을 2초 얼린다(6초마다)', minC: 1 },
-  wind: { name: '바람 사냥꾼', pre: '바람 사냥꾼의', css: '#a8ffb0', two: { spd: 0.12 }, twoTxt: '이동 속도 +12%', fourTxt: '모든 스킬 재사용 대기 -18%', minC: 2 },
+  flame: { name: t('gear.4ddc2b'), pre: t('gear.5c85eb'), css: '#ff8a4a', two: { atk: 0.1 }, twoTxt: t('gear.5bca81'), fourTxt: t('gear.2b2d06'), minC: 0 },
+  frost: { name: t('gear.06b1b2'), pre: t('gear.d45acb'), css: '#9ae8ff', two: { def: 0.06 }, twoTxt: t('gear.2367e4'), fourTxt: t('gear.1b5fda'), minC: 1 },
+  wind: { name: t('gear.75e1d5'), pre: t('gear.04b3ce'), css: '#a8ffb0', two: { spd: 0.12 }, twoTxt: t('gear.1b54c9'), fourTxt: t('gear.db06e4'), minC: 2 },
   // 6장~ 세트: 4세트 효과는 그 장의 지형을 다룬다(envfx.js)
-  tide: { name: '심해 파수꾼', pre: '심해 파수꾼의', css: '#5ae0d0', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '물웅덩이 감속이 약 40% 줄고 독구름 피해도 40% 줄어든다', minC: 5 },
-  crystal: { name: '수정 세공사', pre: '수정 세공사의', css: '#c080ff', two: { cd: 0.08 }, twoTxt: '재사용 대기 -8%', fourTxt: '레이저·낙뢰 같은 지형 피해를 약 40% 덜 받는다', minC: 7 },
-  sky: { name: '폭풍 순례자', pre: '폭풍 순례자의', css: '#e8f4ff', two: { spd: 0.08 }, twoTxt: '이동 속도 +8%', fourTxt: '바람에 밀리는 힘이 약 40% 줄고 어둠 속 시야가 넓다', minC: 9 },
-  steam: { name: '증기 기술자', pre: '증기 기술자의', css: '#e08a50', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '분출구·불·번개 피해를 약 40% 덜 받는다', minC: 11 },
-  mirror: { name: '거울 수호자', pre: '거울 수호자의', css: '#90ffe8', two: { atk: 0.08 }, twoTxt: '모든 피해 +8%', fourTxt: '거울 빛줄기·되받기 피해를 약 40% 덜 받는다', minC: 13 },
+  tide: { name: t('gear.2c5818'), pre: t('gear.610dd9'), css: '#5ae0d0', two: { def: 0.06 }, twoTxt: t('gear.2367e4'), fourTxt: t('gear.187007'), minC: 5 },
+  crystal: { name: t('gear.52bf4b'), pre: t('gear.1c44ce'), css: '#c080ff', two: { cd: 0.08 }, twoTxt: t('data.fd5d9c'), fourTxt: t('gear.e71f23'), minC: 7 },
+  sky: { name: t('gear.5bf334'), pre: t('gear.f1c803'), css: '#e8f4ff', two: { spd: 0.08 }, twoTxt: t('data.3c4ccd'), fourTxt: t('gear.467826'), minC: 9 },
+  steam: { name: t('gear.b618ff'), pre: t('gear.620db6'), css: '#e08a50', two: { hp: 0.1 }, twoTxt: t('gear.fefbab'), fourTxt: t('gear.8a95df'), minC: 11 },
+  mirror: { name: t('gear.2e8831'), pre: t('gear.a5d2e8'), css: '#90ffe8', two: { atk: 0.08 }, twoTxt: t('gear.9e0581'), fourTxt: t('gear.d88cb8'), minC: 13 },
   // 16~18장 세트: 장 열릴 때만 나온다(minC가 그 장). 4세트는 그 장의 기믹 피해를 약 40% 줄인다
-  palace: { name: '서리 왕궁 근위', pre: '서리 근위의', css: '#8ad8ff', two: { def: 0.07 }, twoTxt: '받는 피해 -7%', fourTxt: '얼음 가시·서리 분출 피해를 약 40% 덜 받고 얼음판에서 덜 미끄러진다', minC: 15 },
-  skyway: { name: '하늘 항해사', pre: '하늘 항해사의', css: '#ffc890', two: { spd: 0.1 }, twoTxt: '이동 속도 +10%', fourTxt: '작살·포격·돌풍 피해를 약 40% 덜 받고 바람에 덜 밀린다', minC: 16 },
-  clock: { name: '시계탑 정비사', pre: '시계 정비사의', css: '#e8d090', two: { cd: 0.09 }, twoTxt: '재사용 대기 -9%', fourTxt: '멈춘 시계 감속이 약 40% 줄고 종소리·톱니 피해도 40% 줄어든다', minC: 17 },
-  thorn: { name: '가시 덩굴', pre: '가시 덩굴', css: '#7fd06a', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '맞으면 주변 적에게 가시가 박힌다', minC: 0 },
-  gold: { name: '황금 상인', pre: '황금 상인의', css: '#ffd75e', two: { mag: 0.3 }, twoTxt: '줍는 거리 +30%', fourTxt: '은화 +50%, 상인 물건 20% 할인', minC: 1 },
+  palace: { name: t('gear.9bba5e'), pre: t('gear.e7b3bd'), css: '#8ad8ff', two: { def: 0.07 }, twoTxt: t('gear.234918'), fourTxt: t('gear.df87e2'), minC: 15 },
+  skyway: { name: t('gear.432096'), pre: t('gear.6fe2e2'), css: '#ffc890', two: { spd: 0.1 }, twoTxt: t('gear.1077c1'), fourTxt: t('gear.b302bd'), minC: 16 },
+  clock: { name: t('gear.2cc839'), pre: t('gear.d121fc'), css: '#e8d090', two: { cd: 0.09 }, twoTxt: t('gear.aed6ea'), fourTxt: t('gear.29a9a9'), minC: 17 },
+  thorn: { name: t('gear.804e48'), pre: t('gear.804e48'), css: '#7fd06a', two: { hp: 0.1 }, twoTxt: t('gear.fefbab'), fourTxt: t('gear.f353a7'), minC: 0 },
+  gold: { name: t('gear.b25c04'), pre: t('gear.46395b'), css: '#ffd75e', two: { mag: 0.3 }, twoTxt: t('data.7703b8'), fourTxt: t('gear.aff98a'), minC: 1 },
   // 무기 전용 세트: 그 무기를 들고 싸울 때만 나온다(상인도 판다)
-  sword: { w: 'sword', name: '검성', pre: '검성의', css: '#9ad8ff', two: { atk: 0.1 }, twoTxt: '모든 피해 +10%', fourTxt: '세 번 벨 때마다 검기가 날아간다', minC: 0 },
-  spear: { w: 'spear', name: '용기사', pre: '용기사의', css: '#a8ffb0', two: { luck: 0.06 }, twoTxt: '치명·은화 +6%', fourTxt: '찌를 때 25% 확률로 투창을 던진다', minC: 0 },
-  axe: { w: 'axe', name: '광전사', pre: '광전사의', css: '#ff7a5a', two: { hp: 0.12 }, twoTxt: '최대 체력 +12%', fourTxt: '체력 절반 아래면 피해 +30%·받는 피해 -20%', minC: 0 },
-  bow: { w: 'bow', name: '사냥꾼', pre: '사냥꾼의', css: '#e8d08a', two: { cd: 0.08 }, twoTxt: '재사용 대기 -8%', fourTxt: '세 번째 화살마다 터진다', minC: 0 },
-  gun: { w: 'gun', name: '총잡이', pre: '총잡이의', css: '#ffb050', two: { spd: 0.1 }, twoTxt: '이동 속도 +10%', fourTxt: '다섯 번째 총알은 피해 2배', minC: 0 },
-  knuckle: { w: 'knuckle', name: '무도가', pre: '무도가의', css: '#ffe070', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '열 번 칠 때마다 충격파가 퍼진다', minC: 0 },
-  staff: { w: 'staff', name: '대마법사', pre: '대마법사의', css: '#c890ff', two: { cd: 0.1 }, twoTxt: '재사용 대기 -10%', fourTxt: '스킬이 10% 확률로 한 번 더 나간다', minC: 0 },
+  sword: { w: 'sword', name: t('gear.2bea5d'), pre: t('gear.07fec2'), css: '#9ad8ff', two: { atk: 0.1 }, twoTxt: t('gear.5bca81'), fourTxt: t('gear.82f301'), minC: 0 },
+  spear: { w: 'spear', name: t('gear.ce2b07'), pre: t('gear.cc6e77'), css: '#a8ffb0', two: { luck: 0.06 }, twoTxt: t('gear.47986c'), fourTxt: t('gear.0a3a2c'), minC: 0 },
+  axe: { w: 'axe', name: t('gear.c78379'), pre: t('gear.e2a392'), css: '#ff7a5a', two: { hp: 0.12 }, twoTxt: t('gear.dc5cc3'), fourTxt: t('gear.fdf048'), minC: 0 },
+  bow: { w: 'bow', name: t('gear.3d13f8'), pre: t('gear.921dce'), css: '#e8d08a', two: { cd: 0.08 }, twoTxt: t('data.fd5d9c'), fourTxt: t('gear.5b89ae'), minC: 0 },
+  gun: { w: 'gun', name: t('gear.b026d6'), pre: t('gear.e08ae1'), css: '#ffb050', two: { spd: 0.1 }, twoTxt: t('gear.1077c1'), fourTxt: t('gear.1199c4'), minC: 0 },
+  knuckle: { w: 'knuckle', name: t('gear.a2cff2'), pre: t('gear.ac9015'), css: '#ffe070', two: { def: 0.06 }, twoTxt: t('gear.2367e4'), fourTxt: t('gear.e2b9cf'), minC: 0 },
+  staff: { w: 'staff', name: t('gear.b65756'), pre: t('gear.c8ab98'), css: '#c890ff', two: { cd: 0.1 }, twoTxt: t('gear.1c9604'), fourTxt: t('gear.04c4e6'), minC: 0 },
 };
 
 // 숨겨진 템: 한 번만 얻는다. 얻는 조건은 hint로 흐릿하게만 알려 준다
 export const EGGS = {
-  duck: { slot: 'ring', name: '고무 오리', st: { def: 0.12, luck: 0.06 }, desc: '맞으면 꽥! 하고 운다', hint: '아주 드물게, 아무 데서나' },
-  granny: { slot: 'helm', name: '할머니 뜨개 모자', st: { hp: 0.2, regen: 0.8 }, desc: '쓰러져도 따뜻하다', hint: '열 번 쓰러지면' },
-  apron: { slot: 'armor', name: '대장장이 앞치마', st: { def: 0.08, hp: 0.12 }, desc: '끼고 있으면 강화 성공 확률 +5%p', hint: '칼을 세 번 부수면' },
-  cat: { slot: 'boots', name: '고양이 발 장화', st: { spd: 0.2, mag: 0.4 }, desc: '발소리가 나지 않는다', hint: '도망치는 고블린이 가끔' },
-  rock: { slot: 'collar', name: '이상한 돌멩이', st: { pet: 1.0 }, desc: '펫이 이걸 아주 좋아한다', hint: '대장간에서 칼을 자꾸 건드리면' },
+  duck: { slot: 'ring', name: t('gear.6200c6'), st: { def: 0.12, luck: 0.06 }, desc: t('gear.e32d35'), hint: t('gear.83856f') },
+  granny: { slot: 'helm', name: t('gear.3a4371'), st: { hp: 0.2, regen: 0.8 }, desc: t('gear.d600cf'), hint: t('gear.e32096') },
+  apron: { slot: 'armor', name: t('gear.83fada'), st: { def: 0.08, hp: 0.12 }, desc: t('gear.8bdbfa'), hint: t('gear.46668c') },
+  cat: { slot: 'boots', name: t('gear.6a09be'), st: { spd: 0.2, mag: 0.4 }, desc: t('gear.a36ef1'), hint: t('gear.a4bb6f') },
+  rock: { slot: 'collar', name: t('gear.97efd8'), st: { pet: 1.0 }, desc: t('gear.227ed3'), hint: t('gear.358adf') },
 };
 
 // ── 무기 종류: 기본 공격·전용 스킬·잘 나오는 스킬·따르는 스탯이 다르다. 검 말고는 보스·정예를 잡거나 판을 깨면 무작위로 얻는다 ──
 export const WTYPES = [
-  { id: 'sword', name: '검', noun: '검', desc: '앞쪽을 넓게 벤다', stat: 'str', tag: 'melee', fav: ['spin', 'orb', 'wave', 'might'], own: 'wave' },
-  { id: 'spear', name: '창', noun: '창', desc: '좁고 길게 꿰뚫는다', stat: 'dex', tag: 'ranged', fav: ['dagger', 'ice', 'javelin', 'haste'], own: 'javelin' },
-  { id: 'axe', name: '도끼', noun: '도끼', desc: '느리지만 사방을 크게 찍는다', stat: 'str', tag: 'melee', fav: ['fireball', 'holy', 'quake', 'vigor'], own: 'quake' },
-  { id: 'bow', name: '활', noun: '활', desc: '멀리서 꿰뚫는 화살을 쏜다', stat: 'dex', tag: 'ranged', fav: ['dagger', 'ice', 'volley', 'haste'], own: 'volley' },
-  { id: 'gun', name: '총', noun: '총', desc: '총알을 연달아 쏜다', stat: 'dex', tag: 'ranged', fav: ['bolt', 'dagger', 'grenade', 'focus'], own: 'grenade' },
-  { id: 'knuckle', name: '너클', noun: '너클', desc: '붙어서 아주 빠르게 친다', stat: 'str', tag: 'melee', fav: ['spin', 'orb', 'palm', 'vigor'], own: 'palm' },
-  { id: 'staff', name: '지팡이', noun: '지팡이', desc: '적을 따라가는 마력탄을 쏜다', stat: 'int', tag: 'magic', fav: ['bolt', 'fireball', 'holy', 'missile'], own: 'missile' },
+  { id: 'sword', name: t('gear.a2a7e6'), noun: t('gear.a2a7e6'), desc: t('gear.ce7066'), stat: 'str', tag: 'melee', fav: ['spin', 'orb', 'wave', 'might'], own: 'wave' },
+  { id: 'spear', name: t('gear.c214a6'), noun: t('gear.c214a6'), desc: t('gear.e7ff7f'), stat: 'dex', tag: 'ranged', fav: ['dagger', 'ice', 'javelin', 'haste'], own: 'javelin' },
+  { id: 'axe', name: t('gear.2c9df8'), noun: t('gear.2c9df8'), desc: t('gear.1bfd66'), stat: 'str', tag: 'melee', fav: ['fireball', 'holy', 'quake', 'vigor'], own: 'quake' },
+  { id: 'bow', name: t('gear.1c93d6'), noun: t('gear.1c93d6'), desc: t('gear.aa96eb'), stat: 'dex', tag: 'ranged', fav: ['dagger', 'ice', 'volley', 'haste'], own: 'volley' },
+  { id: 'gun', name: t('gear.10d96e'), noun: t('gear.10d96e'), desc: t('gear.621ee8'), stat: 'dex', tag: 'ranged', fav: ['bolt', 'dagger', 'grenade', 'focus'], own: 'grenade' },
+  { id: 'knuckle', name: t('gear.a65ee1'), noun: t('gear.a65ee1'), desc: t('gear.012e4e'), stat: 'str', tag: 'melee', fav: ['spin', 'orb', 'palm', 'vigor'], own: 'palm' },
+  { id: 'staff', name: t('gear.e5ed98'), noun: t('gear.e5ed98'), desc: t('gear.fd9ef8'), stat: 'int', tag: 'magic', fav: ['bolt', 'fireball', 'holy', 'missile'], own: 'missile' },
 ];
 export const wtypeOf = sv => WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
 
 // ── 보석으로 사는 꾸미기 ──
 // 영웅 스킨: 이전 색상 스킨 구매 내역을 보존한다. 능력치 보너스는 없다
 export const HERO_SKINS = [
-  { id: '', name: '기본 모험가', desc: '처음 옷', cost: 0 },
-  { id: 'crimson', name: '진홍 기사', desc: '붉은 잔광', hue: 150, cost: 500 },
-  { id: 'shadow', name: '그림자 추적자', desc: '그림자 잔광', gray: true, dark: true, cost: 500 },
-  { id: 'jade', name: '비취 수도승', desc: '비취빛 잔광', hue: -90, cost: 800 },
-  { id: 'paladin', name: '황금 성기사', desc: '황금빛 잔광', hue: -150, cost: 800 },
-  { id: 'demon', name: '마왕 갑주', desc: '마왕의 잔광', hue: 100, cost: 1600 },
+  { id: '', name: t('gear.eb1a0e'), desc: t('gear.4ddd2f'), cost: 0 },
+  { id: 'crimson', name: t('gear.d167dd'), desc: t('gear.b73918'), hue: 150, cost: 500 },
+  { id: 'shadow', name: t('gear.edf081'), desc: t('gear.7bc0ef'), gray: true, dark: true, cost: 500 },
+  { id: 'jade', name: t('gear.a0e911'), desc: t('gear.5d91e7'), hue: -90, cost: 800 },
+  { id: 'paladin', name: t('gear.c01c98'), desc: t('gear.b83810'), hue: -150, cost: 800 },
+  { id: 'demon', name: t('gear.712e5a'), desc: t('gear.eba52e'), hue: 100, cost: 1600 },
 ];
 // 캐시 무기: 무기 종류마다 하나. 그 무기를 들면 피해 +12%, 칼빛을 따로 안 끼면 고유 궤적 색
 export const CASH_W = {
-  sword: { name: '용살검', hue: 175, tint: 0xff5a2a },
-  spear: { name: '천룡창', hue: -60, tint: 0x9ae8ff },
-  axe: { name: '파멸의 도끼', hue: 100, tint: 0xb07aff },
-  bow: { name: '천궁', hue: -150, tint: 0xffd75e },
-  gun: { name: '마도총', hue: 60, tint: 0xff6ad0 },
-  knuckle: { name: '용권', hue: -120, tint: 0x6fe36a },
-  staff: { name: '대현자의 지팡이', gray: true, tint: 0xffffff },
+  sword: { name: t('gear.23f653'), hue: 175, tint: 0xff5a2a },
+  spear: { name: t('gear.4c84aa'), hue: -60, tint: 0x9ae8ff },
+  axe: { name: t('gear.515403'), hue: 100, tint: 0xb07aff },
+  bow: { name: t('gear.baf63b'), hue: -150, tint: 0xffd75e },
+  gun: { name: t('gear.9e0682'), hue: 60, tint: 0xff6ad0 },
+  knuckle: { name: t('gear.7a7a42'), hue: -120, tint: 0x6fe36a },
+  staff: { name: t('gear.13c3b9'), gray: true, tint: 0xffffff },
 };
 export const CASH_W_GEM = 900, CASH_W_DMG = 0.12;
 export const heroSkin = sv => HERO_SKINS.find(x => x.id === (sv.hskin || '')) || HERO_SKINS[0];
@@ -131,16 +132,16 @@ export const SKILL_UNLOCK = { holy: 1, bolt: 2, fireball: 3, ice: 5 };
 
 // ── 스탯: 스테이지를 처음 깰 때 2점, 보스는 2점 더(5장까지 40점, 6장부터는 판마다 1점·보스 1점 더) ──
 export const SP = [
-  { id: 'str', name: '힘', desc: '검·도끼·너클 피해 +10%', css: '#ff9a7a' },
-  { id: 'dex', name: '민첩', desc: '창·활·총 피해 +10% · 이동 +0.3%', css: '#a8ffb0' },
-  { id: 'int', name: '지능', desc: '지팡이 피해 +10% · 재사용 -0.3%', css: '#9ad8ff' },
-  { id: 'vit', name: '체력', desc: '최대 체력 +4% · 회복 +0.02/초', css: '#ffd75e' },
+  { id: 'str', name: t('gear.ef089e'), desc: t('gear.d7322e'), css: '#ff9a7a' },
+  { id: 'dex', name: t('gear.64b53c'), desc: t('gear.83fd4d'), css: '#a8ffb0' },
+  { id: 'int', name: t('gear.448d3a'), desc: t('gear.940dd1'), css: '#9ad8ff' },
+  { id: 'vit', name: t('data.a45ea5'), desc: t('gear.7d5210'), css: '#ffd75e' },
 ];
 // 든 무기가 따르는 스탯 1점마다 모든 피해 +10%. 다른 무기 스탯에 찍은 점수는 피해를 올리지 않는다
 // 몹 체력은 무기 스탯에 대부분 찍었다고 보고 올린다(spReq): 창을 들고 지능만 찍으면 뒤로 갈수록 못 깬다
 export const SP_DMG = 0.1;
 export const SKILL_TAG = { sword: 'melee', spin: 'melee', quake: 'melee', palm: 'melee', dagger: 'ranged', ice: 'ranged', javelin: 'ranged', wave: 'ranged', volley: 'ranged', grenade: 'ranged', bolt: 'magic', fireball: 'magic', holy: 'magic', orb: 'magic', missile: 'magic' };
-export const TAG_NAME = { melee: '근접', ranged: '원거리', magic: '마법' };
+export const TAG_NAME = { melee: t('gear.c95a16'), ranged: t('gear.e39bc2'), magic: t('gear.9d4179') };
 // 15판(5장)까지는 스테이지 2점·보스 2점 더(40점). 6장부터는 판마다 1점·보스 1점 더로 완만하게(45판 끝까지 약 80점)
 export const SP_OLD_END = 15;
 export const spTotal = cleared => cleared <= SP_OLD_END ? cleared * 2 + Math.floor(cleared / 3) * 2
@@ -162,23 +163,23 @@ export const SP_RESET_GEM = 50;
 // 보스를 처음 잡으면 그 보스를 작게 만든 펫이 따라온다. 장(맵)마다 잘 듣는 펫이 달라 처음 받은 펫도 뒷 장에서 다시 쓴다
 // good: 그 장에서 효과 ×1.8 + 주인공 받는 피해 -20%, weak: 그 장에서 효과 ×0.6 (장 번호는 0부터)
 export const PETS = [
-  { id: 'general', name: '해골 장군', desc: '방패로 한 대를 막아 준다', unlock: 2, hint: '1-2 중간 보스', color: 0xe8e2c8, good: [0, 2], tank: true },
-  { id: 'kingslime', name: '슬라임 왕', desc: '은화·상자를 주워 온다', unlock: 3, hint: '1-3 보스', color: 0x6fe36a, good: [1], weak: [2] },
-  { id: 'lich', name: '리치 왕', desc: '저주로 적을 약하게 한다', unlock: 6, hint: '2-3 보스', color: 0xb07aff, good: [4], weak: [1] },
-  { id: 'lavagolem', name: '용암 거신', desc: '둘레에 불바다를 깐다', unlock: 9, hint: '3-3 보스', color: 0xff7a2a, good: [3], weak: [2], tank: true },
-  { id: 'wyrm', name: '서리 용', desc: '입김으로 앞쪽 적을 얼린다', unlock: 12, hint: '4-3 보스', color: 0x9ae8ff, good: [4] },   // 4-3에서 얻으면 남은 곳이 5장뿐이라 5장에 잘 듣게
-  { id: 'demonlord', name: '마왕', desc: '마탄 세 발을 흩뿌린다', unlock: 15, hint: '5-3 보스', color: 0xff3a50, good: [0, 1], weak: [4] },
+  { id: 'general', name: t('battle.20631e'), desc: t('gear.e0457f'), unlock: 2, hint: t('gear.a32b6f'), color: 0xe8e2c8, good: [0, 2], tank: true },
+  { id: 'kingslime', name: t('data.052600'), desc: t('gear.e49319'), unlock: 3, hint: t('gear.dc40e0'), color: 0x6fe36a, good: [1], weak: [2] },
+  { id: 'lich', name: t('data.8938a1'), desc: t('gear.fd27a3'), unlock: 6, hint: t('gear.94c524'), color: 0xb07aff, good: [4], weak: [1] },
+  { id: 'lavagolem', name: t('data.7464f1'), desc: t('gear.690878'), unlock: 9, hint: t('gear.4adfa8'), color: 0xff7a2a, good: [3], weak: [2], tank: true },
+  { id: 'wyrm', name: t('data.05e151'), desc: t('gear.028ba6'), unlock: 12, hint: t('gear.14ff77'), color: 0x9ae8ff, good: [4] },   // 4-3에서 얻으면 남은 곳이 5장뿐이라 5장에 잘 듣게
+  { id: 'demonlord', name: t('data.93df8f'), desc: t('gear.6acfc2'), unlock: 15, hint: t('gear.a17071'), color: 0xff3a50, good: [0, 1], weak: [4] },
   // 6장~: 보스 이름 = 펫 id. 지형 기믹을 다루는 펫이 하나씩 있다(good은 그 기믹이 심한 장)
-  { id: 'tidewyrm', name: '해일의 수문룡', desc: '파도로 적을 밀어내고 웅덩이에 안 느려진다', unlock: 18, hint: '6-3 보스', color: 0x5ae0d0, good: [5, 9], weak: [3] },
-  { id: 'swampqueen', name: '늪의 여왕', desc: '둘레에 독안개를 깔고 독구름이 안 아프다', unlock: 21, hint: '7-3 보스', color: 0xb060e0, good: [6, 10], weak: [4] },
-  { id: 'crystcolossus', name: '수정 거신', desc: '수정 파편을 사방으로 쏜다', unlock: 24, hint: '8-3 보스', color: 0xb080ff, good: [7, 13], weak: [5], tank: true },
-  { id: 'stormcaptain', name: '폭풍의 기사단장', desc: '낙뢰를 내리고 바람에 덜 밀린다', unlock: 27, hint: '9-3 보스', color: 0xd8e8ff, good: [8, 12], weak: [9] },
-  { id: 'voidlord', name: '공허 군주', desc: '적을 한곳으로 끌어모은다', unlock: 30, hint: '10-3 보스', color: 0x7a6aff, good: [9, 14], weak: [7] },
-  { id: 'sandcolossus', name: '모래 거신', desc: '모래 폭풍으로 둘레 적을 느리게 하고 유사에 안 끌린다', unlock: 33, hint: '11-3 보스', color: 0xe0c080, good: [10, 4], weak: [5], tank: true },
-  { id: 'steamgeneral', name: '증기 장군', desc: '증기를 뿜어 둘레를 때리고 분출구에 안 다친다', unlock: 36, hint: '12-3 보스', color: 0xe08a50, good: [11, 14], weak: [8] },
-  { id: 'thunderdragon', name: '뇌룡', desc: '번개가 적 셋을 잇고 낙뢰에 안 다친다', unlock: 39, hint: '13-3 보스', color: 0x9a8aff, good: [12, 14], weak: [10] },
-  { id: 'mirrorlord', name: '거울의 군주', desc: '가까운 적을 6초마다 멈추고 빛줄기에 안 다친다', unlock: 42, hint: '14-3 보스', color: 0x90ffe8, good: [13, 7], weak: [11] },
-  { id: 'forgegod', name: '원초의 대장신', desc: '적 무리 위로 큰 망치를 내리치고 불에 안 다친다', unlock: 45, hint: '15-3 보스', color: 0xffd75e, good: [14, 6], weak: [12] },
+  { id: 'tidewyrm', name: t('data.2758f7'), desc: t('gear.b6f98b'), unlock: 18, hint: t('gear.d23c11'), color: 0x5ae0d0, good: [5, 9], weak: [3] },
+  { id: 'swampqueen', name: t('data.782796'), desc: t('gear.313f6a'), unlock: 21, hint: t('gear.709650'), color: 0xb060e0, good: [6, 10], weak: [4] },
+  { id: 'crystcolossus', name: t('data.c93590'), desc: t('gear.0da21a'), unlock: 24, hint: t('gear.2d95ee'), color: 0xb080ff, good: [7, 13], weak: [5], tank: true },
+  { id: 'stormcaptain', name: t('data.0e877d'), desc: t('gear.a5abb7'), unlock: 27, hint: t('gear.d497d9'), color: 0xd8e8ff, good: [8, 12], weak: [9] },
+  { id: 'voidlord', name: t('data.15bd71'), desc: t('gear.34c282'), unlock: 30, hint: t('gear.841922'), color: 0x7a6aff, good: [9, 14], weak: [7] },
+  { id: 'sandcolossus', name: t('data.134571'), desc: t('gear.03abd7'), unlock: 33, hint: t('gear.7ef7ca'), color: 0xe0c080, good: [10, 4], weak: [5], tank: true },
+  { id: 'steamgeneral', name: t('data.37ac3b'), desc: t('gear.3d4f2a'), unlock: 36, hint: t('gear.a423d7'), color: 0xe08a50, good: [11, 14], weak: [8] },
+  { id: 'thunderdragon', name: t('data.da6742'), desc: t('gear.3eeed8'), unlock: 39, hint: t('gear.086c44'), color: 0x9a8aff, good: [12, 14], weak: [10] },
+  { id: 'mirrorlord', name: t('data.91fb7c'), desc: t('gear.1a6d5d'), unlock: 42, hint: t('gear.749dde'), color: 0x90ffe8, good: [13, 7], weak: [11] },
+  { id: 'forgegod', name: t('data.66d303'), desc: t('gear.c941c0'), unlock: 45, hint: t('gear.b17e72'), color: 0xffd75e, good: [14, 6], weak: [12] },
 ];
 // 예전 펫(불씨·슬라임·박쥐)을 키운 만큼 같은 때 받는 보스 펫으로 옮긴다
 export const PET_OLD = { fire: 'general', slime: 'lich', bat: 'lavagolem' };
@@ -220,6 +221,14 @@ export function makeItem(c, opt = {}) {
   }
   for (const k in st) st[k] = Math.round(st[k] * 1000) / 1000;
   return { u: uid(), s: slot.id, r, c: ci, n: set ? `${SETS[set].pre} ${slot.name}` : slot.names[ni], set, st };
+}
+// 장비 이름은 저장된 글자(it.n)가 아니라 종류·세트·단계로 지금 언어에서 다시 만든다(옛 저장도 같다)
+export function itemName(it) {
+  if (it.egg && EGGS[it.egg]) return EGGS[it.egg].name;
+  const slot = SLOTS.find(x => x.id === it.s);
+  if (!slot) return it.n;
+  const c = it.c || 0, ni = c < 5 ? c : Math.min(slot.names.length - 1, 5 + Math.floor((c - 5) / 2));
+  return it.set && SETS[it.set] ? `${SETS[it.set].pre} ${slot.name}` : slot.names[ni] || it.n;
 }
 export const makeEgg = id => ({ u: uid(), s: EGGS[id].slot, r: 4, c: 0, n: EGGS[id].name, egg: id, st: { ...EGGS[id].st } });
 
