@@ -164,7 +164,7 @@ const BGM_FILES = {
 // 두 곡 모두 평균 -17.8dB·최대 -3dB라 0.6이면 최대가 -7.6dB로 효과음보다 컸다 → 0.2(평균 -32dB·최대 -17dB, 절차 BGM과 비슷). 음량 설정이 생기면 여기에 곱한다
 // 53차: 웹·itch에서 배경음악이 크다는 말이 나와 0.2 → 0.035로(-15dB). 측정(tools/audio_levels.mjs): 효과음 소리 나는 구간 RMS 평균 -35dB, 음악은 0.07일 때 -43dB였고 0.035면 -49dB.
 // 효과음 한 톤 최대는 베기·피격 약 -21dB, 처치 -18dB, 레벨업 -27dB(master 0.35 x 톤 vol). 음악 설정(끔/작게/보통)의 '작게'는 절반(-6dB)
-const BGM_BASE = 0.1;   // 54차: 아이폰에서 gain이 실제로 먹게 되니 0.015(-57dB)는 폰 스피커로 안 들렸다. 효과음 평균보다 약 11dB 아래
+const BGM_BASE = 0.15;   // 54차: 아이폰에서 gain이 실제로 먹게 되니 0.015(-57dB)는 폰 스피커로 안 들렸다. 효과음 평균보다 약 11dB 아래
 let musicMul = 1;   // 보통 1, 작게 0.5
 const bv = () => BGM_BASE * musicMul;
 // 54차: iOS Safari는 <audio>.volume을 JS로 못 바꾼다(항상 1.0) → 파일 음악을 WebAudio GainNode로 거쳐 크기를 정한다.
@@ -237,7 +237,7 @@ function nativeFallback(st) {
   st.el = el; try { old.pause(); } catch { /* 무시 */ }
   el.play().catch(() => {});
 }
-const PGAIN = (lobby) => (lobby ? 0.12 : 0.14) * musicMul;   // 절차 BGM(0.22/0.28 → 0.12/0.14)
+const PGAIN = (lobby) => (lobby ? 0.18 : 0.21) * musicMul;   // 절차 BGM(0.22/0.28 → 0.18/0.21)
 export const setMusicLevel = lv => {
   musicMul = lv === 1 ? 0.5 : 1;
   try {
