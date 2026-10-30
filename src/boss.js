@@ -4,11 +4,13 @@ import { sfx, playBgm } from './sfx.js';
 import { insetsGame } from './safeArea.js';
 import { font, toast, viewRect } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
+import { MID_PATTERNS } from './midPat.js';
 import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has } from './fx2.js';
 import { t, tt } from './i18n.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
-const PAT_NAME = { jump: t('boss.107f3a'), charge: t('boss.420d2b'), slam: t('boss.029568'), ring: t('boss.6d24cb'), aimed: t('boss.36fc49'), summon: t('boss.d66332'), sweep: t('boss.40236d'), pools: t('boss.ec0b01'), wave: t('boss.997e54'), tsunami: t('boss.814117'), spore: t('boss.5c693c'), bloom: t('boss.0768ac'), prism: t('boss.3e97bd'), shatter: t('boss.56758f'), gale: t('boss.071b3a'), cyclone: t('boss.3dbf66'), void: t('boss.a11889'), eclipse: t('boss.895396'), burrow: t('boss.15b7f0'), sink: t('boss.4af90f'), vent: t('boss.418165'), overheat: t('boss.5bbfb4'), bolt: t('boss.7e82c9'), tempest: t('boss.d7dac6'), mirror: t('boss.e70e4d'), reflect: t('boss.2c22c2'), hammer: t('boss.ecef39'), meteor: t('boss.8d6129'), icelance: t('boss.93e20a'), frostquake: t('boss.e480b8'), blizzard: t('boss.87a560'), volley: t('boss.15e4f0'), skydive: t('boss.81537e'), broadside: t('boss.054902'), squall: t('boss.071b3a'), chime: t('boss.3e801a'), rewindpat: t('boss.099f7b'), gearsaw: t('boss.1497d7'), stoptime: t('boss.cb1b40') };
+const PAT_NAME = { jump: t('boss.107f3a'), charge: t('boss.420d2b'), slam: t('boss.029568'), ring: t('boss.6d24cb'), aimed: t('boss.36fc49'), summon: t('boss.d66332'), sweep: t('boss.40236d'), pools: t('boss.ec0b01'), wave: t('boss.997e54'), tsunami: t('boss.814117'), spore: t('boss.5c693c'), bloom: t('boss.0768ac'), prism: t('boss.3e97bd'), shatter: t('boss.56758f'), gale: t('boss.071b3a'), cyclone: t('boss.3dbf66'), void: t('boss.a11889'), eclipse: t('boss.895396'), burrow: t('boss.15b7f0'), sink: t('boss.4af90f'), vent: t('boss.418165'), overheat: t('boss.5bbfb4'), bolt: t('boss.7e82c9'), tempest: t('boss.d7dac6'), mirror: t('boss.e70e4d'), reflect: t('boss.2c22c2'), hammer: t('boss.ecef39'), meteor: t('boss.8d6129'), icelance: t('boss.93e20a'), frostquake: t('boss.e480b8'), blizzard: t('boss.87a560'), volley: t('boss.15e4f0'), skydive: t('boss.81537e'), broadside: t('boss.054902'), squall: t('boss.071b3a'), chime: t('boss.3e801a'), rewindpat: t('boss.099f7b'), gearsaw: t('boss.1497d7'), stoptime: t('boss.cb1b40'),
+  clubs: t('boss.05f230'), graves: t('boss.0a1ef8'), lavaspit: t('boss.d9d2de'), icicles: t('boss.b3b24e'), chains: t('boss.3a008c'), claw: t('boss.e62c5f'), tongue: t('boss.3ba158'), stinger: t('boss.e2a932'), swoop: t('boss.35fb4a'), gaze: t('boss.b9dfe0'), unwrap: t('boss.4bc136'), piston: t('boss.f17946'), shards: t('boss.e11a57'), anvilrain: t('boss.1655ad') };
 const MID_EXTRA = ['ring', 'jump'];   // 50차: 중간보스 페이즈 1·2에서 늘어나는 새 패턴
 const PHASE_LINE = [t('boss.d58fa8'), t('boss.6bf13b')];
 
@@ -20,7 +22,7 @@ export class BossAI {
     const p = { x: Phaser.Math.Clamp(hx + R(-70, 70), 40, 1600 - 40), y: Phaser.Math.Clamp(Math.max(vr.y + vr.height * 0.22, 60), 60, 1600 - 40) };
     const m = this.m = s.mobs.create(p.x, p.y, null).play(key);
     const fb = s.registry.get('fallback')[key];
-    m.setScale(fb ? 3.0 : 1.3).setDepth(12);
+    m.setScale(fb ? 3.0 : this.b.mid ? 1.12 : 1.3).setDepth(12);
     m.preFX?.addGlow(0x000000, 2.5, 0, false, 0.1, 8);   // 49차: 짙은 외곽선으로 바닥·효과 속에서도 읽힌다
     if (fb) m.setTint(this.b.color);
     m.isBoss = true; m.bossAI = this; m.kind = key; m.kbRes = 0; m.color = this.b.color; m.hitBy = {}; m.baseTint = m.tintTopLeft;
@@ -441,4 +443,4 @@ export class BossAI {
 }
 
 // 6장부터의 보스 패턴(envfx.js)
-Object.assign(BossAI.prototype, BOSS_PATTERNS);
+Object.assign(BossAI.prototype, BOSS_PATTERNS, MID_PATTERNS);

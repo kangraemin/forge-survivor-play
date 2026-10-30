@@ -19,7 +19,7 @@ const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero
   'mob2_r0', 'mob2_r1', 'mob2_r2', 'fx1_r0', 'fx1_r1', 'fx1_r2', 'fx2_r0', 'fx2_r1', 'fx2_r2', 'tiles', 'deco'];
 // 6~15장 그림은 기존 그림의 색만 바꿔 만든다(tools/palette.py). 몹 시트 z6~z15(장당 3행), 보스 boss3~boss6, 바닥 tile6~tile15
 const NEW_CH = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', ...NEW_CH.map(c => 'z' + c)].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
+const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', 'mid1', 'mid2', 'mid3', 'mid4', 'mid5', 'mid6', ...NEW_CH.map(c => 'z' + c)].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
   .concat(['boss6_r0'], NEW_CH.map(c => 'tile' + c), NEW_CH.map(c => 'prop' + c), [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(c => 'lobby_bg' + c))
   .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'lobby_bg', 'bell', 'tile2', 'tile3', 'tile4', 'tile5']);
 // 코드로 그리던 작은 그림을 대신하는 PNG(assets/icon). 있으면 makeTextures가 건너뛴다
@@ -131,7 +131,7 @@ export class Boot extends Phaser.Scene {
       let sh = this.sheet(`${b.sheet}_r${b.row}`, 2);
       if (!sh) { sh = this.sheet('mob_r' + (b.row % 3)); fallback[key] = true; }
       A(key, sh, 3);
-      if (b.lateCh) A(key + 'Tele', this.sheet(`${b.sheet}_r${b.row}_telegraph`, 2), 5);   // 16~18장 보스의 패턴 예고 그림
+      if (b.lateCh && !b.mid) A(key + 'Tele', this.sheet(`${b.sheet}_r${b.row}_telegraph`, 2), 5);   // 16~18장 보스의 패턴 예고 그림
     }
     for (const it of CASH_PETS) { A(`pet_${it.id}`, `cos_${it.id}`, 6); if (it.dir) A(`pet_${it.id}_slash`, `cos_${it.id}_slash`, 10, 0); }
     makePetRoleAnims(this);

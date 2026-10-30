@@ -14,7 +14,7 @@ const cl = v => Phaser.Math.Clamp(v, 40, WORLD - 40);
 // 피해 이름 → 그 장 세트(4세트가 이 피해를 약 40% 줄인다)
 export const LATE_FX4 = { ice: 'palace4', frost: 'palace4', bash: 'palace4', harpoon: 'skyway4', gust: 'skyway4', cannon: 'skyway4', shock: 'skyway4', chime: 'clock4', gear: 'clock4', slash: 'clock4' };
 
-const segDist = (px, py, ax, ay, bx, by) => {
+export const segDist = (px, py, ax, ay, bx, by) => {
   const vx = bx - ax, vy = by - ay, t = Phaser.Math.Clamp(((px - ax) * vx + (py - ay) * vy) / (vx * vx + vy * vy || 1), 0, 1);
   return Math.hypot(px - ax - vx * t, py - ay - vy * t);
 };
@@ -297,12 +297,12 @@ export class Late {
 
 // ── 보스 패턴(BossAI.prototype에 섞는다) ──
 const hit = (b, mul, src) => { const e = b.s.env, f = LATE_FX4[src]; b.s.hurt(b.m.dmg * mul * (f && e?.fx4(f) ? 0.6 : 1), src); };
-const lineWarn = (b, ox, oy, a, len, w, ms, onFire) => {
+export const lineWarn = (b, ox, oy, a, len, w, ms, onFire) => {
   const s = b.s, m = b.m, strip = warnStrip(s, ox, oy, a, len, w) || s.add.graphics().setDepth(9).lineStyle(w / 2, 0xff4050, 0.6).lineBetween(ox, oy, ox + Math.cos(a) * len, oy + Math.sin(a) * len);
   if (strip.step) { const st = { f: 0 }; s.tweens.add({ targets: st, f: 1, duration: ms, onUpdate: () => strip.active && strip.step(st.f) }); }
   s.time.delayedCall(ms, () => { strip.destroy(); if (m.active && !s.over) onFire(); });
 };
-const flashLine = (s, ox, oy, ex, ey, col) => { const ln = s.add.line(0, 0, ox, oy, ex, ey, col, 1).setOrigin(0).setLineWidth(3).setDepth(32); s.tweens.add({ targets: ln, alpha: 0, duration: 260, onComplete: () => ln.destroy() }); };
+export const flashLine = (s, ox, oy, ex, ey, col) => { const ln = s.add.line(0, 0, ox, oy, ex, ey, col, 1).setOrigin(0).setLineWidth(3).setDepth(32); s.tweens.add({ targets: ln, alpha: 0, duration: 260, onComplete: () => ln.destroy() }); };
 
 export const LATE_PATTERNS = {
   // 서리 왕: 얼음 창이 내 쪽으로 세 줄(분노 직전엔 다섯 줄) 부채꼴로 박힌다

@@ -1276,9 +1276,10 @@ export class Battle extends Phaser.Scene {
       // 처음 판(1-1)도 마지막 웨이브 후반에 약한 해골 장군이 나온다: 끝이 밋밋하게 시간만 다 됐다(40차)
       const easyBoss = this.easy && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.45;
       if (easyBoss || (towerBoss || this.s === 1 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
-        this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true);
+        const midKey = !this.endless && this.ch.mid && D.BOSSES[this.ch.mid] ? this.ch.mid : 'general';   // 장마다 다른 중간보스(무한의 탑은 해골 장군)
+        this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, midKey, this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true);
         if (easyBoss) this.midBoss.m.dmg *= 0.7;   // 52차: 1-1 중간보스도 실제 DPS 기준 체력(예전엔 체력 0.4배 식이라 3초에 죽었다). 대신 덜 아프게
-        this.banner(t('battle.20631e'), t('battle.a76043')); sfx('bossIn');
+        this.banner(D.BOSSES[midKey].name, t('battle.a76043')); sfx('bossIn');
         if (!this.bot && !this.mode) playBgm('boss', this.c);   // 중간보스 곡. 잡으면 boss.js die()가 전투 곡으로 되돌린다
       }
     } else {
