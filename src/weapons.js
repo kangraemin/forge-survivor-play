@@ -1,3 +1,4 @@
+import { cosmetic } from './cosmetics.js';
 // 액티브 스킬 8종 + 무기 전용 7종(검기·투창·지진·화살비·수류탄·기공파·유도 마탄). 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
 import { sfx } from './sfx.js';
 import { skinFx, viewRect } from './ui.js';
@@ -53,7 +54,11 @@ export class Weapons {
   }
 
   enhGlow() {
-    const sv = this.s.sv, g = this.enhBase(sv.enh), sk = (sv.skin && SKINS.find(x => x.id === sv.skin)) || cashW(sv);
+    const sv = this.s.sv, g = this.enhBase(sv.enh);
+    const theme = cosmetic(this.s.cosLook?.weapon)?.effect;
+    const themes = { star: [0xa9caff, 30], leaf: [0x9be88a, -90], water: [0x87e8ff, 0], note: [0xe2a0ff, 95], heart: [0xff9dc3, 145], ember: [0xff9b60, 175], gold: [0xffe495, -150] };
+    if (themes[theme]) { const [tint, hue] = themes[theme]; return { ...g, tint, skin: { tint, hue } }; }
+    const sk = (sv.skin && SKINS.find(x => x.id === sv.skin)) || cashW(sv);
     // 칼빛을 끼면 색만 바꾼다(크기는 강화 단계 그대로)
     return sk ? { ...g, tint: sk.tint, skin: sk, ember: g.ember || sk.ember } : g;
   }

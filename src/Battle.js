@@ -12,14 +12,8 @@ import { track, logCtx } from './log.js';
 import { dexKill } from './codex.js';
 import { makeEnv } from './envfx.js';
 
-// 주인공 시트(검 없는 hn_*)의 프레임별 손 위치 [x, y, 칼날 방향(도)]. w는 한 칸 너비. 서 있기·피격·돌진은 같은 시트('pose')
-const HAND = {
-  walkFront: { w: 37, f: [[7, 30, 115], [6, 31, 115], [7, 31, 115], [6, 32, 115]] },
-  walkUp: { w: 39, f: [[29, 31, 65], [29, 32, 65], [29, 31, 65], [30, 32, 65]] },
-  walkSide: { w: 40, f: [[12, 33, 35], [12, 33, 35], [11, 33, 35], [11, 33, 35]] },
-  slash: { w: 58, f: [[21, 9, -55], [41, 32, 35], [44, 24, 0], [25, 36, 30]] },
-  pose: { w: 63, f: [[28, 31, 75], [25, 29, 170], [27, 32, 50], [28, 33, 50]] },
-};
+import { consumeTrial } from './cosmetics.js';
+import { dressHero, CosmeticActor, weaponKey, placeHeld } from './cosmeticView.js';
 const { W, H } = D;
 const WORLD = 1600;
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
@@ -35,6 +29,7 @@ export class Battle extends Phaser.Scene {
     this.dungeon = data.dungeon || null;                // 일일 던전 종류(gold·stone·gear·gem)
     this.isBoss = !this.endless && !this.dungeon && this.s === D.STAGES_PER_CHAPTER - 1;
     this.sv = load();
+    const outfit = consumeTrial(this.sv); this.cosLook = outfit.look; this.cosTrial = outfit.trial; save();
     const q = new URLSearchParams(location.search);
     this.bot = !!data.bot || q.has('bot');
     this.speed = +(q.get('speed') || 1);   // 자동 검증용 배속
@@ -259,6 +254,7 @@ export class Battle extends Phaser.Scene {
     this.maxHp = D.PLAYER.hp * (1 + this.tv('hp')) * (1 + 0.15 * this.sv.tier);   // 무기 등급이 오르면 체력도 오른다(tv('hp')에 장비·스탯 체력도 들어 있다)
     this.hp = this.maxHp;
     this.hero = this.physics.add.sprite(WORLD / 2, WORLD / 2, 'hero2_r0s').play('idle');
+    dressHero(this.hero, this.cosLook);
     this.hero.body.setSize(this.hero.width * 0.45, this.hero.height * 0.35).setOffset(this.hero.width * 0.275, this.hero.height * 0.6);
     this.hero.setCollideWorldBounds(true);
     this.heroShadow = this.add.image(0, 0, 'shadow').setScale(1.6, 1.4);
@@ -274,12 +270,12 @@ export class Battle extends Phaser.Scene {
     // 몹 더미에 몸이 가려도 머리 위 작은 화살표로 어디 있는지 보인다
     this.heroMark = this.add.triangle(0, 0, 0, 0, 8, 0, 4, 5, rc).setStrokeStyle(1, 0x000000, 0.6).setDepth(12);
     // 영웅 스킨: 몸 색을 바꾼다
-    if (heroSkin(sv).id) skinFx(this.hero, heroSkin(sv));
+    if (!this.hero.cosBody && heroSkin(sv).id) skinFx(this.hero, heroSkin(sv));
     if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
     // 주인공 그림은 검을 들고 있다: 다른 무기면 손에 그 무기 그림을 겹쳐 든다
-    const wk = `w_${this.wtype.id}${sv.tier}`;
+    const wk = weaponKey(this.cosLook, this.wtype.id, sv.tier);
     this.heroWeapon = this.textures.exists(wk) ? this.add.image(0, 0, wk) : null;
-    this.heroSword = this.wtype.id === 'sword';
+    this.heroSword = this.wtype.id === 'sword' || !!this.cosLook.weapon;
     if (this.heroWeapon) {
       // 검은 등급마다 다른 그림(w_sword0~9)을 손잡이 끝으로 쥔다. +5·+10·+15를 넘으면 검이 커지고 강화 색으로 빛난다
       const eb = sv.enh >= 15 ? 3 : sv.enh >= 10 ? 2 : sv.enh >= 5 ? 1 : 0, sz = this.heroSword ? 18 + 2 * eb : 16;
@@ -289,6 +285,9 @@ export class Battle extends Phaser.Scene {
         if (eb) this.heroWeapon.preFX?.addGlow(rc, eb, 0, false, 0.1, 6);
       }
     }
+    this.cosActor = new CosmeticActor(this, this.hero, this.cosLook);
+    this.cosActor.effect ||= ({ crimson: 'ember', shadow: 'star', jade: 'leaf', paladin: 'gold', demon: 'ember' })[sv.hskin];
+    this.events.once('shutdown', () => { this.cosActor?.destroy(); this.cosActor = null; });
     this.face = 1; this.walkT = 0; this.iframe = 0;
     this.atk = D.weaponAtk(sv.tier, sv.enh);
   }
@@ -682,6 +681,7 @@ export class Battle extends Phaser.Scene {
   }
 
   kill(m) {
+    if (!m.dead) this.cosActor?.emit('kill');
     m.dead = true; m.body.enable = false;
     const r = this.run;
     r.kills++; this.sv.stats.kills++; mission('kill');
@@ -1187,12 +1187,7 @@ export class Battle extends Phaser.Scene {
     if (this.heroWeapon) {
       const k = h.anims.currentAnim?.key, f = h.flipX ? -1 : 1;
       if (this.heroSword) {
-        // 프레임마다 손 위치(시트 픽셀)와 칼날 방향(도, 0=오른쪽·아래가 +)을 따라 쥔다
-        const T = HAND[k === 'walkFront' || k === 'walkUp' || k === 'walkSide' || k === 'slash' ? k : 'pose'], fi = h.anims.currentFrame?.textureFrame ?? 0;
-        const [gx, gy, th] = T.f[Math.min(fi, T.f.length - 1)];
-        const te = f > 0 ? th : 180 - th;
-        this.heroWeapon.setPosition(h.x + (gx - T.w / 2) * f, h.y + (gy - 26) - bob * h.height).setFlipX(f < 0).setAngle(te + (f > 0 ? 45 : 135) + h.angle)
-          .setDepth(h.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(h.alpha);
+        placeHeld(h, this.heroWeapon, bob);
       } else {
         // 손 자리: 앞모습은 왼쪽 아래, 뒷모습은 오른쪽(몸 뒤), 옆모습·서 있기는 바라보는 쪽, 휘두를 땐 앞으로 뻗는다
         const [ox, oy, ang] = k === 'walkFront' ? [-9, 6, -20] : k === 'walkUp' ? [9, 5, 20] : k === 'slash' ? [13 * f, 0, 40 * f] : [6 * f, 7, 10 * f];
@@ -1200,6 +1195,7 @@ export class Battle extends Phaser.Scene {
           .setDepth(h.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(h.alpha);
       }
     }
+    this.cosActor?.update(dt, moving);
     this.moveV = v;
   }
 
@@ -1274,7 +1270,7 @@ export class Battle extends Phaser.Scene {
 
   updatePickups(dt) {
     const h = this.hero, r = this.run;
-    const pick = D.PLAYER.pickup * (1 + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + this.lv3('magnet', 0.4) + r.bPick);
+    const pick = D.PLAYER.pickup * (1 + (['baby_dragon', 'chick'].includes(this.cosLook.pet) ? 0.08 : 0) + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + this.lv3('magnet', 0.4) + r.bPick);
     const hop = o => {   // 떨어질 때 살짝 튀는 연출(Quad.Out으로 올랐다 내려온다)
       if (o.hopT === undefined) return;
       o.hopT += dt;

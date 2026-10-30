@@ -1,3 +1,4 @@
+import { cosmeticPage } from './cosmeticShop.js';
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
@@ -25,7 +26,7 @@ export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
   // 씬 인스턴스는 재사용되니 전투에서 돌아올 때 잠금·체크 상태를 비운다
-  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; }
+  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = 'costume'; this.cosSelected = { costume: data.cosmetic }; this.legacySkins = false; } }
   // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
   get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
   get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
@@ -39,7 +40,7 @@ export class Lobby extends Phaser.Scene {
     this.input.once('pointerdown', () => { unlock(); playBgm('lobby'); });
     playBgm('lobby');
     // 1-1을 처음 깨고 오면 대장간으로 안내한다
-    if (sv.cleared >= 1 && !sv.tut.forgeShown) { sv.tut.forgeShown = true; this.tab = 'forge'; save(); }
+    if (this.shopPage !== 'skin' && sv.cleared >= 1 && !sv.tut.forgeShown) { sv.tut.forgeShown = true; this.tab = 'forge'; save(); }
     // 어려움은 마왕을 잡은 뒤에만. 전투 탭이 보던 난이도를 기억한다
     this.hard = !!sv.hardOn && D.hardOpen(sv);
     dexRefresh(sv);
@@ -867,13 +868,19 @@ export class Lobby extends Phaser.Scene {
 
   // ── 꾸미기: 칼빛·영웅 스킨·캐시 무기를 보석으로 사고 골라 낀다 ──
   skinPage() {
-    const sv = this.sv, b = this.body, page = this.skinTab ||= 'blade';
+    if (!this.legacySkins) return cosmeticPage(this);
+    this.legacySkinPage();
+    this.body.add(button(this, 135, 429, 128, 18, '새 꾸미기로 돌아가기', () => { this.legacySkins = false; this.show('shop'); }, { size: 9 }));
+  }
+
+  legacySkinPage() {
+    const sv = this.sv, b = this.body, page = this.legacyTab ||= 'blade';
     [['blade', '칼빛'], ['hero', '영웅'], ['weapon', '무기']].forEach(([id, name], i) => {
       const x = 50 + i * 85, on = page === id;
       b.add(this.add.text(x, 84, name, font(11, on ? '#ffffff' : '#7d8f94')).setOrigin(0.5));
       if (on) b.add(this.add.rectangle(x, 95, 50, 2, 0xffffff));
       const hit = this.add.rectangle(x, 86, 80, 22, 0, 0).setInteractive({ useHandCursor: true });
-      hit.on('pointerup', () => { if (this.busy) return; this.skinTab = id; sfx('click'); this.show('shop'); });
+      hit.on('pointerup', () => { if (this.busy) return; this.legacyTab = id; sfx('click'); this.show('shop'); });
       b.add(hit);
     });
     // 한 칸: 미리보기 · 이름 · 효과 · 버튼
@@ -891,7 +898,7 @@ export class Lobby extends Phaser.Scene {
           sv.gem -= it.cost; track('cosm_buy', { item: it.id, kind: page, cost: it.cost }); sfx('buy'); toast(this, `${it.name} 얻음!`, '#ffd75e');
         } else sfx('click');
         onBuy(); save(); this.refreshTop(); this.show('shop');
-      }, { size: 10, color: on ? 0x3b2f5c : own ? 0x2f6b3a : 0x8a2f6a });
+      }, { size: 10, color: on ? 0x3b2f5c : own ? 0x3a3846 : 0x8a2f6a });
       b.add(bt);
       if (!own) b.add(gemIcon(this, x + 40, y + 56, 9));
     };
@@ -903,7 +910,7 @@ export class Lobby extends Phaser.Scene {
         cell(i, sk, own, on, slash(sk.id && sk), () => { (sv.skins ||= {})[sk.id] = true; sv.skin = sk.id; track('skin_equip', { skin: sk.id || 'none' }); });
       });
     } else if (page === 'hero') {
-      b.add(this.add.text(W / 2, 410, '몸 색이 바뀌고 작은 능력치가 붙는다', font9(10, '#a1b2b6')).setOrigin(0.5));
+      b.add(this.add.text(W / 2, 410, '기존 색상 소유 내역 유지 · 영웅 능력치 보너스 없음', font9(10, '#a1b2b6')).setOrigin(0.5));
       HERO_SKINS.forEach((hs, i) => {
         const own = !hs.id || sv.hskins?.[hs.id], on = (sv.hskin || '') === hs.id;
         cell(i, hs, own, on, (x, y) => { const h = this.add.sprite(x, y, 'hero2_r0s').play('idleL').setScale(0.8); return hs.id ? skinFx(h, hs) : h; },

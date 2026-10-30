@@ -19,7 +19,9 @@ export const TOSS_AD_GROUPS = {
   // gem: 'TODO', sweep: 'TODO', double: 'TODO', revive: 'TODO',
 };
 // 결제 상품 SKU = 게임 상품 id 그대로(data.js IAP/BIG_PACKS 의 id, 특가 deal_<꾸러미>_<할인율>, 성장 grow<장>). 콘솔에 이 이름으로 만든다
-export const tossSku = itemId => itemId;
+// 꾸미기 묶음도 동일한 지급/미결 주문 복구 경로를 사용한다. 콘솔 등록 후 실제 SKU로 매핑한다.
+export const TOSS_COSMETIC_SKUS = { look_picnic: 'look_picnic', look_bath: 'look_bath' };
+export const tossSku = itemId => TOSS_COSMETIC_SKUS[itemId] || itemId;
 export const AD_LOAD_TIMEOUT_MS = 25000;   // AdMob은 로드에 5~20초(최대 60초)
 
 const sdk = () => window.__AIT_SDK || null;
@@ -89,7 +91,7 @@ function buy(id, grant) {
   });
 }
 // 앱을 켤 때: 결제는 됐는데 지급이 끝나지 못한 주문
-const pending = async () => (await sdk().IAP.getPendingOrders())?.orders || [];
+const pending = async () => ((await sdk().IAP.getPendingOrders())?.orders || []).map(o => ({ ...o, sku: Object.keys(TOSS_COSMETIC_SKUS).find(id => TOSS_COSMETIC_SKUS[id] === o.sku) || o.sku }));
 const complete = orderId => sdk().IAP.completeProductGrant({ params: { orderId } });
 
 // 토스 안일 때만 window.forgePlatform을 채운다(다른 앱판이 먼저 넣어 뒀으면 건드리지 않는다)

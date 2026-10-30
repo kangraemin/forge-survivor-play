@@ -1,3 +1,4 @@
+import { cosmeticResultCard } from './cosmeticShop.js';
 // 전투 위에 뜨는 창: 레벨업 3택, 스킬 상자, 웨이브 사이 상점, 일시정지, 결과
 import * as D from './data.js';
 import { save, mission } from './save.js';
@@ -586,6 +587,7 @@ export class Overlay {
     if (this.c) { this.c.destroy(); this.c = null; this.open = null; }
     this.queue = []; this.pendingLv = 0;
     const c = this.begin('result');
+    cosmeticResultCard(s, c, win);
     c.add(panel(s, 20, 84, W - 40, 368, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
     const dunFull = dun && dunF >= 1;
     const title = s.add.text(W / 2, 118, s.endless ? (floors > best ? '최고 기록!' : '탑 도전 끝') : dun ? (dunFull ? '던전 완료!' : '던전 끝') : win ? (s.isBoss ? '보스 격파!' : '스테이지 클리어!') : '쓰러졌다…', font(18, win || dunFull || (s.endless && floors > best) ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);

@@ -1,3 +1,4 @@
+import { equippedLook } from './cosmetics.js';
 // 로비 '장비' 탭: 장비 끼기·분해, 무기 종류, 펫, 스탯. Lobby.prototype에 섞어 쓴다
 import * as D from './data.js';
 import { save } from './save.js';
@@ -14,11 +15,13 @@ const PAGE = 24, COLS = 6, CELL = 40;
 const SHORT = { hp: '체력', atk: '피해', def: '방어', spd: '이속', mag: '자력', luck: '치명', regen: '회복', cd: '재사용', pet: '펫' };
 
 // 장비 한 칸 그림: 등급 색 테두리 + 등급 색으로 물든 부위 그림. 세트는 안쪽 테두리를 세트 색으로, 숨겨진 템은 ★
-export function itemBox(scene, x, y, it, size = 34, on = false) {
+export function itemBox(scene, x, y, it, size = 34, on = false, appearance = false) {
   const c = scene.add.container(x, y), rr = RARITY[it.r];
   c.add(scene.add.rectangle(0, 0, size, size, it.r === 4 ? 0x2a0a22 : it.r === 3 ? 0x2a1a08 : 0x1c2935).setStrokeStyle(2, rr.color));
   if (it.set) c.add(scene.add.rectangle(0, 0, size - 6, size - 6).setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(SETS[it.set].css).color, 0.9));
-  c.add(scene.add.image(0, 0, 'gs_' + it.s).setScale(Math.floor(size * 0.6 / 12 * 2) / 2).setTint(it.r === 0 ? 0xd8d2e8 : Phaser.Display.Color.HexStringToColor(rr.css).color));
+  const hat = appearance && it.s === 'helm' && scene.sv && equippedLook(scene.sv).head;
+  if (hat) c.add(scene.add.image(0, 0, `cos_${hat}`).setDisplaySize(size * 0.8, size * 0.8));
+  else c.add(scene.add.image(0, 0, 'gs_' + it.s).setScale(Math.floor(size * 0.6 / 12 * 2) / 2).setTint(it.r === 0 ? 0xd8d2e8 : Phaser.Display.Color.HexStringToColor(rr.css).color));
   if (it.egg) c.add(scene.add.text(size / 2 - 3, -size / 2 + 1, '★', font(8, '#ff8ae0')).setOrigin(1, 0));
   if (on) c.add(scene.add.text(-size / 2 + 2, size / 2 - 2, 'E', font(8, '#5fdc6a')).setOrigin(0, 1));
   c.setSize(size, size);
@@ -68,7 +71,7 @@ export const GearTab = {
     SLOTS.forEach((sl, i) => {
       const x = 31 + i * 52, y = 132, u = sv.eq?.[sl.id], it = u && sv.inv.find(v => v.u === u);
       if (it) {
-        const box = itemBox(this, x, y, it, 38); b.add(box);
+        const box = itemBox(this, x, y, it, 38, false, true); b.add(box);
         box.setInteractive({ useHandCursor: true }).on('pointerup', () => !this.busy && this.itemWin(it));
       } else {
         b.add(this.add.rectangle(x, y, 38, 38, 0x0b111a).setStrokeStyle(1, 0x293845));

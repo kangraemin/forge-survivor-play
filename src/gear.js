@@ -85,14 +85,14 @@ export const WTYPES = [
 export const wtypeOf = sv => WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
 
 // ── 보석으로 사는 꾸미기 ──
-// 영웅 스킨: 주인공 몸 색이 바뀌고 작은 능력치가 붙는다(st 값은 장비 옵션과 같은 비율)
+// 영웅 스킨: 이전 색상 스킨 구매 내역을 보존한다. 능력치 보너스는 없다
 export const HERO_SKINS = [
   { id: '', name: '기본 모험가', desc: '처음 옷', cost: 0 },
-  { id: 'crimson', name: '진홍 기사', desc: '최대 체력 +6%', hue: 150, st: { hp: 0.06 }, cost: 500 },
-  { id: 'shadow', name: '그림자 추적자', desc: '이동 속도 +6%', gray: true, dark: true, st: { spd: 0.06 }, cost: 500 },
-  { id: 'jade', name: '비취 수도승', desc: '재사용 대기 -5%', hue: -90, st: { cd: 0.05 }, cost: 800 },
-  { id: 'paladin', name: '황금 성기사', desc: '피해 +6%', hue: -150, st: { atk: 0.06 }, cost: 800 },
-  { id: 'demon', name: '마왕 갑주', desc: '피해 +8% · 체력 +8%', hue: 100, st: { atk: 0.08, hp: 0.08 }, cost: 1600 },
+  { id: 'crimson', name: '진홍 기사', desc: '붉은 잔광', hue: 150, cost: 500 },
+  { id: 'shadow', name: '그림자 추적자', desc: '그림자 잔광', gray: true, dark: true, cost: 500 },
+  { id: 'jade', name: '비취 수도승', desc: '비취빛 잔광', hue: -90, cost: 800 },
+  { id: 'paladin', name: '황금 성기사', desc: '황금빛 잔광', hue: -150, cost: 800 },
+  { id: 'demon', name: '마왕 갑주', desc: '마왕의 잔광', hue: 100, cost: 1600 },
 ];
 // 캐시 무기: 무기 종류마다 하나. 그 무기를 들면 피해 +12%, 칼빛을 따로 안 끼면 고유 궤적 색
 export const CASH_W = {
@@ -238,7 +238,7 @@ export function gearStats(sv) {
     if (n >= 4) out.fx.add(k + '4');
   }
   // 영웅 스킨·캐시 무기
-  for (const [k, v] of Object.entries(heroSkin(sv).st || {})) out[k] += v;
+  // 캐릭터·의상은 시각 효과만: 기존 영웅 스킨도 능력치에 더하지 않는다.
   if (cashW(sv)) out.atk += CASH_W_DMG;
   // 스탯 체력·민첩·지능
   const sp = sv.sp || {};

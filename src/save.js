@@ -24,6 +24,7 @@ const fresh = () => ({
   tut: {},                 // 처음 하는 사람 안내를 마쳤나
   starterShown: false,
   endBest: 0,              // 무한의 탑 최고 층
+  cosmetics: { owned: {}, equip: {}, tried: {} }, // 신규 외형·캐시 펫, 이전 skins/hskins 보존
   skins: {}, skin: '',     // 산 칼빛, 끼고 있는 칼빛
   hskins: {}, hskin: '', cw: {}, books: {}, book: '',   // 산 영웅 스킨·캐시 무기·비급, 낀 것
   stats: { runs: 0, kills: 0, destroyed: 0, playMs: 0, losses: 0 },

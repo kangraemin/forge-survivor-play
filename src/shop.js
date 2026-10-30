@@ -8,6 +8,7 @@ import { save, load } from './save.js';
 import { HERO_SKINS } from './gear.js';
 import { sfx } from './sfx.js';
 import { font, font9, panel, button, fixedContainer } from './ui.js';
+import { COS_PACKS, cosmetic, wardrobe } from './cosmetics.js';
 import { installToss } from './toss.js';
 
 // 토스 미니앱 안이면 window.forgePlatform을 채운다(웹에서는 아무 일도 안 한다)
@@ -22,7 +23,8 @@ export const won = n => n.toLocaleString('ko-KR') + '원';
 const stageGold = sv => D.dunBase(sv).gold;
 export function grant(sv, give) {
   for (const [k, v] of Object.entries(give)) {
-    if (k === 'goldStage') sv.gold += Math.round(stageGold(sv) * v);
+    if (k === 'cosmetics') { for (const id of v) if (cosmetic(id)) wardrobe(sv).owned[id] = true; }
+    else if (k === 'goldStage') sv.gold += Math.round(stageGold(sv) * v);
     else if (k === 'skin') (sv.skins ||= {})[v] = true;
     else if (k === 'hskin') (sv.hskins ||= {})[v] = true;
     else sv[k] = (sv[k] || 0) + v;
@@ -31,6 +33,7 @@ export function grant(sv, give) {
 }
 // sv를 넘기면 goldStage를 '금화 ×2' 대신 실제 받을 금화로 보여 준다
 export const giveText = (give, sv) => Object.entries(give).map(([k, v]) => ({
+  cosmetics: Array.isArray(v) ? v.map(id => cosmetic(id)?.name).join(' · ') : '',
   gem: `보석 ${v}`, gold: `금화 ${v.toLocaleString()}`, stone: `강화석 ${v}`, guard: `방지권 ${v}`, charm: `강화 +5%p ×${v}`, sweep: `소탕권 ${v}`, spReset: `스탯 초기화권 ${v}`, goldStage: sv ? `금화 ${Math.round(stageGold(sv) * v).toLocaleString()}` : `금화 ×${v}`, skin: D.SKINS.find(x => x.id === v)?.name, hskin: `${HERO_SKINS.find(x => x.id === v)?.name} 스킨`,
 }[k])).join(' · ');
 
@@ -109,16 +112,20 @@ export function applyPurchase(sv, item) {
 // 결제. 성공하면 상품을 지급하고 true
 function buyRaw(scene, sv, item) {
   return new Promise(res => {
-    let applied = false;
+    let applied = false, granted = false;
     const apply = orderId => {
       if (applied) return;
       applied = true;
+      if (orderId && sv.orders?.includes(orderId)) return;
       if (orderId) (sv.orders ||= []).push(orderId);   // 같은 주문을 복구 때 두 번 주지 않게
       applyPurchase(sv, item);
+      granted = true;
+      sv.paidTotal = (sv.paidTotal || 0) + item.price;
+      save(); // SDK 지급 성공 응답 전에 소유권·주문·집계를 함께 저장
     };
     const done = ok => {
       if (ok) { apply(); sfx('win'); }
-      res(ok);
+      res({ ok, granted });
     };
     // 앱: 지급을 SDK 지급 콜백 안에서 끝낸다(지급 뒤 true를 돌려줘야 주문이 완료로 닫힌다)
     if (window.forgePlatform?.buy) return window.forgePlatform.buy(item.id, orderId => { apply(orderId); return true; }).then(done, () => done(false));
@@ -144,15 +151,16 @@ export function showAd(scene, sv, kind) {
   return showAdRaw(scene, sv, kind).then(ok => { track('ad_result', { kind, ok, sec: Math.round((Date.now() - t0) / 1000) }); return ok; });
 }
 export function buy(scene, sv, item) {
+  if (COS_PACKS.some(p => p.id === item.id) && item.give.cosmetics.some(id => wardrobe(sv).owned[id])) return Promise.resolve(false);
   const t0 = Date.now(), first = !sv.paidTotal;
   track('iap_click', { item: item.id, price: item.price, scene: scene.scene.key, first_purchase: first, gem: sv.gem, cleared: sv.cleared, platform: window.forgePlatform?.buy ? 'app' : devpay() ? 'devpay' : 'web' });
   track('begin_checkout', { currency: 'KRW', value: item.price, item_id: item.id });
-  return buyRaw(scene, sv, item).then(ok => {
+  return buyRaw(scene, sv, item).then(({ ok, granted }) => {
     const sec = Math.round((Date.now() - t0) / 1000);
     track(ok ? 'iap_success' : 'iap_cancel', { item: item.id, price: item.price, sec, first_purchase: first });
-    if (ok) {
+    if (granted) {
       track('purchase', { currency: 'KRW', value: item.price, transaction_id: `${item.id}-${Date.now()}`, item_id: item.id, first_purchase: first });
-      logUser({ payer: true, paid_total: (sv.paidTotal = (sv.paidTotal || 0) + item.price) }); save();
+      logUser({ payer: true, paid_total: sv.paidTotal });
     }
     return ok;
   });
@@ -160,8 +168,8 @@ export function buy(scene, sv, item) {
 
 // 결제는 됐는데 지급이 끝나지 못한 주문을 앱을 켠 뒤 한 번 되살린다(앱판 전용)
 // 상품 id → 상품: 일반(IAP·큰 꾸러미) / 특가 deal_<꾸러미>_<할인율> / 성장 grow<장>
-function itemBySku(sku) {
-  const f = [...D.IAP, ...D.BIG_PACKS].find(x => x.id === sku);
+export function itemBySku(sku) {
+  const f = [...D.IAP, ...D.BIG_PACKS, ...COS_PACKS].find(x => x.id === sku);
   if (f) return f;
   const m = /^deal_(.+)_(\d+)$/.exec(sku), d = m && D.DEALS.find(x => x.id === m[1]);
   if (d) return { ...d, id: sku, onBuy: sv => { if (sv.deal) sv.deal.got = true; } };
