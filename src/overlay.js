@@ -28,7 +28,7 @@ export class Overlay {
     if (fb) g.setTint(p.color);
     c.add(g);
     c.add(s.add.text(W / 2, 236, p.name, font(14, '#ffffff')).setOrigin(0.5));
-    c.add(s.add.text(W / 2, 256, p.desc, font9(10, '#c8bfe0')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 256, p.desc, font9(10, '#a1b2b6')).setOrigin(0.5));
     const chN = i => `${i + 1}장`;
     c.add(s.add.text(W / 2, 274, `잘 듣는 곳: ${[...(p.good || []).map(chN), ...(p.id === 'demonlord' ? ['무한의 탑'] : [])].join(' · ') || '-'}`, font9(10, '#5fdc6a')).setOrigin(0.5));
     const close = () => { s.tweens.killTweensOf(c); c.destroy(); };
@@ -117,7 +117,7 @@ export class Overlay {
     c.add(s.add.text(W / 2, 100, `레벨 ${s.run.lv}`, font(18, '#ffffff')).setOrigin(0.5));
     // 처음 하는 사람에게는 같은 자리에서 고르는 법을 알려 준다(카드와 겹치지 않게)
     const firstLv = s.sv.stats.runs <= 1 && s.run.lv === 2;
-    c.add(s.add.text(W / 2, 122, firstLv ? '▼ 아래 카드 하나를 눌러 고르세요' : '스킬 하나를 고르세요', font9(11, firstLv ? '#ffffff' : '#c8bfe0')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 122, firstLv ? '▼ 아래 카드 하나를 눌러 고르세요' : '스킬 하나를 고르세요', font9(11, firstLv ? '#ffffff' : '#a1b2b6')).setOrigin(0.5));
     const cards = s.add.container(0, 0); c.add(cards);
     // 다시 뽑기와 헷갈렸다: 카드의 '빼기'는 그 카드만 바꾼다고 짧게 적는다(긴 설명은 화면 밖으로 넘쳤다)
     const banInfo = () => banTxt.setText(r.banLeft > 0 ? `빼기는 그 카드만 바꾼다 · 남은 ${r.banLeft}번` : `빼기는 그 카드만 바꾼다 · 보석 ${D.BAN_GEM}`);
@@ -136,7 +136,7 @@ export class Overlay {
     };
     const r = s.run;
     if (r.banLeft === undefined) r.banLeft = D.BANISH_PER_RUN;
-    const banTxt = s.add.text(W / 2, 438, '', font9(10, '#a89cc8')).setOrigin(0.5); c.add(banTxt);
+    const banTxt = s.add.text(W / 2, 438, '', font9(10, '#a1b2b6')).setOrigin(0.5); c.add(banTxt);
     this.redraw = draw;
     draw();
     // 처음 하는 사람: 첫 레벨업 카드를 반짝여 고르는 곳을 알려 준다
@@ -183,32 +183,32 @@ export class Overlay {
     const firstRun = s.sv.stats.runs <= 1;
     const banGem = s.run.banLeft <= 0, canBan = !special && (!banGem || s.sv.gem >= D.BAN_GEM) && !(firstRun && s.run.lv === 2);
     // 카드는 한 가지 틀: 공격/보조 구분은 이름 옆 작은 글로만 한다(테두리 색이 두 가지라 어지러웠다)
-    c.add(panel(s, -115, -35, 230, 70, { fill: 0x1c1830, line: 0x4a4068 }));
+    c.add(panel(s, -115, -35, 230, 70, { fill: 0x1c2935, line: 0x475c66 }));
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4));
     c.add(special ? icon(s, -88, 0, k === '_heal' ? 14 : 12, 32) : skillIcon(s, -88, 0, def, 32));
     // 기본 공격 이름은 든 무기를 따른다(창 찌르기·도끼 찍기)
     const name = special ? (k === '_heal' ? '회복 물약' : '은화 주머니') : k === 'sword' ? { sword: def.name, spear: '창 찌르기', axe: '도끼 찍기', bow: '활 쏘기', gun: '사격', knuckle: '주먹 연타', staff: '마력탄' }[s.wtype.id] : def.name;
-    const nm = s.add.text(-60, -24, name, font(12, '#ffffff')); c.add(nm);
-    if (!special) c.add(s.add.text(-60 + nm.width + 5, -23, lv ? `Lv ${lv}→${lv + 1}` : isAct ? '공격' : '보조', font9(10, '#a89cc8')));
+    const nm = s.add.text(-60, -24, name, font(12, '#ffb85c', 0)); c.add(nm);
+    if (!special) c.add(s.add.text(-60 + nm.width + 5, -23, lv ? `Lv ${lv}→${lv + 1}` : isAct ? '공격' : '보조', font9(10, '#a1b2b6')));
     let desc = special ? (k === '_heal' ? '체력 30% 회복' : '은화 +25') : def.type === 'passive' ? def.desc[0] : def.desc[lv];
     if (def?.bonus && lv + 1 === D.PASSIVE_LV3) desc += `\n+ Lv3 보너스: ${def.bonus}`;
-    c.add(s.add.text(-60, -6, desc, { ...font9(11, '#d8d2e8'), wordWrap: { width: 165 } }).setLineSpacing(1));
+    c.add(s.add.text(-60, -6, desc, { ...font9(11, '#f2e4bc'), wordWrap: { width: 165 } }).setLineSpacing(1));
     // 레벨 칸
-    if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 26, 7, 4, j < lv ? 0xd8d2e8 : j === lv ? 0x5fdc6a : 0x3a3450).setOrigin(0, 0.5));
+    if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 26, 7, 4, j < lv ? 0xd8d2e8 : j === lv ? 0x5fdc6a : 0x293845).setOrigin(0, 0.5));
     // 진화 재료 표시: 이 스킬이 다른 스킬의 진화에 쓰이면 짝을 알려 준다
     const evoOf = special ? null : def.type === 'active' ? D.EVOS[k] && D.SKILLS[D.EVOS[k].need].name : Object.keys(D.EVOS).filter(b => D.EVOS[b].need === k).map(b => D.SKILLS[b].name).join('·');
     // 시너지: 이 스킬을 고르면 이미 가진 짝 스킬과 시너지가 생긴다(진화 안내보다 먼저 보여 준다)
     const syn = special || lv ? [] : D.synOf(k, sk);
     if (syn.length) c.add(s.add.text(108, 26, `시너지: ${syn[0].name}`, font9(10, '#ffb050')).setOrigin(1, 0.5));
-    else if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(10, '#a89cc8')).setOrigin(1, 0.5));
+    else if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? `+${evoOf} → 진화` : `${evoOf} 진화 재료`, font9(10, '#a1b2b6')).setOrigin(1, 0.5));
     c.setSize(230, 70).setInteractive({ useHandCursor: true });
     onTap(c, () => this.pick(k, c));
     // 추방: 이번 판에서 다시 안 나온다(첫 레벨업에는 숨김)
     if (canBan) {
       // 카드 오른쪽 위 모서리에 '빼기'라고 글로 붙인다(X만 있으면 다시 뽑기와 구분이 안 됐다)
       const x = s.add.container(96, -22);
-      x.add(s.add.rectangle(0, 0, 38, 22, 0x2c2640, 1).setStrokeStyle(1, 0x5a5078));
-      x.add(s.add.text(banGem ? 4 : 0, 0, banGem ? `빼기${D.BAN_GEM}` : '빼기', font9(10, '#c8bfe0')).setOrigin(0.5));
+      x.add(s.add.rectangle(0, 0, 38, 22, 0x293845, 1).setStrokeStyle(1, 0x475c66));
+      x.add(s.add.text(banGem ? 4 : 0, 0, banGem ? `빼기${D.BAN_GEM}` : '빼기', font9(10, '#a1b2b6')).setOrigin(0.5));
       if (banGem) x.add(gemIcon(s, -13, 0, 8));
       x.setSize(42, 24).setInteractive({ useHandCursor: true });
       onTap(x, (p, lx, ly, ev) => {
@@ -295,10 +295,10 @@ export class Overlay {
       keys.forEach((k, i) => {
         const v = it.st[k] || 0, o = it === item && cur ? cur.st[k] || 0 : null, mark = o == null || v === o ? '' : v > o ? ' ▲' : ' ▼';
         const txt = v ? statText(k, v) + mark : statText(k, o).replace('+', '-') + ' ▼';   // 잃는 만큼 빼서 보여 준다
-        c.add(s.add.text(x, 240 + i * 13, txt, font9(9, mark === ' ▲' ? '#5fdc6a' : mark ? '#ff8a8a' : '#c8bfe0')).setOrigin(0.5));
+        c.add(s.add.text(x, 240 + i * 13, txt, font9(9, mark === ' ▲' ? '#5fdc6a' : mark ? '#ff8a8a' : '#a1b2b6')).setOrigin(0.5));
       });
     };
-    side(W / 2 - 54, cur, '지금', '#a89cc8');
+    side(W / 2 - 54, cur, '지금', '#a1b2b6');
     side(W / 2 + 54, item, '주운 것', '#5fdc6a');
     c.add(s.add.text(W / 2, 200, '→', font(14, '#ffd75e')).setOrigin(0.5));
     // 끼는 쪽이 기본: 장착 버튼을 크게, 가방은 작게
@@ -344,7 +344,7 @@ export class Overlay {
     let rerolls = 0;
     c.add(panel(s, 10, 60, W - 20, 380, { fill: 0x1a1426 }));
     c.add(s.add.text(W / 2, 78, '떠돌이 상인', font(15, '#ffd75e')).setOrigin(0.5));
-    c.add(s.add.text(W / 2, 96, '은화는 판이 끝나면 사라진다', font9(10, '#a89cc8')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 96, '은화는 판이 끝나면 사라진다', font9(10, '#a1b2b6')).setOrigin(0.5));
     const silverTxt = s.add.text(W / 2, 116, '', font(12, '#e8eef8')).setOrigin(0.5); c.add(silverTxt);
     const hpTxt = s.add.text(W / 2, 132, '', font9(10, '#ff9090')).setOrigin(0.5); c.add(hpTxt);
     const grid = s.add.container(0, 0); c.add(grid);
@@ -369,7 +369,7 @@ export class Overlay {
         g.add(panel(s, -56, -46, 112, 92, { fill: it.sold ? 0x141018 : 0x261f3a, line: can ? 0xffd75e : 0x4a4060 }));
         g.add((it.item ? itemBox(s, 0, -26, it.item, 26) : icon(s, 0, -26, it.icon, 26)).setAlpha(it.sold ? 0.3 : 1));
         g.add(s.add.text(0, -8, it.name, font(10, it.sold ? '#666' : it.item ? RARITY[it.item.r].css : '#ffffff')).setOrigin(0.5));
-        g.add(s.add.text(0, 7, it.desc, { ...font9(10, '#c8bfe0'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0).setLineSpacing(-1));
+        g.add(s.add.text(0, 7, it.desc, { ...font9(10, '#a1b2b6'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0).setLineSpacing(-1));
         g.add(s.add.text(0, 37, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
         g.setSize(112, 92).setInteractive({ useHandCursor: true });
         onTap(g, () => {
@@ -441,7 +441,7 @@ export class Overlay {
     s.log('revive_offer', { gem: sv.gem, can_gem: sv.gem >= D.REVIVE_GEM, no_ads: !!sv.noAds });
     c.add(panel(s, 30, 150, W - 60, 190, { fill: 0x1a1426, line: 0x7a3a4a }));
     c.add(s.add.text(W / 2, 176, '쓰러졌다…', font(16, '#ff7070')).setOrigin(0.5));
-    c.add(s.add.text(W / 2, 194, '체력 절반으로 일어나 이어서 싸울까?', font9(10, '#e8e2f8')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 194, '체력 절반으로 일어나 이어서 싸울까?', font9(10, '#f2e4bc')).setOrigin(0.5));
     // 다시 하기와 다른 점: 지금까지 키운 것이 그대로 남는다
     c.add(s.add.text(W / 2, 210, `Lv ${s.run.lv}·스킬·주운 것 그대로 남는다`, font9(10, '#9ae0ff')).setOrigin(0.5));
     let busy = false;
@@ -548,16 +548,16 @@ export class Overlay {
     const dunFull = dun && dunF >= 1;
     const title = s.add.text(W / 2, 118, s.endless ? (floors > best ? '최고 기록!' : '탑 도전 끝') : dun ? (dunFull ? '던전 완료!' : '던전 끝') : win ? (s.isBoss ? '보스 격파!' : '스테이지 클리어!') : '쓰러졌다…', font(18, win || dunFull || (s.endless && floors > best) ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
-    c.add(s.add.text(W / 2, 142, s.endless ? `무한의 탑  ·  최고 ${sv.endBest}층` : dun ? `일일 던전 · ${D.DUN_TYPES[dun].name}` : `${hard ? '어려움 ' : ''}${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(10, hard ? '#ff9090' : '#c8bfe0')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 142, s.endless ? `무한의 탑  ·  최고 ${sv.endBest}층` : dun ? `일일 던전 · ${D.DUN_TYPES[dun].name}` : `${hard ? '어려움 ' : ''}${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? '  ·  첫 클리어 ×' + D.FIRST_CLEAR_MUL : ''}`, font9(10, hard ? '#ff9090' : '#a1b2b6')).setOrigin(0.5));
     // 판 기록은 한 줄 칸으로(이름·값 세 줄이 보상 목록과 섞여 빽빽했다)
     const lines = [['처치', fmt(r.kills)], ['레벨', String(r.lv)]];
     if (s.endless) lines.push(['넘은 층', `${floors}층`]); else if (dun) lines.push(['보상', Math.round(Math.max(D.DUNGEON.minPay, Math.min(1, dunF)) * 100) + '%']); else if (!win) lines.push(['버틴 정도', Math.round(s.runProgress() * 100) + '%']);
     lines.forEach(([a, b], i) => {
       const x = W / 2 + (i - (lines.length - 1) / 2) * 70;
-      c.add(s.add.text(x, 164, a, font9(10, '#a89cc8')).setOrigin(0.5));
+      c.add(s.add.text(x, 164, a, font9(10, '#a1b2b6')).setOrigin(0.5));
       c.add(s.add.text(x, 180, b, font(13)).setOrigin(0.5));
     });
-    c.add(s.add.rectangle(W / 2, 198, W - 80, 1, 0x3a3450));
+    c.add(s.add.rectangle(W / 2, 198, W - 80, 1, 0x293845));
     const rew = [[12, '금화', gold], [13, '강화석', stone]];
     if (guard) rew.push([11, '방지권', guard]);
     if (sweep) rew.push([15, '소탕권', sweep]);
@@ -568,7 +568,7 @@ export class Overlay {
     rew.forEach(([ic, name, n], i) => {
       const x = i % 2 ? 146 : 38, y = 214 + Math.floor(i / 2) * 22;
       c.add(ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
-      c.add(s.add.text(x + 20, y, name, font9(10, '#c8bfe0')).setOrigin(0, 0.5));
+      c.add(s.add.text(x + 20, y, name, font9(10, '#a1b2b6')).setOrigin(0, 0.5));
       const t = s.add.text(x + 88, y, '+0', font(12)).setOrigin(1, 0.5); c.add(t); tx.push(t);
       const o = { v: 0 };
       s.tweens.add({ targets: o, v: n, duration: 350, delay: 150 + i * 80, onUpdate: () => t.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
@@ -585,14 +585,14 @@ export class Overlay {
     if (!win && !s.endless && !dun && !close) {   // 아깝게 졌으면 '한 번 더'만 권한다(강화하자와 둘로 갈렸다)
       const pw = D.powerOf(sv), rp = D.recOf(s.c, s.s, hard);
       c.add(s.add.text(W / 2, 266, `내 전투력 ${pw} / 권장 ${rp}`, font(11, D.powerCol(pw, rp, s.s))).setOrigin(0.5));
-      c.add(pw >= rp ? s.add.text(W / 2, 282, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#c8bfe0')).setOrigin(0.5) : s.add.text(W / 2, 282, `권장까지 ${rp - pw} 모자란다. 강화하자`, font9(11, '#e8e2f8')).setOrigin(0.5));
+      c.add(pw >= rp ? s.add.text(W / 2, 282, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#a1b2b6')).setOrigin(0.5) : s.add.text(W / 2, 282, `권장까지 ${rp - pw} 모자란다. 강화하자`, font9(11, '#f2e4bc')).setOrigin(0.5));
     }
     // 자랑하기: 이겼거나 탑 기록을 넘으면 공유(친구가 들어올 길이 없었다). 하루 한 번 보석
     const brag = !s.bot && !dun && (win || (s.endless && floors > best));
     if (brag) {
       const gift = sv.shareDay !== sv.day, shareGem = sv.shared ? D.SHARE_GEM : D.SHARE_GEM_FIRST;
       // 광고 버튼 아래 한 줄. 강조색은 주 버튼 하나만 쓴다(주황·파랑·초록이 한 창에 다 있었다)
-      const sb = button(s, W / 2, 316, 190, 24, gift ? `자랑하기 보석+${shareGem}` : '자랑하기', async () => {
+      const sb = button(s, W / 2, 318, 150, 20, gift ? `자랑하기 보석+${shareGem}` : '자랑하기', async () => {
         const msg = s.endless ? `무한의 탑 ${floors}층 돌파!` : `${s.isBoss ? D.BOSSES[s.ch.boss].name + ' 격파! ' : ''}${s.c + 1}-${s.s + 1} 클리어`;
         const text = `${sv.title ? `[${sv.title}] ` : ''}${hard ? '어려움 ' : ''}${msg} 내 무기는 ${D.tierName(sv.tier, s.wtype)} +${sv.enh} · 강화 서바이버`, url = D.SHARE_URL;
         let ok = false;
@@ -602,12 +602,12 @@ export class Overlay {
         } catch { /* 공유 창을 닫았다 */ }
         s.log('share', { ok, boss: !!s.isBoss, endless: !!s.endless });
         if (ok && sv.shareDay !== sv.day) { sv.shareDay = sv.day; sv.gem += sv.shared ? D.SHARE_GEM : D.SHARE_GEM_FIRST; sv.shared = true; save(); sfx('coin'); sb.label.setText('보석 받음!'); }
-      }, { size: 11, color: 0x3a3846 });
+      }, { size: 10, color: 0x3a3846 });
       c.add(sb);
     }
     // 광고 보고 금화·강화석 2배(하루 횟수 제한). 져도 받을 게 있으면 띄운다
     if (!s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0) {
-      const db = button(s, W / 2, brag ? 288 : 310, 190, 24, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
+      const db = button(s, W / 2, brag ? 288 : 310, 210, 28, sv.noAds ? '보상 2배 받기' : '광고 보고 보상 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         s.log('double_reward', { ok, gold, stone });
@@ -617,18 +617,18 @@ export class Overlay {
         tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
         [tx[0], tx[1]].forEach(t => s.tweens.add({ targets: t, scale: 1.4, duration: 120, yoyo: true }));
         sfx('coin'); db.label.setText('2배 받았다!');
-      }, { size: 11, color: 0x3a3846 });
+      }, { size: 12, color: 0x3a3846, textColor: '#ffb85c' });   // 자랑하기보다 커야 한다(40차: 둘이 같은 크기라 눈이 안 갔다). 채운 주황은 아래 주 버튼 몫
       c.add(db);
     }
     // 얻은 장비 줄(판 안, 버튼 위). 빈 부위는 알아서 끼워졌다
-    c.add(s.add.rectangle(W / 2, 336, W - 80, 1, 0x3a3450));
+    c.add(s.add.rectangle(W / 2, 336, W - 80, 1, 0x293845));
     const egg = loot.find(it => it.egg), top = loot.reduce((a, it) => Math.max(a, it.r < 4 ? it.r : -1), -1);
     // 장 보스를 처음 잡으면 새 무기가 열린다(장마다 받는 큰 보상)
     const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
     const head = wNew ? `새 무기 「${wNew.name}」 획득!` : s.run.dupW ? `무기를 다 모아 강화석 +${D.DUP_W_STONE}` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
     // 보스를 처음 잡으면 새 무기와 보스 펫이 같이 온다: 펫은 한 줄 위에 따로
     if (wNew && newPet) c.add(s.add.text(W / 2, 326, `새 펫 「${newPet.name}」 합류!`, font9(10, '#ffb050')).setOrigin(0.5));
-    if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#c8bfe0')).setOrigin(0.5));
+    if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#a1b2b6')).setOrigin(0.5));
     // 보스 펫 합류는 결과 창 위에 따로 크게 띄운다(한 줄 글씨로는 못 보고 지나갔다)
     if (newPet && !s.bot) this.petJoin(newPet);
     // 새 무기는 장비 아이콘 대신 무기 이름 칸으로 보여 준다(장비 그림이 나와 무엇을 얻었는지 헷갈렸다)
@@ -636,7 +636,7 @@ export class Overlay {
       const st = { str: '힘', dex: '민첩', int: '지능' }[wNew.stat];
       c.add(panel(s, W / 2 - 90, 362, 180, 30, { fill: 0x2a2010, line: 0xffb050 }));
       c.add(s.add.text(W / 2, 371, `${wNew.name} · ${st}을 따른다`, font(11, '#ffd75e')).setOrigin(0.5));
-      c.add(s.add.text(W / 2, 384, '장비 탭에서 바꿔 들 수 있다', font9(10, '#c8bfe0')).setOrigin(0.5));
+      c.add(s.add.text(W / 2, 384, '장비 탭에서 바꿔 들 수 있다', font9(10, '#a1b2b6')).setOrigin(0.5));
     }
     const n = wNew ? 0 : Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);
     loot.slice(0, n).forEach((it, i) => {
@@ -644,7 +644,7 @@ export class Overlay {
       c.add(box); box.setScale(0);
       s.tweens.add({ targets: box, scale: 1, duration: 220, delay: 450 + i * 90, ease: 'Back.Out', onStart: () => it.r >= 2 && sfx('level') });
     });
-    if (!wNew && loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#c8bfe0')).setOrigin(0, 0.5));
+    if (!wNew && loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#a1b2b6')).setOrigin(0, 0.5));
     const nextIdx = Math.min(hard ? sv.hardCleared : sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
     // 던전: 남은 횟수가 있으면 바로 한 번 더
     if (dun) {

@@ -185,7 +185,7 @@ export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) 
 export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 46 };
 // 몹이 많아진 만큼 레벨업 간격을 늘리되, Lv6부터는 40% 줄여 한 판 안에 진화까지 닿게 한다
 // 2레벨은 바로, 3~5레벨은 고르게(17차 150초에 Lv5, 18차 20초에 카드 4연타, 19차 20초에 3장 뒤 30초 공백)
-const XP_EARLY = [0, 5, 18, 30, 38, 50];
+const XP_EARLY = [0, 3, 10, 18, 28, 40];   // 첫 판 80초에 Lv3이라 무기가 늦게 붙었다(40차)
 export const xpNeed = lv => lv <= 5 ? XP_EARLY[lv] : Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6));
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;

@@ -10,7 +10,7 @@ export const PX = Math.max(2, Math.min(4, Math.ceil(Math.min(innerWidth * dpr / 
 // 글자는 그리는 판 해상도로 만든다(1배로 만들어 PX배로 늘리면 뭉개진다)
 export const font = (size, color = '#ffffff', stroke = 3) =>
   ({ fontFamily: 'G11', fontSize: size + 'px', color, stroke: '#0a0710', strokeThickness: stroke, resolution: PX });
-export const font9 = (size, color = '#d8d2e8') => ({ fontFamily: 'G9', fontSize: size + 'px', color, resolution: PX });
+export const font9 = (size, color = '#f2e4bc') => ({ fontFamily: 'G9', fontSize: size + 'px', color, resolution: PX });
 
 export const COLOR = { panel: 0x1c2935, panel2: 0x293845, line: 0x475c66, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
 
@@ -94,7 +94,7 @@ export function toast(scene, msg, color = '#ffffff', y) {
   // 화면 위쪽(상단 바 바로 아래)에 어두운 띠를 깔아 아래 정보·버튼을 가리지 않는다
   const t = scene.add.container(135, y + 16).setDepth(3000).setScrollFactor(0).setAlpha(0);
   const tx = scene.add.text(0, 0, msg, font(12, color)).setOrigin(0.5);
-  t.add([scene.add.rectangle(0, 0, Math.min(262, tx.width + 24), 24, 0x0a0710, 0.85).setStrokeStyle(1, 0x5b4f7a), tx]);
+  t.add([scene.add.rectangle(0, 0, Math.min(262, tx.width + 24), 24, 0x0a0710, 0.85).setStrokeStyle(1, 0x475c66), tx]);
   scene.tweens.add({ targets: t, alpha: 1, y, duration: 160, ease: 'Back.Out' });
   scene.tweens.add({ targets: t, alpha: 0, y: y - 12, delay: 1300, duration: 300, onComplete: () => t.destroy() });
 }

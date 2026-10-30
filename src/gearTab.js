@@ -16,7 +16,7 @@ const SHORT = { hp: '체력', atk: '피해', def: '방어', spd: '이속', mag: 
 // 장비 한 칸 그림: 등급 색 테두리 + 등급 색으로 물든 부위 그림. 세트는 안쪽 테두리를 세트 색으로, 숨겨진 템은 ★
 export function itemBox(scene, x, y, it, size = 34, on = false) {
   const c = scene.add.container(x, y), rr = RARITY[it.r];
-  c.add(scene.add.rectangle(0, 0, size, size, it.r === 4 ? 0x2a0a22 : it.r === 3 ? 0x2a1a08 : 0x15121f).setStrokeStyle(2, rr.color));
+  c.add(scene.add.rectangle(0, 0, size, size, it.r === 4 ? 0x2a0a22 : it.r === 3 ? 0x2a1a08 : 0x1c2935).setStrokeStyle(2, rr.color));
   if (it.set) c.add(scene.add.rectangle(0, 0, size - 6, size - 6).setStrokeStyle(1, Phaser.Display.Color.HexStringToColor(SETS[it.set].css).color, 0.9));
   c.add(scene.add.image(0, 0, 'gs_' + it.s).setScale(Math.floor(size * 0.6 / 12 * 2) / 2).setTint(it.r === 0 ? 0xd8d2e8 : Phaser.Display.Color.HexStringToColor(rr.css).color));
   if (it.egg) c.add(scene.add.text(size / 2 - 3, -size / 2 + 1, '★', font(8, '#ff8ae0')).setOrigin(1, 0));
@@ -29,20 +29,21 @@ export const GearTab = {
   gearTab() {
     const sv = this.sv, b = this.body;
     this.gearPage ||= 'gear';
-    const subs = [['gear', '장비'], ['pet', '펫'], ['stat', '스탯']];
+    const subs = [['gear', '장비'], ['pet', '펫'], ['stat', '스탯'], ['train', '훈련']];
     subs.forEach(([id, name], i) => {
       const on = this.gearPage === id;
       // 아래 무기 버튼 줄과 똑같이 생겨 헷갈렸다: 위는 글자+밑줄 탭으로 구분한다
-      const x = 50 + i * 85, t = this.add.text(x, 50, name, font(12, on ? '#ffffff' : '#8a80a0')).setOrigin(0.5);
+      const x = 37 + i * 65.3, t = this.add.text(x, 50, name, font(12, on ? '#ffb85c' : '#a1b2b6', 0)).setOrigin(0.5);
       b.add(t);
-      if (on) b.add(this.add.rectangle(x, 62, 60, 2, 0xffffff));
-      const hit = this.add.rectangle(x, 52, 80, 28, 0, 0).setInteractive({ useHandCursor: true });
+      if (on) b.add(this.add.rectangle(x, 62, 45, 2, 0xffb85c));
+      const hit = this.add.rectangle(x, 52, 64, 28, 0, 0).setInteractive({ useHandCursor: true });
       hit.on('pointerup', () => { if (this.busy) return; this.gearPage = id; this.invPage = 0; sfx('click'); this.show('gear'); });
       b.add(hit);
       if (id === 'stat' && spFree(sv) > 0) b.add(this.add.circle(x + t.width / 2 + 6, 45, 3, 0xff5050));
     });
     if (this.gearPage === 'pet') return this.petPage();
     if (this.gearPage === 'stat') return this.statPage();
+    if (this.gearPage === 'train') return this.trainTab();
     this.equipPage();
   },
 
@@ -62,7 +63,7 @@ export const GearTab = {
       b.add(bt);
     });
     const wt = WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
-    b.add(this.add.text(W / 2, 101, `${wt.name} · ${SP.find(p => p.id === wt.stat).name}을 따른다 · 전용 스킬 「${D.SKILLS[wt.own].name}」`, font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 101, `${wt.name} · ${SP.find(p => p.id === wt.stat).name}을 따른다 · 전용 스킬 「${D.SKILLS[wt.own].name}」`, font9(10, '#a1b2b6')).setOrigin(0.5));
     // 낀 장비 5칸
     SLOTS.forEach((sl, i) => {
       const x = 31 + i * 52, y = 132, u = sv.eq?.[sl.id], it = u && sv.inv.find(v => v.u === u);
@@ -70,13 +71,13 @@ export const GearTab = {
         const box = itemBox(this, x, y, it, 38); b.add(box);
         box.setInteractive({ useHandCursor: true }).on('pointerup', () => !this.busy && this.itemWin(it));
       } else {
-        b.add(this.add.rectangle(x, y, 38, 38, 0x0d0a14).setStrokeStyle(1, 0x3a3450));
+        b.add(this.add.rectangle(x, y, 38, 38, 0x0b111a).setStrokeStyle(1, 0x293845));
       }
-      b.add(this.add.text(x, y + 25, sl.name, font9(10, '#a89cc8')).setOrigin(0.5));
+      b.add(this.add.text(x, y + 25, sl.name, font9(10, '#a1b2b6')).setOrigin(0.5));
     });
     // 합친 효과
     const parts = Object.keys(STATS).filter(k => g[k] > 0.0005).map(k => `${SHORT[k]} +${STATS[k].pct ? Math.round(g[k] * 100) + '%' : g[k].toFixed(1)}`);
-    b.add(this.add.text(W / 2, 170, parts.length ? parts.join('  ') : '장비를 끼면 능력치가 오른다', { ...font9(9, '#e8e2f8'), align: 'center', wordWrap: { width: W - 20 } }).setOrigin(0.5, 0));
+    b.add(this.add.text(W / 2, 170, parts.length ? parts.join('  ') : '장비를 끼면 능력치가 오른다', { ...font9(9, '#f2e4bc'), align: 'center', wordWrap: { width: W - 20 } }).setOrigin(0.5, 0));
     const setLine = Object.entries(g.sets).map(([k, n]) => `${SETS[k].name} ${n}/4${n >= 4 ? ' ★' : n >= 2 ? ' ☆' : ''}${SETS[k].w && SETS[k].w !== sv.wtype ? '(' + WTYPES.find(w => w.id === SETS[k].w).name + ')' : ''}`).join('  ');
     if (setLine) { const st = this.add.text(W / 2, 194, setLine, font9(9, '#ffb050')).setOrigin(0.5, 0); st.setScale(Math.min(1, (W - 16) / st.width)); b.add(st); }   // 세트가 여럿이면 양옆이 잘렸다
     // 가방
@@ -87,7 +88,7 @@ export const GearTab = {
     b.add(this.add.text(14, 206, `장비 가방 ${inv.length}/${INV_MAX}`, font(10)));
     const toStat = () => { if (this.busy) return; sfx('click'); track('sp_hint_go'); this.gearPage = 'stat'; this.show('gear'); };
     if (!inv.length) {
-      b.add(this.add.text(W / 2, 258, '스테이지를 깨면 장비가 나온다\n빈 칸에는 알아서 낀다', { ...font9(11, '#c8bfe0'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
+      b.add(this.add.text(W / 2, 258, '스테이지를 깨면 장비가 나온다\n빈 칸에는 알아서 낀다', { ...font9(11, '#a1b2b6'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
       // 탭의 빨간 점 = 찍을 스탯 포인트. 비었을 땐 가운데 버튼으로 바로 보낸다
       if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, `스탯 포인트 ${spFree(sv)}개 찍기 →`, toStat, { size: 11, color: 0x3a3846 }));
       b.add(button(this, W / 2, spFree(sv) > 0 ? 334 : 310, 170, 26, '장비 얻으러 전투하기 →', () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
@@ -102,7 +103,7 @@ export const GearTab = {
     });
     if (pages > 1) {
       b.add(button(this, 40, 404, 40, 22, '◀', () => { if (this.busy) return; this.invPage = (this.invPage + pages - 1) % pages; this.show('gear'); }, { size: 10 }));
-      b.add(this.add.text(80, 404, `${this.invPage + 1}/${pages}`, font9(10, '#a89cc8')).setOrigin(0.5));
+      b.add(this.add.text(80, 404, `${this.invPage + 1}/${pages}`, font9(10, '#a1b2b6')).setOrigin(0.5));
       b.add(button(this, 120, 404, 40, 22, '▶', () => { if (this.busy) return; this.invPage = (this.invPage + 1) % pages; this.show('gear'); }, { size: 10 }));
     }
     const junk = inv.filter(it => it.r === 0 && !on.has(it.u));
@@ -124,9 +125,9 @@ export const GearTab = {
     c.add(panel(this, 22, 96, W - 44, 302, { fill: 0x1a1426, line: rr.color }));
     c.add(itemBox(this, W / 2, 130, it, 40));
     c.add(this.add.text(W / 2, 160, it.n, font(13, rr.css)).setOrigin(0.5));
-    c.add(this.add.text(W / 2, 177, `${rr.name} ${sl.name}${it.egg ? '' : ` · ${it.c + 1}장`}`, font9(10, '#a89cc8')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 177, `${rr.name} ${sl.name}${it.egg ? '' : ` · ${it.c + 1}장`}`, font9(10, '#a1b2b6')).setOrigin(0.5));
     let y = 194;
-    const line = (txt, col = '#e8e2f8') => { c.add(this.add.text(W / 2, y, txt, font9(10, col)).setOrigin(0.5, 0)); y += 15; };
+    const line = (txt, col = '#f2e4bc') => { c.add(this.add.text(W / 2, y, txt, font9(10, col)).setOrigin(0.5, 0)); y += 15; };
     Object.entries(it.st).forEach(([k, v], i) => line(statText(k, v), i === 0 ? '#ffffff' : '#c8f0a0'));
     if (it.egg) line(EGGS[it.egg].desc, '#ff8ae0');
     if (it.set) {
@@ -143,8 +144,8 @@ export const GearTab = {
         const v = STATS[k].pct ? `${Math.round(Math.abs(d) * 1000) / 10}%` : Math.abs(d).toFixed(2);
         return [`${SHORT[k]} ${d > 0 ? '▲' : '▼'}${v}`, d > 0 ? '#5fdc6a' : '#ff8070'];
       }).filter(Boolean);
-      y += 3; line(cur ? `낀 「${cur.n}」과 비교` : '빈칸에 끼면', '#a89cc8');
-      if (!diff.length) line('차이 없음', '#a89cc8');
+      y += 3; line(cur ? `낀 「${cur.n}」과 비교` : '빈칸에 끼면', '#a1b2b6');
+      if (!diff.length) line('차이 없음', '#a1b2b6');
       // 두 칸씩 줄을 나눠 글자가 중간에서 잘리지 않게
       diff.forEach(([t, col], i) => c.add(this.add.text(W / 2 + (i % 2 ? 6 : -6), y + Math.floor(i / 2) * 13, t, font9(9, col)).setOrigin(i % 2 ? 0 : 1, 0)));
     }
@@ -169,7 +170,7 @@ export const GearTab = {
   petPage() {
     const sv = this.sv, b = this.body, g = gearStats(sv), fb = this.registry.get('fallback') || {};
     const chN = c => `${c + 1}장`;
-    b.add(this.add.text(W / 2, 74, '한 마리를 데려간다 · 맵마다 잘 듣는 펫이 다르다', font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 74, '한 마리를 데려간다 · 맵마다 잘 듣는 펫이 다르다', font9(10, '#a1b2b6')).setOrigin(0.5));
     PETS.forEach((p, i) => {
       const y = 86 + i * 50, open = sv.cleared >= p.unlock, lv = sv.pets?.[p.id] || 0, on = sv.pet === p.id;
       b.add(panel(this, 12, y, W - 24, 46, { fill: on ? 0x2e2448 : 0x1a1528, line: on ? 0xffd75e : COLOR.line }));
@@ -177,8 +178,8 @@ export const GearTab = {
       if (!open) b.add(this.add.text(34, y + 23, '?', font(14, '#6a6080')).setOrigin(0.5));
       else if (this.anims.exists(p.id)) { const sp = this.add.sprite(34, y + 23, null).play(p.id).setScale(fb[p.id] ? 0.8 : 0.36); if (fb[p.id]) sp.setTint(p.color); b.add(sp); }
       b.add(this.add.text(56, y + 5, open ? `${p.name}  Lv ${lv}` : `??? · ${p.hint}`, font(11, open ? '#ffffff' : '#6a6080')));
-      if (!open) { b.add(this.add.text(56, y + 23, '보스를 잡으면 따라온다', font9(10, '#5a5070'))); return; }
-      b.add(this.add.text(56, y + 20, p.desc, font9(10, '#e8e2f8')));
+      if (!open) { b.add(this.add.text(56, y + 23, '보스를 잡으면 따라온다', font9(10, '#5c6e76'))); return; }
+      b.add(this.add.text(56, y + 20, p.desc, font9(10, '#f2e4bc')));
       const fit = `강함 ${[...(p.good || []).map(chN), ...(p.id === 'demonlord' ? ['탑'] : [])].join('·') || '-'}${p.weak ? `  약함 ${p.weak.map(chN).join('·')}` : ''}`;
       b.add(this.add.text(56, y + 33, fit, font9(9, '#8fdc8a')));
       const tb = button(this, W - 50, y + 13, 62, 18, on ? '함께' : '데려가기', () => {
@@ -195,8 +196,8 @@ export const GearTab = {
       fbt.setEnabled(!max && sv.gold >= cost); b.add(fbt);
     });
     // 한 줄이면 화면 양 끝이 잘려 두 줄로 나눈다
-    b.add(this.add.text(W / 2, 386, '맞는 맵이면 효과 ×1.8 (장군·거신은 피해 -20%)', font9(9, '#a89cc8')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 399, `목걸이로 펫 효과 +${Math.round(g.pet * 100)}%`, font9(9, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 386, '맞는 맵이면 효과 ×1.8 (장군·거신은 피해 -20%)', font9(9, '#a1b2b6')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 399, `목걸이로 펫 효과 +${Math.round(g.pet * 100)}%`, font9(9, '#a1b2b6')).setOrigin(0.5));
   },
 
   // ── 스탯: 스테이지를 처음 깰 때 점수를 받아 찍는다 ──
@@ -204,7 +205,7 @@ export const GearTab = {
     const sv = this.sv, b = this.body, free = spFree(sv), wt = WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
     sv.sp ||= { str: 0, dex: 0, int: 0, vit: 0 };
     b.add(this.add.text(W / 2, 76, `남은 점수 ${free} / ${spTotal(sv.cleared)}`, font(12, free ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 92, '첫 클리어마다 1점, 보스는 2점 더 · 5점마다 보너스', font9(10, '#a89cc8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 92, '첫 클리어마다 1점, 보스는 2점 더 · 5점마다 보너스', font9(10, '#a1b2b6')).setOrigin(0.5));
     SP.forEach((st, i) => {
       const y = 104 + i * 54, v = sv.sp[st.id] || 0;
       b.add(panel(this, 12, y, W - 24, 48, { fill: 0x1a1528 }));
@@ -216,7 +217,7 @@ export const GearTab = {
       const now = Math.round((dmgStat ? statMul(sv, st.id) - 1 : gearStats({ sp: { vit: v } }).hp) * 100);
       const left = SP_MILE - v % SP_MILE;
       b.add(this.add.text(92, y + 10, `+${now}% · ${left}점 뒤 +${Math.round((dmgStat ? SP_MILE_DMG : SP_MILE_HP) * 100)}%`, font9(9, '#ffd75e')));
-      b.add(this.add.text(24, y + 28, st.desc, font9(10, '#e8e2f8')));
+      b.add(this.add.text(24, y + 28, st.desc, font9(10, '#f2e4bc')));
       const pb = button(this, W - 44, y + 30, 44, 24, '+1', () => {
         if (this.busy || spFree(sv) <= 0) return;
         sv.sp[st.id] = v + 1; save(); sfx('buy'); track('stat_up', { stat: st.id, v: v + 1, power: D.powerOf(sv) }); this.show('gear');
@@ -225,7 +226,7 @@ export const GearTab = {
     });
     // 든 무기의 스탯만 피해를 올린다: 안 맞는 스탯에 찍었으면 경고
     const wrong = SP.filter(p => p.id !== 'vit' && p.id !== wt.stat).reduce((a, p) => a + (sv.sp[p.id] || 0), 0);
-    b.add(this.add.text(W / 2, 330, `${wt.name}은 ${SP.find(p => p.id === wt.stat).name}만 피해를 올린다`, font9(10, '#e8e2f8')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 330, `${wt.name}은 ${SP.find(p => p.id === wt.stat).name}만 피해를 올린다`, font9(10, '#f2e4bc')).setOrigin(0.5));
     if (wrong) b.add(this.add.text(W / 2, 346, `다른 무기 스탯에 ${wrong}점: 지금 무기로는 힘이 안 된다`, font9(10, '#ff8070')).setOrigin(0.5));
     const used = spTotal(sv.cleared) - free;
     const rb = button(this, W / 2, 402, 200, 24, sv.spReset > 0 ? `초기화 (초기화권 ${sv.spReset}장)` : `초기화 (보석 ${SP_RESET_GEM})`, () => {

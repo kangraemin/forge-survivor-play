@@ -7,7 +7,7 @@ import { makeWeaponTextures } from './wart.js';
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
   'mob2_r0', 'mob2_r1', 'mob2_r2', 'fx1_r0', 'fx1_r1', 'fx1_r2', 'fx2_r0', 'fx2_r1', 'fx2_r2', 'tiles', 'deco'];
 const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2'].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
-  .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'lobby_bg', 'tile2', 'tile3', 'tile4', 'tile5']);
+  .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'lobby_bg', 'bell', 'tile2', 'tile3', 'tile4', 'tile5']);
 // 코드로 그리던 작은 그림을 대신하는 PNG(assets/icon). 있으면 makeTextures가 건너뛴다
 const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'meat', 'silver',
   'magnetItem', 'gem1', 'gem2', 'gem3', 'ebullet', 'fireball', 'ice', 'hammer', 'wave', 'dagger', 'orb'];
