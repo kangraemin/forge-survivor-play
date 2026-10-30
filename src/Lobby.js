@@ -262,7 +262,8 @@ export class Lobby extends Phaser.Scene {
     track('ch16_open', { on: !!sv.tut?.ch16Notify });
     c.add(panel(this, 20, 150, W - 40, 190, { fill: 0x1a1426, line: 0x9ae0ff }));
     c.add(this.add.text(W / 2, 172, t('lobby.ch16Title'), font(13, '#9ae0ff')).setOrigin(0.5));
-    [t('lobby.ch16L1'), t('lobby.ch16L2')].forEach((s2, i) => { const tx = this.add.text(32, 194 + i * 40, '- ' + s2, { ...font9(10, '#e8f4f8'), wordWrap: { width: W - 64 } }).setLineSpacing(2); c.add(tx); });
+    let ty = 194;   // 60차: 문장 높이만큼만 띄운다(고정 40px 간격이 빈 줄처럼 보였다)
+    [t('lobby.ch16L1'), t('lobby.ch16L2')].forEach(s2 => { const tx = this.add.text(32, ty, '- ' + s2, { ...font9(10, '#e8f4f8'), wordWrap: { width: W - 64 } }).setLineSpacing(2); c.add(tx); ty += tx.height + 8; });
     const on = !!sv.tut?.ch16Notify;
     const nb = button(this, shareHidden() ? W / 2 : 82, 316, shareHidden() ? 140 : 108, 28, on ? t('lobby.ch16Done') : t('lobby.ch16On'), () => {
       if (sv.tut?.ch16Notify) return;

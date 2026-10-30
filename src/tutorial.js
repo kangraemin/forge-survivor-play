@@ -35,7 +35,7 @@ const noPrep = f => () => { const { prep, ...r } = f(); return r; };
 export const TAB_COACH = { tab_gear: noPrep(S.gear), tab_pet: noPrep(S.pet), tab_shop: noPrep(S.trade) };
 
 export function tutorialSteps(scene, full = false) {
-  if (!full) return [S.enh(), S.risk(), S.go()];
+  if (!full) return [S.enh()];   // 60차: 첫 판 직후엔 핵심 한 장(강화)만. 나머지는 탭을 처음 열 때·설정 다시 보기
   const steps = [S.gear(), S.bag(), S.enh(), S.risk(), S.pet(), S.petRole(), S.cur(), S.trade()];
   // 이미 2장 보스를 넘긴 사람은 도전 버튼도 한 번에 보여 준다
   if (scene.sv.cleared >= 6) steps.push(modeStep());

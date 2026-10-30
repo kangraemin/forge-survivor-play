@@ -10,13 +10,14 @@ export function installDesktop() {
   css.textContent = `
 #sidebg{position:fixed;inset:-24px;z-index:0;display:none;background:#0b0b10 url(assets/loading_bg.jpg) center/cover no-repeat;filter:blur(12px) brightness(.42) saturate(.9);pointer-events:none}
 #game{z-index:1}
-#deskhint{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);color:#cfd8dc;font:12px/1.7 G9,G11,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
-#deskhint,#deskinfo{font:12px/1.7 G9,G11,sans-serif}
-#deskinfo{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);width:180px;color:#cfd8dc;text-shadow:0 1px 2px #000;pointer-events:none}
-#deskinfo b{display:block;margin:10px 0 4px;color:#ffd75e;font:14px G11,G9,sans-serif}
+#deskhint{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);color:#cfd8dc;font:15px/1.65 G9,G11,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
+#deskhint,#deskinfo{font:15px/1.65 G9,G11,sans-serif}
+#deskinfo{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);width:200px;color:#e6edf0;text-shadow:0 1px 2px #000;pointer-events:none}
+#deskinfo b{display:block;margin:14px 0 5px;color:#ffd75e;font:18px G11,G9,sans-serif}
+#deskinfo .ic{display:inline-block;width:1.5em;text-align:center}
 #deskinfo b:first-child{margin-top:0}
 #deskinfo .ok{color:#5fdc6a}
-#deskhint b{display:block;margin-bottom:4px;color:#ffd75e;font:14px G11,G9,sans-serif}
+#deskhint b{display:block;margin-bottom:5px;color:#ffd75e;font:18px G11,G9,sans-serif}
 @media (min-aspect-ratio:115/100){#sidebg{display:block}}`;
   document.head.appendChild(css);
   const bg = document.createElement('div'); bg.id = 'sidebg';
@@ -29,7 +30,7 @@ export function installDesktop() {
   const info = document.createElement('div'); info.id = 'deskinfo'; document.body.appendChild(info);
   let mods = null;
   const line = (txt, cls) => { const d = document.createElement('div'); d.textContent = '- ' + txt; if (cls) d.className = cls; return d; };
-  const head = txt => { const b = document.createElement('b'); b.textContent = txt; return b; };
+  const head = (txt, icon) => { const b = document.createElement('b'); const i = document.createElement('span'); i.className = 'ic'; i.textContent = icon; b.append(i, txt); return b; };   // 아이콘은 글자 그림(외부 이미지·링크 없음)
   const fill = async () => {
     try {
       mods ||= await Promise.all([import('../save.js'), import('../data.js'), import('../gear.js')]);
@@ -37,10 +38,10 @@ export function installDesktop() {
       const kids = [];
       if ((sv.cleared | 0) >= 1) {
         const ords = D.forgeOrdersToday(sv.dayN), done = ords.filter(o => sv.misGot['o_' + o.id]).length;
-        kids.push(head(t('desk.ordTitle', { done, n: ords.length })));
+        kids.push(head(t('desk.ordTitle', { done, n: ords.length }), '\u{1F4DC}'));
         for (const o of ords) { const have = Math.min(o.need, sv.mis[o.key] || 0); kids.push(line(t('desk.ordRow', { name: o.name, have, need: o.need }), have >= o.need ? 'ok' : '')); }
       }
-      kids.push(head(t('desk.swordTitle')));
+      kids.push(head(t('desk.swordTitle'), '\u2694\uFE0F'));
       kids.push(line(t('desk.sword', { enh: sv.enh | 0, name: D.tierName(sv.tier, G.wtypeOf(sv)) })));
       kids.push(line(t('desk.power', { p: D.powerOf(sv) })));
       info.replaceChildren(...kids);
@@ -49,12 +50,12 @@ export function installDesktop() {
   const fine = () => { try { return matchMedia('(pointer:fine)').matches; } catch { return false; } };
   const place = () => {
     const w = innerWidth, h = innerHeight, cv = document.querySelector('#game canvas'), side = cv ? cv.getBoundingClientRect().left : (w - Math.min(w, h * 270 / 480)) / 2;   // 가운데 판을 뺀 한쪽 폭
-    const on = w / h >= WIDE && side >= 170 && fine();
+    const on = w / h >= WIDE && side >= 220 && fine();
     hint.style.display = on ? 'block' : 'none';
     const right = cv ? cv.getBoundingClientRect().right : w - side;
     info.style.display = on ? 'block' : 'none';
-    if (on) { info.style.left = Math.round(right + 16) + 'px'; fill(); }
-    if (on) { hint.style.left = Math.round(side - 196) + 'px'; hint.style.width = '180px'; hint.style.textAlign = 'right'; }
+    if (on) { info.style.width = Math.min(220, w - right - 28) + 'px'; info.style.left = Math.round(right + 16) + 'px'; fill(); }
+    if (on) { hint.style.left = Math.round(side - 216) + 'px'; hint.style.width = '200px'; hint.style.textAlign = 'right'; }
   };
   addEventListener('resize', place); place(); setInterval(place, 1500);   // 캔버스가 뜨고 크기가 잡힌 뒤에도 맞춘다
 }

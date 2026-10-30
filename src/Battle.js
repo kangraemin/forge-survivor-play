@@ -1356,9 +1356,9 @@ export class Battle extends Phaser.Scene {
         for (let i = 0; i < 3; i++) this.spawn(false, this.ch.mobs[1], { elite: true, force: true });
         this.banner(t('battle.raidT'), t('battle.raidS')); sfx('bossIn'); this.log('stage1_raid', { bt: Math.round(this.bt / 1000) });
       }
-      // 58차: 1-2 이후 일반 판 — 마지막에서 둘째 웨이브에 금화 행렬, 둘째 웨이브엔 장마다 다른 중반 이벤트(midPat.js MID_EVENTS)
-      if (this.goldOk && !this.isBoss && !this.rushDone && this.wave === Math.min(2, this.waveCount - 1) && this.waveT > this.waveLen * rc('gold_rush_at') && rc('gold_rush_n') > 0) { this.rushDone = true; this.goldRush(); }
-      if (!this.stage1 && !this.midEvDone && !this.easy && !this.practice && !this.mode && !this.isBoss && !this.endless && !this.dungeon && this.wave === 1 && this.waveT > this.waveLen * 0.35) { this.midEvDone = true; runMidEvent(this); }
+      // 58차: 1-2 이후 판(60차: x-3 보스 판도 포함) — 마지막에서 둘째 웨이브에 금화 행렬, 둘째 웨이브엔 장마다 다른 중반 이벤트(midPat.js MID_EVENTS)
+      if (this.goldOk && !this.rushDone && this.wave === Math.min(2, this.waveCount - 1) && this.waveT > this.waveLen * rc('gold_rush_at') && rc('gold_rush_n') > 0) { this.rushDone = true; this.goldRush(); }
+      if (!this.stage1 && !this.midEvDone && !this.easy && !this.practice && !this.mode && !this.endless && !this.dungeon && this.wave === 1 && this.waveT > this.waveLen * 0.35) { this.midEvDone = true; runMidEvent(this); }
       // 53차: 1-1 마지막 웨이브가 열리면(중간보스 직전) 회복 구슬 하나를 몸 곁에. 체력이 모자랄 때만 의미가 있게 항상 놓는다
       if (this.stage1 && !this.healOrbDone && this.wave === this.waveCount - 1) { this.healOrbDone = true; this.addItem(this.hero.x + 24, this.hero.y - 12, 'meat'); this.log('stage1_heal_orb', { hp: Math.round(this.hp / this.maxHp * 100) }); }
       if (this.eventAt != null && !this.eventDone && this.progress() >= this.eventAt) { this.eventDone = true; this.surprise(this.eventKind); }

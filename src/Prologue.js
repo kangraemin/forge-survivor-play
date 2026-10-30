@@ -23,14 +23,8 @@ const LINES = [   // [누가, 키]
   ['hero', () => t('prologue.l0')], ['hero', () => t('prologue.l1')], ['priest', () => t('prologue.l2')], ['priest', () => t('prologue.l3')],
   ['priest', () => t('prologue.l4')], ['priest', () => t('prologue.l5')], ['hero', () => t('prologue.l6')],
 ];
-// 사제 픽셀 그림(16x26). 새 그림이 나오면 docs/prologue.md 목록대로 교체한다
-const PRIEST = [
-  '..............YY', '.....oooooo...YY', '....owwwwwwo...b', '...owwwwwwwwo..b', '...owwsssswwo..b', '...osessssseo..b', '...osssssssso..b',
-  '....ossssssso..b', '....owwwwwwo...b', '..owwwwyywwwwo.b', '..owwwwyywwwwo.b', '.owwgwwyywwgwwoy', '.owwgwwyywwgwwoy', '.owwgwwyywwgwwoy',
-  '.owwgwwyywwgwwso', '.owwgwwyywwgwwso', '.owgggwyywgggwo.', '.owgggwwwwgggwo.', '.owgggwwwwgggwo.', '..owgggwwgggwo..',
-  '..owgggwwgggwo..', '..owggggggggwo..', '..oyyyyyyyyyyo..', '..owwwwwwwwwwo..', '...oooooooooo...', '................',
-];
-const PAL = { o: 0x1a1226, w: 0xf4efe0, g: 0xc9c0a8, y: 0xffd75e, s: 0xf2c9a0, e: 0x2a1a3a, b: 0x8a5a2a, Y: 0xfff2b0 };
+// 프롤로그 전용 그림(game/assets/pro_*.png, docs/prologue.md): 사제 5프레임·거대 보스 3프레임·쓰러진 주인공 2프레임·부활 빛 기둥 4프레임
+const PRO_SHEETS = [['pro_priest', 60, 79], ['pro_boss', 165, 202], ['pro_hero_down', 69, 51], ['pro_revive_fx', 41, 78]];
 
 export class Prologue extends Phaser.Scene {
   constructor() { super('Prologue'); }
@@ -38,7 +32,10 @@ export class Prologue extends Phaser.Scene {
   init(data) { this.replay = !!data?.replay; }
 
   // 15장 몹·15장 마지막 보스·바닥·최강 펫 그림은 첫 실행에서 아직 안 받았다: 시작 직전에 받는다
-  preload() { ensureKeys(this, k => /^(z15_r[012]|boss6_r0|boss5_r0|tile15)$/.test(k)); }
+  preload() {
+    ensureKeys(this, k => /^(z15_r[012]|boss5_r0|tile15)$/.test(k));
+    for (const [k, fw, fh] of PRO_SHEETS) if (!this.textures.exists(k)) this.load.spritesheet(k, `assets/${k}.png`, { frameWidth: fw, frameHeight: fh });
+  }
 
   create() {
     hiCam(this); buildAnims(this); this.makeTextures(); this.makeAnims();
@@ -67,18 +64,13 @@ export class Prologue extends Phaser.Scene {
   at(sec, fn) { this.sched.push({ t: sec, fn }); }
 
   // ── 코드로 그리는 그림 ──
-  makeTextures() {
-    if (this.textures.exists('pro_priest')) return;
-    const g = this.make.graphics({ add: false });
-    PRIEST.forEach((row, y) => [...row].forEach((c, x) => { if (PAL[c] !== undefined) g.fillStyle(PAL[c]).fillRect(x, y, 1, 1); }));
-    g.generateTexture('pro_priest', 16, 26); g.destroy();
-  }
+  makeTextures() {}
   makeAnims() {
     const A = (key, tex, frames, rate, repeat) => { if (!this.anims.exists(key) && this.textures.exists(tex)) this.anims.create({ key, frames: this.anims.generateFrameNumbers(tex, frames ? { frames } : {}), frameRate: rate, repeat }); };
     this.idleTex = this.textures.exists('hn_hero2_r2s') ? 'hn_hero2_r2s' : 'hero2_r2s';
     this.slashTex = this.textures.exists('hn_hero_r2s') ? 'hn_hero_r2s' : 'hero_r2s';
     A('pro_idle', this.idleTex, [2, 3], 2.5, -1); A('pro_slash', this.slashTex, null, 22, 0);
-    A('pro_sword', 'hero2_r2s', [2, 3], 2.5, -1); A('pro_pillar', 'fx2_r2s', null, 9, -1);
+    A('pro_sword', 'hero2_r2s', [2, 3], 2.5, -1); A('pro_pillar', 'pro_revive_fx', null, 9, -1); A('pro_priest_idle', 'pro_priest', [0, 1], 2, -1); A('pro_priest_pray', 'pro_priest', [2, 3], 4, -1);
   }
   makeGround() {
     const key = this.textures.exists('tile15') ? 'tile15' : 'tiles';
@@ -193,12 +185,10 @@ export class Prologue extends Phaser.Scene {
     this.tweens.add({ targets: this.red, alpha: 0.22, duration: 400, yoyo: true, repeat: 5 });
     const w = this.add.text(W / 2, this.HY - 150, t('prologue.warn'), font(15, '#ff6a5a', 4)).setOrigin(0.5).setDepth(60).setAlpha(0); w.isBtnLabel = true; this.fg.add(w);
     this.tweens.add({ targets: w, alpha: 1, duration: 300, yoyo: true, hold: 1500, onComplete: () => w.destroy() });
-    const key = BOSSES[PROLOGUE_BOSS].sheet + '_r' + BOSSES[PROLOGUE_BOSS].row + 's';
-    const fy = this.HY - 34; this.bossFeet = fy;
+        const fy = this.HY - 34; this.bossFeet = fy;
     this.bossShadow = this.add.ellipse(W / 2, fy + 2, 280, 44, 0x000000, 0.55).setDepth(6).setAlpha(0); this.fg.add(this.bossShadow);
     this.bossAura = this.add.image(W / 2, fy - 150, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff3010).setScale(6.5).setDepth(6.5).setAlpha(0); this.fg.add(this.bossAura);
-    this.boss = this.add.sprite(W / 2, -330, key).setOrigin(0.5, 1).setScale(4.3).setDepth(7); this.fg.add(this.boss);
-    if (this.anims.exists(PROLOGUE_BOSS)) this.boss.play(PROLOGUE_BOSS);
+    this.boss = this.add.sprite(W / 2, -330, 'pro_boss', 0).setOrigin(0.5, 1).setScale(1.7).setDepth(7); this.fg.add(this.boss);
     this.boss.preFX?.addGlow(0xff2a10, 3, 0, false, 0.1, 10);
     this.tweens.add({ targets: this.boss, y: fy, duration: 2600, ease: 'Quad.In', onComplete: () => { sfx('boom'); this.cameras.main.shake(400, 0.02); this.tweens.add({ targets: [this.bossShadow, this.bossAura], alpha: { from: 0, to: 0.6 }, duration: 400 }); this.tweens.add({ targets: this.bossAura, alpha: 0.25, duration: 600, yoyo: true, repeat: -1 }); this.bossBar(); this.phase = 'bossHit'; } });
     this.tweens.add({ targets: this.bossShadow, alpha: 0.55, duration: 2600 });
@@ -224,20 +214,22 @@ export class Prologue extends Phaser.Scene {
     this.phase = 'telegraph'; sfx('warn');
     this.zone = this.add.ellipse(this.HX, this.HY - 6, 30, 12, 0xff2020, 0.45).setDepth(7.2); this.fg.add(this.zone);
     this.tweens.add({ targets: this.zone, scaleX: 5, scaleY: 5, duration: 1100 });
-    this.tweens.add({ targets: this.boss, scale: 5, y: this.bossFeet - 50, duration: 1100, ease: 'Sine.Out' });
+    this.boss.setFrame(1);
+    this.tweens.add({ targets: this.boss, scale: 1.98, y: this.bossFeet - 50, duration: 1100, ease: 'Sine.Out' });
     this.tweens.add({ targets: this.bossAura, alpha: 0.7, duration: 1100 });
   }
   slam() {
     if (this.skipped) return;
     this.phase = 'slam';
-    this.tweens.add({ targets: this.boss, scale: 4.1, y: this.bossFeet + 70, duration: 130, ease: 'Expo.In', onComplete: () => {
+    this.boss.setFrame(2);
+    this.tweens.add({ targets: this.boss, scale: 1.62, y: this.bossFeet + 70, duration: 130, ease: 'Expo.In', onComplete: () => {
       sfx('boom'); sfx('hurt');
       this.cameras.main.flash(300, 255, 255, 255); this.cameras.main.shake(700, 0.035);
       const ring = this.add.image(this.HX, this.HY - 6, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff5030).setScale(0.3, 0.14).setDepth(31);
       this.tweens.add({ targets: ring, scaleX: 8, scaleY: 3.5, alpha: 0, duration: 600, onComplete: () => ring.destroy() });
       // 주인공이 날아가고 무기는 손에서 떨어져 나간다
-      this.dead = true; this.hero.stop().setTexture('hero2_r2s', 0).setTint(0xffaaaa);
-      this.tweens.add({ targets: this.hero, x: this.HX - 40, y: this.HY + 36, angle: -70, duration: 380, ease: 'Quad.Out' });
+      this.dead = true; this.hero.stop().setTexture('pro_hero_down', 0).setScale(1.15).setTint(0xffaaaa);
+      this.tweens.add({ targets: this.hero, x: this.HX - 40, y: this.HY + 36, duration: 380, ease: 'Quad.Out' });
       this.tweens.add({ targets: this.wp, x: this.HX + 90, y: this.HY - 90, angle: 700, duration: 700, alpha: 0.0 });
       if (this.pet) this.tweens.add({ targets: [this.pet, this.petRing], alpha: 0.2, duration: 400 });
       [...this.mobs].forEach(m => this.killMob(m, true));
@@ -294,7 +286,7 @@ export class Prologue extends Phaser.Scene {
     this.clearStage(); this.phase = 'cut';
     this.skipBtn.setDepth(300);
     this.dim.setAlpha(0.8).setDepth(20);
-    this.hero.setDepth(25).setPosition(this.HX - 30, this.HY + 24).setAngle(0).setFlipX(false).setScale(1.35).setTexture('hero2_r2s', 0).setTint(0x7a7a90);
+    this.hero.setDepth(25).setPosition(this.HX - 30, this.HY + 24).setAngle(0).setFlipX(false).setScale(1.15).setTexture('pro_hero_down', 0).setTint(0x7a7a90);
     this.hero.stop(); this.hero.y += 4;
     this.cameras.main.fadeIn(600, 0, 0, 0);
     this.dlgIdx = -1; this.makeDialog();
@@ -342,32 +334,32 @@ export class Prologue extends Phaser.Scene {
   act(i) {
     const hx = this.HX - 30, py = this.HY + 28;
     if (i === 1) {   // 완전히 쓰러진다
-      this.tweens.add({ targets: this.hero, angle: 78, y: this.HY + 36, duration: 700, ease: 'Quad.In' });
+      this.tweens.add({ targets: this.hero, y: this.HY + 36, duration: 700, ease: 'Quad.In' });
     }
     if (i === 2) {   // 빛 기둥 + 사제
       sfx('heal');
-      this.pillar = this.add.sprite(this.HX + 54, py + 4, 'fx2_r2s').setOrigin(0.5, 1).setScale(3.4, 5).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe08a).setDepth(24).setAlpha(0).play('pro_pillar');
-      this.priest = this.add.image(this.HX + 54, py, 'pro_priest').setOrigin(0.5, 1).setScale(2.4).setDepth(26).setAlpha(0);
+      this.pillar = this.add.sprite(this.HX + 54, py + 4, 'pro_revive_fx').setOrigin(0.5, 1).setScale(1.7, 1.6).setDepth(24).setAlpha(0).play('pro_pillar');
+      this.priest = this.add.sprite(this.HX + 54, py, 'pro_priest', 0).setOrigin(0.5, 1).setScale(0.95).setDepth(26).setAlpha(0).play('pro_priest_idle');
       this.tweens.add({ targets: this.pillar, alpha: 0.75, duration: 700 }); this.tweens.add({ targets: this.priest, alpha: 1, duration: 1000, delay: 300 });
       this.cameras.main.flash(300, 255, 240, 190);
     }
     if (i === 3) {   // 부활: 낡은 검을 든 모습으로 일어선다
       sfx('success');
-      const pl = this.add.sprite(hx, this.HY + 32, 'fx2_r2s').setOrigin(0.5, 1).setScale(2.4, 3.6).setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe08a).setDepth(24).play('pro_pillar');
+      const pl = this.add.sprite(hx, this.HY + 32, 'pro_revive_fx').setOrigin(0.5, 1).setScale(1.5, 1.3).setDepth(24).play('pro_pillar');
+      this.priest?.play('pro_priest_pray');
       this.time.delayedCall(1600, () => this.tweens.add({ targets: pl, alpha: 0, duration: 500, onComplete: () => pl.destroy() }));
       this.cameras.main.flash(300, 255, 240, 190);
       this.hero.clearTint().setTint(0xffffff).clearTint();
-      this.tweens.add({ targets: this.hero, angle: 0, y: this.HY + 30, duration: 600, ease: 'Back.Out', onComplete: () => this.hero.play('pro_sword') });
+      this.hero.setTexture('pro_hero_down', 1);
+      this.tweens.add({ targets: this.hero, y: this.HY + 30, duration: 600, ease: 'Back.Out', onComplete: () => this.hero.setScale(1.35).play('pro_sword') });
       this.tweens.add({ targets: this.dim, alpha: 0.55, duration: 800 });
       this.showCard(false);
     }
     if (i === 4) this.showCard(true);
     if (i === 5) {   // 복선: 사제의 눈이 한순간 붉게 빛난다(눈빛 하나, 그 뒤 아무 일도 없다)
-      const sc = 2.4, ex = [5, 10].map(c => this.priest.x + (c - 8 + 0.5) * sc), ey = this.priest.y - (26 - 5 - 0.5) * sc;
-      ex.forEach(x => {
-        const g = this.add.image(x, ey, 'px').setScale(2.6, 1.6).setTint(0xff4a30).setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setAlpha(0);
-        this.tweens.add({ targets: g, alpha: 1, duration: 220, delay: 700, yoyo: true, hold: 380, onComplete: () => g.destroy() });
-      });
+      const pr = this.priest; pr.play('pro_priest_idle');   // 붉은 눈 프레임(4)을 잠깐 보여 주고 틴트·글로우로 강조한다
+      this.time.delayedCall(700, () => { if (!pr.active) return; pr.anims.stop(); pr.setFrame(4).setTint(0xffb0a0); pr.preFX?.addGlow(0xff2a10, 4, 0, false, 0.1, 10); sfx('warn'); });
+      this.time.delayedCall(1300, () => { if (!pr.active) return; pr.clearTint(); pr.preFX?.clear(); pr.play('pro_priest_idle'); });
     }
   }
   // 지금 가진 것: 낡은 검 +0, 펫·장비 없음
@@ -422,7 +414,7 @@ export class Prologue extends Phaser.Scene {
     this.clearStage(); this.typing?.remove(); this.typing = null; this.autoT?.remove();
     this.pillar?.destroy(); this.priest?.destroy(); this.card?.destroy(); this.cardNone?.destroy();
     this.tapZone?.destroy(); this.dlg?.destroy();
-    this.hero.setDepth(25).setPosition(this.HX, this.HY + 30).setAngle(0).clearTint().setFlipX(false).play('pro_sword');
+    this.hero.setDepth(25).setPosition(this.HX, this.HY + 30).setAngle(0).clearTint().setFlipX(false).setScale(1.35).play('pro_sword');
     this.dim.setAlpha(0.6);
     this.dlg = { setVisible() {}, destroy() {} }; this.tapZone = { destroy() {} };
     this.showGoal();
