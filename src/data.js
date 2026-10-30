@@ -9,6 +9,17 @@ export const CHAPTERS = [
   { name: '용암 동굴', tiles: 'tile3', mobs: ['imp', 'golem', 'fskull'], boss: 'lavagolem', dur: 180, dark: 0.5, light: 0xff6a2a },
   { name: '얼어붙은 설원', tiles: 'tile4', mobs: ['wolf', 'yeti', 'icesp'], boss: 'wyrm', dur: 195, dark: 0.35, light: 0xbfe8ff },
   { name: '마왕성', tiles: 'tile5', mobs: ['dknight', 'cultist', 'gargoyle'], boss: 'demonlord', dur: 210, dark: 0.5, light: 0xff4060 },
+  // 6장부터: env는 장 고유 지형·환경(envfx.js), note는 '새로운 점' 한 줄(판 시작 때 알려 준다). 설계표 docs/chapters.md
+  { name: '가라앉은 신전', tiles: 'tile6', mobs: ['drowned', 'coral', 'wraith'], boss: 'tidewyrm', dur: 232, dark: 0.45, light: 0x5ae0d0, deco: 0x7ad8d0, env: 'tide', note: '바닥의 물웅덩이를 밟으면 느려진다 · 물귀신은 물속에 잠겨 피한다' },
+  { name: '독안개 늪', tiles: 'tile7', mobs: ['toxslime', 'rotgiant', 'sporespider'], boss: 'swampqueen', dur: 240, dark: 0.5, light: 0x9aff5a, deco: 0x9ac060, env: 'fog', note: '독안개가 떠다닌다 · 포자 거미는 지나간 길에 독구름을 남긴다' },
+  { name: '수정 광산', tiles: 'tile8', mobs: ['crystbat', 'crystgolem', 'prism'], boss: 'crystcolossus', dur: 248, dark: 0.5, light: 0xc080ff, deco: 0xb090ff, env: 'beam', note: '수정 기둥이 레이저를 쏘며 돈다 · 프리즘 정령의 탄은 갈라진다' },
+  { name: '하늘 성채', tiles: 'tile9', mobs: ['galewolf', 'citknight', 'galegarg'], boss: 'stormcaptain', dur: 256, dark: 0.3, light: 0xe8f4ff, deco: 0xd8e8ff, env: 'wind', note: '바람이 방향을 바꿔 가며 분다 · 돌풍 가고일이 밀어낸다' },
+  { name: '심연', tiles: 'tile10', mobs: ['voidslime', 'abysspider', 'voidpriest'], boss: 'voidlord', dur: 264, dark: 0.62, light: 0x6a5aff, deco: 0x6a70c0, env: 'abyss', note: '시야가 좁다 · 어둠 속 적은 가까이 와야 보인다' },
+  { name: '모래 폐도', tiles: 'tile11', mobs: ['sandskel', 'scorpion', 'mirage'], boss: 'sandcolossus', dur: 272, dark: 0.3, light: 0xffd070, deco: 0xe0c080, env: 'sand', note: '유사 구덩이가 끌어당긴다 · 모래 해골은 한 번 되살아나고 전갈은 모래에 숨었다 튀어나온다' },
+  { name: '증기 공방', tiles: 'tile12', mobs: ['clockimp', 'steelgiant', 'steamskull'], boss: 'steamgeneral', dur: 280, dark: 0.45, light: 0xff9a50, deco: 0xd09060, env: 'steam', note: '증기 분출구가 박자대로 뿜는다 · 태엽 임프는 오래 두면 빨라지고 강철 거신은 방어 자세를 취한다' },
+  { name: '폭풍 평원', tiles: 'tile13', mobs: ['stormwolf', 'stormyeti', 'stormspirit'], boss: 'thunderdragon', dur: 288, dark: 0.4, light: 0x8ac8ff, deco: 0x90b0d0, env: 'storm', note: '낙뢰가 예고 원 뒤에 떨어진다 · 먹구름 설인 곁으로 번개가 몰린다' },
+  { name: '거울 궁전', tiles: 'tile14', mobs: ['mirrorknight', 'phantompriest', 'glassgarg'], boss: 'mirrorlord', dur: 296, dark: 0.35, light: 0x80ffe0, deco: 0x90e0d0, env: 'mirror', note: '거울 빛줄기 둘이 서로 반대로 돈다 · 빛나는 거울 기사를 치면 되받는다 · 환영 사제는 분신을 만든다' },
+  { name: '원초의 대장간', tiles: 'tile15', mobs: ['anvilimp', 'flamegiant', 'starskull'], boss: 'forgegod', dur: 304, dark: 0.5, light: 0xffd75e, deco: 0xe0b060, env: 'forge', note: '낙뢰와 불 균열이 함께 온다 · 쇠모루 임프는 죽으면 모루가 떨어진다' },
 ];
 // 장마다 3판: 일반 → 일반(규칙·변종·중간 보스) → 보스. 6판일 땐 같은 맵·같은 몹이 이어져 x-5쯤 질렸다
 export const STAGES_PER_CHAPTER = 3;
@@ -35,11 +46,48 @@ export const MOBS = {
   dknight: { sheet: 'z5', row: 0, hp: 46, spd: 25, dmg: 8, ai: 'tank', color: 0xc04050 },
   cultist: { sheet: 'z5', row: 1, hp: 15, spd: 28, dmg: 5, ai: 'ranged', color: 0xb070ff },
   gargoyle: { sheet: 'z5', row: 2, hp: 14, spd: 52, dmg: 4.5, ai: 'swarm', color: 0x9a9aa8 },
+  // 6장~ : fx는 envfx.js가 처리하는 몹 고유 행동
+  drowned: { sheet: 'z6', row: 0, hp: 16, spd: 26, dmg: 6, ai: 'chase', color: 0x5ac8b0, fx: 'pool' },
+  coral: { sheet: 'z6', row: 1, hp: 46, spd: 20, dmg: 8, ai: 'tank', color: 0x70e0d8 },
+  wraith: { sheet: 'z6', row: 2, hp: 12, spd: 38, dmg: 5, ai: 'float', color: 0xb8a0ff, fx: 'dive' },
+  toxslime: { sheet: 'z7', row: 0, hp: 17, spd: 30, dmg: 6, ai: 'chase', color: 0xb060e0 },
+  rotgiant: { sheet: 'z7', row: 1, hp: 48, spd: 19, dmg: 8, ai: 'tank', color: 0xa0c040 },
+  sporespider: { sheet: 'z7', row: 2, hp: 19, spd: 34, dmg: 6, ai: 'charge', color: 0xc0e040, fx: 'spore' },
+  crystbat: { sheet: 'z8', row: 0, hp: 9, spd: 54, dmg: 4, ai: 'swarm', color: 0xd0a0ff },
+  crystgolem: { sheet: 'z8', row: 1, hp: 46, spd: 19, dmg: 8, ai: 'tank', color: 0xa080ff, fx: 'shard' },
+  prism: { sheet: 'z8', row: 2, hp: 13, spd: 28, dmg: 5, ai: 'ranged', color: 0x80ffd0, fx: 'prism' },
+  galewolf: { sheet: 'z9', row: 0, hp: 19, spd: 46, dmg: 6.5, ai: 'charge', color: 0xc0d8ff },
+  citknight: { sheet: 'z9', row: 1, hp: 50, spd: 24, dmg: 8.5, ai: 'tank', color: 0xe0e8ff },
+  galegarg: { sheet: 'z9', row: 2, hp: 14, spd: 50, dmg: 5, ai: 'swarm', color: 0x90c8e8, fx: 'gust' },
+  voidslime: { sheet: 'z10', row: 0, hp: 18, spd: 30, dmg: 6, ai: 'chase', color: 0x6a60d0, fx: 'split' },
+  abysspider: { sheet: 'z10', row: 1, hp: 21, spd: 36, dmg: 7, ai: 'charge', color: 0x5a80c0, fx: 'cloak' },
+  voidpriest: { sheet: 'z10', row: 2, hp: 14, spd: 28, dmg: 5, ai: 'ranged', color: 0x8a70e0, fx: 'cloak' },
+  sandskel: { sheet: 'z11', row: 0, hp: 19, spd: 30, dmg: 6.5, ai: 'chase', color: 0xe0c080, fx: 'revive' },
+  scorpion: { sheet: 'z11', row: 1, hp: 22, spd: 38, dmg: 7, ai: 'charge', color: 0xd09040, fx: 'burrow' },
+  mirage: { sheet: 'z11', row: 2, hp: 15, spd: 36, dmg: 5.5, ai: 'float', color: 0x80e8d8, fx: 'blink' },
+  clockimp: { sheet: 'z12', row: 0, hp: 15, spd: 34, dmg: 6, ai: 'chase', color: 0xd09060, fx: 'overclock' },
+  steelgiant: { sheet: 'z12', row: 1, hp: 52, spd: 20, dmg: 9, ai: 'tank', color: 0xa0a8b8, fx: 'brace' },
+  steamskull: { sheet: 'z12', row: 2, hp: 17, spd: 32, dmg: 6.5, ai: 'chase', color: 0xe0e0f0, fx: 'steamdie' },
+  stormwolf: { sheet: 'z13', row: 0, hp: 22, spd: 48, dmg: 7, ai: 'charge', color: 0xa0c8ff, fx: 'zap' },
+  stormyeti: { sheet: 'z13', row: 1, hp: 54, spd: 21, dmg: 9, ai: 'tank', color: 0x7080a0, fx: 'lure' },
+  stormspirit: { sheet: 'z13', row: 2, hp: 15, spd: 28, dmg: 6, ai: 'ranged', color: 0x80d0ff, fx: 'aimline' },
+  mirrorknight: { sheet: 'z14', row: 0, hp: 56, spd: 25, dmg: 9.5, ai: 'tank', color: 0xb0f0e0, fx: 'parry' },
+  phantompriest: { sheet: 'z14', row: 1, hp: 16, spd: 28, dmg: 6, ai: 'ranged', color: 0x90e090, fx: 'clone' },
+  glassgarg: { sheet: 'z14', row: 2, hp: 17, spd: 52, dmg: 6, ai: 'swarm', color: 0x80e0c8, fx: 'shard' },
+  anvilimp: { sheet: 'z15', row: 0, hp: 20, spd: 36, dmg: 7, ai: 'chase', color: 0xe0b060, fx: 'anvil' },
+  flamegiant: { sheet: 'z15', row: 1, hp: 60, spd: 21, dmg: 10, ai: 'tank', color: 0xf0b050, fx: 'firepool' },
+  starskull: { sheet: 'z15', row: 2, hp: 18, spd: 32, dmg: 7, ai: 'ranged', color: 0xa0f0b0, fx: 'homing' },
 };
 
 export const MOB_NAMES = {
   slime: '슬라임', skel: '해골', bat: '박쥐', zombie: '좀비', ghost: '유령', spider: '거미', imp: '임프', golem: '골렘', fskull: '불해골',
   wolf: '늑대', yeti: '설인', icesp: '얼음 정령', dknight: '암흑 기사', cultist: '사교도', gargoyle: '가고일',
+  drowned: '익사한 병사', coral: '산호 수호상', wraith: '물귀신', toxslime: '독 점액', rotgiant: '부패 거인', sporespider: '포자 거미',
+  crystbat: '수정 박쥐', crystgolem: '수정 골렘', prism: '프리즘 정령', galewolf: '바람 늑대', citknight: '성채 기사', galegarg: '돌풍 가고일',
+  voidslime: '공허 점액', abysspider: '심연 거미', voidpriest: '공허 사제',
+  sandskel: '모래 해골', scorpion: '사막 전갈', mirage: '신기루 유령', clockimp: '태엽 임프', steelgiant: '강철 거신', steamskull: '증기 불해골',
+  stormwolf: '번개 늑대', stormyeti: '먹구름 설인', stormspirit: '뇌운 정령', mirrorknight: '거울 기사', phantompriest: '환영 사제', glassgarg: '유리 가고일',
+  anvilimp: '쇠모루 임프', flamegiant: '불꽃 거신', starskull: '별빛 불해골',
 };
 // 변종: 스테이지마다 하나씩 새로 나와 판마다 몬스터가 달라 보이게 한다(같은 그림에 색·크기·행동을 바꾼다)
 export const VARIANTS = {
@@ -50,7 +98,7 @@ export const VARIANTS = {
   giant: { pre: '거대', desc: '크고 질기다', tint: 0xffe070, hp: 3, scale: 1.7, spd: 0.8, kb: 0.2 },
 };
 // x-2에 새로 나오는 변종은 장마다 다르다: [챕터 몹 번호, 변종]. 2장부터 x-1엔 앞 장 변종이 섞인다. 보스 판은 없음
-const CH_VARIANT = [[0, 'split'], [2, 'swift'], [1, 'armor'], [0, 'burst'], [2, 'giant']];
+const CH_VARIANT = [[0, 'split'], [2, 'swift'], [1, 'armor'], [0, 'burst'], [2, 'giant'], [2, 'swift'], [0, 'armor'], [2, 'burst'], [1, 'giant'], [0, 'swift']];
 export const stageVariant = (c, s) => s === 1 ? CH_VARIANT[c % CH_VARIANT.length] : s === 0 && c > 0 ? CH_VARIANT[(c - 1) % CH_VARIANT.length] : null;
 export const VARIANT_RATE = 0.22, VARIANT_OLD_RATE = 0.1;   // 이번 변종 / 앞 스테이지 변종이 섞이는 비율
 // 판 규칙: 같은 스테이지도 판마다 다르게 흘러가도록 시작할 때 하나를 뽑는다(안 뽑힐 수도 있다)
@@ -61,21 +109,40 @@ export const RUN_MODS = [
 ];
 export const RUN_MOD_CHANCE = 0.6;
 // x-2는 판 규칙이 정해져 있다(장마다 돌아가며). 다시 할 땐 위 확률로 다른 규칙이 섞인다
-export const stageMod = c => RUN_MODS[[2, 0, 1, 0, 2][c % 5]];   // 1-2는 질풍: 1-1 다음 판이 바로 1-2라 첫 규칙이 여기서 보여야 한다(41차)
+export const stageMod = c => RUN_MODS[[2, 0, 1, 0, 2, 1, 2, 0, 2, 1][c % 10]];   // 1-2는 질풍: 1-1 다음 판이 바로 1-2라 첫 규칙이 여기서 보여야 한다(41차)
 
 // 보스: sheet/row는 2프레임 시트. hp는 1챕터 배율 기준 값(챕터 배율이 곱해진다)
 // rage: 체력 절반 아래에서 새로 섞여 나오는 공격(같은 패턴만 반복된다는 평가)
+// 보스 분노 때 알리는 새 공격 이름
+export const RAGE_WHAT = {
+  sweep: '휩쓰는 광선', pools: '남는 장판', slam: '연속 내려찍기',
+  tsunami: '삼중 해일', bloom: '독꽃', shatter: '수정 파편 폭발', cyclone: '회오리', eclipse: '일식과 틈 있는 탄 고리',
+  sink: '모래 늪', overheat: '과열', tempest: '뇌우', reflect: '반사 방패', meteor: '유성우',
+};
 export const BOSSES = {
   kingslime: { name: '슬라임 왕', sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'summon', 'jump', 'ring'], rage: 'pools' },
   lich: { name: '리치 왕', sheet: 'boss1', row: 1, hp: 1500, dmg: 12, spd: 22, color: 0x9dff7a, pattern: ['ring', 'summon', 'aimed', 'ring'], rage: 'sweep' },
   lavagolem: { name: '용암 거신', sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
   wyrm: { name: '서리 용', sheet: 'boss2', row: 0, hp: 1450, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
   demonlord: { name: '마왕', sheet: 'boss2', row: 1, hp: 3000, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'], rage: 'sweep' },
+  // 6장~ 보스: 새 패턴(envfx.js BOSS_PATTERNS)이 섞인다. rage는 체력 절반 아래에서 끼어드는 새 공격
+  tidewyrm: { name: '해일의 수문룡', sheet: 'boss3', row: 0, hp: 1500, dmg: 14, spd: 30, color: 0x5ae0d0, pattern: ['wave', 'aimed', 'jump', 'wave'], rage: 'tsunami' },
+  swampqueen: { name: '늪의 여왕', sheet: 'boss3', row: 1, hp: 1650, dmg: 14, spd: 24, color: 0xb060e0, pattern: ['spore', 'summon', 'aimed', 'spore'], rage: 'bloom' },
+  crystcolossus: { name: '수정 거신', sheet: 'boss3', row: 2, hp: 1800, dmg: 15, spd: 18, color: 0xb080ff, pattern: ['prism', 'slam', 'charge', 'prism'], rage: 'shatter' },
+  stormcaptain: { name: '폭풍의 기사단장', sheet: 'boss4', row: 0, hp: 1700, dmg: 15, spd: 32, color: 0xd8e8ff, pattern: ['gale', 'charge', 'aimed', 'gale'], rage: 'cyclone' },
+  voidlord: { name: '공허 군주', sheet: 'boss4', row: 1, hp: 2000, dmg: 16, spd: 26, color: 0x7a6aff, pattern: ['void', 'ring', 'summon', 'void'], rage: 'eclipse' },
+  sandcolossus: { name: '모래 거신', sheet: 'boss4', row: 2, hp: 2100, dmg: 16, spd: 20, color: 0xe0c080, pattern: ['burrow', 'slam', 'summon', 'burrow'], rage: 'sink' },
+  steamgeneral: { name: '증기 장군', sheet: 'boss5', row: 0, hp: 2250, dmg: 17, spd: 28, color: 0xe08a50, pattern: ['vent', 'aimed', 'summon', 'vent'], rage: 'overheat' },
+  thunderdragon: { name: '뇌룡', sheet: 'boss5', row: 1, hp: 2400, dmg: 17, spd: 34, color: 0x9a8aff, pattern: ['bolt', 'charge', 'aimed', 'bolt'], rage: 'tempest' },
+  mirrorlord: { name: '거울의 군주', sheet: 'boss5', row: 2, hp: 2550, dmg: 18, spd: 26, color: 0x90ffe8, pattern: ['mirror', 'ring', 'aimed', 'mirror'], rage: 'reflect' },
+  forgegod: { name: '원초의 대장신', sheet: 'boss6', row: 0, hp: 2800, dmg: 19, spd: 24, color: 0xffd75e, pattern: ['hammer', 'ring', 'slam', 'hammer'], rage: 'meteor' },
   general: { name: '해골 장군', sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
 };
 
 // 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다. 4~5장 벽이 너무 높아 조금 낮췄다
-export const chapterHp = c => Math.pow(2.05, c) * GEAR_HP(c);           // c는 0부터
+// 6장부터는 장마다 REC_G배씩 오른다(무기 등급이 2장마다 오르므로 등급 한 칸 2.56배 = 장당 1.6배). 5장까지는 예전 그대로
+export const REC_G = 1.4;
+export const chapterHp = c => (c < 5 ? Math.pow(2.05, c) : Math.pow(2.05, 4) * Math.pow(REC_G, c - 4)) * GEAR_HP(c);           // c는 0부터
 export const chapterDmg = c => 0.65 * Math.pow(1.18, c);   // 1.25면 3장부터 무기 등급 체력 보너스를 앞질러 30초 만에 녹았다
 // 스테이지마다 확 어려워진다: 1-1은 누구나 깨고, 1-2부터는 대충 움직이면 죽고 대장간에서 몇 번 강화하면 깬다
 // s는 0~5. 1-2에서 바로 벽을 느끼게 크게 뛰고, 1-6 권장이 +10쯤(승급 조건)에 닿게 뒤로 갈수록 완만히
@@ -88,15 +155,26 @@ export const stageSpawn = s => 0.35 * oldS(s);                 // 초당 더 나
 export const timeHp = f => 0.75 + 0.8 * f + 0.45 * f * f;   // 초반 몹은 약하고 많게. 끝 무렵을 더 세게(1.7→2.0): 마지막 웨이브는 늘 체력 만땅이었다(37차)
 
 // ── 무기·대장간 ──
+const tierAtk = t => Math.round(190 * Math.pow(REC_G, 2 * (t - 5) + 1));
 export const TIERS = [
   { name: '녹슨 철검', atk: 10, icon: 0 },
   { name: '강철검', atk: 21, icon: 1 },
   { name: '미스릴검', atk: 44, icon: 2 },
   { name: '룬 대검', atk: 92, icon: 2, tint: 0xffa0ff },
   { name: '전설의 화염검', atk: 190, icon: 3 },
+  // 6장부터 두 장마다 한 등급. atk은 그 등급을 처음 쓰는 장의 권장 기준(REC_BASE)과 같다
+  { name: '성광의 검', atk: tierAtk(5), icon: 3, tint: 0xfff0a0 },
+  { name: '용린 대검', atk: tierAtk(6), icon: 3, tint: 0x80ffd0 },
+  { name: '천공의 신검', atk: tierAtk(7), icon: 3, tint: 0xa0d8ff },
+  { name: '심연의 마검', atk: tierAtk(8), icon: 3, tint: 0x9a80ff },
+  { name: '창세의 대장검', atk: tierAtk(9), icon: 3, tint: 0xffe070 },
 ];
+// 승급에 필요한 깬 판 수(그 등급으로 올라가려면). 5장까지는 장마다, 6장부터는 두 장마다
+export const TIER_AT = [0, 3, 6, 9, 12, 15, 21, 27, 33, 39];
+// 그 장을 권장할 때 쓰는 무기 공격력 기준
+export const REC_BASE = c => c < 5 ? TIERS[c].atk : Math.round(190 * Math.pow(REC_G, c - 4));
 // 무기 종류마다 이름이 다르다(검은 원래 이름, 나머지는 등급 + 무기)
-const TIER_PRE = ['녹슨', '강철', '미스릴', '룬', '전설의'];
+const TIER_PRE = ['녹슨', '강철', '미스릴', '룬', '전설의', '성광의', '용린', '천공의', '심연의', '창세의'];
 export const tierName = (tier, w) => !w || w.id === 'sword' ? TIERS[tier].name : `${TIER_PRE[tier]} ${w.noun}`;
 // +5·+10·+15·+20을 넘을 때마다 칼이 한 번 더 깨어난다(×1.1). 한 단계 +10%만으론 강해진 게 안 느껴진다
 export const ENH_MILESTONE = 5, MILESTONE_MUL = 1.1;
@@ -125,17 +203,20 @@ export const DESTROY_FROM = 10;                            // +10에서 +11을 �
 export const SHATTER_DROP = 2;
 export const shatterTo = enh => Math.max(0, enh - SHATTER_DROP);
 export const FAIL_REFUND = 0.3;                            // 위험 구간에서 실패하면 금화 30%를 돌려준다
-const TIER_COST = [1, 2.2, 4.8, 10.5, 23];
-export const enhGold = (tier, enh) => Math.round(40 * TIER_COST[tier] * Math.pow(1.22, enh) / 5) * 5;
+const TIER_COST_OLD = [1, 2.2, 4.8, 10.5, 23];
+export const GOLD_G = 1.25;                                 // 6장부터 장마다 금화 보상·강화 비용이 오르는 배율
+export const chCost = c => c < 5 ? TIER_COST_OLD[c] : 23 * Math.pow(GOLD_G, c - 4);
+const tierCost = t => t < 5 ? TIER_COST_OLD[t] : chCost(5 + 2 * (t - 5));   // 등급은 두 장에 한 칸
+export const enhGold = (tier, enh) => Math.round(40 * tierCost(tier) * Math.pow(1.22, enh) / 5) * 5;
 export const enhStone = (tier, enh) => Math.ceil((enh + 1) / 2) + tier;
 export const PROMOTE_NEED = 10;                            // 승급하려면 +10 이상
-export const promoteGold = tier => Math.round(600 * TIER_COST[tier + 1] / 50) * 50;
+export const promoteGold = tier => Math.round(600 * tierCost(tier + 1) / 50) * 50;
 // 승급하면 지금 공격력 이상이 되는 가장 낮은 강화 수치에서 시작한다(+0부터면 223 → 190으로 약해졌다)
 export const promoteEnh = (tier, enh) => { let e = 0; while (e < PROMOTE_NEED - 1 && weaponAtk(tier + 1, e) < weaponAtk(tier, enh)) e++; return e; };
 
 // ── 스테이지 보상(금화·강화석) ──
 // 2장부터 10% 더 준다: 후반 강화 한 번에 판이 너무 많이 들었다(25%면 완주가 3.7시간으로 짧아졌다)
-export const clearGold = (c, s) => Math.round(75 * TIER_COST[c] * (1 + 0.2 * oldS(s)) * (c >= 1 ? 1.1 : 1) / 5) * 5;
+export const clearGold = (c, s) => Math.round(75 * chCost(c) * (1 + 0.2 * oldS(s)) * (c >= 1 ? 1.1 : 1) / 5) * 5;
 export const FIRST_CLEAR_MUL = 2.5;
 export const clearStone = (c, s) => 3 + oldS(s) + c * 2;
 export const FAIL_STONE_RATE = 0.5;                        // 져도 강화석을 같은 식으로 조금 준다(0개면 허탈했다)
@@ -174,9 +255,11 @@ export const powerOf = sv => {
 // 장 첫 판(2장부터)은 적응 판: 보스 바로 뒤라 강화를 덜 했어도 깰 수 있게 낮춘다
 export const easeHp = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
 export const easeDmg = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
-export const recPower = (c, s) => Math.round(TIERS[Math.min(c, TIERS.length - 1)].atk * stageMul(s) * easeHp(c, s) * (isBossS(s) && c > 0 ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
+export const recPower = (c, s) => Math.round(REC_BASE(c) * stageMul(s) * easeHp(c, s) * (isBossS(s) && c > 0 ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
 // 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯(1점 +2%, 5점 보너스)까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
-export const GEAR_HP = c => 1 + 0.36 * c;
+// 6장부터는 장비·스탯으로 늘어나는 힘이 더 가파르다고 보고 장당 0.82씩(5장까지는 0.36)
+const GEAR_SLOPE2 = 0.95;
+export const GEAR_HP = c => c < 5 ? 1 + 0.36 * c : 1 + 0.36 * 4 + GEAR_SLOPE2 * (c - 4);
 // 전투력 색: 권장을 넘어도 보스 판은 20% 여유가 있어야 초록(20차 봇: 1-6 권장 114%에서 졌다)
 export const powerCol = (pw, rp, s) => pw >= rp * (isBossS(s) ? 1.2 : 1) ? '#5fdc6a' : pw >= rp ? '#ffd75e' : '#ff8070';
 export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
@@ -286,7 +369,7 @@ export const DEALS = [
 export const DEAL_OFF = [30, 40, 50];   // 할인율(%)
 export const dealPrice = (d, off) => Math.round(d.price * (100 - off) / 10000) * 100;
 // 성장 꾸러미: 장 보스를 처음 잡은 뒤 24시간. 다음 등급 +0→+10에 드는 강화석(30 + 10×등급)의 2배와 방지권
-export const GROW = { ms: 24 * 3600000, price: [2900, 3900, 4900, 5900, 6900] };
+export const GROW = { ms: 24 * 3600000, price: [2900, 3900, 4900, 5900, 6900, 6900, 6900, 6900, 6900, 6900] };
 export const growGive = c => { const t = Math.min(c + 1, TIERS.length - 1); return { stone: 2 * (30 + 10 * t), guard: 3 + c, goldStage: 4 }; };
 // 큰 꾸러미: 달마다 한 번(보석 상자보다 보석당 값이 싸고 방지권·부적이 붙는다)
 export const BIG_PACKS = [
@@ -370,9 +453,12 @@ export const LOGIN_REWARDS = [
 export const loginMul = streak => 1 + 0.25 * Math.min(4, Math.floor(Math.max(0, streak - 1) / 7));
 
 // ── 어려움: 마왕을 잡으면 같은 15판을 센 몹·큰 보상으로 다시 돈다. 근거는 docs/CONTENT_PLAN.md ──
-// k는 5-3 권장(약 3,100) 대비 배율. 판마다 14%씩(끝 판 약 21,900), 장 첫 판은 조금 낮추고 보스 판은 높인다
-export const HARD = { unlock: 15, start: 1, grow: 1.14, dmg: 1.05, dmgGrow: 1.03, firstGem: 10, bossGem: 80 };
-const LAST_C = 4, LAST_S = 2;
+// k는 마지막 장 보스 권장 대비 배율. 판마다 4.5%씩, 장 첫 판은 조금 낮추고 보스 판은 높인다
+// 장이 늘어 한 바퀴가 45판이 됐다: 판마다 오르는 비율을 15판 시절(14%/3%)에서 45판(약 4.5%/1%)으로 풀어 끝 판 권장이 예전과 비슷한 배율로 오르게 한다
+// 열리는 때: 일반 모드를 끝까지 깬 뒤. 예전에 이미 어려움을 시작한 저장은 그대로 들어간다(hardOpen)
+export const HARD = { unlock: CHAPTERS.length * STAGES_PER_CHAPTER, start: 1, grow: 1.045, dmg: 1.05, dmgGrow: 1.01, firstGem: 10, bossGem: 80 };
+export const hardOpen = sv => sv.cleared >= HARD.unlock || (sv.hardCleared || 0) > 0;
+const LAST_C = CHAPTERS.length - 1, LAST_S = 2;
 export const hardK = (c, s) => HARD.start * Math.pow(HARD.grow, c * STAGES_PER_CHAPTER + s) * (isBossS(s) ? 1.12 : c > 0 && s === 0 ? 0.92 : 1);
 export const hardRec = (c, s) => Math.round(recPower(LAST_C, LAST_S) * hardK(c, s));
 // 몹 체력: 5-3 몹 체력 × k(보스 판이 아니면 권장의 보스 가산 1.25를 뺀다)

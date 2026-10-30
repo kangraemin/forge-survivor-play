@@ -22,7 +22,7 @@ export class Weapons {
   nearest(maxD = 1e9, from = this.s.hero) {
     let best = null, bd = maxD * maxD;
     this.s.mobs.getChildren().forEach(m => {
-      if (m.dead) return;
+      if (m.dead || m.dive) return;
       const d = Phaser.Math.Distance.Squared(m.x, m.y, from.x, from.y);
       if (d < bd) { bd = d; best = m; }
     });
@@ -30,7 +30,7 @@ export class Weapons {
   }
   onScreen() {
     const v = viewRect(this.s);
-    return this.s.mobs.getChildren().filter(m => !m.dead && Phaser.Geom.Rectangle.Contains(v, m.x, m.y));
+    return this.s.mobs.getChildren().filter(m => !m.dead && !m.dive && Phaser.Geom.Rectangle.Contains(v, m.x, m.y));
   }
 
   update(dt) {

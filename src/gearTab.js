@@ -171,8 +171,16 @@ export const GearTab = {
   petPage() {
     const sv = this.sv, b = this.body, g = gearStats(sv), fb = this.registry.get('fallback') || {};
     const chN = c => `${c + 1}장`;
+    // 한 쪽에 여섯 마리: 장이 늘어 펫이 열여섯이 됐다
+    const PER = 6, pages = Math.ceil(PETS.length / PER), pg = Math.min(this.petPg || 0, pages - 1);
     b.add(this.add.text(W / 2, 74, '한 마리를 데려간다 · 맵마다 잘 듣는 펫이 다르다', font9(10, '#a1b2b6')).setOrigin(0.5));
-    PETS.forEach((p, i) => {
+    if (pages > 1) {
+      const go = d => { if (this.busy) return; this.petPg = (pg + d + pages) % pages; sfx('click'); this.show('gear'); };
+      b.add(button(this, 22, 74, 28, 16, '◀', () => go(-1), { size: 9 }));
+      b.add(button(this, W - 22, 74, 28, 16, '▶', () => go(1), { size: 9 }));
+      b.add(this.add.text(W - 22, 86, `${pg + 1}/${pages}`, font9(9, '#a1b2b6')).setOrigin(0.5, 0));
+    }
+    PETS.slice(pg * PER, pg * PER + PER).forEach((p, i) => {
       const y = 86 + i * 50, open = sv.cleared >= p.unlock, lv = sv.pets?.[p.id] || 0, on = sv.pet === p.id;
       b.add(panel(this, 12, y, W - 24, 46, { fill: on ? 0x2e2448 : 0x1a1528, line: on ? 0xffd75e : COLOR.line }));
       // 전투와 같은 모습(보스를 작게)
@@ -206,7 +214,7 @@ export const GearTab = {
     const sv = this.sv, b = this.body, free = spFree(sv), wt = WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
     sv.sp ||= { str: 0, dex: 0, int: 0, vit: 0 };
     b.add(this.add.text(W / 2, 76, `남은 점수 ${free} / ${spTotal(sv.cleared)}`, font(12, free ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 92, '첫 클리어마다 1점, 보스는 2점 더 · 5점마다 보너스', font9(10, '#a1b2b6')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 92, '첫 클리어마다 1점, 보스는 2점 더 · 15판 뒤로는 판마다 1점 · 5점마다 보너스', font9(10, '#a1b2b6')).setOrigin(0.5));
     SP.forEach((st, i) => {
       const y = 104 + i * 54, v = sv.sp[st.id] || 0;
       b.add(panel(this, 12, y, W - 24, 48, { fill: 0x1a1528 }));

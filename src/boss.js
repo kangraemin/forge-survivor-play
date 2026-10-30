@@ -2,6 +2,7 @@
 import * as D from './data.js';
 import { sfx } from './sfx.js';
 import { font, toast } from './ui.js';
+import { BOSS_PATTERNS } from './envfx.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 
@@ -55,7 +56,7 @@ export class BossAI {
     }
     if (enraged && !this.rage) {
       this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; s.cameras.main.shake(300, 0.005); sfx('bossIn');
-      const what = { sweep: '휩쓰는 광선', pools: '남는 장판', slam: '연속 내려찍기' }[this.b.rage];
+      const what = D.RAGE_WHAT[this.b.rage];
       // 중간 보스는 배너 대신 짧은 알림(예고 없이 새 공격이 나왔다)
       if (this.b.rage && !this.mid) s.banner(`${this.b.name}이 분노했다!`, `새 공격: ${what}`);
       else if (this.b.rage) toast(s, `${this.b.name} 분노! 새 공격: ${what}`, '#ff9a8a', 200);   // 위쪽 배너와 겹치지 않게
@@ -263,3 +264,6 @@ export class BossAI {
     s.time.delayedCall(1400, () => s.ui.result(true));
   }
 }
+
+// 6장부터의 보스 패턴(envfx.js)
+Object.assign(BossAI.prototype, BOSS_PATTERNS);

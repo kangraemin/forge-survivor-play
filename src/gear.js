@@ -4,12 +4,14 @@
 const RF = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
+// 6장부터 두 장마다 장비 이름이 한 등급 오른다(무기 등급과 같은 순서)
+const NEW_PRE = ['성광의', '용린', '천공의', '심연의', '창세의'];
 export const SLOTS = [
-  { id: 'helm', name: '투구', main: 'hp', names: ['가죽 두건', '철 투구', '미스릴 투구', '룬 투구', '마왕의 뿔투구'] },
-  { id: 'armor', name: '갑옷', main: 'def', names: ['누빈 옷', '사슬 갑옷', '미스릴 갑옷', '룬 갑옷', '마왕의 흑갑'] },
-  { id: 'boots', name: '장화', main: 'spd', names: ['헌 장화', '철 장화', '미스릴 장화', '룬 장화', '마왕의 군화'] },
-  { id: 'ring', name: '반지', main: 'atk', names: ['구리 반지', '은 반지', '미스릴 반지', '룬 반지', '마왕의 인장'] },
-  { id: 'collar', name: '펫 목걸이', main: 'pet', pet: true, names: ['가죽 목걸이', '방울 목걸이', '미스릴 목걸이', '룬 목걸이', '마왕의 목줄'] },
+  { id: 'helm', name: '투구', main: 'hp', names: ['가죽 두건', '철 투구', '미스릴 투구', '룬 투구', '마왕의 뿔투구', ...NEW_PRE.map(p => p + ' 투구')] },
+  { id: 'armor', name: '갑옷', main: 'def', names: ['누빈 옷', '사슬 갑옷', '미스릴 갑옷', '룬 갑옷', '마왕의 흑갑', ...NEW_PRE.map(p => p + ' 갑옷')] },
+  { id: 'boots', name: '장화', main: 'spd', names: ['헌 장화', '철 장화', '미스릴 장화', '룬 장화', '마왕의 군화', ...NEW_PRE.map(p => p + ' 장화')] },
+  { id: 'ring', name: '반지', main: 'atk', names: ['구리 반지', '은 반지', '미스릴 반지', '룬 반지', '마왕의 인장', ...NEW_PRE.map(p => p + ' 반지')] },
+  { id: 'collar', name: '펫 목걸이', main: 'pet', pet: true, names: ['가죽 목걸이', '방울 목걸이', '미스릴 목걸이', '룬 목걸이', '마왕의 목줄', ...NEW_PRE.map(p => p + ' 목걸이')] },
 ];
 export const slotOf = id => SLOTS.find(s => s.id === id);
 
@@ -43,6 +45,12 @@ export const SETS = {
   flame: { name: '대장장이의 불꽃', pre: '불꽃 대장장이의', css: '#ff8a4a', two: { atk: 0.1 }, twoTxt: '모든 피해 +10%', fourTxt: '맞힌 적이 25% 확률로 폭발한다', minC: 0 },
   frost: { name: '서리 수호자', pre: '서리 수호자의', css: '#9ae8ff', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '맞으면 주변 적을 2초 얼린다(6초마다)', minC: 1 },
   wind: { name: '바람 사냥꾼', pre: '바람 사냥꾼의', css: '#a8ffb0', two: { spd: 0.12 }, twoTxt: '이동 속도 +12%', fourTxt: '모든 스킬 재사용 대기 -18%', minC: 2 },
+  // 6장~ 세트: 4세트 효과는 그 장의 지형을 다룬다(envfx.js)
+  tide: { name: '심해 파수꾼', pre: '심해 파수꾼의', css: '#5ae0d0', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '물웅덩이에 느려지지 않고 독구름 피해가 절반이다', minC: 5 },
+  crystal: { name: '수정 세공사', pre: '수정 세공사의', css: '#c080ff', two: { cd: 0.08 }, twoTxt: '재사용 대기 -8%', fourTxt: '레이저·낙뢰 같은 지형 피해를 40% 덜 받는다', minC: 7 },
+  sky: { name: '폭풍 순례자', pre: '폭풍 순례자의', css: '#e8f4ff', two: { spd: 0.08 }, twoTxt: '이동 속도 +8%', fourTxt: '바람에 밀리지 않고 어둠 속에서도 시야가 넓다', minC: 9 },
+  steam: { name: '증기 기술자', pre: '증기 기술자의', css: '#e08a50', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '분출구·불·번개 피해를 절반만 받는다', minC: 11 },
+  mirror: { name: '거울 수호자', pre: '거울 수호자의', css: '#90ffe8', two: { atk: 0.08 }, twoTxt: '모든 피해 +8%', fourTxt: '거울 빛줄기·되받기 피해를 절반만 받는다', minC: 13 },
   thorn: { name: '가시 덩굴', pre: '가시 덩굴', css: '#7fd06a', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '맞으면 주변 적에게 가시가 박힌다', minC: 0 },
   gold: { name: '황금 상인', pre: '황금 상인의', css: '#ffd75e', two: { mag: 0.3 }, twoTxt: '줍는 거리 +30%', fourTxt: '은화 +50%, 상인 물건 20% 할인', minC: 1 },
   // 무기 전용 세트: 그 무기를 들고 싸울 때만 나온다(상인도 판다)
@@ -117,7 +125,7 @@ export const OWN_SKILLS = WTYPES.map(w => w.own);
 // 진행할수록 레벨업 카드에 새 스킬이 섞여 나온다(깬 스테이지 수)
 export const SKILL_UNLOCK = { holy: 1, bolt: 2, fireball: 3, ice: 5 };
 
-// ── 스탯: 스테이지를 처음 깰 때 1점, 보스는 2점 더(끝까지 40점) ──
+// ── 스탯: 스테이지를 처음 깰 때 2점, 보스는 2점 더(5장까지 40점, 6장부터는 판마다 1점·보스 1점 더) ──
 export const SP = [
   { id: 'str', name: '힘', desc: '검·도끼·너클 피해 +10%', css: '#ff9a7a' },
   { id: 'dex', name: '민첩', desc: '창·활·총 피해 +10% · 이동 +0.3%', css: '#a8ffb0' },
@@ -129,7 +137,10 @@ export const SP = [
 export const SP_DMG = 0.1;
 export const SKILL_TAG = { sword: 'melee', spin: 'melee', quake: 'melee', palm: 'melee', dagger: 'ranged', ice: 'ranged', javelin: 'ranged', wave: 'ranged', volley: 'ranged', grenade: 'ranged', bolt: 'magic', fireball: 'magic', holy: 'magic', orb: 'magic', missile: 'magic' };
 export const TAG_NAME = { melee: '근접', ranged: '원거리', magic: '마법' };
-export const spTotal = cleared => cleared * 2 + Math.floor(cleared / 3) * 2;   // 스테이지 2점, 보스 2점 더(끝까지 40점)
+// 15판(5장)까지는 스테이지 2점·보스 2점 더(40점). 6장부터는 판마다 1점·보스 1점 더로 완만하게(45판 끝까지 약 80점)
+export const SP_OLD_END = 15;
+export const spTotal = cleared => cleared <= SP_OLD_END ? cleared * 2 + Math.floor(cleared / 3) * 2
+  : 40 + (cleared - SP_OLD_END) + (Math.floor(cleared / 3) - Math.floor(SP_OLD_END / 3));
 export const spUsed = sv => SP.reduce((a, s) => a + (sv.sp?.[s.id] || 0), 0);
 export const spFree = sv => spTotal(sv.cleared) - spUsed(sv);
 // 5점마다 한 번 더 붙는 보너스(찍는 맛)
@@ -153,6 +164,17 @@ export const PETS = [
   { id: 'lavagolem', name: '용암 거신', desc: '둘레에 불바다를 깐다', unlock: 9, hint: '3-3 보스', color: 0xff7a2a, good: [3], weak: [2], tank: true },
   { id: 'wyrm', name: '서리 용', desc: '입김으로 앞쪽 적을 얼린다', unlock: 12, hint: '4-3 보스', color: 0x9ae8ff, good: [4] },   // 4-3에서 얻으면 남은 곳이 5장뿐이라 5장에 잘 듣게
   { id: 'demonlord', name: '마왕', desc: '마탄 세 발을 흩뿌린다', unlock: 15, hint: '5-3 보스', color: 0xff3a50, good: [0, 1], weak: [4] },
+  // 6장~: 보스 이름 = 펫 id. 지형 기믹을 다루는 펫이 하나씩 있다(good은 그 기믹이 심한 장)
+  { id: 'tidewyrm', name: '해일의 수문룡', desc: '파도로 적을 밀어내고 웅덩이에 안 느려진다', unlock: 18, hint: '6-3 보스', color: 0x5ae0d0, good: [5, 9], weak: [3] },
+  { id: 'swampqueen', name: '늪의 여왕', desc: '둘레에 독안개를 깔고 독구름이 안 아프다', unlock: 21, hint: '7-3 보스', color: 0xb060e0, good: [6, 10], weak: [4] },
+  { id: 'crystcolossus', name: '수정 거신', desc: '수정 파편을 사방으로 쏜다', unlock: 24, hint: '8-3 보스', color: 0xb080ff, good: [7, 13], weak: [5], tank: true },
+  { id: 'stormcaptain', name: '폭풍의 기사단장', desc: '낙뢰를 내리고 바람에 덜 밀린다', unlock: 27, hint: '9-3 보스', color: 0xd8e8ff, good: [8, 12], weak: [9] },
+  { id: 'voidlord', name: '공허 군주', desc: '적을 한곳으로 끌어모은다', unlock: 30, hint: '10-3 보스', color: 0x7a6aff, good: [9, 14], weak: [7] },
+  { id: 'sandcolossus', name: '모래 거신', desc: '모래 폭풍으로 둘레 적을 느리게 하고 유사에 안 끌린다', unlock: 33, hint: '11-3 보스', color: 0xe0c080, good: [10, 4], weak: [5], tank: true },
+  { id: 'steamgeneral', name: '증기 장군', desc: '증기를 뿜어 둘레를 때리고 분출구에 안 다친다', unlock: 36, hint: '12-3 보스', color: 0xe08a50, good: [11, 14], weak: [8] },
+  { id: 'thunderdragon', name: '뇌룡', desc: '번개가 적 셋을 잇고 낙뢰에 안 다친다', unlock: 39, hint: '13-3 보스', color: 0x9a8aff, good: [12, 14], weak: [10] },
+  { id: 'mirrorlord', name: '거울의 군주', desc: '가까운 적을 6초마다 멈추고 빛줄기에 안 다친다', unlock: 42, hint: '14-3 보스', color: 0x90ffe8, good: [13, 7], weak: [11] },
+  { id: 'forgegod', name: '원초의 대장신', desc: '적 무리 위로 큰 망치를 내리치고 불에 안 다친다', unlock: 45, hint: '15-3 보스', color: 0xffd75e, good: [14, 6], weak: [12] },
 ];
 // 예전 펫(불씨·슬라임·박쥐)을 키운 만큼 같은 때 받는 보스 펫으로 옮긴다
 export const PET_OLD = { fire: 'general', slime: 'lich', bat: 'lavagolem' };
@@ -180,7 +202,7 @@ export function rollRarity(boost = 0) {
 export function makeItem(c, opt = {}) {
   const r = opt.rarity ?? rollRarity(opt.boost || 0);
   const slot = slotOf(opt.slot || pick(SLOTS.map(s => s.id)));
-  const ci = Math.min(c, slot.names.length - 1);
+  const ci = Math.min(c, 14), ni = c < 5 ? c : Math.min(slot.names.length - 1, 5 + Math.floor((c - 5) / 2));   // ci: 장(수치), ni: 이름 칸(두 장에 한 칸)
   // 희귀 이상은 55% 확률로 세트(든 무기의 전용 세트 60%, 나머지는 그 챕터 공용 세트). 4세트가 너무 안 모였다
   const sets = Object.entries(SETS).filter(([, s]) => !s.w && s.minC <= c).map(([k]) => k);
   const wset = opt.w && SETS[opt.w] ? opt.w : null;
@@ -193,7 +215,7 @@ export function makeItem(c, opt = {}) {
     st[k] = (st[k] || 0) + roll(k, ci, RARITY[r].mul * 0.8);
   }
   for (const k in st) st[k] = Math.round(st[k] * 1000) / 1000;
-  return { u: uid(), s: slot.id, r, c: ci, n: set ? `${SETS[set].pre} ${slot.name}` : slot.names[ci], set, st };
+  return { u: uid(), s: slot.id, r, c: ci, n: set ? `${SETS[set].pre} ${slot.name}` : slot.names[ni], set, st };
 }
 export const makeEgg = id => ({ u: uid(), s: EGGS[id].slot, r: 4, c: 0, n: EGGS[id].name, egg: id, st: { ...EGGS[id].st } });
 

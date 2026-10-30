@@ -27,15 +27,15 @@ export const ContentTab = {
     dot(103, dunOpen && left > 0);
     b.add(button(this, 165, y, 58, 24, '기록', () => !this.busy && this.recordWin(), { size: 10 }));
     dot(165, achReady(sv) > 0);
-    // 난이도: 마왕을 잡으면 열린다(그 전엔 잠긴 채 목표로 보인다)
-    const hardOpen = sv.cleared >= D.HARD.unlock;
+    // 난이도: 마지막 장 보스를 잡으면 열린다(그 전엔 잠긴 채 목표로 보인다)
+    const hardOpen = D.hardOpen(sv);
     const hb = button(this, 227, y, 58, 24, this.hard ? '보통으로' : '어려움', () => {
       if (this.busy) return;
       this.hard = !this.hard; sv.hardOn = this.hard; save(); this.selTop();
       track('difficulty_toggle', { hard: this.hard, hardCleared: sv.hardCleared || 0 });
       toast(this, this.hard ? '어려움 · 몹이 세고 보상이 크다' : '보통 난이도', this.hard ? '#ff9090' : '#ffffff');
       this.show('battle');
-    }, { size: 10, color: this.hard ? 0x3a3846 : 0x8a2a3a, onDeny: () => { track('locked_menu_tap', { menu: 'hard' }); toast(this, '어려움 · 5장 마왕을 잡으면 열린다', '#ff9a8a'); } });
+    }, { size: 10, color: this.hard ? 0x3a3846 : 0x8a2a3a, onDeny: () => { track('locked_menu_tap', { menu: 'hard' }); toast(this, '어려움 · 마지막 장 보스를 잡으면 열린다', '#ff9a8a'); } });
     hb.setEnabled(hardOpen); b.add(hb);
   },
 

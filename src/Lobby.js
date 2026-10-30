@@ -41,7 +41,7 @@ export class Lobby extends Phaser.Scene {
     // 1-1을 처음 깨고 오면 대장간으로 안내한다
     if (sv.cleared >= 1 && !sv.tut.forgeShown) { sv.tut.forgeShown = true; this.tab = 'forge'; save(); }
     // 어려움은 마왕을 잡은 뒤에만. 전투 탭이 보던 난이도를 기억한다
-    this.hard = !!sv.hardOn && sv.cleared >= D.HARD.unlock;
+    this.hard = !!sv.hardOn && D.hardOpen(sv);
     dexRefresh(sv);
     // 처음 고를 챕터는 지금 도전할 곳
     // 판을 새로 깼으면 다음 도전 칸으로 옮긴다(깬 칸에 머물러 1-1만 되풀이했다)
@@ -647,11 +647,11 @@ export class Lobby extends Phaser.Scene {
     }
     // 승급: +10 이상이고 그 등급 챕터 보스를 깨면 다음 등급 무기로(지금보다 약해지지 않는 강화 수치부터)
     if (sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1) {
-      const need = (sv.tier + 1) * D.STAGES_PER_CHAPTER, okBoss = sv.cleared >= need, cost = D.promoteGold(sv.tier);
+      const need = D.TIER_AT[sv.tier + 1], okBoss = sv.cleared >= need, cost = D.promoteGold(sv.tier);
       const pb = button(this, max ? W / 2 : 200, 404, max ? 180 : 110, 30, `승급 ${fmt(cost)}`, () => this.promote(), { size: 12, color: 0x2f6b3a });
       pb.setEnabled(okBoss && sv.gold >= cost); b.add(pb);
       if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }
-      else if (!okBoss) b.add(this.add.text(W / 2, 375, `승급하려면 ${sv.tier + 1}장 보스를 쓰러뜨려야 한다`, font9(10, '#ff9a8a')).setOrigin(0.5, 0));
+      else if (!okBoss) b.add(this.add.text(W / 2, 375, `승급하려면 ${need / D.STAGES_PER_CHAPTER}장 보스를 쓰러뜨려야 한다`, font9(10, '#ff9a8a')).setOrigin(0.5, 0));
       else {
         // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
         const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
@@ -791,7 +791,7 @@ export class Lobby extends Phaser.Scene {
 
   promote() {
     const sv = this.sv, cost = D.promoteGold(sv.tier);
-    if (this.busy || sv.gold < cost || sv.cleared < (sv.tier + 1) * D.STAGES_PER_CHAPTER) return;
+    if (this.busy || sv.gold < cost || sv.cleared < D.TIER_AT[sv.tier + 1]) return;
     this.busy = true;
     sv.gold -= cost; sv.enh = D.promoteEnh(sv.tier, sv.enh); sv.tier++; save(); this.refreshTop();
     track('promote', { tier: sv.tier, cost, cleared: sv.cleared });

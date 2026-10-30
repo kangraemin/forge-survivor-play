@@ -6,7 +6,10 @@ import { makeWeaponTextures } from './wart.js';
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
   'mob2_r0', 'mob2_r1', 'mob2_r2', 'fx1_r0', 'fx1_r1', 'fx1_r2', 'fx2_r0', 'fx2_r1', 'fx2_r2', 'tiles', 'deco'];
-const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2'].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
+// 6~15장 그림은 기존 그림의 색만 바꿔 만든다(tools/palette.py). 몹 시트 z6~z15(장당 3행), 보스 boss3~boss6, 바닥 tile6~tile15
+const NEW_CH = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', ...NEW_CH.map(c => 'z' + c)].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
+  .concat(['boss6_r0'], NEW_CH.map(c => 'tile' + c))
   .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'lobby_bg', 'bell', 'tile2', 'tile3', 'tile4', 'tile5']);
 // 코드로 그리던 작은 그림을 대신하는 PNG(assets/icon). 있으면 makeTextures가 건너뛴다
 const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'meat', 'silver',

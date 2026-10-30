@@ -10,6 +10,7 @@ import { gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSett
 import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 import { dexKill } from './codex.js';
+import { makeEnv } from './envfx.js';
 
 const { W, H } = D;
 const WORLD = 1600;
@@ -97,7 +98,7 @@ export class Battle extends Phaser.Scene {
     this.pbullets = this.physics.add.group();
     this.physics.world.setBounds(0, 0, WORLD, WORLD);
     this.physics.add.collider(this.mobs, this.mobs, null, (a, b) => !a.float && !b.float && !a.dead && !b.dead);
-    this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && !m.goblin && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
+    this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && !m.goblin && !m.dive && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
     this.physics.add.overlap(this.hero, this.ebullets, (h, b) => { this.hurt(b.dmg, 'shot'); b.destroy(); });
 
     // 왼쪽 위 기준 카메라라 주인공이 가운데 오도록 반 화면만큼 밀고, 경계도 그만큼 옮긴다
@@ -113,6 +114,7 @@ export class Battle extends Phaser.Scene {
     this.ui = new Overlay(this);
     this.petShield = false;
     this.pet = new Pet(this);
+    this.env = makeEnv(this);   // 6장부터의 장 기믹(envfx.js)
     this.makeHud();
     this.makeJoystick();
     this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE');
@@ -197,8 +199,9 @@ export class Battle extends Phaser.Scene {
     this.add.graphics().setDepth(-9).fillStyle(0x000000, 0.5).fillRect(-M, -M, WORLD + 2 * M, M).fillRect(-M, WORLD, WORLD + 2 * M, M).fillRect(-M, 0, M, WORLD).fillRect(WORLD, 0, M, WORLD);
     // 전용 바닥 그림이 없는 챕터는 1챕터 바닥에 색을 입힌다
     const TINT = [0xffffff, 0x8a9ab8, 0xd07050, 0xd8f0ff, 0x9a70b0];
+    const decoTint = this.ch.deco ?? (this.c ? TINT[this.c] : 0xffffff);   // 6장부터는 장 데이터의 deco 색
     if (this.hard) rt.setTint(0xd87a7a);   // 어려움은 바닥이 붉게 물든다
-    else if (!tintless && this.c > 0) rt.setTint(TINT[this.c]);
+    else if (!tintless && this.c > 0) rt.setTint(TINT[this.c] ?? 0xffffff);
     else if (this.s === 1 && !this.endless) rt.setTint(0xb8c0dc);   // x-2는 바닥을 식혀 x-1과 다른 곳처럼
     if (!this.textures.exists('decos')) {
       const ds = this.textures.get('deco').getSourceImage();
@@ -208,7 +211,7 @@ export class Battle extends Phaser.Scene {
     for (let i = 0; i < 90; i++) {
       const x = R(0, WORLD), y = R(0, WORLD);
       if (Math.hypot(x - c, y - c) < 220) continue;
-      this.add.image(x, y, 'decos', R(0, 2)).setOrigin(0.5, 1).setDepth(10 + y / WORLD).setTint(this.c ? TINT[this.c] : 0xffffff);
+      this.add.image(x, y, 'decos', R(0, 2)).setOrigin(0.5, 1).setDepth(10 + y / WORLD).setTint(decoTint);
     }
     for (let a = 0; a < 8; a++) {
       const x = c + Math.cos(a * Math.PI / 4) * 200, y = c + Math.sin(a * Math.PI / 4) * 200;
@@ -450,6 +453,7 @@ export class Battle extends Phaser.Scene {
     m.variant = opt.mini ? null : vk; m.bs = (elite ? 1.5 : 1) * (v?.scale || 1) * (opt.mini ? 0.65 : 1);
     m.color = m0.color; m.kb = 0; m.slow = 0; m.freeze = 0; m.curse = 0; m.tint0 = undefined; m.phase = RF(0, 6); m.t = 0;
     m.hitBy = {};
+    this.env?.mobInit(m);
     if (this.registry.get('fallback')[kind] && this.c > 0) m.setTint(m0.color);
     if (v) m.setTint(v.tint); else if (m0.tint) m.setTint(m0.tint);
     if (this.dungeon) m.setTint(D.DUN_TYPES[this.dungeon].tint);   // 던전 몹은 요일 색
@@ -513,7 +517,7 @@ export class Battle extends Phaser.Scene {
   // src: 같은 무기가 같은 몹을 너무 자주 때리지 않게 하는 키. kb: 밀려나는 세기
   // tag: 스킬 갈래(근접·원거리·마법·펫). 스탯 힘·민첩·지능이 갈래별 피해를 올린다
   hitMob(m, mult, { src = 'x', cd = 0, kb = 60, fx = 'small', from, tag } = {}) {
-    if (!m.active || m.dead) return false;
+    if (!m.active || m.dead || m.dive) return false;   // 물귀신은 잠겨 있는 동안 맞지 않는다
     if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
     m.hitBy[src] = this.bt;
     const { dmg, crit } = this.dmgCalc(mult, tag);
@@ -545,6 +549,7 @@ export class Battle extends Phaser.Scene {
     } else this.spark.explode(3, m.x, m.y);
     this.popup(m.x, m.y - 12, dmg, crit, fx === 'big');
     sfx(crit ? 'crit' : 'hit', 45, 1 + 0.1 * Math.min(3, Math.floor(this.sv.enh / 5)));
+    if (m.parryUntil > this.bt) this.env?.onHit(m);
     if (m.hp <= 0) this.kill(m);
     return true;
   }
@@ -571,6 +576,7 @@ export class Battle extends Phaser.Scene {
     r.mana = Math.min(D.MANA_MAX, r.mana + (m.elite ? D.MANA_ELITE : D.MANA_KILL));
     sfx('kill', 50);
     if (m.isBoss) { m.bossAI.die(); return; }
+    this.env?.mobKill(m);
     // 연속 처치: 1.2초 안에 이어 잡으면 콤보가 쌓인다
     this.combo = this.bt - (this.lastKillT || -1e9) < 1200 ? (this.combo || 0) + 1 : 1; this.lastKillT = this.bt;
     if (this.combo >= 10) { this.comboTxt.setText(`${this.combo} 콤보`).setAlpha(1).setScale(1.35); this.tweens.add({ targets: this.comboTxt, scale: 1, duration: 120 }); }
@@ -985,6 +991,7 @@ export class Battle extends Phaser.Scene {
     this.moveHero(time, dt);
     this.weapons.update(dt);
     this.pet.update(dt);
+    this.env?.update(dt);
     this.updateMobs(dt);
     this.updatePickups(dt);
     this.updateHud(time);
@@ -998,13 +1005,14 @@ export class Battle extends Phaser.Scene {
     if (this.autoMove) v.copy(this.autoMove(time));
     if (v.length() > 1) v.normalize();
     const r = this.run;
-    const spd = D.PLAYER.spd * (1 + this.tv('spd') + 0.08 * (r.skills.haste || 0) + this.lv3('haste', 0.08) + r.bSpd);
+    const spd = D.PLAYER.spd * (1 + this.tv('spd') + 0.08 * (r.skills.haste || 0) + this.lv3('haste', 0.08) + r.bSpd) * (this.env?.spdMul() ?? 1);
     // 출발·정지를 짧게 보간해 뻣뻣하지 않게(손가락을 따라 미끄러지듯)
     const ease = 1 - Math.pow(1 - (v.length() > 0.1 ? 0.3 : 0.4), dt / 16.7);
     this.mv ||= { x: 0, y: 0 };
     this.mv.x += (v.x * spd - this.mv.x) * ease; this.mv.y += (v.y * spd - this.mv.y) * ease;
     let vx = this.mv.x, vy = this.mv.y;
     if (this.lunge && this.lunge.t > 0) { vx += this.lunge.x; vy += this.lunge.y; this.lunge.t -= dt; }
+    const ev = this.env?.vel(); if (ev) { vx += ev.x; vy += ev.y; }   // 바람·돌풍·끌어당김
     this.hero.setVelocity(vx, vy);
     const moving = v.length() > 0.1, h = this.hero;
     const slashing = (h.anims.currentAnim?.key === 'slash' && h.anims.isPlaying) || this.bt < (this.hurtUntil || 0);
@@ -1059,6 +1067,7 @@ export class Battle extends Phaser.Scene {
         if (m.variant === 'swift' && m.t - (m.trailT || 0) > 110) { m.trailT = m.t; const g = this.add.image(m.x, m.y, m.texture.key, m.frame.name).setFlipX(m.flipX).setScale(m.scaleX).setTintFill(0xff4040).setAlpha(0.35).setDepth(8); this.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() }); }
       }
       m.setFlipX(m.x > h.x);
+      this.env?.mobTick(m, dt);
       if (m.freeze > 0) { m.freeze -= dt; m.setVelocity(0, 0); m.anims.timeScale = 0; return; }
       m.anims.timeScale = m.slow > 0 ? 0.5 : 1;
       if (m.slow > 0) m.slow -= dt;
@@ -1101,7 +1110,7 @@ export class Battle extends Phaser.Scene {
         const want = d > 120 ? 1 : d < 90 ? -0.6 : 0;
         m.setVelocity(dx / d * spd * want, dy / d * spd * want);
         m.cd = (m.cd ?? 1500 + R(0, 1500)) - dt;
-        if (m.cd <= 0 && d < 200) { m.cd = 3000; this.enemyShot(m.x, m.y, Math.atan2(dy, dx), 75, m.dmg); }
+        if (m.cd <= 0 && d < 200) { m.cd = 3000; if (!this.env?.shot(m, Math.atan2(dy, dx))) this.enemyShot(m.x, m.y, Math.atan2(dy, dx), 75, m.dmg); }
       } else m.setVelocity(dx / d * spd, dy / d * spd);
     });
   }
@@ -1168,7 +1177,9 @@ export class Battle extends Phaser.Scene {
     this.ultTxt.setText(full ? '눌러서 발동!' : `궁극기 ${Math.floor(mf * 100)}%`).setColor(full ? '#ffd75e' : '#a1b2b6');
     // 조명
     this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);
-    this.dark.clear().fill(0x06040c, this.darkA).erase('light', this.hero.x - cam.scrollX - 150, this.hero.y - cam.scrollY - 150);
+    const L = this.env?.lightK < 1 || this.env?.blackT > 0 ? this.env.light.setScale(this.env.blackT > 0 ? 0.4 : this.env.lightK) : null;   // 심연·일식은 밝히는 범위가 좁다
+    this.dark.clear().fill(0x06040c, this.darkA);
+    if (L) this.dark.erase(L, this.hero.x - cam.scrollX, this.hero.y - cam.scrollY); else this.dark.erase('light', this.hero.x - cam.scrollX - 150, this.hero.y - cam.scrollY - 150);
     for (const t of this.torches) {
       const sx = t.x - cam.scrollX, sy = t.y - cam.scrollY;
       if (sx > -150 && sy > -150 && sx < W + 150 && sy < H + 150) this.dark.erase('light', sx - 150, sy - 150);
