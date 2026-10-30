@@ -12,6 +12,7 @@ import { t, tt } from './i18n.js';
 import { load } from './save.js';
 import { track } from './log.js';
 import { isFirstRun } from './coach.js';
+import { HAVE } from './assetList.js';   // assets/ 맨 위 PNG 목록(tools/gen_asset_list.mjs). 없는 선택 그림은 요청하지 않아 404·'Missing resource'가 없다
 import { setSound, setMusic, setMusicLevel, setVib, unlock, primeAudio } from './sfx.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
@@ -47,7 +48,7 @@ export class Boot extends Phaser.Scene {
     this.add.text(W / 2, H / 2 - 20, tt('boot.e414a2'), font(16, '#ffd75e')).setOrigin(0.5);
     this.load.on('progress', v => { bar.width = 160 * v; });
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
-    for (const k of REQUIRED.concat(OPTIONAL)) this.load.image(k, `assets/${k}.png`);
+    for (const k of REQUIRED.concat(OPTIONAL.filter(k => HAVE.has(k)))) this.load.image(k, `assets/${k}.png`);
     for (const [k, fw, fh] of MODE_SHEETS) this.load.spritesheet('ma_' + k, `assets/modes/${k}.png`, { frameWidth: fw, frameHeight: fh });   // 모드 그림(docs/modes_art.md)
     for (const [k, fw, fh] of CH_SHEETS) this.load.spritesheet('ma_' + k, `assets/modes/${k}.png`, { frameWidth: fw, frameHeight: fh });   // 3~15장 장 테마 그림(파일이 없으면 도형으로)
     for (const k of MODE_IMAGES) this.load.image('ma_' + k, `assets/modes/${k}.png`);

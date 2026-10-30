@@ -295,6 +295,8 @@ export function earlyBgm(enabled) {
   musicOn = !!enabled;
   if (!musicOn || bgm || typeof Audio === 'undefined') return;
   const file = bgmFile('lobby', 0); if (!file) return;
+  // 54차: 컨텍스트는 첫 제스처 전에는 만들지 않는다(브라우저 경고·아이폰 무음 방지). 파일만 미리 받아 두고 첫 터치 때 playBgm이 튼다
+  if (!ctx) { preloadBgm(file); return; }
   const el = new Audio(); attachGain(el); el.loop = true; el.preload = 'auto'; el.volume = bv(); el.muted = held; el.src = file;
   const st = { kind: 'lobby', ch: 0, file, el };
   el.addEventListener('error', () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); } });
