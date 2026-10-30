@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "{v} recompensas de missão",
  "lobby.c48b8f": "{name} · Vença a 1-1 para abrir",
  "lobby.52de23": "Difícil ",
- "lobby.ee42ff": "{v}{v2} Capítulo  {name}",
  "lobby.6019de": "{bossLeft} lutas p/ Chefe",
  "lobby.e0436f": "Desafie o Chefe!",
  "lobby.b78093": "Chefe vencido",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "Única vez",
  "shop.starterTag": "Única vez · Valor de tabela {won} ({x}x)",
  "lobby.ch16Soon": "Cap. 16 em breve",
- "lobby.chTitleHard": "Difícil Capítulo {n}: {name}"
+ "lobby.chTitleHard": "Difícil Capítulo {n}: {name}",
+ "battle.raidT": "Ataque de elites!",
+ "battle.raidS": "Três elites vêm correndo",
+ "desk.title": "Teclado",
+ "desk.move": "Mover: WASD ou setas",
+ "desk.ult": "Suprema: barra de espaço",
+ "lobby.ch16Title": "Aviso do capítulo 16",
+ "lobby.ch16L1": "O capítulo 16, Palácio Congelado, está em preparação",
+ "lobby.ch16L2": "Ative o aviso e contaremos na primeira vez que você entrar após o lançamento",
+ "lobby.ch16On": "Avisar-me",
+ "lobby.ch16Done": "Aviso ativado",
+ "lobby.ch16Share": "Contar a um amigo",
+ "lobby.ch16Open": "Capítulo 16 aberto! Vá ao Palácio Congelado",
+ "lobby.ch16Thx": "Aviso ativado"
 }

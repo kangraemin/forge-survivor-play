@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "Thưởng NV: {v}",
  "lobby.c48b8f": "{name} · Qua 1-1 để mở",
  "lobby.52de23": "Khó ",
- "lobby.ee42ff": "{v}{v2} Chương  {name}",
  "lobby.6019de": "{bossLeft} màn tới Boss",
  "lobby.e0436f": "Đấu Boss!",
  "lobby.b78093": "Hạ Boss",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "Chỉ 1 lần",
  "shop.starterTag": "Chỉ 1 lần · Giá lẻ cộng lại {won} ({x}x)",
  "lobby.ch16Soon": "Chương 16 sắp ra",
- "lobby.chTitleHard": "Khó Chương {n}: {name}"
+ "lobby.chTitleHard": "Khó Chương {n}: {name}",
+ "battle.raidT": "Elite tấn công!",
+ "battle.raidS": "3 elite đang lao tới",
+ "desk.title": "Bàn phím",
+ "desk.move": "Di chuyển: WASD hoặc phím mũi tên",
+ "desk.ult": "Tuyệt kỹ: phím cách",
+ "lobby.ch16Title": "Báo tin chương 16",
+ "lobby.ch16L1": "Chương 16, Cung điện băng giá, đang được chuẩn bị",
+ "lobby.ch16L2": "Bật thông báo, bạn sẽ được báo ngay lần đầu vào game sau khi chương mở",
+ "lobby.ch16On": "Báo cho tôi",
+ "lobby.ch16Done": "Đã bật báo",
+ "lobby.ch16Share": "Rủ bạn bè",
+ "lobby.ch16Open": "Chương 16 đã mở! Đến Cung điện băng giá nào",
+ "lobby.ch16Thx": "Đã bật thông báo"
 }

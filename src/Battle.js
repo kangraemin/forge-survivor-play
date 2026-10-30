@@ -62,7 +62,7 @@ export class Battle extends Phaser.Scene {
     // 장면 인스턴스는 판끼리 재사용된다: 이벤트·축복·던전 고블린 상태를 비운다
     this.ultTip = null; this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
     // 보스 단계도 비운다(앞 판이 보스전으로 끝나면 다음 판이 웨이브 없이 영원히 이어졌다)
-    this.bossLvQ = 0; this.lvForce = false; this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.healOrbDone = false; this.spawnAcc = 0;
+    this.bossLvQ = 0; this.lvForce = false; this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.raidDone = false; this.healOrbDone = false; this.spawnAcc = 0;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -1301,6 +1301,12 @@ export class Battle extends Phaser.Scene {
           this.log('taste_next', { ch: 1 });
         }
       }
+      // 55차: 1-1 하이라이트 — 처음 판은 중간보스(약 1분 뒤)가 있고, 그 뒤 판은 둘째 웨이브 중간에 엘리트 셋이 한꺼번에 몰려온다(보상·스탯은 그대로, 150초 동안 밋밋하던 구간만 깬다)
+      if (this.stage1 && !this.easy && !this.raidDone && this.wave === 1 && this.waveT > this.waveLen * 0.35) {
+        this.raidDone = true;
+        for (let i = 0; i < 3; i++) this.spawn(false, this.ch.mobs[1], { elite: true, force: true });
+        this.banner(t('battle.raidT'), t('battle.raidS')); sfx('bossIn'); this.log('stage1_raid', { bt: Math.round(this.bt / 1000) });
+      }
       // 53차: 1-1 마지막 웨이브가 열리면(중간보스 직전) 회복 구슬 하나를 몸 곁에. 체력이 모자랄 때만 의미가 있게 항상 놓는다
       if (this.stage1 && !this.healOrbDone && this.wave === this.waveCount - 1) { this.healOrbDone = true; this.addItem(this.hero.x + 24, this.hero.y - 12, 'meat'); this.log('stage1_heal_orb', { hp: Math.round(this.hp / this.maxHp * 100) }); }
       if (this.eventAt != null && !this.eventDone && this.progress() >= this.eventAt) { this.eventDone = true; this.surprise(this.eventKind); }
@@ -1315,7 +1321,7 @@ export class Battle extends Phaser.Scene {
       // x-2는 마지막 웨이브에 해골 장군(중간 보스)
       const towerBoss = this.endless && this.wave % 3 === 2 && this.midWave !== this.wave && !this.midBoss;
       // 처음 판(1-1)도 마지막 웨이브 후반에 약한 해골 장군이 나온다: 끝이 밋밋하게 시간만 다 됐다(40차)
-      const easyBoss = this.easy && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.45;
+      const easyBoss = this.easy && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.25;   // 55차: 0.45→0.25 — 중간보스가 판 끝 쪽에서 나와 '남은 0:01'로 늘어지던 것을 앞당겨 전체 한 판을 줄인다
       if (easyBoss || (towerBoss || this.s === 1 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
         const midKey = !this.endless && this.ch.mid && D.BOSSES[this.ch.mid] ? this.ch.mid : 'general';   // 장마다 다른 중간보스(무한의 탑은 해골 장군)
         this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, midKey, this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true);
@@ -1581,6 +1587,7 @@ export class Battle extends Phaser.Scene {
     this.hpLag.width += (76 * f - this.hpLag.width) * 0.06;
     this.hpTxt.setText(`${Math.min(Math.ceil(Math.max(0, this.hp)), Math.round(this.maxHp))}/${Math.round(this.maxHp)}`);
     if (this.bossPhase) { this.timeTxt.setText(tt('battle.792e7e')); this.waveTxt.setText(''); }
+    else if (this.midBoss?.m?.active && !this.midBoss.m.dead) { this.timeTxt.setText(tt('battle.792e7e')).setColor('#ff9a5a'); this.waveTxt.setText(tt('battle.7e0431', { v: this.hard ? tt('battle.79b7f1') : '', min: Math.min(this.wave + 1, this.waveCount), waveCount: this.waveCount })); }   // 55차: 중간보스가 사는 동안은 웨이브 시간이 0:01에 묶여 '남은 0:01'로 오래 보였다 → 보스가 살아 있으면 '보스'로 표시
     else {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));
       this.timeTxt.setText(tt('battle.ee07c6', { floor: Math.floor(left / 60), padStart: String(left % 60).padStart(2, '0') }));   // 경과 시간으로 읽혔다

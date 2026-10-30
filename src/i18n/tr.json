@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "Görev Ödülü {v}",
  "lobby.c48b8f": "{name} · 1-1'i geçince açılır",
  "lobby.52de23": "Zor ",
- "lobby.ee42ff": "{v}{v2}. Bölüm {name}",
  "lobby.6019de": "Patrona {bossLeft} tur",
  "lobby.e0436f": "Patrona Meydan Oku!",
  "lobby.b78093": "Patron Yenildi",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "Tek sefer",
  "shop.starterTag": "Tek sefer · Parça fiyatları {won} ({x}x)",
  "lobby.ch16Soon": "16. Bölüm yakında",
- "lobby.chTitleHard": "Zor {n}. Bölüm: {name}"
+ "lobby.chTitleHard": "Zor {n}. Bölüm: {name}",
+ "battle.raidT": "Elit Baskını!",
+ "battle.raidS": "3 elit üstüne koşuyor",
+ "desk.title": "Klavye",
+ "desk.move": "Hareket: WASD veya ok tuşları",
+ "desk.ult": "Ulti: Boşluk tuşu",
+ "lobby.ch16Title": "16. Bölüm Bildirimi",
+ "lobby.ch16L1": "16. Bölüm, Donmuş Saray, hazırlanıyor",
+ "lobby.ch16L2": "Bildirimi aç; bölüm açıldıktan sonra oyuna ilk girişinde haber verelim",
+ "lobby.ch16On": "Haber ver",
+ "lobby.ch16Done": "Bildirim açık",
+ "lobby.ch16Share": "Arkadaşa söyle",
+ "lobby.ch16Open": "16. Bölüm açıldı! Donmuş Saray'a git",
+ "lobby.ch16Thx": "Bildirim açıldı"
 }

@@ -3,7 +3,7 @@ import { openSettings } from './settingsPanel.js';
 import { tutorialDue, runTutorial, modeDue, runModeCoach, tabCoach } from './tutorial.js';
 import { nextGoal, salesOpen } from './nextGoal.js';
 import { cashHidden, shareHidden, adWord, trialInfo, openFull } from './platform/flags.js';   // 포털판(CrazyGames·itch): 현금 상품·공유 숨김
-import { shareBrag, braggable, bragGem, lobbyShareTick } from './share.js';
+import { shareBrag, braggable, bragGem, lobbyShareTick, openShare, myCode } from './share.js';
 import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmetics.js';
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
 import * as D from './data.js';
@@ -75,6 +75,8 @@ export class Lobby extends Phaser.Scene {
     track('lobby_enter', { tab: this.tab, cleared: sv.cleared, tier: sv.tier, enh: sv.enh, power: D.powerOf(sv), gold: sv.gold, stone: sv.stone, gem: sv.gem, runs: sv.stats.runs, guard: sv.guard, sweep: sv.sweep });
     this.show(this.tab);
     this.cameras.main.fadeIn(200);
+    // 55차: 16장 알림을 켜 둔 사람은 16장이 열린 뒤 처음 로비에서 한 번 알려 준다
+    if (sv.tut?.ch16Notify && !sv.tut.ch16Told && D.openN() > D.MAIN_CHAPTERS) { sv.tut.ch16Told = 1; save(); this.time.delayedCall(900, () => toast(this, t('lobby.ch16Open'), '#9ae0ff', 112)); }
     // 자리를 비웠다 돌아오면 견습생이 번 것을 먼저 준다(다른 창보다 앞)
     const idle = this.idleReward();
     if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
@@ -237,6 +239,23 @@ export class Lobby extends Phaser.Scene {
   }
 
   // 1-3을 깬 뒤 한 번만: 첫 결제 꾸러미
+  // 55차: 16장 예고 카드를 누르면: 업데이트 알림 켜기(저장은 tut.ch16Notify 하나) + 친구에게 알리기. 출시는 15장까지 그대로
+  ch16Win() {
+    const sv = this.sv, c = this.modal();
+    track('ch16_open', { on: !!sv.tut?.ch16Notify });
+    c.add(panel(this, 20, 150, W - 40, 190, { fill: 0x1a1426, line: 0x9ae0ff }));
+    c.add(this.add.text(W / 2, 172, t('lobby.ch16Title'), font(13, '#9ae0ff')).setOrigin(0.5));
+    [t('lobby.ch16L1'), t('lobby.ch16L2')].forEach((s2, i) => { const tx = this.add.text(32, 194 + i * 40, '- ' + s2, { ...font9(10, '#e8f4f8'), wordWrap: { width: W - 64 } }).setLineSpacing(2); c.add(tx); });
+    const on = !!sv.tut?.ch16Notify;
+    const nb = button(this, shareHidden() ? W / 2 : 82, 316, shareHidden() ? 140 : 108, 28, on ? t('lobby.ch16Done') : t('lobby.ch16On'), () => {
+      if (sv.tut?.ch16Notify) return;
+      sv.tut ||= {}; sv.tut.ch16Notify = 1; save(); track('ch16_notify_on'); sfx('coin'); toast(this, t('lobby.ch16Thx'), '#9ae0ff', 112); c.close();
+    }, { size: 11, color: 0x2f6b3a });
+    nb.setEnabled(!on); c.add(nb);
+    if (!shareHidden()) c.add(button(this, 196, 316, 108, 28, t('lobby.ch16Share'), async () => { const r = await openShare(this, t('share.6ee53a', { myCode: myCode() })); track('ch16_share', { ok: r }); }, { size: 11, color: 0x1d6f80 }));
+    c.add(button(this, W - 40, 172, 24, 20, 'X', () => c.close(), { size: 10 }));
+  }
+
   starterWin() {
     const sv = this.sv, it = D.IAP.find(x => x.id === 'starter'), c = this.modal();
     sv.offerDay = sv.day; sv.popRun = sv.stats.runs;
@@ -402,6 +421,7 @@ export class Lobby extends Phaser.Scene {
     const bh = Math.min(top ? extra - 4 : extra - 10, 50);
     // 50차: 모드 선택 화면에서는 겨울·오늘의 특가 배너를 숨긴다(시작 버튼 아래가 광고처럼 보였다)
     if (id === 'battle' && this.modeScr) return;
+    if (id === 'forge' && H >= 575 && sv.cleared >= 1) return;   // 55차: 키 큰 폰의 대장간은 아래 빈 자리를 오늘의 의뢰 3개가 쓴다(판매 배너와 겹치지 않게)
     // 50차: 처음 시작한 계정(1판도 못 깸): 비는 자리에 첫 목표 한 줄과 모드 예고 카드를 둔다
     if (id === 'battle' && sv.cleared < 1 && !this.tower && bh >= 34) {
       const c = this.bn = this.add.container(0, 436).setDepth(10), w = W - 24;
@@ -447,7 +467,7 @@ export class Lobby extends Phaser.Scene {
       const im = this.add.image(12, 0, 'ban_ch16').setOrigin(0); im.setScale((W - 24) / im.width); c.add(im);
       c.add(this.add.text(24, 8, t('lobby.e3cee5'), font(11, '#9ae0ff')));
       c.add(this.add.text(24, 24, t('lobby.3f8470'), font9(9, '#ffffff')));
-      c.add(this.add.rectangle(12, 0, W - 24, im.displayHeight, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy) toast(this, t('lobby.810f12'), '#9ae0ff', 112); }));
+      c.add(this.add.rectangle(12, 0, W - 24, im.displayHeight, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy) { sfx('click'); this.ch16Win(); } }));
       return;
     }
     // 52차: 1장을 깨면 모드 4종이 열린다 — 처음 들어갈 때까지 큰 카드 + 빨간 점으로 알린다(작은 회색 '모드' 버튼만 있어 못 찾았다)
@@ -462,7 +482,7 @@ export class Lobby extends Phaser.Scene {
     const half = (W - 24 - 6) / 2;
     // 53차: 승급이 증표에 막혔으면 왼쪽 칸을 '도전 X장 깨면 증표' 목표 카드로 바꾸고 바로 가기를 단다
     if (goal?.kind === 'mark') card(12, half, 0x7fe6ee, goal.title, '#7fe6ee', goal.sub, () => this.goChallenge());
-    else if (!win && D.openN() <= D.MAIN_CHAPTERS && sv.cleared >= 5 * D.STAGES_PER_CHAPTER) card(12, half, 0x9ae0ff, t('lobby.ch16Soon'), '#9ae0ff', t('lobby.3f8470'), () => { sfx('click'); toast(this, t('lobby.810f12'), '#9ae0ff', 112); });   // 55차: 후반 신호 — 16장 준비 중(표시만, 알림 신청 없음)
+    else if (!win && D.openN() <= D.MAIN_CHAPTERS && sv.cleared >= 5 * D.STAGES_PER_CHAPTER) card(12, half, 0x9ae0ff, t('lobby.ch16Soon'), '#9ae0ff', t('lobby.3f8470'), () => { sfx('click'); this.ch16Win(); });   // 55차: 후반 신호 — 16장 준비 중(표시만, 알림 신청 없음)
     else card(12, half, win ? 0x7ad0ff : COLOR.line, win ? t('lobby.4c24d0') : t('lobby.8306ca'), win ? '#9ae0ff' : '#ffffff', win ? t('lobby.01ac36', { length: winterItems().length }) : t('lobby.34a1d0'), () => goSkin(win ? 'winter' : 'character'));
     card(12 + half + 6, half, 0xff9ad0, t('lobby.b0904d'), '#ff9ad0', t('lobby.f1b741', { name: ts.name, SALE_OFF }), () => goSkin(ts.kind, ts.id));
   }
@@ -763,7 +783,8 @@ export class Lobby extends Phaser.Scene {
     if (!max) b.bringToTop(this.awakeTxt);
     this.swordAura(enh);
     // 55차: 대장간 의뢰 칩(회색 — 주황 버튼은 강화 하나)
-    if (sv.cleared >= 1) {
+    if (sv.cleared >= 1 && H >= 575) this.ordersInline(b, 424);
+    else if (sv.cleared >= 1) {
       const oc = button(this, 80, 232, 132, 20, tt('lobby.ordChip', { done: this.ordersDone(), n: this.orders().length }), () => { if (!this.busy) { sfx('click'); track('order_open'); this.missionWin(false, 'order'); } }, { size: 10, color: 0x3a3846 });
       b.add(oc);
       if (this.ordersReady() > 0) b.add(this.add.circle(142, 223, 4, 0xff3a3a));

@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "任务奖励{v}个",
  "lobby.c48b8f": "{name} · 通关1-1解锁",
  "lobby.52de23": "困难 ",
- "lobby.ee42ff": "{v}{v2}章  {name}",
  "lobby.6019de": "距首领{bossLeft}场",
  "lobby.e0436f": "挑战首领!",
  "lobby.b78093": "击败首领",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "限购1次",
  "shop.starterTag": "限购1次·内容定价合计{won}(约{x}倍)",
  "lobby.ch16Soon": "第16章 准备中",
- "lobby.chTitleHard": "困难 第{n}章 {name}"
+ "lobby.chTitleHard": "困难 第{n}章 {name}",
+ "battle.raidT": "精英来袭!",
+ "battle.raidS": "3只精英冲过来了",
+ "desk.title": "键盘操作",
+ "desk.move": "移动：WASD 或方向键",
+ "desk.ult": "大招：空格键",
+ "lobby.ch16Title": "第16章更新提醒",
+ "lobby.ch16L1": "第16章「冰封王宫」正在准备中",
+ "lobby.ch16L2": "开启提醒后，开放后你第一次进入游戏时会通知你",
+ "lobby.ch16On": "开启提醒",
+ "lobby.ch16Done": "提醒已开",
+ "lobby.ch16Share": "告诉朋友",
+ "lobby.ch16Open": "第16章开放了！去冰封王宫吧",
+ "lobby.ch16Thx": "已开启提醒"
 }

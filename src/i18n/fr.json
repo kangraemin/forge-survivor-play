@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "{v} récomp. mission",
  "lobby.c48b8f": "{name} · Finis 1-1 pour l'ouvrir",
  "lobby.52de23": "Difficile ",
- "lobby.ee42ff": "{v}{v2} Chapitre  {name}",
  "lobby.6019de": "Boss: {bossLeft}",
  "lobby.e0436f": "Défi Boss !",
  "lobby.b78093": "Boss vaincu",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "1 achat",
  "shop.starterTag": "1 achat · Prix cumulé {won} (x{x})",
  "lobby.ch16Soon": "Chap. 16 bientôt",
- "lobby.chTitleHard": "Difficile Chapitre {n} : {name}"
+ "lobby.chTitleHard": "Difficile Chapitre {n} : {name}",
+ "battle.raidT": "Raid d'élites !",
+ "battle.raidS": "Trois élites foncent sur vous",
+ "desk.title": "Clavier",
+ "desk.move": "Déplacer : WASD ou flèches",
+ "desk.ult": "Ultime : barre d'espace",
+ "lobby.ch16Title": "Alerte chapitre 16",
+ "lobby.ch16L1": "Le chapitre 16, Palais gelé, est en préparation",
+ "lobby.ch16L2": "Activez l'alerte et on vous le dira à la première connexion après la sortie",
+ "lobby.ch16On": "Me prévenir",
+ "lobby.ch16Done": "Alerte activée",
+ "lobby.ch16Share": "Prévenir un ami",
+ "lobby.ch16Open": "Le chapitre 16 est ouvert ! Direction le Palais gelé",
+ "lobby.ch16Thx": "Alerte activée"
 }

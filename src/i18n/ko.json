@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "임무 보상 {v}개",
  "lobby.c48b8f": "{name} · 1-1을 깨면 열린다",
  "lobby.52de23": "어려움 ",
- "lobby.ee42ff": "{v}{v2}장  {name}",
  "lobby.6019de": "보스까지 {bossLeft}판",
  "lobby.e0436f": "보스 도전!",
  "lobby.b78093": "보스 격파",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "1회 한정",
  "shop.starterTag": "1회 한정 · 구성품 정가 합계 {won} (약 {x}배)",
  "lobby.ch16Soon": "16장 준비 중",
- "lobby.chTitleHard": "어려움 {n}장  {name}"
+ "lobby.chTitleHard": "어려움 {n}장  {name}",
+ "battle.raidT": "엘리트 습격!",
+ "battle.raidS": "정예 3마리가 달려와요",
+ "desk.title": "키보드 조작",
+ "desk.move": "이동: WASD 또는 방향키",
+ "desk.ult": "궁극기: 스페이스바",
+ "lobby.ch16Title": "16장 업데이트 알림",
+ "lobby.ch16L1": "16장 얼어붙은 왕궁이 준비 중이에요",
+ "lobby.ch16L2": "알림을 켜 두면 열린 뒤 처음 접속할 때 알려 드려요",
+ "lobby.ch16On": "알림 받기",
+ "lobby.ch16Done": "알림 켜짐",
+ "lobby.ch16Share": "친구에게 알리기",
+ "lobby.ch16Open": "16장이 열렸어요! 얼어붙은 왕궁으로 가요",
+ "lobby.ch16Thx": "알림을 켰어요"
 }

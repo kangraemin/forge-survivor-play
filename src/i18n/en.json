@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "{v} mission rewards",
  "lobby.c48b8f": "{name} · Clear 1-1 to unlock",
  "lobby.52de23": "Hard ",
- "lobby.ee42ff": "{v}{v2} Chapter  {name}",
  "lobby.6019de": "{bossLeft} to Boss",
  "lobby.e0436f": "Boss Time!",
  "lobby.b78093": "Boss Slain",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "1x only",
  "shop.starterTag": "1x only · Parts worth {won} ({x}x)",
  "lobby.ch16Soon": "Chapter 16 soon",
- "lobby.chTitleHard": "Hard Chapter {n}: {name}"
+ "lobby.chTitleHard": "Hard Chapter {n}: {name}",
+ "battle.raidT": "Elite Raid!",
+ "battle.raidS": "3 elites are charging in",
+ "desk.title": "Keyboard",
+ "desk.move": "Move: WASD or arrow keys",
+ "desk.ult": "Ultimate: Space bar",
+ "lobby.ch16Title": "Chapter 16 Update Alert",
+ "lobby.ch16L1": "Chapter 16, Frozen Palace, is in the works",
+ "lobby.ch16L2": "Turn on the alert and we'll tell you the first time you open the game after it launches",
+ "lobby.ch16On": "Alert me",
+ "lobby.ch16Done": "Alert on",
+ "lobby.ch16Share": "Tell a friend",
+ "lobby.ch16Open": "Chapter 16 is open! Head to the Frozen Palace",
+ "lobby.ch16Thx": "Alert is on"
 }

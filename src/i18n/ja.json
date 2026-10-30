@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "任務報酬{v}個",
  "lobby.c48b8f": "{name} · 1-1クリアで解放",
  "lobby.52de23": "ハード ",
- "lobby.ee42ff": "{v}{v2}章 {name}",
  "lobby.6019de": "ボスまで{bossLeft}戦",
  "lobby.e0436f": "ボスに挑戦!",
  "lobby.b78093": "ボス撃破",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "1回限定",
  "shop.starterTag": "1回限定・内容の定価合計{won}(約{x}倍)",
  "lobby.ch16Soon": "16章 準備中",
- "lobby.chTitleHard": "ハード 第{n}章 {name}"
+ "lobby.chTitleHard": "ハード 第{n}章 {name}",
+ "battle.raidT": "エリート襲撃!",
+ "battle.raidS": "エリート3体が突進してくる",
+ "desk.title": "キーボード操作",
+ "desk.move": "移動: WASD または矢印キー",
+ "desk.ult": "必殺技: スペースキー",
+ "lobby.ch16Title": "16章アップデート通知",
+ "lobby.ch16L1": "16章「凍てついた王宮」を準備中です",
+ "lobby.ch16L2": "通知をオンにすると、公開後に最初に起動したときにお知らせします",
+ "lobby.ch16On": "通知を受け取る",
+ "lobby.ch16Done": "通知オン",
+ "lobby.ch16Share": "友だちに知らせる",
+ "lobby.ch16Open": "16章が開きました! 凍てついた王宮へ行こう",
+ "lobby.ch16Thx": "通知をオンにしました"
 }

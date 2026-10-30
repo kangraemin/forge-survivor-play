@@ -115,6 +115,22 @@ export const ContentTab = {
   orders() { return D.forgeOrdersToday(this.sv.dayN); },
   ordersReady() { const sv = this.sv; return this.orders().filter(o => (sv.mis[o.key] || 0) >= o.need && !sv.misGot['o_' + o.id]).length; },
   ordersDone() { const sv = this.sv; return this.orders().filter(o => sv.misGot['o_' + o.id]).length; },
+  // 55차 2차: 대장간 화면 아래(강화 버튼 밑 빈 자리)에 오늘 의뢰 3개와 보상을 바로 보여 준다. 키가 작은 화면은 칩(창)으로 대신한다
+  ordersInline(b, y0) {
+    const sv = this.sv;
+    b.add(this.add.text(14, y0, t('lobby.ordChip', { done: this.ordersDone(), n: this.orders().length }), font(11, '#ffd75e', 2)));
+    this.orders().forEach((o, i) => {
+      const y = y0 + 15 + i * 28, have = Math.min(o.need, sv.mis[o.key] || 0), done = have >= o.need, got = sv.misGot['o_' + o.id];
+      b.add(panel(this, 12, y, W - 24, 26, { fill: got ? 0x141018 : 0x293845 }));
+      { const nt = this.add.text(20, y + 2, o.name, font9(10, got ? '#6a6080' : '#ffffff')); nt.setScale(Math.min(1, (W - 108) / nt.width)); b.add(nt); }
+      { const rt = this.add.text(20, y + 14, t('lobby.ordRow', { have: fmt(have), need: fmt(o.need), give: giveText(o.give, sv) }), font9(9, done ? '#5fdc6a' : '#a1b2b6')); rt.setScale(Math.min(1, (W - 108) / rt.width)); b.add(rt); }
+      const bt = button(this, W - 46, y + 13, 56, 20, got ? t('lobby.8d8680') : t('lobby.98d0f0'), () => {
+        if (got || !done) return;
+        sv.misGot['o_' + o.id] = true; track('order_claim', { id: o.id }); grant(sv, o.give); sfx('coin'); this.refreshTop(); this.show('forge');
+      }, { size: 10, color: 0x1d6f80 });
+      bt.setEnabled(done && !got); b.add(bt);
+    });
+  },
   ordersDraw(body, redraw) {
     const sv = this.sv;
     this.orders().forEach((o, i) => {

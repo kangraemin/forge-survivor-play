@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "{v} premios de misión",
  "lobby.c48b8f": "{name} · Se abre al pasar 1-1",
  "lobby.52de23": "Difícil ",
- "lobby.ee42ff": "{v}{v2} Capítulo  {name}",
  "lobby.6019de": "Jefe en {bossLeft}",
  "lobby.e0436f": "¡Reta al Jefe!",
  "lobby.b78093": "Jefe vencido",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "1 vez",
  "shop.starterTag": "1 vez · Valor de lista {won} (x{x})",
  "lobby.ch16Soon": "Cap. 16 pronto",
- "lobby.chTitleHard": "Difícil Capítulo {n}: {name}"
+ "lobby.chTitleHard": "Difícil Capítulo {n}: {name}",
+ "battle.raidT": "¡Ataque de élites!",
+ "battle.raidS": "Tres élites se lanzan a por ti",
+ "desk.title": "Teclado",
+ "desk.move": "Mover: WASD o flechas",
+ "desk.ult": "Definitiva: barra espaciadora",
+ "lobby.ch16Title": "Aviso del capítulo 16",
+ "lobby.ch16L1": "El capítulo 16, Palacio Helado, está en preparación",
+ "lobby.ch16L2": "Activa el aviso y te lo diremos la primera vez que entres tras el estreno",
+ "lobby.ch16On": "Avisarme",
+ "lobby.ch16Done": "Aviso activado",
+ "lobby.ch16Share": "Avisar a un amigo",
+ "lobby.ch16Open": "¡Capítulo 16 abierto! Ve al Palacio Helado",
+ "lobby.ch16Thx": "Aviso activado"
 }

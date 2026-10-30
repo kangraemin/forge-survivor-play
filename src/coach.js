@@ -77,11 +77,11 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
     const ax = Math.max(bx + 12, Math.min(bx + BW - 12, rx + rw / 2)), ay = up ? ry + rh + 9 : ry - 9;
     const ar = scene.add.text(ax, ay, up ? '▲' : '▼', font(14, '#7fe6ee')).setOrigin(0.5); c.add(ar);
     scene.tweens.add({ targets: ar, y: ay + (up ? 4 : -4), alpha: 0.4, duration: 380, yoyo: true, repeat: -1 });
-    // 아래 줄: 왼쪽 건너뛰기(보조), 가운데 쪽수, 오른쪽 주황 버튼은 이 화면에 하나(강조 테두리·화살표는 청록: 주황이 둘로 보이던 것 53차)
+    // 아래 줄: 왼쪽 건너뛰기(보조), 가운데 쪽수, 오른쪽 확인은 청록 보조색(구멍 안 주황 행동 버튼과 둘로 보이던 것 55차: 주황은 한 화면 하나)
     const by2 = by + hh - 20;
     if (skip) c.add(button(scene, bx + 44, by2, 76, 24, t('coach.88130a'), () => end(true), { size: 10, color: 0x3a3846 }));
     if (steps.length > 1) c.add(scene.add.text(bx + BW / 2, by2, `${n + 1}/${steps.length}`, font9(9, '#a1b2b6')).setOrigin(0.5));
-    c.add(button(scene, bx + BW - 44, by2, 76, 24, n + 1 >= steps.length ? t('lobby.468266') : t('coach.854c76'), next, { size: 11, color: 0x2f6b3a }));
+    c.add(button(scene, bx + BW - 44, by2, 76, 24, n + 1 >= steps.length ? t('lobby.468266') : t('coach.854c76'), next, { size: 11, color: 0x1d6f80 }));
   }
   draw(0);
   return c;

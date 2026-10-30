@@ -86,11 +86,15 @@ export class BossAI {
   // 못 잡던 판(13장)도 기준 안으로 들어온다. 너무 빨리 닳는 쪽은 holdFloor(최소 버티는 시간)가 막는다
   fit(dt) {
     const m = this.m, age = this.age || 0;
-    if (!this.T || m.dead || age < 14000) return;
+    if (!this.T || m.dead || age < 10000) return;
     this.fitT = (this.fitT || 0) + dt;
     if (this.fitT < 3000) return; this.fitT = 0;
-    const live = (age - 2300) / 1000, rate = (this.dealt || 0) / Math.max(1, live);
-    if (rate <= 0) return;
+    const live = (age - 2300) / 1000, dl = this.dealt || 0;
+    // 55차: 누적 평균만 보면 뒤로 갈수록 피해가 줄 때(보스가 멀어지고 쉴드·무적 구간이 길어질 때) 끝이 늘어졌다(8-2 130초·15-2 126초). 최근 9초 피해율이 평균보다 낮으면 그 값으로 맞춘다 — 플레이어 쪽은 그대로, 보스 체력 곡선만 따라간다
+    (this.fitHist ||= []).push(dl); if (this.fitHist.length > 4) this.fitHist.shift();
+    const recent = this.fitHist.length >= 4 ? (dl - this.fitHist[0]) / 9 : Infinity;
+    const rate = Math.min(dl / Math.max(1, live), recent > 0 ? recent : Infinity);
+    if (!(rate > 0) || !isFinite(rate)) return;
     const left = Math.max(6, D.BOSS_FIT[this.mid ? 'mid' : 'last'] - live), need = rate * left;
     if (m.hp <= need) return;
     const f = Math.max(0.6, need / m.hp);
@@ -107,7 +111,7 @@ export class BossAI {
     // 50차: 시간 곡선 — 체력 비율이 (1 - 경과/목표시간)보다 빨리 닳으면 그 선까지 되채운다(보스가 숨을 고른다). 싸우는 중 레벨업·카드로 DPS가 늘어도, 고강화로 다시 해도 목표 시간 안엔 안 죽는다
     this.holdFloor();
     this.fit(dt);
-    if (this.bar && !this.mid && !this.tired && this.age > D.BOSS_TIRED.ms) {
+    if (this.bar && !this.tired && this.age > (this.mid ? D.BOSS_TIRED.midMs : D.BOSS_TIRED.ms)) {
       this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(t('boss.6683a5', { name: this.b.name, round: Math.round((D.BOSS_TIRED.mul - 1) * 100) })).setColor('#ff9a5a');
       s.banner(t('boss.4fceda'), t('boss.94d38c', { round: Math.round((D.BOSS_TIRED.mul - 1) * 100) }));
     }

@@ -124,7 +124,6 @@
  "lobby.2f4c8a": "{v} hadiah misi",
  "lobby.c48b8f": "{name} · Buka setelah tamatkan 1-1",
  "lobby.52de23": "Sulit ",
- "lobby.ee42ff": "Bab {v}{v2}  {name}",
  "lobby.6019de": "{bossLeft} lagi: Bos",
  "lobby.e0436f": "Tantang Bos!",
  "lobby.b78093": "Bos Kalah",
@@ -2019,5 +2018,18 @@
  "data.starterOnce": "1x saja",
  "shop.starterTag": "1x saja · Harga satuan {won} ({x}x)",
  "lobby.ch16Soon": "Bab 16 segera",
- "lobby.chTitleHard": "Sulit Bab {n}: {name}"
+ "lobby.chTitleHard": "Sulit Bab {n}: {name}",
+ "battle.raidT": "Serangan Elite!",
+ "battle.raidS": "3 elite menyerbu ke arahmu",
+ "desk.title": "Keyboard",
+ "desk.move": "Gerak: WASD atau tombol panah",
+ "desk.ult": "Ultimate: Spasi",
+ "lobby.ch16Title": "Pemberitahuan Bab 16",
+ "lobby.ch16L1": "Bab 16, Istana Beku, sedang disiapkan",
+ "lobby.ch16L2": "Aktifkan pemberitahuan, dan kami kabari saat kamu pertama masuk setelah rilis",
+ "lobby.ch16On": "Ingatkan aku",
+ "lobby.ch16Done": "Pengingat aktif",
+ "lobby.ch16Share": "Beritahu teman",
+ "lobby.ch16Open": "Bab 16 terbuka! Menuju Istana Beku",
+ "lobby.ch16Thx": "Pengingat diaktifkan"
 }
