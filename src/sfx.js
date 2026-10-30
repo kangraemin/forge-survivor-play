@@ -7,7 +7,7 @@ function ac() {
   if (!ctx) {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return null;
-    ctx = new C(); master = ctx.createGain(); master.gain.value = held ? 0 : 0.35; master.connect(ctx.destination);
+    ctx = new C(); ctx.onstatechange = onCtxState; master = ctx.createGain(); master.gain.value = held ? 0 : 0.35; master.connect(ctx.destination);
   }
   // 아이폰은 앱을 나갔다 오면 'interrupted'가 된다: running이 아니면 다시 깨운다
   if (ctx.state !== 'running') ctx.resume().catch(() => {});
@@ -26,7 +26,7 @@ function rebuild() {
   if (ac() && kind && musicOn) playBgm(kind, ch);
 }
 const wake = () => {
-  if (bgm && bgm.el && bgm.el.paused && musicOn && !document.hidden) bgm.el.play().catch(() => {});   // 파일 음악: 백그라운드에서 멈췄으면 다시 튼다
+  if (bgm && bgm.el && bgm.el.paused && musicOn && !document.hidden) playEl(bgm.el).catch(() => {});   // 파일 음악: 백그라운드에서 멈췄으면 다시 튼다
   if (bgm && bgm.want) retryFile();
   if (!ctx) return;
   if (ctx.state === 'closed') { rebuild(); return; }
@@ -164,22 +164,56 @@ const BGM_FILES = {
 // 두 곡 모두 평균 -17.8dB·최대 -3dB라 0.6이면 최대가 -7.6dB로 효과음보다 컸다 → 0.2(평균 -32dB·최대 -17dB, 절차 BGM과 비슷). 음량 설정이 생기면 여기에 곱한다
 // 53차: 웹·itch에서 배경음악이 크다는 말이 나와 0.2 → 0.035로(-15dB). 측정(tools/audio_levels.mjs): 효과음 소리 나는 구간 RMS 평균 -35dB, 음악은 0.07일 때 -43dB였고 0.035면 -49dB.
 // 효과음 한 톤 최대는 베기·피격 약 -21dB, 처치 -18dB, 레벨업 -27dB(master 0.35 x 톤 vol). 음악 설정(끔/작게/보통)의 '작게'는 절반(-6dB)
-const BGM_BASE = 0.015;
+const BGM_BASE = 0.05;   // 54차: 아이폰에서 gain이 실제로 먹게 되니 0.015(-57dB)는 폰 스피커로 안 들렸다. 효과음 평균보다 약 11dB 아래
 let musicMul = 1;   // 보통 1, 작게 0.5
 const bv = () => BGM_BASE * musicMul;
 // 54차: iOS Safari는 <audio>.volume을 JS로 못 바꾼다(항상 1.0) → 파일 음악을 WebAudio GainNode로 거쳐 크기를 정한다.
 // el.volume을 그대로 쓰는 기존 코드(페이드·감시·설정)가 GainNode를 움직이도록 요소마다 volume 속성을 가로챈다. 요소는 컨텍스트 하나에만 묶이므로 컨텍스트를 새로 만들면 요소도 새로 만든다
+let forceNative = false;   // MediaElementSource 경로가 무음이면 요소 직접 출력으로(크기 조절은 포기, 소리는 난다)
 function attachGain(el) {
-  if (!el || el._g) return;
+  if (!el || el._g || forceNative) return;
   const c = ctx || ac(); if (!c) return;
   try {
     const src = c.createMediaElementSource(el), g = c.createGain();
     g.gain.value = bv(); src.connect(g); g.connect(c.destination);
-    el._g = g; el._gctx = c;
+    const an = c.createAnalyser(); an.fftSize = 1024; g.connect(an);
+    el._g = g; el._gctx = c; el._an = an;
     Object.defineProperty(el, 'volume', { configurable: true, get: () => g.gain.value, set: v => { g.gain.value = Math.max(0, Math.min(1, v)); } });
   } catch { /* 연결 못 하면 요소 음량을 그대로 쓴다(데스크톱) */ }
 }
-const PGAIN = (lobby) => (lobby ? 0.018 : 0.022) * musicMul;   // 절차 BGM(0.22/0.28 → 0.018/0.022)
+// iOS: 컨텍스트가 running이 되기 전에 요소를 play하면 MediaElementSource 경로가 무음이 된다 → running 전이면 미뤄 두었다가 running이 될 때 튼다
+function playEl(el) {
+  if (el._g && ctx && ctx.state !== 'running') { el._pend = true; return Promise.resolve(); }
+  el._pend = false; return el.play();
+}
+function onCtxState() { if (ctx && ctx.state === 'running' && bgm && bgm.el && bgm.el._pend && musicOn) playEl(bgm.el).catch(() => {}); }
+// 무음 감지: 틀고 2초 뒤 GainNode 출력이 계속 0이면 이 경로를 버리고 새 요소를 직접 출력으로 튼다(한 요소는 한 MediaElementSource만 된다)
+function watchSilence(st, tries = 0) {
+  setTimeout(() => {
+    try {
+      const el = st.el;
+      if (bgm !== st || !el || !el._an || forceNative || !musicOn || held || document.hidden) return;
+      if (!ctx || ctx.state !== 'running' || el.paused || el._fx || el._g.gain.value < 0.001) { if (tries < 4) watchSilence(st, tries + 1); return; }
+      const buf = new Float32Array(1024); let peak = 0, n = 0;
+      const t = setInterval(() => {
+        el._an.getFloatTimeDomainData(buf); for (const x of buf) peak = Math.max(peak, Math.abs(x));
+        if (++n < 8) return;
+        clearInterval(t);
+        if (peak < 1e-6 && bgm === st) { console.info('bgm silent -> native output'); nativeFallback(st); }
+      }, 60);
+    } catch { /* 무시 */ }
+  }, 2000);
+}
+function nativeFallback(st) {
+  forceNative = true;
+  for (const k in preloaded) if (preloaded[k]._g) delete preloaded[k];
+  const old = st.el, el = new Audio(st.file);
+  el.loop = true; el.muted = held; el.volume = bv();
+  try { el.currentTime = old.currentTime || 0; } catch { /* 무시 */ }
+  st.el = el; try { old.pause(); } catch { /* 무시 */ }
+  el.play().catch(() => {});
+}
+const PGAIN = (lobby) => (lobby ? 0.06 : 0.07) * musicMul;   // 절차 BGM(0.22/0.28 → 0.06/0.07)
 export const setMusicLevel = lv => {
   musicMul = lv === 1 ? 0.5 : 1;
   try {
@@ -241,8 +275,9 @@ export function earlyBgm(enabled) {
   const st = { kind: 'lobby', ch: 0, file, el };
   el.addEventListener('error', () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); } });
   bgm = st;
-  const p = el.play();
+  const p = playEl(el);
   if (p && p.catch) p.catch(() => { /* 막힘: 첫 입력 때 wake가 다시 튼다 */ });
+  watchSilence(bgm);
 }
 const resumeAt = {};   // 보스 곡으로 넘어가기 전 전투 곡의 재생 위치(파일 → 초). 보스를 잡고 돌아오면 거기서 이어서
 function startFile(kind, chapter, file, crossfade) {
@@ -256,13 +291,14 @@ function startFile(kind, chapter, file, crossfade) {
   const st = { kind, ch: chapter, file, el };
   const fail = () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); playBgm(kind, chapter); } };
   el.addEventListener('error', fail);
-  const p = el.play();
+  const p = playEl(el);
   if (p && p.catch) p.catch(e => {
     if (bgm !== st) return;
     if (e && e.name === 'NotAllowedError') { bgm = null; startProc(kind, chapter, st); }   // 자동재생 막힘: 절차 BGM으로 대신하다 다음 터치에 파일로 바꾼다
     else fail();
   });
   bgm = st;
+  watchSilence(st);
   preloadAhead(kind, chapter);
 }
 // 터치 때: 막혀 있던 파일 음악을 다시 시도한다
@@ -272,10 +308,10 @@ function retryFile() {
   const old = bgm; old.retrying = true;
   const el = new Audio(w.file); attachGain(el);
   el.loop = true; el.volume = bv(); el.muted = held;
-  el.play().then(() => {
+  playEl(el).then(() => {
     if (bgm !== old) { el.pause(); return; }
     clearInterval(old.timer); const g = old.g; try { g.gain.setValueAtTime(g.gain.value, ctx.currentTime); g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2); } catch { /* 무시 */ } setTimeout(() => g.disconnect(), 300);
-    bgm = { kind: w.kind, ch: w.ch, file: w.file, el };
+    bgm = { kind: w.kind, ch: w.ch, file: w.file, el }; watchSilence(bgm);
     el.addEventListener('error', () => { if (bgm && bgm.el === el) { badFiles.add(w.file); bgm = null; stopEl(el); playBgm(w.kind, w.ch); } });
   }).catch(() => { old.retrying = false; });
 }
@@ -291,7 +327,7 @@ export function playBgm(kind, chapter = 0) {
   stopBgm();
   if (file && lingering && lingering.file === file && !badFiles.has(file)) {   // 같은 곡: 처음부터 다시 틀지 않고 이어서
     clearTimeout(lingering.dying); bgm = lingering; lingering = null; bgm.kind = kind; bgm.ch = chapter;
-    if (bgm.el.paused) bgm.el.play().catch(() => {});
+    if (bgm.el.paused) playEl(bgm.el).catch(() => {});
     return;
   }
   let cross = false;
@@ -381,7 +417,7 @@ function watchdog() {
     if (!bgm || !musicOn) return;
     if (bgm.el) {
       const el = bgm.el;
-      if (el.paused && !bgm.want) el.play().catch(() => {});
+      if (el.paused && !bgm.want) playEl(el).catch(() => {});
       if (!held && el.muted) el.muted = false;
       if (!el._fx && el.volume < bv() * 0.5) el.volume = bv();
     } else if (bgm.g && ctx && ctx.state === 'running') {
