@@ -4,6 +4,7 @@
 import * as D from './data.js';
 import { sfx } from './sfx.js';
 import { font, viewRect } from './ui.js';
+import { warnDisc, warnStrip, warnFan, runWarn } from './fx2.js';
 
 const WORLD = 1600;
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
@@ -112,7 +113,11 @@ export class Env {
   addPit(x, y, r, life) { this.pits.push({ x, y, r, life }); }
   // 예고 원(빨강) → ms 뒤 onBoom
   warn(x, y, r, ms, onBoom) {
-    const s = this.s, g = s.add.graphics().setDepth(9), st = { f: 0 }, calm = this.kind === 'storm';   // 13장: 붉은 원이 몹 위를 덮어 몹이 안 읽혔다(44차)
+    const s = this.s;
+    // 48차: 예고 바닥은 fx2 그림(그림이 없을 때만 예전 빨간 원)
+    const wd = warnDisc(s, x, y, r);
+    if (wd) { runWarn(s, wd, ms, () => { if (!s.over) onBoom(); }); return; }
+    const g = s.add.graphics().setDepth(9), st = { f: 0 }, calm = this.kind === 'storm';   // 13장: 붉은 원이 몹 위를 덮어 몹이 안 읽혔다(44차)
     s.tweens.add({ targets: st, f: 1, duration: ms, onUpdate: () => { g.clear().fillStyle(0xff2030, 0.2).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(2, 0xff4050, 0.5 + 0.5 * Math.abs(Math.sin(st.f * 12))).strokeEllipse(x, y, r * 2, r * 1.5); }, onComplete: () => { g.destroy(); if (!s.over) onBoom(); } });
   }
   inEll(x, y, r) { const h = this.s.hero, dx = (h.x - x) / r, dy = (h.y + 8 - y) / (r * 0.75); return dx * dx + dy * dy <= 1; }
@@ -265,9 +270,10 @@ export class Env {
     for (const v of this.vents) {
       v.t -= dt;
       if (v.ph === 'idle' && v.t <= 0) { v.ph = 'warn'; v.t = 1100; sfx('warn', 200); }
-      else if (v.ph === 'warn' && v.t <= 0) { v.ph = 'burst'; v.t = 650; v.hit = false; }
+      else if (v.ph === 'warn' && v.t <= 0) { v.wd?.destroy(); v.wd = null; v.ph = 'burst'; v.t = 650; v.hit = false; }
       else if (v.ph === 'burst' && v.t <= 0) { v.ph = 'idle'; v.t = 2800 + R(0, 900); }
       if (v.ph === 'idle') g.fillStyle(0x303038, 0.7).fillEllipse(v.x, v.y, 16, 9).lineStyle(1, 0xa0a0b0, 0.8).strokeEllipse(v.x, v.y, 16, 9);
+      else if (v.ph === 'warn' && (v.wd ||= warnDisc(s, v.x, v.y, v.r))) { v.wd.step(1 - v.t / 1100); }
       else if (v.ph === 'warn') g.fillStyle(0xff2030, 0.2).fillEllipse(v.x, v.y, v.r * 2, v.r * 1.5).lineStyle(2, 0xff4050, 0.5 + 0.5 * Math.abs(Math.sin(s.bt / 70))).strokeEllipse(v.x, v.y, v.r * 2, v.r * 1.5);
       else {
         g.fillStyle(0xf0f0f8, 0.55).fillEllipse(v.x, v.y - 8, v.r * 1.6, v.r * 2.2).fillStyle(0xffffff, 0.4).fillEllipse(v.x, v.y - 18, v.r * 1.1, v.r * 1.8);
@@ -478,7 +484,8 @@ export class Env {
   shot(m, ang) {
     const s = this.s;
     if (m.fx === 'aimline') {
-      const g = s.add.graphics().setDepth(9).lineStyle(2, 0xff4050, 0.8).lineBetween(m.x, m.y, m.x + Math.cos(ang) * 200, m.y + Math.sin(ang) * 200);
+      const g = warnStrip(s, m.x, m.y, ang, 200, 14) || s.add.graphics().setDepth(9).lineStyle(2, 0xff4050, 0.8).lineBetween(m.x, m.y, m.x + Math.cos(ang) * 200, m.y + Math.sin(ang) * 200);
+      if (g.step) { const st = { f: 0 }; s.tweens.add({ targets: st, f: 1, duration: 550, onUpdate: () => g.active && g.step(st.f) }); }
       s.time.delayedCall(550, () => { g.destroy(); if (m.active && !m.dead && !s.over) s.enemyShot(m.x, m.y, ang, 160, m.dmg * 1.2).setTint(0x80d0ff); });
       return true;
     }
@@ -517,7 +524,9 @@ function bandWave(boss, cx, cy, ang, len, thick, warnMs, sweepMs, dmgMul) {
   // 진행 방향 ang, 띠의 폭(진행에 수직) 380 · 두께 thick
   const W2 = 190;
   const path = [{ x: sx + nx * W2, y: sy + ny * W2 }, { x: sx + c * len + nx * W2, y: sy + sn * len + ny * W2 }, { x: sx + c * len - nx * W2, y: sy + sn * len - ny * W2 }, { x: sx - nx * W2, y: sy - ny * W2 }];
-  g.fillStyle(0xff2030, 0.14).fillPoints(path, true).lineStyle(1.5, 0xff4050, 0.7).strokePoints(path, true);
+  const bs = warnStrip(s, sx - nx * 0 + 0, sy, ang, len, W2 * 2);
+  if (bs) { bs.setPosition(sx, sy); const q = { f: 0 }; s.tweens.add({ targets: q, f: 1, duration: warnMs, onUpdate: () => bs.active && bs.step(q.f), onComplete: () => bs.destroy() }); }
+  else g.fillStyle(0xff2030, 0.14).fillPoints(path, true).lineStyle(1.5, 0xff4050, 0.7).strokePoints(path, true);
   sfx('warn');
   const st = { f: 0 };
   s.tweens.add({ targets: g, alpha: { from: 0.5, to: 1 }, duration: 220, yoyo: true, repeat: Math.floor(warnMs / 440) });
@@ -545,7 +554,11 @@ function sectorBeams(boss, n, arm, rot, warnMs, sweepMs, len, dmgMul) {
   const s = boss.s, m = boss.m, a0 = Math.random() * 6.28, dir = Math.random() < 0.5 ? -1 : 1, g = s.add.graphics().setDepth(9), st = { a: 0 };
   const ox = m.x, oy = m.y;
   const lines = a => { for (let i = 0; i < n; i++) { const t = a0 + a * dir + i * arm; g.lineBetween(ox, oy, ox + Math.cos(t) * len, oy + Math.sin(t) * len); } };
-  g.lineStyle(2, 0xff4050, 0.8); lines(0); sfx('warn');
+  const strips = [];
+  for (let i = 0; i < n; i++) { const w = warnStrip(s, ox, oy, a0 + i * arm, len, 16); if (w) strips.push(w); }
+  if (strips.length) { const q = { f: 0 }; s.tweens.add({ targets: q, f: 1, duration: warnMs, onUpdate: () => strips.forEach(w => w.active && w.step(q.f)), onComplete: () => strips.forEach(w => w.destroy()) }); }
+  else { g.lineStyle(2, 0xff4050, 0.8); lines(0); }
+  sfx('warn');
   s.time.delayedCall(warnMs, () => {
     if (!m.active || s.over) { g.destroy(); return; }
     const hitAt = {};
@@ -626,7 +639,9 @@ export const BOSS_PATTERNS = {
     const s = this.s, m = this.m;
     this.busy = 2000; m.setVelocity(0, 0);
     const a = Phaser.Math.Angle.Between(m.x, m.y, s.hero.x, s.hero.y), g = s.add.graphics().setDepth(9);
-    g.fillStyle(0xe8f4ff, 0.18).slice(m.x, m.y, 180, a - 0.5, a + 0.5, false).fillPath().lineStyle(2, 0xff4050, 0.8).lineBetween(m.x, m.y, m.x + Math.cos(a) * 180, m.y + Math.sin(a) * 180);
+    const fan = warnFan(s, m.x, m.y, a, 180);
+    if (fan) runWarn(s, fan, 850);
+    else g.fillStyle(0xe8f4ff, 0.18).slice(m.x, m.y, 180, a - 0.5, a + 0.5, false).fillPath().lineStyle(2, 0xff4050, 0.8).lineBetween(m.x, m.y, m.x + Math.cos(a) * 180, m.y + Math.sin(a) * 180);
     sfx('warn');
     s.time.delayedCall(850, () => {
       g.destroy();

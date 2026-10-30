@@ -1,6 +1,8 @@
 import { gearStats, wMul, wtypeOf, spReq, SP_RESET_GEM } from './gear.js';
 // 게임 데이터와 밸런스 수치. 숫자는 전부 여기서만 바꾼다. 근거는 docs/DESIGN.md
-export const W = 270, H = 480;
+// 세로는 폰 화면 비율에 맞춰 늘린다(48차): 480(16:9) ~ 585(19.5:9). 위아래 빈 띠 대신 HUD·조이스틱 영역으로 쓴다
+export const W = 270;
+export const H = (() => { try { const r = innerHeight / innerWidth; return r > 0 && isFinite(r) ? Math.max(480, Math.min(585, Math.round(W * r))) : 480; } catch { return 480; } })();
 
 // 챕터: 몬스터 3종 + 보스. dur은 일반 스테이지 길이(초)
 export const CHAPTERS = [
@@ -343,6 +345,8 @@ export const DROP = {
   bossSilver: 100,
 };
 export const HEAL_PCT = 0.15;
+// 보스 약점 구간(페이즈 전환 뒤 4.2초) 받는 피해 배수: 보스 체력은 그대로 두고 몰아치는 맛을 준다(48차 1.5 -> 2.2)
+export const WEAK_MUL = 2.2;
 
 // ── 과금 ──
 // 보석: 유료 재화. 무료로도 꾸준히 모인다(출석·첫 클리어·광고). 보석 1개 ≈ 10원
@@ -356,11 +360,17 @@ export const IAP = [
   // 광고 제거: 보석이 아닌 현금 상품. 광고 버튼(보석·소탕권·보상 2배·부활)이 광고 없이 바로 보상을 준다
   { id: 'noads', name: '광고 제거', price: 5900, once: true, tag: '1회 · 광고 버튼이 바로 보상', desc: '광고 없이 바로 보상 · 보석 100 덤', give: { gem: 100 }, noAds: true },
   { id: 'gem1', name: '보석 한 줌', price: 1200, give: { gem: 120 } },
+  // 48차 가격 사다리: 2,900·9,900·19,900원. 보석 10원/개 기준에 큰 묶음일수록 덤이 커진다(+7% → +10% → +16% → +17% → +18%)
+  { id: 'gem1b', name: '보석 한 자루', price: 2900, tag: '+7%', give: { gem: 310 } },
   { id: 'gem2', name: '보석 주머니', price: 5900, tag: '인기 · +10%', give: { gem: 650 } },
+  { id: 'gem2b', name: '보석 큰 주머니', price: 9900, tag: '+16%', give: { gem: 1150 } },
   { id: 'gem3', name: '보석 상자', price: 12000, tag: '+17%', give: { gem: 1400 } },
+  { id: 'gem4', name: '보석 큰 상자', price: 19900, tag: '+18% · 가장 알뜰', give: { gem: 2350 } },
 ];
 // 보석 묶음은 처음 살 때 보석 2배(특가·성장 꾸러미·큰 꾸러미는 해당 없음)
-export const FIRST_BUY_X2 = ['gem1', 'gem2', 'gem3'];
+export const FIRST_BUY_X2 = ['gem1', 'gem1b', 'gem2', 'gem2b', 'gem3', 'gem4'];
+// 패키지 탭 구분(48차): 보석 묶음 / 꾸러미 / 정기
+export const PACK_GROUPS = { gem: ['gem1', 'gem1b', 'gem2', 'gem2b', 'gem3', 'gem4'], bundle: ['starter', 'cosm', 'noads'], sub: ['pass'] };
 
 // ── 한정 판매(상점 '특가' 칸) ──
 // 오늘의 특가: 하루 한 번 아래 꾸러미 하나를 무작위 할인율로 판다. 기기 시간 자정에 바뀐다

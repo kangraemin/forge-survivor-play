@@ -22,7 +22,7 @@ export class Overlay {
   petJoin(p) {
     const s = this.s, sv = s.sv;
     const c = fixedContainer(s).setDepth(DEPTH + 10);
-    const dim = s.add.rectangle(0, 0, W, 480, 0x000000, 0.7).setOrigin(0).setInteractive();
+    const dim = s.add.rectangle(0, 0, W, H, 0x000000, 0.7).setOrigin(0).setInteractive();
     c.add([dim, panel(s, 30, 120, W - 60, 230, { fill: 0x1a1426, line: p.color })]);
     c.add(s.add.text(W / 2, 142, '새 펫 합류!', font(15, '#ffd75e')).setOrigin(0.5));
     c.add(s.add.image(W / 2, 192, 'disc').setScale(1.1).setTint(p.color).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD));
@@ -89,8 +89,10 @@ export class Overlay {
     s.bannerObjs?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.bannerObjs = null; s.bannerQ = [];
     s.joy.o = null; s.joy.v.reset(); s.joy.base.setVisible(false); s.joy.knob.setVisible(false);
     s.showUlt?.(false);   // 창 아래 안내 글과 겹치지 않게 궁극기 버튼을 숨긴다
-    const c = fixedContainer(s).setDepth(DEPTH);
-    const dim = s.add.rectangle(0, 0, W, H, 0x05030a, 0.72).setOrigin(0).setInteractive();
+    // 세로로 긴 폰(H>480)에서는 창 내용을 남는 높이의 절반만큼 내려 가운데로(48차). 어둡게 덮는 막은 그만큼 올려 화면 전체를 덮는다
+    const dy = Math.round((H - 480) / 2);
+    const c = fixedContainer(s, 0, dy).setDepth(DEPTH);
+    const dim = s.add.rectangle(0, -dy, W, H, 0x05030a, 0.72).setOrigin(0).setInteractive();
     c.add(dim); c.setAlpha(0);
     s.tweens.add({ targets: c, alpha: 1, duration: 140 });
     this.c = c;
@@ -226,6 +228,32 @@ export class Overlay {
     if (s.bot) s.time.delayedCall(150, () => this.pick(cards.list[0]?.key));
   }
   lvReroll() { return 8 + 6 * (this.s.run.lvRerolls || 0); }
+  // 진화할 수 있는 스킬이 있는가(있으면 자동 강화로 넘기지 않고 카드 창을 연다)
+  evoReady() {
+    const sk = this.s.run.skills;
+    return Object.entries(D.EVOS).some(([k, e]) => sk[k] >= D.SKILL_MAX && sk[e.need] && !this.s.run.evo[k]);
+  }
+  // 카드 없이 가진 스킬 하나를 한 단계 올린다. 올릴 게 없으면 체력·은화
+  autoLevel() {
+    const s = this.s, r = s.run, sk = r.skills;
+    const own = Object.keys(sk).filter(k => D.SKILLS[k] && sk[k] > 0 && sk[k] < D.SKILL_MAX);
+    sfx('level');
+    const pil = s.add.sprite(s.hero.x, s.hero.y + 20, 'fx2_r2s').setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH - 1).setTint(0x9ad8ff).setScale(0.7).play('fxPillar');
+    pil.once('animationcomplete', () => pil.destroy());
+    if (own.length) {
+      // 액티브를 먼저, 그다음 낮은 레벨부터(고르는 수고만 덜고 빌드는 그대로 자란다)
+      own.sort((a, b) => (D.SKILLS[a].type === 'active' ? 0 : 1) - (D.SKILLS[b].type === 'active' ? 0 : 1) || sk[a] - sk[b] || Math.random() - 0.5);
+      const k = own[0];
+      sk[k]++;
+      if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
+      s.refreshSkillRow();
+      s.log('skill_auto', { skill: k, skill_lv: sk[k], lv: r.lv });
+      toast(s, `Lv ${r.lv} · ${D.SKILLS[k].name} Lv ${sk[k]} 자동 강화`, '#9ae0ff', 96);
+    } else {
+      s.heal(s.maxHp * 0.15); r.silver += 10;
+      toast(s, `Lv ${r.lv} · 체력 회복 · 은화 +10`, '#9ae0ff', 96);
+    }
+  }
 
   card(k, x, y, i) {
     const s = this.s, sk = s.run.skills;
@@ -666,9 +694,11 @@ export class Overlay {
       c.add(pw >= rp ? s.add.text(W / 2, 282, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#a1b2b6')).setOrigin(0.5) : s.add.text(W / 2, 282, `권장까지 ${fmt(rp - pw)} 모자란다. 강화하자`, font9(11, '#f2e4bc')).setOrigin(0.5));
     }
     // 자랑하기: 이겼거나 탑 기록을 넘으면 공유(친구가 들어올 길이 없었다). 하루 한 번 보석
-    const brag = !s.bot && !dun && (win || (s.endless && floors > best));
+    // 48차: 첫 3판은 보상과 '다음 판'만 보여 준다. 광고 2배·자랑하기·장착 안내는 4판째부터
+    const early = sv.stats.runs <= 3 && !dun && !s.endless;
+    const brag = !early && !s.bot && !dun && (win || (s.endless && floors > best));
     // 45차: 광고 2배·자랑하기는 한 줄 보조 버튼(둘 다 있으면 반반, 하나면 가운데). 주 버튼은 아래 '다음 판' 하나
-    const adOn = !s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0;
+    const adOn = !early && !s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0;
     const sw = adOn && brag ? 112 : 170, sx = adOn && brag ? 58 : 0;
     if (brag) {
       const gift = sv.shareDay !== sv.day, shareGem = sv.shared ? D.SHARE_GEM : D.SHARE_GEM_FIRST;
@@ -706,7 +736,7 @@ export class Overlay {
     const egg = loot.find(it => it.egg), top = loot.reduce((a, it) => Math.max(a, it.r < 4 ? it.r : -1), -1);
     // 장 보스를 처음 잡으면 새 무기가 열린다(장마다 받는 큰 보상)
     const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
-    const head = autoEq.length && !wNew && !egg && !newPet ? `${autoEq[0].n}${autoEq.length > 1 ? ` 외 ${autoEq.length - 1}개` : ''} 자동 장착!` : wNew ? `새 무기 「${wNew.name}」 획득!` : s.run.dupW ? `무기를 다 모아 강화석 +${D.DUP_W_STONE}` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
+    const head = autoEq.length && !early && !wNew && !egg && !newPet ? `${autoEq[0].n}${autoEq.length > 1 ? ` 외 ${autoEq.length - 1}개` : ''} 자동 장착!` : wNew ? `새 무기 「${wNew.name}」 획득!` : s.run.dupW ? `무기를 다 모아 강화석 +${D.DUP_W_STONE}` : egg ? `숨겨진 장비 「${egg.n}」!` : newPet ? `새 펫 「${newPet.name}」 합류!` : top >= 3 ? '전설 장비!' : loot.length ? `장비 ${loot.length}개를 가방에 넣었다${salvaged ? ` (가득 차 강화석 +${salvaged})` : ''}` : '';
     // 보스를 처음 잡으면 새 무기와 보스 펫이 같이 온다: 펫은 한 줄 위에 따로
     if (wNew && newPet) c.add(s.add.text(W / 2, 326, `새 펫 「${newPet.name}」 합류!`, font9(10, '#ffb050')).setOrigin(0.5));
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : autoEq.length ? font(11, '#5fdc6a') : font9(10, '#a1b2b6')).setOrigin(0.5));

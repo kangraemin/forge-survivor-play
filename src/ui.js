@@ -1,11 +1,11 @@
 // 공통 UI: 글자 스타일, 패널, 누르는 버튼, 아이콘
 import { sfx } from './sfx.js';
-import { TIERS, SKILLS } from './data.js';
+import { TIERS, SKILLS, H as GH } from './data.js';
 
 // 그리는 배율. 카메라를 왼쪽 위 기준으로 PX배 당겨 게임 좌표(270x480)를 그대로 쓴다
 // 기기 실제 픽셀에 맞춘다(1080 폭 폰이면 4배): 화면에 맞추며 정수배가 아니게 늘리거나 줄이면 글자 획이 들쭉날쭉해진다
 const dpr = window.devicePixelRatio || 1;
-export const PX = Math.max(2, Math.min(4, Math.ceil(Math.min(innerWidth * dpr / 270, innerHeight * dpr / 480) - 0.05)));
+export const PX = Math.max(2, Math.min(4, Math.ceil(Math.min(innerWidth * dpr / 270, innerHeight * dpr / GH) - 0.05)));
 
 // 글자는 그리는 판 해상도로 만든다(1배로 만들어 PX배로 늘리면 뭉개진다)
 export const font = (size, color = '#ffffff', stroke = 3) =>

@@ -21,7 +21,9 @@ export const TOSS_AD_GROUPS = {
 // 결제 상품 SKU = 게임 상품 id 그대로(data.js IAP/BIG_PACKS 의 id, 특가 deal_<꾸러미>_<할인율>, 성장 grow<장>). 콘솔에 이 이름으로 만든다
 // 꾸미기 묶음도 동일한 지급/미결 주문 복구 경로를 사용한다. 콘솔 등록 후 실제 SKU로 매핑한다.
 export const TOSS_COSMETIC_SKUS = { look_picnic: 'look_picnic', look_bath: 'look_bath', look_snow_trip: 'look_snow_trip', look_snow_friends: 'look_snow_friends' };
-export const tossSku = itemId => TOSS_COSMETIC_SKUS[itemId] || itemId;
+// 보석·꾸러미·정기 상품(data.js IAP). 48차에 2,900(gem1b)·9,900(gem2b)·19,900(gem4)원 상품 추가. 콘솔에 같은 이름으로 만든다
+export const TOSS_IAP_SKUS = Object.fromEntries(['starter', 'cosm', 'pass', 'noads', 'gem1', 'gem1b', 'gem2', 'gem2b', 'gem3', 'gem4', 'big1', 'big2'].map(id => [id, id]));
+export const tossSku = itemId => TOSS_COSMETIC_SKUS[itemId] || TOSS_IAP_SKUS[itemId] || itemId;
 export const AD_LOAD_TIMEOUT_MS = 25000;   // AdMob은 로드에 5~20초(최대 60초)
 
 const sdk = () => window.__AIT_SDK || null;

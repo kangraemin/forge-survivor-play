@@ -14,7 +14,7 @@ import { installToss } from './toss.js';
 // 토스 미니앱 안이면 window.forgePlatform을 채운다(웹에서는 아무 일도 안 한다)
 installToss();
 
-const W = 270, H = 480;
+const W = 270, H = D.H;
 const devpay = () => { try { return new URLSearchParams(location.search).has('devpay'); } catch { return false; } };
 export const won = n => n.toLocaleString('ko-KR') + '원';
 

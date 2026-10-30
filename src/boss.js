@@ -3,6 +3,7 @@ import * as D from './data.js';
 import { sfx } from './sfx.js';
 import { font, toast } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
+import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has } from './fx2.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 const PAT_NAME = { jump: '내려찍기!', charge: '돌진!', slam: '장판!', ring: '탄막!', aimed: '조준 사격!', summon: '소환!', sweep: '광선!', pools: '독 웅덩이!', wave: '파도!', tsunami: '해일!', spore: '포자!', bloom: '개화!', prism: '프리즘!', shatter: '파편!', gale: '돌풍!', cyclone: '회오리!', void: '공허!', eclipse: '일식!', burrow: '잠복!', sink: '함몰!', vent: '증기 분출!', overheat: '과열!', bolt: '낙뢰!', tempest: '폭풍!', mirror: '거울!', reflect: '반사!', hammer: '망치!', meteor: '운석!' };
@@ -60,12 +61,14 @@ export class BossAI {
     if (!this.mid && this.bar) for (const [i, f] of [[1, 0.7], [2, 0.4]]) if ((this.phase || 0) < i && m.hp <= m.maxHp * f) this.phaseShift(i, f);
     if (this.mark) {
       if (m.expose > s.bt && m.active) {
-        this.mark.setPosition(m.x, m.y - m.displayHeight * 0.1).setScale((m.displayWidth * 0.62 / 28) * (1 + 0.12 * Math.sin(s.bt / 80)));
-        this.markTxt?.setPosition(m.x, m.y - m.displayHeight * 0.1 - 1).setAlpha(0.6 + 0.4 * Math.abs(Math.sin(s.bt / 120)));
-      } else { this.mark.destroy(); this.mark = null; this.markTxt?.destroy(); this.markTxt = null; }
+        // 48차: fx2 약점 과녁을 크게(보스 몸 폭의 70%, 최소 1.8배)
+        const sc = Math.max(1.8, m.displayWidth * 0.7 / 28) * (1 + 0.1 * Math.sin(s.bt / 80));
+        this.mark.setPosition(m.x, m.y - m.displayHeight * 0.1).setScale(sc);
+        this.markTxt?.setPosition(m.x, m.y - m.displayHeight * 0.1 - 22 * Math.max(1, sc * 0.6)).setAlpha(0.6 + 0.4 * Math.abs(Math.sin(s.bt / 120)));
+      } else { this.mark.destroy(); this.mark = null; this.markTxt?.destroy(); this.markTxt = null; this.wborder?.destroy(); this.wborder = null; }
     }
     if (enraged && !this.rage) {
-      this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; s.cameras.main.shake(300, 0.005); sfx('bossIn');
+      this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; this.aura = rageAura(s, m); phaseBorder(s, 800, 0xff4040); s.cameras.main.shake(300, 0.005); sfx('bossIn');
       const what = D.RAGE_WHAT[this.b.rage];
       // 중간 보스는 배너 대신 짧은 알림(예고 없이 새 공격이 나왔다)
       if (this.b.rage && !this.mid) s.banner(`${this.b.name}이 분노했다!`, `새 공격: ${what}`);
@@ -106,10 +109,12 @@ export class BossAI {
   // 47차: 보스 머리 위 말풍선 한 줄
   bubble(text, ms = 1500) {
     const s = this.s, m = this.m;
-    const t = s.add.text(0, 0, text, font(10, '#2a1a10')).setOrigin(0.5);
-    const w = t.width + 14, h = 18;
-    const bg = s.add.graphics().fillStyle(0xfff4d8, 1).lineStyle(2, 0x2a1a10, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 5).strokeRoundedRect(-w / 2, -h / 2, w, h, 5)
-      .fillTriangle(-4, h / 2 - 1, 4, h / 2 - 1, 0, h / 2 + 6);
+    const t = s.add.text(0, -2, text, font(10, '#2a1a10', 0)).setOrigin(0.5);
+    const w = Math.max(60, t.width + 26), h = 30;
+    // 48차: fx2 말풍선 틀(9슬라이스). 틀이 없으면 예전 둥근 사각형
+    const fr = bubbleFrame(s, w, h);
+    const bg = fr || s.add.graphics().fillStyle(0xfff4d8, 1).lineStyle(2, 0x2a1a10, 1).fillRoundedRect(-w / 2, -9, w, 18, 5).strokeRoundedRect(-w / 2, -9, w, 18, 5)
+      .fillTriangle(-4, 8, 4, 8, 0, 15);
     const c = s.add.container(m.x, m.y - m.displayHeight * 0.75, [bg, t]).setDepth(42);
     const follow = () => { if (!m.active || !c.active) return; c.setPosition(m.x, m.y - m.displayHeight * 0.75); };
     s.events.on('update', follow);
@@ -120,30 +125,36 @@ export class BossAI {
     const s = this.s, m = this.m;
     // 47차: 0.7초 완전 정지(보스·움직임), 화면 번쩍임, 말풍선, 약점 표식
     this.phase = i; this.busy = Math.max(this.busy, 1100); m.setVelocity(0, 0);
-    m.expose = s.bt + 3600;
+    m.expose = s.bt + 4200;
     s.hitstop = Math.max(s.hitstop || 0, 700);
-    s.flashFx.setAlpha(0.75); s.tweens.add({ targets: s.flashFx, alpha: 0, duration: 450 });
+    s.flashFx.setAlpha(0.45); s.tweens.add({ targets: s.flashFx, alpha: 0, duration: 450 });
+    phaseBorder(s, 900);
     this.bubble(PHASE_LINE[i - 1] || '이제부터 진짜다!');
     s.cameras.main.shake(260, 0.006); s.cameras.main.flash(180, 255, 240, 200); sfx('bossIn');
     const ring = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(30).setScale(0.4);
     s.tweens.add({ targets: ring, scale: m.displayWidth / 28 + 1.4, alpha: 0, duration: 520, onComplete: () => ring.destroy() });
     s.tweens.add({ targets: m, scaleX: m.scaleX * 1.15, scaleY: m.scaleY * 0.9, duration: 160, yoyo: true });
     this.mark?.destroy();
-    this.mark = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(41).setAlpha(1);
+    // 48차: 약점 과녁은 fx2 그림(반복 깜빡임), 약점 구간 동안 화면 테두리와 효과음
+    this.mark = has(s, 'weakpoint') ? s.add.sprite(m.x, m.y, 'x_weakpoint').setDepth(41).setScale(2.4).play('x_weakpoint')
+      : s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(41).setAlpha(1);
     this.markTxt?.destroy();
-    this.markTxt = s.add.text(m.x, m.y, '약점!', font(10, '#ff5a4a', 3)).setOrigin(0.5).setDepth(41);
+    this.markTxt = s.add.text(m.x, m.y, '약점!', font(11, '#ffe060', 3)).setOrigin(0.5).setDepth(41);
+    this.wborder?.destroy(); this.wborder = weakBorder(s);
+    sfx('weak');
     s.banner(`페이즈 ${i + 1}!`, '약점이 드러났다 · 지금 몰아쳐라 (추가 피해)');
     s.log?.('boss_phase', { boss: this.key, phase: i + 1, at: f });
   }
 
-  // 예고: 빨간 원이 차오른 뒤 터진다
-  warnCircle(x, y, r, ms, onBoom) {
-    const s = this.s, g = s.add.graphics().setDepth(9);
+  // 예고: fx2 원형 그림이 차오른 뒤 터진다(48차). 소환 자리는 마법진 그림
+  warnCircle(x, y, r, ms, onBoom, summon = false) {
+    const s = this.s, sp = warnDisc(s, x, y, r, summon);
+    if (sp) { runWarn(s, sp, ms, onBoom); return; }
+    const g = s.add.graphics().setDepth(9);
     const st = { f: 0 };
     s.tweens.add({
       targets: st, f: 1, duration: ms,
-      // 몹·이펙트에 묻히지 않게 테두리를 굵게 하고 깜빡인다
-      onUpdate: () => { const blink = 0.55 + 0.45 * Math.abs(Math.sin(st.f * 12)); g.clear().fillStyle(0xff2030, 0.2).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(2.5, 0xff4050, blink).strokeEllipse(x, y, r * 2, r * 1.5).fillStyle(0xff2030, 0.32).fillEllipse(x, y, r * 2 * st.f, r * 1.5 * st.f); },
+      onUpdate: () => { const blink = 0.55 + 0.45 * Math.abs(Math.sin(st.f * 12)); g.clear().fillStyle(0xff2030, 0.2).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(2.5, 0xff4050, blink).strokeEllipse(x, y, r * 2, r * 1.5); },
       onComplete: () => { g.destroy(); onBoom(); },
     });
   }
@@ -155,8 +166,11 @@ export class BossAI {
     const s = this.s;
     s.cameras.main.shake(220, 0.01);
     sfx('boom');
-    const ring = s.add.image(x, y, 'ring').setScale(0.3, 0.22).setTint(0xffe0c0).setDepth(9).setAlpha(0.9);
-    s.tweens.add({ targets: ring, scaleX: (r || 40) / 28, scaleY: (r || 40) / 38, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
+    // 48차: 착탄은 fx2 충격파 그림(없으면 예전 고리)
+    if (!playOnce(s, 'impact_slam', x, y, { sx: Math.max(0.5, (r || 40) * 2 / 100), sy: Math.max(0.5, (r || 40) * 1.5 / 100), depth: 10 })) {
+      const ring = s.add.image(x, y, 'ring').setScale(0.3, 0.22).setTint(0xffe0c0).setDepth(9).setAlpha(0.9);
+      s.tweens.add({ targets: ring, scaleX: (r || 40) / 28, scaleY: (r || 40) / 38, alpha: 0, duration: 300, onComplete: () => ring.destroy() });
+    }
     s.dust.explode(20, x, y);
     if (r && this.inWarn(x, y, r)) s.hurt(this.m.dmg * 1.6);
   }
@@ -203,15 +217,24 @@ export class BossAI {
     const s = this.s, m = this.m;
     const a = Phaser.Math.Angle.Between(m.x, m.y, s.hero.x, s.hero.y), len = 260;
     this.busy = 1500; m.setVelocity(0, 0);
-    const g = s.add.graphics().setDepth(9);
-    g.fillStyle(0xff2030, 0.22).lineStyle(1, 0xff4050, 0.9);
-    const w = m.displayWidth * 0.6, cx = Math.cos(a), cy = Math.sin(a), nx = -cy * w / 2, ny = cx * w / 2;
-    const pts = [{ x: m.x + nx, y: m.y + ny }, { x: m.x + cx * len + nx, y: m.y + cy * len + ny }, { x: m.x + cx * len - nx, y: m.y + cy * len - ny }, { x: m.x - nx, y: m.y - ny }];
-    g.fillPoints(pts, true).strokePoints(pts, true);
+    const w = m.displayWidth * 0.6, cx = Math.cos(a), cy = Math.sin(a);
+    const strip = warnStrip(s, m.x, m.y, a, len, w);
+    let g = strip;
+    if (strip) runWarn(s, strip, fast ? 550 : 750);
+    else {
+      g = s.add.graphics().setDepth(9);
+      g.fillStyle(0xff2030, 0.22).lineStyle(1, 0xff4050, 0.9);
+      const nx = -cy * w / 2, ny = cx * w / 2;
+      const pts = [{ x: m.x + nx, y: m.y + ny }, { x: m.x + cx * len + nx, y: m.y + cy * len + ny }, { x: m.x + cx * len - nx, y: m.y + cy * len - ny }, { x: m.x - nx, y: m.y - ny }];
+      g.fillPoints(pts, true).strokePoints(pts, true);
+    }
+    const sx0 = m.x, sy0 = m.y;
     sfx('warn');
     s.tweens.add({ targets: m, x: m.x - cx * 8, y: m.y - cy * 8, duration: fast ? 500 : 700 });
     s.time.delayedCall(fast ? 550 : 750, () => {
-      g.destroy();
+      g.active && g.destroy();
+      // 돌진이 시작되면 지나간 자리에 먼지 자국
+      playOnce(s, 'impact_charge', sx0, sy0, { sx: 1.6, sy: Math.max(0.8, w / 40), rot: a, depth: 8, origin: [0, 0.5], alpha: 0.9 });
       m.setVelocity(cx * 520, cy * 520);
       s.cameras.main.shake(300, 0.004);
       s.time.delayedCall(500, () => { if (m.active) m.setVelocity(0, 0); });
@@ -227,7 +250,7 @@ export class BossAI {
     // 47차: 소환 자리에 먼저 빨간 표시가 뜨고 0.7초 뒤 졸개가 나온다
     for (let i = 0; i < 6; i++) {
       const a = i / 6 * Math.PI * 2, x = m.x + Math.cos(a) * 50, y = m.y + Math.sin(a) * 50;
-      this.warnCircle(x, y, 12, 700, () => { if (m.active) s.spawn(false, s.ch.mobs[i % 3], { force: true, at: { x, y } }); });
+      this.warnCircle(x, y, 14, 700, () => { if (m.active) s.spawn(false, s.ch.mobs[i % 3], { force: true, at: { x, y } }); }, true);
     }
   }
 
@@ -247,7 +270,10 @@ export class BossAI {
     const a0 = Phaser.Math.Angle.Between(m.x, m.y, s.hero.x, s.hero.y) - dir * arc / 2;
     this.busy = 2100; m.setVelocity(0, 0);
     const g = s.add.graphics().setDepth(9), st = { a: a0 };
-    g.fillStyle(0xff2030, 0.26).slice(m.x, m.y, len, a0, a0 + dir * arc, dir < 0).fillPath()
+    // 48차: 휩쓸 범위는 fx2 부채꼴 그림(중심 방향 = 시작각에서 반 호만큼)
+    const fan = warnFan(s, m.x, m.y, a0 + dir * arc / 2, len);
+    if (fan) runWarn(s, fan, fast ? 650 : 850);
+    else g.fillStyle(0xff2030, 0.26).slice(m.x, m.y, len, a0, a0 + dir * arc, dir < 0).fillPath()
       .lineStyle(2, 0xff4050, 0.8).lineBetween(m.x, m.y, m.x + Math.cos(a0) * len, m.y + Math.sin(a0) * len);
     sfx('warn');
     s.time.delayedCall(fast ? 650 : 850, () => {
@@ -291,9 +317,15 @@ export class BossAI {
 
   die() {
     const s = this.s, m = this.m;
-    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy(); this.markTxt?.destroy();
+    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy(); this.markTxt?.destroy(); this.wborder?.destroy(); this.aura?.destroy();
     this.bar?.forEach(o => o.destroy());
     s.hitstop = 260;
+    // 48차: 막타는 0.4초 슬로모션(실제 시간 기준)
+    if (!this.mid) {
+      const sl = 0.25;
+      s.time.timeScale = sl; s.tweens.timeScale = sl; s.anims.globalTimeScale = sl;
+      setTimeout(() => { try { s.time.timeScale = 1; s.tweens.timeScale = 1; s.anims.globalTimeScale = 1; } catch { /* 장면이 이미 닫힘 */ } }, 400);
+    }
     s.cameras.main.shake(600, 0.015);
     s.flashFx.setAlpha(0.9); s.tweens.add({ targets: s.flashFx, alpha: 0, duration: 700 });
     sfx('boom'); s.time.delayedCall(200, () => sfx('boom'));

@@ -126,7 +126,7 @@ export class CosmeticActor {
         .setScale(0.95 * h.scaleX, 0.95 * h.scaleY).setAngle(h.angle).setFlipX(h.flipX).setAlpha(h.alpha).setDepth(h.depth + 0.02);
     }
     if (this.aura) {
-      this.aura.setPosition(h.x, h.y).setScale(h.scaleX, h.scaleY).setAlpha(0.8 * h.alpha).setVisible(h.visible).setDepth(h.depth + 0.015);
+      this.aura.setPosition(h.x, h.y).setScale(h.scaleX, h.scaleY).setAlpha((k === 'slash' ? 0.3 : 0.55) * h.alpha).setVisible(h.visible).setDepth(h.depth + 0.015);
     }
     if (this.pet) {
       if (this.petSlash > 0 && (this.petSlash -= dt) <= 0) this.pet.play(`pet_${this.look.pet}`);

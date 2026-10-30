@@ -1,3 +1,4 @@
+import * as fx2 from './fx2.js';
 import { cosmetic } from './cosmetics.js';
 // 액티브 스킬 8종 + 무기 전용 7종(검기·투창·지진·화살비·수류탄·기공파·유도 마탄). 각 스킬은 재사용 대기(ms)가 차면 발동한다. 수치는 lv(1~5)로 정한다
 import { sfx } from './sfx.js';
@@ -160,27 +161,30 @@ export class Weapons {
       const g0 = this.enhGlow(), tier = s.sv.tier;
       // 45차: 무기 단계가 전투에서 보이게(표현만, 판정 범위·피해는 그대로) — 단계마다 궤적이 커지고, 3단계부터 검 고유색, 6단계부터 한 겹 더 깐다
       const tt = TIERS[tier]?.tint, g = { ...g0, scale: g0.scale * (1 + 0.05 * tier), tint: g0.tint || (tier >= 3 ? tt : 0), glow: g0.glow || tier >= 6 };
-      const wd = g.wide || 1, sx0 = 0.85 * area * g.scale * (spear ? 1.5 : axe ? 1.3 : 1), sy0 = 0.85 * area * g.scale * (spear ? 0.35 : axe ? 1.3 : 1) * (spear ? 1 : wd);
-      const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.85)
+      // 48차: 궤적 크기·농도는 강화 단계·범위와 떼어 상한을 둔다(후반 화면 1/3~1/2을 덮던 문제). 판정 범위·피해는 그대로
+      const lite = !!s.sv.fxLite, wd = Math.min(g.wide || 1, 1.15);
+      const cap = Math.min(1.1, 0.85 * Math.min(area, 1.3) * Math.min(g.scale, 1.15));
+      const sx0 = cap * (spear ? 1.5 : axe ? 1.25 : 1), sy0 = cap * (spear ? 0.35 : axe ? 1.25 : 1) * (spear ? 1 : wd);
+      const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.8)
         .setScale(sx0, sy0).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
-      if (g.skin) skinFx(fx, g.skin).setAlpha(1);
-      else if (g.tint) fx.setTint(g.tint).setAlpha(1);
-      // +5부터 같은 궤적을 겹쳐 깐다: +5 한 겹(파랑) · +10 두 겹(주황, 더 넓게) · +15 세 겹(보라 + 흰 심지)
-      const layers = g.layers || (g.glow ? 1 : 0), et = g.etint || g.tint;
-      for (let li = 0; li < layers; li++) {
-        const fx2 = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(27 - li * 0.1).setAlpha(0.6)
-          .setScale(sx0 * (1.2 + 0.18 * li), sy0 * (1.2 + 0.3 * li)).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
-        if (li === 2) fx2.setTint(0xffffff).setAlpha(0.85).setScale(sx0 * 0.9, sy0 * 0.45);
-        else if (et) fx2.setTint(et); else if (g.skin) skinFx(fx2, g.skin);
-        const pl = () => fx2.active && fx2.setPosition(h.x + Math.cos(a) * 22 * area, h.y - 4 + Math.sin(a) * 18 * area);
-        pl(); fx2.on('animationupdate', pl);
-        fx2.once('animationcomplete', () => fx2.destroy());
+      if (g.skin) skinFx(fx, g.skin).setAlpha(0.85);
+      else if (g.tint) fx.setTint(g.tint).setAlpha(0.85);
+      // +5/+10/+15: 겹쳐 깔던 큰 복사본 대신 강화 궤적 그림 한 장(크기 상한, 0.15초 안에 사라짐)으로 단계를 구분한다
+      const kill = o => s.time.delayedCall(150, () => o.active && o.destroy());
+      if (e >= 5 && !lite) {
+        const k = e >= 15 ? 'slash_plus15' : e >= 10 ? 'slash_plus10' : 'slash_plus5';
+        const sp = fx2.playOnce(s, k, 0, 0, { sx: e >= 15 ? 0.95 : e >= 10 ? 0.9 : 0.85, depth: 29, alpha: 0.8, rot: a });
+        if (sp) {
+          if (Math.cos(a) < 0) sp.setFlipY(true);
+          const pl = () => sp.active && sp.setPosition(h.x + Math.cos(a) * 30 * Math.min(area, 1.3), h.y - 4 + Math.sin(a) * 24 * Math.min(area, 1.3));
+          pl(); sp.on('animationupdate', pl); kill(sp);
+        }
       }
       this.skinSlash(a, area);
       const fwd = spear ? 2 : 1;
       const place = () => fx.setPosition(h.x + Math.cos(a) * 22 * area * fwd, h.y - 4 + Math.sin(a) * 18 * area * fwd);
       place(); fx.on('animationupdate', place);
-      fx.once('animationcomplete', () => fx.destroy());
+      fx.once('animationcomplete', () => fx.destroy()); kill(fx);
       sfx('swing', 60);
       s.time.delayedCall(45, () => {
         let hit = 0, boom = false, chain = 0;

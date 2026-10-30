@@ -55,7 +55,8 @@ export class Lobby extends Phaser.Scene {
     // 세로로 긴 폰(390x844)에서 판 위아래 남는 검은 띠를 전투 화면처럼 바닥 무늬로 채운다(44차)
     setBackdrop(this, 'tiles', 0x6a5a82);
     this.bg = this.add.container(0, 0);
-    this.body = this.add.container(0, 0);
+    // 세로로 더 긴 폰(H>480)은 탭 본문을 남는 높이의 절반만큼 내려 위아래 여백을 고르게 한다(48차)
+    this.body = this.add.container(0, Math.round((H - 480) * 0.5));
     this.makeTop();
     this.makeTabs();
     logUser({ cleared: sv.cleared, tier: sv.tier, enh: sv.enh, payer: !!sv.paidTotal, paid_total: sv.paidTotal || 0, no_ads: !!sv.noAds, pass: sv.passLeft > 0 });
@@ -273,6 +274,13 @@ export class Lobby extends Phaser.Scene {
     const g = this.make.graphics({ add: false });
     // 망치 그림이 로드돼도 불티(spark)는 따로 만든다(같이 건너뛰면 강화 불꽃이 깨진다)
     if (!this.textures.exists('spark')) g.fillStyle(0xffffff).fillRect(0, 0, 2, 2).generateTexture('spark', 2, 2);
+    // 설정 톱니(48차): 18x18
+    if (!this.textures.exists('gear')) {
+      g.clear().fillStyle(0xcfd6dc);
+      for (let k = 0; k < 8; k++) g.fillCircle(9 + Math.cos(k * Math.PI / 4) * 7.2, 9 + Math.sin(k * Math.PI / 4) * 7.2, 1.9);
+      g.fillCircle(9, 9, 6).fillStyle(0x0b111a).fillCircle(9, 9, 2.6);
+      g.generateTexture('gear', 18, 18);
+    }
     if (this.textures.exists('hammer')) return g.destroy();
     g.clear().fillStyle(0x0a0710).fillRect(9, 0, 4, 22).fillRect(0, 0, 22, 9);
     g.fillStyle(0x7a4a22).fillRect(10, 8, 2, 13);
@@ -290,7 +298,7 @@ export class Lobby extends Phaser.Scene {
     const items = [[12, () => fmt(sv.gold)], [13, () => fmt(sv.stone)], [11, () => sv.guard], [15, () => `${sv.sweep}`], [-1, () => fmt(sv.gem)]];
     // 상단은 금화·강화석·보석 셋만(디자인 인계): 방지권은 대장간, 소탕권은 전투 탭에서 보인다. 칸 번호(bump)는 그대로 둔다
     this.topTxt = items.map(([ic, get], i) => {
-      const x = [6, 90, -1, -1, 164][i];
+      const x = [4, 56, -1, -1, 108][i];
       const t = this.add.text(x + 17, 10, '', font(11, '#f2e4bc', 0)).setDepth(51);
       t.get = get;
       if (x < 0) return t.setVisible(false);
@@ -298,20 +306,20 @@ export class Lobby extends Phaser.Scene {
       else this.add.existing(icon(this, x + 7, 17, ic, 14).setDepth(51));
       return t;
     });
-    // 알림 종: 오늘 임무·주간·출석을 연다. 받을 보상이 있으면 빨간 점
+    // 알림 종·소리·설정(48차): 종 44px, 소리 30px, 설정 톱니 44px로 따로 떨어뜨린다
     if (this.textures.exists('bell') && sv.cleared > 0) {
-      const bell = this.add.image(W - 40, 17, 'bell').setDepth(51).setInteractive({ useHandCursor: true });
-      bell.on('pointerup', () => { if (this.busy) return; sfx('click'); track('bell_tap'); this.missionWin(); });
-      this.bellDot = this.add.circle(W - 32, 10, 3, 0xed786f).setDepth(52);
+      const bell = this.add.image(176, 17, 'bell').setDepth(51);
+      this.add.rectangle(176, 22, 44, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); track('bell_tap'); this.missionWin(); });
+      this.bellDot = this.add.circle(186, 10, 3, 0xed786f).setDepth(52);
       // 점만으론 무슨 알림인지 모른다(42차): 종 아래에 한 줄로 뭘 받는지 작게 보여 준다
-      this.bellHint = this.add.text(W - 32, 31, '', font(8, '#ffd75e', 2)).setOrigin(1, 0.5).setDepth(52);
+      this.bellHint = this.add.text(198, 31, '', font(8, '#ffd75e', 2)).setOrigin(1, 0.5).setDepth(52);
     }
     // 소리 켜고 끄기
-    const snd = this.add.text(W - 8, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
-    snd.on('pointerup', () => { sv.sound = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
-    // 설정(저장 내보내기·가져오기, 구매 복원)
-    const cfg = this.add.text(W - 8, 31, '설정', font(8, '#a1b2b6', 2)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
-    cfg.on('pointerup', () => { if (this.busy) return; sfx('click'); openSettings(this); });
+    const snd = this.add.text(212, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(0.5).setDepth(51);
+    this.add.rectangle(212, 22, 30, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { sv.sound = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
+    // 설정(저장 내보내기·가져오기, 구매 복원, 이펙트 간단히): 톱니 아이콘, 누르는 칸 44px
+    this.add.image(248, 17, 'gear').setDepth(51);
+    this.add.rectangle(248, 22, 44, 44, 0xffffff, 0.001).setDepth(51).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); openSettings(this); });
     this.refreshTop();
   }
   refreshTop() { this.topTxt.forEach(t => t.setText(t.get())); this.bellDot?.setVisible(this.missionReady() > 0); this.bellHint?.setText(this.bellText()); }
@@ -1137,8 +1145,11 @@ export class Lobby extends Phaser.Scene {
     }
     // 패키지
     track('view_item_list', { item_list_id: 'pack', items: D.IAP.filter(it => !soldOut(sv, it)).map(it => it.id).join(','), gem: sv.gem });
-    D.IAP.forEach((it, i) => {
-      const y = 76 + i * 50, sold = soldOut(sv, it);
+    // 48차: 패키지를 보석 / 꾸러미 / 정기로 나눈다
+    const grp = this.packSub && D.PACK_GROUPS[this.packSub] ? this.packSub : 'gem';
+    [['gem', '보석'], ['bundle', '꾸러미'], ['sub', '정기']].forEach(([id, name], i) => b.add(button(this, 52 + i * 83, 86, 78, 22, name, () => { this.packSub = id; track('pack_sub', { sub: id }); this.show('shop'); }, { size: 10, color: grp === id ? 0x7a5a1a : 0x2a2440 })));
+    D.PACK_GROUPS[grp].map(id => D.IAP.find(x => x.id === id)).filter(Boolean).forEach((it, i) => {
+      const y = 100 + i * 50, sold = soldOut(sv, it);
       const hot = it.id === 'starter' || it.id === 'pass' || it.id === 'cosm';
       b.add(panel(this, 12, y, W - 24, 46, { line: hot && !sold ? 0xffd75e : COLOR.line }));
       b.add(gemIcon(this, 30, y + 23, 18));

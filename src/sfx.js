@@ -62,6 +62,7 @@ const SOUNDS = {
   boom: (c, t) => { tone(c, t, { f0: 120, f1: 30, dur: 0.35, type: 'triangle', vol: 0.45 }); hiss(c, t, { dur: 0.3, vol: 0.3, hp: 100, lp: 1500 }); },
   zap: (c, t) => { hiss(c, t, { dur: 0.15, vol: 0.3, hp: 3000 }); tone(c, t, { f0: 1400, f1: 200, dur: 0.12, type: 'sawtooth', vol: 0.12 }); },
   shoot: (c, t) => tone(c, t, { f0: 700, f1: 400, dur: 0.06, type: 'triangle', vol: 0.1 }),
+  weak: (c, t) => { tone(c, t, { f0: 1100, f1: 1700, dur: 0.1, type: 'square', vol: 0.12 }); tone(c, t + 0.1, { f0: 1700, f1: 2200, dur: 0.12, type: 'square', vol: 0.1 }); hiss(c, t, { dur: 0.08, vol: 0.12, hp: 3000 }); },
   warn: (c, t) => { tone(c, t, { f0: 440, dur: 0.12, vol: 0.15 }); tone(c, t + 0.16, { f0: 440, dur: 0.12, vol: 0.15 }); },
   click: (c, t) => tone(c, t, { f0: 900, f1: 700, dur: 0.04, type: 'square', vol: 0.1 }),
   buy: (c, t) => { tone(c, t, { f0: 1200, dur: 0.05, vol: 0.1 }); tone(c, t + 0.06, { f0: 1600, dur: 0.1, vol: 0.1 }); },

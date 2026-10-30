@@ -3,6 +3,7 @@ import { W, H, MOBS, BOSSES } from './data.js';
 import { font, hiCam } from './ui.js';
 import { makeWeaponTextures } from './wart.js';
 import { updateGate, startCheck } from './updateGate.js';
+import { loadFx2, makeFx2Anims } from './fx2.js';
 import { BODY_LOOKS, COS_ROWS, WEAPON_LOOKS, HEAD_LOOKS, CASH_PETS, AURAS } from './cosmetics.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
@@ -42,6 +43,7 @@ export class Boot extends Phaser.Scene {
     this.load.spritesheet('cos_fx', 'assets/cosmetics/fx.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('cos_fx2', 'assets/cosmetics2/fx.png', { frameWidth: 16, frameHeight: 16 });
     for (const id of AURAS) this.load.spritesheet(`cos_aura_${id}`, `assets/cosmetics2/fx_${id}.png`, { frameWidth: 52, frameHeight: 52 });
+    loadFx2(this);
     for (const k of ICONS) this.load.image(k, `assets/icon/${k}.png`);
     for (const id of WEAPONS) for (let t = 0; t < 10; t++) this.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
   }
@@ -91,6 +93,7 @@ export class Boot extends Phaser.Scene {
     A('fxCrit', this.sheet('fx2_r0'), 22, 0);
     A('fxSpin', this.sheet('fx2_r1'), 20, 0);
     A('fxPillar', this.sheet('fx2_r2'), 10, 0);
+    makeFx2Anims(this);
     for (let i = 0; i < 4; i++) this.sheet('icons_r' + i);
 
     // 몬스터: 전용 그림이 없으면 1챕터 같은 줄 몬스터를 색만 바꿔 쓴다

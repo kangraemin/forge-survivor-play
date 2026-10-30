@@ -11,6 +11,7 @@ import { Pet } from './pets.js';
 import { track, logCtx } from './log.js';
 import { dexKill } from './codex.js';
 import { makeEnv } from './envfx.js';
+import { raidFlag, playOnce } from './fx2.js';
 
 import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 import { dressHero, CosmeticActor, weaponKey, placeHeld } from './cosmeticView.js';
@@ -544,6 +545,7 @@ export class Battle extends Phaser.Scene {
     const ex = Math.cos(a), ey = Math.sin(a), horiz = Math.abs(ex) > Math.abs(ey);
     const bar = this.add.rectangle(horiz ? (ex > 0 ? W - 4 : 4) : W / 2, horiz ? H / 2 : (ey > 0 ? H - 4 : 4), horiz ? 8 : W, horiz ? H : 8, 0xff3030, 0.75).setScrollFactor(0).setDepth(60);
     this.tweens.add({ targets: bar, alpha: 0.15, duration: 180, yoyo: true, repeat: 6, onComplete: () => bar.destroy() });
+    raidFlag(this, ex, ey, 2600);
     for (let k = 0; k < 8; k++) this.time.delayedCall(2500 + k * 1250, () => { if (!this.over && !this.bossPhase) this.formation(a + RF(-0.25, 0.25)); });
     this.time.delayedCall(2500 + 8 * 1250, () => !this.over && toast(this, '습격을 막아냈다!', '#5fdc6a', 96));
   }
@@ -588,7 +590,8 @@ export class Battle extends Phaser.Scene {
     m.hitBy[src] = this.bt;
     const { dmg, crit } = this.dmgCalc(mult, tag);
     const open = m.isBoss && m.expose > this.bt;   // 46차: 보스 페이즈 전환 뒤 짧게 약점이 드러난다 — 이때 맞으면 추가 피해
-    m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (open ? 1.5 : 1);
+    if (open && this.bt - (this.weakAt || -1e9) > 260) { this.weakAt = this.bt; sfx('weak', 120); playOnce(this, 'weakpoint_break', m.x, m.y - m.displayHeight * 0.1, { sx: Math.max(1.4, m.displayWidth * 0.45 / 48), depth: 43 }); }
+    m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (open ? D.WEAK_MUL : 1);
     if (open && this.bt - (m.exposeTxt || 0) > 260) {
       m.exposeTxt = this.bt;
       const wt = this.add.text(m.x + RF(-14, 14), m.y - m.displayHeight * 0.35, '약점!', font(10, '#ffe060', 3)).setOrigin(0.5).setDepth(39);
@@ -621,8 +624,8 @@ export class Battle extends Phaser.Scene {
         const c2 = this.add.sprite(m.x, m.y, 'fx2_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31).setScale(0.8).play('fxCrit');
         c2.once('animationcomplete', () => c2.destroy());
       }
-      this.spark.explode(crit ? 12 : 5, m.x, m.y);
-    } else this.spark.explode(3, m.x, m.y);
+      if (this.spark.getAliveParticleCount() < 50) this.spark.explode(crit ? 8 : 4, m.x, m.y);
+    } else if (this.spark.getAliveParticleCount() < 50) this.spark.explode(3, m.x, m.y);
     this.popup(m.x, m.y - 12, dmg, crit, fx === 'big', m);
     sfx(crit ? 'crit' : 'hit', 45, 1 + 0.1 * Math.min(3, Math.floor(this.sv.enh / 5)));
     if (m.parryUntil > this.bt) this.env?.onHit(m);
@@ -685,6 +688,14 @@ export class Battle extends Phaser.Scene {
       this.tweens.add({ targets: pp.t, scale: 1, duration: 90 });
       return;
     }
+    // 48차: 다른 몹이어도 0.3초 안·64px 안에서 큰 숫자가 연달아 뜨면 한 숫자로 합친다(화면이 숫자로 덮이는 것 방지)
+    const pl = this.popLast;
+    if (pl && pl.t.active && pl.t.pop === pl && this.bt - pl.at < 300 && Math.hypot(pl.t.x - x, pl.t.y - y) < 64) {
+      pl.n += n; pl.at = this.bt; pl.crit = pl.crit || crit;
+      pl.t.setText(fmt(pl.n)).setAlpha(1).setScale(1.2); if (pl.crit) pl.t.setColor('#ffd23f');
+      this.tweens.add({ targets: pl.t, scale: 1, duration: 90 });
+      return;
+    }
     if (!crit && n < 100 && Math.random() > 0.25) return;   // 일반 타격도 네 번에 한 번은 보여 강화 차이가 숫자로 보인다
     // 45차: 동시 4개 상한, 새 숫자는 0.12초에 하나씩만(치명타는 예외)
     if (!crit && this.bt - (this.popAt || -1e9) < 120) return;
@@ -706,12 +717,35 @@ export class Battle extends Phaser.Scene {
     else t = this.add.text(x + R(-6, 6), y, fmt(n), st).setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
     this.popups.push(t);
     t.pop = null;
-    if (m) t.pop = m._pop = { t, n, at: this.bt, crit };
+    t.pop = this.popLast = { t, n, at: this.bt, crit };
+    if (m) m._pop = t.pop;
     this.tweens.add({ targets: t, scale: 1, duration: 110, ease: 'Back.Out' });
     this.tweens.add({
       targets: t, y: y - 16, alpha: 0, delay: crit ? 380 : 420, duration: 300,
       onComplete: () => { const i = this.popups.indexOf(t); if (i >= 0) { this.popups.splice(i, 1); this.popFree_(t); } },
     });
+  }
+
+  // 48차: 보스가 화면 밖에 있으면 화면 가장자리에 그쪽을 가리키는 화살표를 띄운다(15장처럼 큰 보스가 시야 밖일 때)
+  bossArrow_() {
+    const m = this.boss?.m, vr = viewRect(this);
+    const off = m && m.active && !m.dead && !vr.contains(m.x, m.y);
+    if (!off) { if (this.bArrow) this.bArrow.setVisible(false); return; }
+    if (!this.bArrow) {
+      const g = this.add.graphics().setScrollFactor(0).setDepth(61);
+      g.fillStyle(0xff4040, 0.95).lineStyle(2, 0x2a0a0a, 1).fillTriangle(10, 0, -8, -9, -8, 9).strokeTriangle(10, 0, -8, -9, -8, 9);
+      const t = this.add.text(0, 0, '보스', font(9, '#ffd0d0', 2)).setOrigin(0.5).setScrollFactor(0).setDepth(61);
+      this.bArrow = this.add.container(0, 0, [g, t]).setScrollFactor(0).setDepth(61);
+      this.bArrowTxt = t; this.bArrow.g = g;
+    }
+    const cx = vr.centerX, cy = vr.centerY, dx = m.x - cx, dy = m.y - cy;
+    const hw = vr.width / 2 - 20, hh = vr.height / 2 - 70;   // 위쪽은 HUD 줄을 피해 70px 안쪽
+    const k = Math.min(hw / Math.max(1, Math.abs(dx)), hh / Math.max(1, Math.abs(dy)));
+    const sx = (cx + dx * k - vr.x) / vr.width * W, sy = (cy + dy * k - vr.y) / vr.height * H;
+    const ang = Math.atan2(dy, dx);
+    this.bArrow.setVisible(true).setPosition(sx, sy).setAlpha(0.7 + 0.3 * Math.sin(this.bt / 120));
+    this.bArrow.g.setRotation(ang);
+    this.bArrowTxt.setPosition(-Math.cos(ang) * 16, -Math.sin(ang) * 16);
   }
 
   popFree_(t) {
@@ -749,7 +783,7 @@ export class Battle extends Phaser.Scene {
       const c = this.fxGet(m.x, m.y, m.texture.key, m.frame.name).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff);
       this.tweens.add({ targets: c, x: m.x + Math.cos(ka) * kd, y: m.y + Math.sin(ka) * kd, angle: Math.cos(ka) > 0 ? 40 : -40, scaleX: c.scaleX * 1.4, scaleY: c.scaleY * 0.2, alpha: 0, duration: 220, ease: 'Quad.In', onComplete: () => this.fxFree_(c) });
     }
-    this.goo.setParticleTint(m.color); this.goo.explode(m.elite ? 24 : 8, m.x, m.y);
+    this.goo.setParticleTint(m.color); if (this.goo.getAliveParticleCount() < 70) this.goo.explode(m.elite ? 14 : 6, m.x, m.y);
     if (m.variant === 'split') for (const d of [-7, 7]) this.spawn(true, m.kind, { force: true, mini: true, at: { x: m.x + d, y: m.y + R(-4, 4) } })?.setTint(D.VARIANTS.split.tint);
     if (m.variant === 'burst') this.burst(m.x, m.y, m.dmg);
     const sm = this.fxGet(m.x, m.y - 2, 'fx1_r2s').setBlendMode(Phaser.BlendModes.ADD).setDepth(30).setAlpha(0.35).setScale(m.elite ? 1 : 0.5).setTint(m.color).play('fxSmoke');
@@ -954,7 +988,9 @@ export class Battle extends Phaser.Scene {
       r.xp -= D.xpNeed(r.lv); r.lv++;
       this.log('level_up', { wave: this.wave });
       this.lvTxt.setText('Lv ' + r.lv);
-      this.ui.levelUp();
+      // 6레벨부터는 홀수 레벨(7·9·11…)을 카드 없이 자동 소강화로 넘긴다: 레벨업 창이 150초에 20번씩 뜨던 것을 절반으로(48차). 성장 레벨 수는 같다. 진화가 열렸으면 창을 연다
+      if (r.lv >= 6 && r.lv % 2 === 1 && !this.ui.evoReady()) this.ui.autoLevel();
+      else this.ui.levelUp();
     }
   }
 
@@ -1125,6 +1161,7 @@ export class Battle extends Phaser.Scene {
     this.bt += dt;
     this.mobCollider.active = (this.frameN = (this.frameN || 0) + 1) % 2 === 0;
     this.rebuildMobs();
+    this.bossArrow_();
     const r = this.run;
     if (this.fightXp > 0) { const fx = this.fightXp; this.fightXp = 0; if (r.lv < 3) this.gainXp(fx); }
     // 45차: 장과 무관하게 첫 레벨업은 늦어도 약 12초 안에 온다. 9장은 순풍에 떠밀려 몹 곁에 못 서 38초 Lv1이었다(7장 19초·10장 16초). 4초부터 8초 동안 Lv2분(3) 경험치가 시간으로 찬다

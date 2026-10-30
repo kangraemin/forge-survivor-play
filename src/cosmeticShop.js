@@ -82,15 +82,19 @@ export function cosmeticPacks(s, index = 0) {
 // 결과 위 빈 영역의 작은 추천 카드. 보상·재도전 버튼을 가리거나 자동 창을 띄우지 않는다.
 export function cosmeticResultCard(s, parent, win) {
   s.cosCard = false;
-  if (s.bot || s.dungeon || s.endless || !(s.sv.stats.runs === 1 || (win && s.isBoss) || s.cosTrial)) return false;
+  // 48차: 첫 3판은 보상과 '다음 판'만. 추천 카드는 4판째부터(보스 격파 때나 체험 끝)이고, 위쪽 HUD를 가리지 않게 결과 창 아래에 둔다
+  const gate = s.sv.stats.runs > 3 && win && s.isBoss;
+  if (s.bot || s.dungeon || s.endless || !(gate || s.cosTrial)) return false;
+  const base = 458, room = D.H - base - 4;
+  if (room < 40) return false;   // 480 높이 화면은 아래 빈 곳이 없어 카드를 건너뛴다
   const sv = s.sv, state = wardrobe(sv), it = cosmetic(s.cosTrial) || todayLook();
   s.cosCard = true;
-  parent.add(panel(s, 20, 24, 230, 56, { fill: 0x142a31, line: 0x507b89 }));
-  icon(s, parent, it, 43, 52, 40);
+  parent.add(panel(s, 20, base, 230, 40, { fill: 0x142a31, line: 0x507b89 }));
+  icon(s, parent, it, 40, base + 20, 28);
   const owned = state.owned[it.id];
-  parent.add(s.add.text(67, 30, `${s.cosTrial ? '체험 끝' : '오늘의 꾸미기'} · ${it.name}`, font9(10, '#d5e9ee')));
+  parent.add(s.add.text(60, base + 3, `${s.cosTrial ? '체험 끝' : '오늘의 꾸미기'} · ${it.name}`, font9(9, '#d5e9ee')));
   const trial = !s.cosTrial && !state.tried[it.id] && !owned && available(it);
-  const bt = button(s, 153, 63, 172, 22, trial ? '이 옷 30초 체험하기' : owned ? `${it.name} 착용하러 가기` : `${salePrice(sv, it).price} 보석으로 구매하기`, () => {
+  const bt = button(s, 156, base + 27, 176, 18, trial ? '이 옷 30초 체험하기' : owned ? `${it.name} 착용하러 가기` : `${salePrice(sv, it).price} 보석으로 구매하기`, () => {
     if (trial) {
       if (!startTrial(sv, it.id)) return; save();
       s.scene.start('Battle', { chapter: 0, stage: 0, bot: false, practice: true });

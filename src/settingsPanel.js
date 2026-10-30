@@ -31,7 +31,8 @@ function textDialog({ title, note = '', value = '', readonly = false, ok = '확�
 const SRC = { main: '정상', bak1: '백업에서 복구함', bak2: '백업에서 복구함', new: '새로 시작' };
 export function openSettings(scene) {
   const sv = load(), c = scene.modal(), st = loadStatus();
-  c.add(panel(scene, 16, 60, W - 32, 330, { fill: 0x1a1426, line: 0xffd75e }));
+  const a = adapter();
+  c.add(panel(scene, 16, 60, W - 32, a.available() ? 330 : 250, { fill: 0x1a1426, line: 0xffd75e }));
   c.add(scene.add.text(W / 2, 78, '설정', font(14, '#ffd75e')).setOrigin(0.5));
   c.add(button(scene, W - 38, 78, 26, 22, 'X', () => c.close(), { size: 11 }));
   const info = [`저장 상태: ${SRC[st.source] || '정상'}${st.lostRaw ? ' (읽지 못한 원본은 따로 보관)' : ''}`, `저장 형식 v${sv.schemaVersion}  ·  앱 ${channel()} 빌드 ${BUILD}`];
@@ -56,13 +57,14 @@ export function openSettings(scene) {
     const n = restorePurchases(store(), load()) + await restorePlatformPurchases();
     save(); track('purchase_restore_tap', { n }); toast(scene, n ? `구매 ${n}건을 되살렸어요` : '되살릴 구매가 없어요', n ? '#5fdc6a' : '#ffffff');
   });
-  const a = adapter();
-  const cloudLabel = a.available() ? '클라우드에 저장 / 불러오기' : '클라우드 저장 (준비 중)';
-  const cb = row(250, cloudLabel, async () => {
-    if (!a.available()) return toast(scene, '이 기기에서는 아직 준비 중이에요', '#a1b2b6');
-    const ok = await cloudPush(load()); toast(scene, ok ? '저장을 맡겼어요' : '맡기지 못했어요', ok ? '#5fdc6a' : '#ed786f');
-  });
-  if (!a.available()) cb.setEnabled(false);
-  c.add(scene.add.text(26, 276, '구매 기록은 저장과 따로 보관돼서\n저장이 사라져도 복원할 수 있어요.', font9(10, '#7d8f94')).setLineSpacing(3));
+  // 이펙트 간단히(48차): 큰 베기 호·파편·번쩍임을 줄인다. 클라우드 저장은 준비되기 전까지 보이지 않는다
+  const fx = row(250, '', () => { sv.fxLite = !sv.fxLite; save(); track('fx_lite', { on: !!sv.fxLite }); fx.label.setText(`이펙트 간단히: ${sv.fxLite ? '켜짐' : '꺼짐'}`); }, 0x3a3846);
+  fx.label.setText(`이펙트 간단히: ${sv.fxLite ? '켜짐' : '꺼짐'}`);
+  if (a.available()) {
+    row(286, '클라우드에 저장 / 불러오기', async () => {
+      const ok = await cloudPush(load()); toast(scene, ok ? '저장을 맡겼어요' : '맡기지 못했어요', ok ? '#5fdc6a' : '#ed786f');
+    });
+  }
+  c.add(scene.add.text(26, a.available() ? 312 : 276, '구매 기록은 저장과 따로 보관돼서\n저장이 사라져도 복원할 수 있어요.', font9(10, '#7d8f94')).setLineSpacing(3));
   void cloudPull;
 }
