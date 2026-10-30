@@ -117,7 +117,7 @@ export function skinFx(sprite, sk) {
 export function weaponIcon(scene, x, y, wid, tier = 0, size = 22) {
   const key = `w_${wid}${tier}`;
   // 검 0~4단계는 아이콘 시트 그림, 6단계 이후는 단계마다 따로 그린 w_sword<등급>(크기가 달라도 size에 맞춘다)
-  if (wid === 'sword' && tier < 5 && scene.textures.exists('icons_r0s') || !scene.textures.exists(key)) return icon(scene, x, y, TIERS[tier].icon, size);
+  if (!scene.textures.exists(key)) return icon(scene, x, y, TIERS[tier].icon, size);
   const im = scene.add.image(x, y, key);
   return im.setScale(size / Math.max(im.width, im.height));
 }

@@ -9,7 +9,7 @@ const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero
 // 6~15장 그림은 기존 그림의 색만 바꿔 만든다(tools/palette.py). 몹 시트 z6~z15(장당 3행), 보스 boss3~boss6, 바닥 tile6~tile15
 const NEW_CH = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', ...NEW_CH.map(c => 'z' + c)].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
-  .concat(['boss6_r0'], NEW_CH.map(c => 'tile' + c))
+  .concat(['boss6_r0'], NEW_CH.map(c => 'tile' + c), NEW_CH.map(c => 'prop' + c), [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(c => 'lobby_bg' + c))
   .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'lobby_bg', 'bell', 'tile2', 'tile3', 'tile4', 'tile5']);
 // 코드로 그리던 작은 그림을 대신하는 PNG(assets/icon). 있으면 makeTextures가 건너뛴다
 const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'meat', 'silver',
@@ -28,6 +28,7 @@ export class Boot extends Phaser.Scene {
     this.load.on('progress', v => { bar.width = 160 * v; });
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
     for (const k of REQUIRED.concat(OPTIONAL)) this.load.image(k, `assets/${k}.png`);
+    for (const k of ['hero2_r0', 'hero2_r1', 'hero_r1', 'hero_r2', 'hero2_r2']) this.load.image('hn_' + k, `assets/hn_${k}.png`);   // 검을 지운 전투용 주인공(검은 Battle이 단계별로 쥔다)
     for (const k of ICONS) this.load.image(k, `assets/icon/${k}.png`);
     for (const id of WEAPONS) for (let t = 0; t < 10; t++) this.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
   }
@@ -43,14 +44,17 @@ export class Boot extends Phaser.Scene {
   create() {
     const A = (key, sheet, rate, repeat = -1, frames) => sheet &&
       this.anims.create({ key, frames: this.anims.generateFrameNumbers(sheet, frames ? { frames } : {}), frameRate: rate, repeat });
-    A('walkFront', this.sheet('hero2_r0'), 8);
-    A('walkUp', this.sheet('hero2_r1'), 8);
-    A('walkSide', this.sheet('hero_r1'), 8);
-    A('slash', this.sheet('hero_r2'), 26, 0);
-    const pose = this.sheet('hero2_r2');
+    // 전투 주인공은 검을 지운 시트(hn_)를 쓴다. 로비는 검이 그려진 원본 'idleL'
+    const hn = k => this.sheet('hn_' + k) || this.sheet(k);
+    A('walkFront', hn('hero2_r0'), 8);
+    A('walkUp', hn('hero2_r1'), 8);
+    A('walkSide', hn('hero_r1'), 8);
+    A('slash', hn('hero_r2'), 26, 0);
+    const pose = hn('hero2_r2');
     A('idle', pose, 2.5, -1, [2, 3]);
     A('hurtPose', pose, 1, 0, [0]);
     A('dashPose', pose, 1, 0, [1]);
+    A('idleL', this.sheet('hero2_r2'), 2.5, -1, [2, 3]);
     A('fxSlash', this.sheet('fx1_r0'), 32, 0);
     A('fxHit', this.sheet('fx1_r1'), 30, 0);
     A('fxSmoke', this.sheet('fx1_r2'), 16, 0);

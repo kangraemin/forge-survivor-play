@@ -213,7 +213,9 @@ export class Env {
       q.hot = Math.max(0, q.hot - dt);
       const lit = q.hot > 0 ? 0.6 + 0.4 * Math.abs(Math.sin(s.bt / 60)) : 0.3;
       g.fillStyle(0xe8f4ff, lit * 0.25).fillCircle(q.x, q.y - 2, q.hot > 0 ? 36 : 22).lineStyle(1, 0xe8f4ff, lit * 0.6).strokeEllipse(q.x, q.y, 64, 48);
-      g.fillStyle(0x4a5668, 1).fillRect(q.x - 3, q.y - 30, 6, 30).fillStyle(0xc8d8f0, 1).fillRect(q.x - 1, q.y - 38, 2, 9).fillStyle(0xffffff, lit).fillCircle(q.x, q.y - 39, 3);
+      if (q.img === undefined) q.img = s.textures.exists('prop13_f') ? s.add.image(q.x, q.y, 'prop13_f', 0).setOrigin(0.5, 1).setDepth(10 + q.y / WORLD) : null;   // 그림이 있으면 기둥은 그림으로
+      if (q.img) q.img.setTint(q.hot > 0 ? 0xffffff : 0xc8c8d0);
+      else g.fillStyle(0x4a5668, 1).fillRect(q.x - 3, q.y - 30, 6, 30).fillStyle(0xc8d8f0, 1).fillRect(q.x - 1, q.y - 38, 2, 9).fillStyle(0xffffff, lit).fillCircle(q.x, q.y - 39, 3);
     }
     // 대장간 모루: 서 있는 동안 달궈지고(공격력↑), 가득 차면 화상. 내려서면 식는다
     if (this.anvils) {
@@ -222,7 +224,9 @@ export class Env {
         const near = this.inEll(a.x, a.y, 30); on = on || near;
         const glow = Math.min(1, this.heat / 100);
         g.fillStyle(0xff7a20, 0.12 + 0.3 * (near ? 1 : 0.4) + glow * 0.2).fillEllipse(a.x, a.y, 60, 45).lineStyle(1.5, 0xffd75e, near ? 0.9 : 0.45).strokeEllipse(a.x, a.y, 60, 45);
-        g.fillStyle(0x2a2a34, 1).fillRect(a.x - 9, a.y - 10, 18, 6).fillRect(a.x - 5, a.y - 5, 10, 6).fillRect(a.x - 8, a.y, 16, 3).fillStyle(0xff9a40, 0.5 + glow * 0.5).fillRect(a.x - 9, a.y - 10, 18, 2);
+        if (a.img === undefined) a.img = s.textures.exists('prop15_f') ? s.add.image(a.x, a.y + 4, 'prop15_f', 0).setOrigin(0.5, 1).setDepth(10 + a.y / WORLD) : null;   // 모루 그림(없으면 사각 도형)
+        if (a.img) a.img.setTint(glow > 0.05 || near ? 0xffffff : 0xd0d0d0);
+        else g.fillStyle(0x2a2a34, 1).fillRect(a.x - 9, a.y - 10, 18, 6).fillRect(a.x - 5, a.y - 5, 10, 6).fillRect(a.x - 8, a.y, 16, 3).fillStyle(0xff9a40, 0.5 + glow * 0.5).fillRect(a.x - 9, a.y - 10, 18, 2);
       }
       this.onAnvil = on;
       const was = this.heat;

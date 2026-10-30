@@ -12,6 +12,14 @@ import { track, logCtx } from './log.js';
 import { dexKill } from './codex.js';
 import { makeEnv } from './envfx.js';
 
+// 주인공 시트(검 없는 hn_*)의 프레임별 손 위치 [x, y, 칼날 방향(도)]. w는 한 칸 너비. 서 있기·피격·돌진은 같은 시트('pose')
+const HAND = {
+  walkFront: { w: 37, f: [[7, 30, 115], [6, 31, 115], [7, 31, 115], [6, 32, 115]] },
+  walkUp: { w: 39, f: [[29, 31, 65], [29, 32, 65], [29, 31, 65], [30, 32, 65]] },
+  walkSide: { w: 40, f: [[12, 33, 35], [12, 33, 35], [11, 33, 35], [11, 33, 35]] },
+  slash: { w: 58, f: [[21, 9, -55], [41, 32, 35], [44, 24, 0], [25, 36, 30]] },
+  pose: { w: 63, f: [[28, 31, 75], [25, 29, 170], [27, 32, 50], [28, 33, 50]] },
+};
 const { W, H } = D;
 const WORLD = 1600;
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
@@ -52,7 +60,7 @@ export class Battle extends Phaser.Scene {
     // 장면 인스턴스는 판끼리 재사용된다: 이벤트·축복·던전 고블린 상태를 비운다
     this.ultTip = null; this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
     // 보스 단계도 비운다(앞 판이 보스전으로 끝나면 다음 판이 웨이브 없이 영원히 이어졌다)
-    this.bossPhase = false; this.midBoss = null; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.spawnAcc = 0;
+    this.bossPhase = false; this.midBoss = null; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.spawnAcc = 0;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -186,6 +194,12 @@ export class Battle extends Phaser.Scene {
     // 가운데 광장·길 안쪽으로 들어간 거리(밖이면 음수)
     const inside = (x, y) => Math.max(190 - Math.hypot(x - c, y - c), 50 - Math.abs(x - c), 50 - Math.abs(y - c));
     // 바깥 바닥을 전부 깔고, 광장 바닥은 경계에서 서서히 짙어지게 겹친다(경계 타일을 쓰면 계단식 사각 패치로 보였다)
+    if (key === 'tile9' || key === 'tile12') {
+      // 9·12장 바닥은 160x120 한 장이 통째로 이어지는 그림이라 회전·광장 겹침 없이 깐다(칸을 섞으면 사각 이음새가 보였다)
+      const big = this.make.image({ key, add: false }).setOrigin(0);
+      for (let y = 0; y < WORLD + 2 * M; y += ts.height) for (let x = 0; x < WORLD + 2 * M; x += ts.width) rt.draw(big, x, y);
+      big.destroy();
+    } else
     for (let y = -M; y < WORLD + M; y += T) for (let x = -M; x < WORLD + M; x += T) {
       const n = Math.random(), cx = x + T / 2, cy = y + T / 2;
       // 3번 그림(밝은 변종)은 3장부터 색을 입히면 사각으로 튄다
@@ -215,10 +229,14 @@ export class Battle extends Phaser.Scene {
       this.textures.addSpriteSheet('decos', ds, { frameWidth: ds.width / 4, frameHeight: ds.height });
     }
     this.torches = [];
-    for (let i = 0; i < 90; i++) {
+    const hasProp = this.textures.exists('prop' + (this.c + 1));   // 장 테마 소품이 있으면 더 촘촘히(6~15장이 한 틀로 보이던 걸 줄인다)
+    for (let i = 0; i < (hasProp ? 190 : 90); i++) {
       const x = R(0, WORLD), y = R(0, WORLD);
-      if (Math.hypot(x - c, y - c) < 220) continue;
-      this.add.image(x, y, 'decos', R(0, 2)).setOrigin(0.5, 1).setDepth(10 + y / WORLD).setTint(decoTint);
+      if (Math.hypot(x - c, y - c) < (hasProp ? 150 : 220)) continue;
+      // 6~15장은 장 테마 소품(prop<장>, 3종), 없으면 풀숲·기둥
+      const pk = 'prop' + (this.c + 1);
+      if (this.textures.exists(pk)) { if (!this.textures.exists(pk + '_f')) { const ps = this.textures.get(pk).getSourceImage(); this.textures.addSpriteSheet(pk + '_f', ps, { frameWidth: ps.width / 3, frameHeight: ps.height }); } this.add.image(x, y, pk + '_f', R(0, 2)).setOrigin(0.5, 1).setDepth(10 + y / WORLD); }
+      else this.add.image(x, y, 'decos', R(0, 2)).setOrigin(0.5, 1).setDepth(10 + y / WORLD).setTint(decoTint);
     }
     for (let a = 0; a < 8; a++) {
       const x = c + Math.cos(a * Math.PI / 4) * 200, y = c + Math.sin(a * Math.PI / 4) * 200;
@@ -257,8 +275,17 @@ export class Battle extends Phaser.Scene {
     if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
     // 주인공 그림은 검을 들고 있다: 다른 무기면 손에 그 무기 그림을 겹쳐 든다
     const wk = `w_${this.wtype.id}${sv.tier}`;
-    this.heroWeapon = this.wtype.id !== 'sword' && this.textures.exists(wk) ? this.add.image(0, 0, wk) : null;
-    if (this.heroWeapon) this.heroWeapon.setScale(16 / Math.max(this.heroWeapon.width, this.heroWeapon.height));   // 6단계 이후 그림은 16칸보다 크다
+    this.heroWeapon = this.textures.exists(wk) ? this.add.image(0, 0, wk) : null;
+    this.heroSword = this.wtype.id === 'sword';
+    if (this.heroWeapon) {
+      // 검은 등급마다 다른 그림(w_sword0~9)을 손잡이 끝으로 쥔다. +5·+10·+15를 넘으면 검이 커지고 강화 색으로 빛난다
+      const eb = sv.enh >= 15 ? 3 : sv.enh >= 10 ? 2 : sv.enh >= 5 ? 1 : 0, sz = this.heroSword ? 18 + 2 * eb : 16;
+      this.heroWeapon.setScale(sz / Math.max(this.heroWeapon.width, this.heroWeapon.height));   // 6단계 이후 그림은 16칸보다 크다
+      if (this.heroSword) {
+        this.heroWeapon.setOrigin(0.2, 0.8);
+        if (eb) this.heroWeapon.preFX?.addGlow(rc, eb, 0, false, 0.1, 6);
+      }
+    }
     this.face = 1; this.walkT = 0; this.iframe = 0;
     this.atk = D.weaponAtk(sv.tier, sv.enh);
   }
@@ -325,11 +352,11 @@ export class Battle extends Phaser.Scene {
   refreshSkillRow() {
     this.skillRow.removeAll(true);
     Object.entries(this.run.skills).forEach(([k, lv], i) => {
-      const x = (i % 8) * 17, y = Math.floor(i / 8) * 17;
+      const x = (i % 8) * 20, y = Math.floor(i / 8) * 20;   // 한 칸 18(전엔 15): 작아서 뭔지 안 보였다(+20%)
       const evo = this.run.evo[k];
-      this.skillRow.add(this.add.rectangle(x, y, 15, 15, evo ? 0x5a3a08 : 0x000000, 0.6).setOrigin(0).setStrokeStyle(1, evo ? 0xff9a3a : D.SKILLS[k].type === 'active' ? 0x6fd3ff : 0xffd75e, evo ? 1 : 0.7));
-      this.skillRow.add(skillIcon(this, x + 7.5, y + 7.5, D.SKILLS[k], 13));
-      this.skillRow.add(this.add.text(x + 15, y + 15, evo ? '★' : lv, font(7, evo ? '#ffd75e' : '#ffffff')).setOrigin(1, 1));
+      this.skillRow.add(this.add.rectangle(x, y, 18, 18, evo ? 0x5a3a08 : 0x000000, 0.6).setOrigin(0).setStrokeStyle(1, evo ? 0xff9a3a : D.SKILLS[k].type === 'active' ? 0x6fd3ff : 0xffd75e, evo ? 1 : 0.7));
+      this.skillRow.add(skillIcon(this, x + 9, y + 9, D.SKILLS[k], 16));
+      this.skillRow.add(this.add.text(x + 18, y + 18, evo ? '★' : lv, font(8, evo ? '#ffd75e' : '#ffffff')).setOrigin(1, 1));
     });
   }
 
@@ -1040,6 +1067,16 @@ export class Battle extends Phaser.Scene {
       while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 38 : 42) : 70)) this.spawn(); }
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
+      // 1-1 마지막 웨이브 후반: 다음 장 몹이 두 마리 잠깐 얼굴을 비춘다('앞으로 더 있다'). 약하게 줘서 난이도는 그대로
+      if (!this.tasteDone && this.c === 0 && this.s === 0 && !this.endless && !this.hard && !this.dungeon && this.wave === this.waveCount - 1 && this.waveT > this.waveLen * 0.62) {
+        this.tasteDone = true;
+        const nx = D.CHAPTERS[1];
+        if (nx) {
+          for (let i = 0; i < 2; i++) { const m = this.spawn(false, nx.mobs[i % 2], { force: true }); if (m) { m.maxHp = m.hp = m.hp * 0.6; m.dmg *= 0.5; m.preFX?.addGlow(0xff6a8a, 2, 0, false, 0.1, 8); } }
+          this.banner('저건 뭐지?', `${nx.name}의 몹이 엿보인다`);
+          this.log('taste_next', { ch: 1 });
+        }
+      }
       if (this.eventAt != null && !this.eventDone && this.progress() >= this.eventAt) { this.eventDone = true; this.surprise(this.eventKind); }
       // 던전: 15초마다 보물 고블린(알림 없이)
       if (this.dungeon && this.bt >= (this.dunGobT ??= D.DUNGEON.goblinSec * 1000)) { this.dunGobT += D.DUNGEON.goblinSec * 1000; this.spawnGoblin(true); }
@@ -1129,11 +1166,20 @@ export class Battle extends Phaser.Scene {
     this.heroMark.setPosition(h.x, h.y - h.height / 2 - 4 + Math.sin(this.bt / 160) * 1.5);
     this.heroShadow.setPosition(h.x, h.y + h.height / 2 - 2).setScale(1.6 * (1 - bob * 2), 1.4).setDepth(9);
     if (this.heroWeapon) {
-      // 손 자리: 앞모습은 왼쪽 아래, 뒷모습은 오른쪽(몸 뒤), 옆모습·서 있기는 바라보는 쪽, 휘두를 땐 앞으로 뻗는다
       const k = h.anims.currentAnim?.key, f = h.flipX ? -1 : 1;
-      const [ox, oy, ang] = k === 'walkFront' ? [-9, 6, -20] : k === 'walkUp' ? [9, 5, 20] : k === 'slash' ? [13 * f, 0, 40 * f] : [6 * f, 7, 10 * f];
-      this.heroWeapon.setPosition(h.x + ox, h.y + oy - bob * h.height).setFlipX(f < 0).setAngle(ang + h.angle)
-        .setDepth(h.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(h.alpha);
+      if (this.heroSword) {
+        // 프레임마다 손 위치(시트 픽셀)와 칼날 방향(도, 0=오른쪽·아래가 +)을 따라 쥔다
+        const T = HAND[k === 'walkFront' || k === 'walkUp' || k === 'walkSide' || k === 'slash' ? k : 'pose'], fi = h.anims.currentFrame?.textureFrame ?? 0;
+        const [gx, gy, th] = T.f[Math.min(fi, T.f.length - 1)];
+        const te = f > 0 ? th : 180 - th;
+        this.heroWeapon.setPosition(h.x + (gx - T.w / 2) * f, h.y + (gy - 26) - bob * h.height).setFlipX(f < 0).setAngle(te + (f > 0 ? 45 : 135) + h.angle)
+          .setDepth(h.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(h.alpha);
+      } else {
+        // 손 자리: 앞모습은 왼쪽 아래, 뒷모습은 오른쪽(몸 뒤), 옆모습·서 있기는 바라보는 쪽, 휘두를 땐 앞으로 뻗는다
+        const [ox, oy, ang] = k === 'walkFront' ? [-9, 6, -20] : k === 'walkUp' ? [9, 5, 20] : k === 'slash' ? [13 * f, 0, 40 * f] : [6 * f, 7, 10 * f];
+        this.heroWeapon.setPosition(h.x + ox, h.y + oy - bob * h.height).setFlipX(f < 0).setAngle(ang + h.angle)
+          .setDepth(h.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(h.alpha);
+      }
     }
     this.moveV = v;
   }

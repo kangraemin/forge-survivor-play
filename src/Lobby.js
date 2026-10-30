@@ -352,7 +352,8 @@ export class Lobby extends Phaser.Scene {
     // 무기가 주인공: 성채 그림 위에 지금 든 무기와 강화 단계를 크게 세운다(칸과 글자만 빽빽했다)
     const pv = this.add.container(0, 0); b.add(pv);
     const AY = 68, AH = 138;
-    if (this.textures.exists('lobby_bg')) pv.add(this.add.image(0, AY - 30, 'lobby_bg').setOrigin(0).setCrop(0, 30, W, AH));
+    const lbk = this.textures.exists('lobby_bg' + (c + 1)) ? 'lobby_bg' + (c + 1) : 'lobby_bg';   // 장마다 배경이 다르다(5장은 마왕성 lobby_bg)
+    if (this.textures.exists(lbk)) pv.add(this.add.image(0, AY - 30, lbk).setOrigin(0).setCrop(0, 30, W, AH));
     else pv.add(this.add.rectangle(0, AY, W, AH, 0x15111f).setOrigin(0));
     pv.add(this.add.rectangle(0, AY + AH - 44, W, 44, 0x05030a, 0.55).setOrigin(0));
     pv.add(this.add.rectangle(0, AY, W, 18, 0x05030a, 0.5).setOrigin(0));
@@ -903,7 +904,7 @@ export class Lobby extends Phaser.Scene {
       b.add(this.add.text(W / 2, 410, '몸 색이 바뀌고 작은 능력치가 붙는다', font9(10, '#a1b2b6')).setOrigin(0.5));
       HERO_SKINS.forEach((hs, i) => {
         const own = !hs.id || sv.hskins?.[hs.id], on = (sv.hskin || '') === hs.id;
-        cell(i, hs, own, on, (x, y) => { const h = this.add.sprite(x, y, 'hero2_r0s').play('idle').setScale(0.8); return hs.id ? skinFx(h, hs) : h; },
+        cell(i, hs, own, on, (x, y) => { const h = this.add.sprite(x, y, 'hero2_r0s').play('idleL').setScale(0.8); return hs.id ? skinFx(h, hs) : h; },
           () => { (sv.hskins ||= {})[hs.id] = true; sv.hskin = hs.id; track('hskin_equip', { skin: hs.id || 'none' }); });
       });
     } else {
