@@ -21,16 +21,19 @@ export class Weapons {
 
   nearest(maxD = 1e9, from = this.s.hero) {
     let best = null, bd = maxD * maxD;
-    this.s.mobs.getChildren().forEach(m => {
-      if (m.dead || m.dive) return;
-      const d = Phaser.Math.Distance.Squared(m.x, m.y, from.x, from.y);
+    // 프레임 처음에 만든 몹 목록·격자를 쓴다(가까운 곳만 볼 땐 칸 몇 개만, 멀리 볼 땐 살아 있는 몹 목록만 훑는다)
+    const list = maxD <= 64 ? this.s.mobsNear(from.x, from.y, maxD) : this.s.liveMobs;
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
+      if (m.dead || m.dive || !m.active) continue;
+      const dx = m.x - from.x, dy = m.y - from.y, d = dx * dx + dy * dy;
       if (d < bd) { bd = d; best = m; }
-    });
+    }
     return best;
   }
   onScreen() {
     const v = viewRect(this.s);
-    return this.s.mobs.getChildren().filter(m => !m.dead && !m.dive && Phaser.Geom.Rectangle.Contains(v, m.x, m.y));
+    return this.s.liveMobs.filter(m => !m.dead && !m.dive && m.active && Phaser.Geom.Rectangle.Contains(v, m.x, m.y));
   }
 
   update(dt) {
@@ -485,7 +488,7 @@ export class Weapons {
     this.orbs.forEach((o, i) => {
       const a = this.orbA + i * Math.PI * 2 / n;
       o.setPosition(s.hero.x + Math.cos(a) * rad, s.hero.y - 4 + Math.sin(a) * rad * 0.8);
-      s.mobs.getChildren().forEach(m => {
+      s.mobsNear(o.x, o.y, 40).forEach(m => {
         if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, o.x, o.y) < (evo ? 18 : 12) + (m.isBoss ? 18 : 0)) s.hitMob(m, mult, { src: 'orb' + i, cd: 400, kb: 90, from: o, tag: 'magic' });
       });
     });
@@ -516,7 +519,7 @@ export class Weapons {
           b.setVelocity(Math.cos(na) * sp, Math.sin(na) * sp).setRotation(na);
         }
       }
-      if (!dead) for (const m of s.mobs.getChildren()) {
+      if (!dead) for (const m of s.mobsNear(b.x, b.y, 48)) {   // 탄 둘레 칸의 몹만(전수 순회 대신). 판정 반지름은 보스 32, 큰 몹도 40 안
         if (m.dead || b.seen.has(m)) continue;
         if (Phaser.Math.Distance.Between(m.x, m.y, b.x, b.y) > 10 + (m.isBoss ? 22 : m.displayWidth * 0.25)) continue;
         b.seen.add(m);

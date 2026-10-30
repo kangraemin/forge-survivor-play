@@ -97,7 +97,9 @@ export class Battle extends Phaser.Scene {
     this.ebullets = this.physics.add.group();
     this.pbullets = this.physics.add.group();
     this.physics.world.setBounds(0, 0, WORLD, WORLD);
-    this.physics.add.collider(this.mobs, this.mobs, null, (a, b) => !a.float && !b.float && !a.dead && !b.dead);
+    this.liveMobs = []; this.gridCells = new Map(); this.gridUsed = []; this.fxFree = []; this.popFree = [];
+    // 몹끼리 밀어내기는 두 프레임에 한 번만 푼다(쌍 검사가 몹 수의 제곱으로 늘어 저사양 폰에서 가장 무거웠다)
+    this.mobCollider = this.physics.add.collider(this.mobs, this.mobs, null, (a, b) => !a.float && !b.float && !a.dead && !b.dead);
     this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && !m.goblin && !m.dive && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
     this.physics.add.overlap(this.hero, this.ebullets, (h, b) => { this.hurt(b.dmg, 'shot'); b.destroy(); });
 
@@ -225,6 +227,7 @@ export class Battle extends Phaser.Scene {
     }
     // 어두운 화면 + 빛
     this.dark = this.add.renderTexture(0, 0, W, H).setOrigin(0).setScrollFactor(0).setDepth(50);
+    this.darkKey = [];   // 어둠 그림에 쓴 값(주인공·횃불 위치, 빛 크기, 어둠 농도): 같으면 다시 안 그린다
     // x-2는 조금 더 어둡다. 0.2를 더하면 2장·5장이 0.8이 돼 몹이 안 보였다
     this.darkA = Math.min(0.62, this.ch.dark + (this.s === 1 && !this.endless ? 0.1 : 0));
     this.glow = this.add.image(0, 0, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(this.hard ? 0xff3a3a : this.ch.light).setAlpha(this.hard ? 0.22 : 0.16).setDepth(49);
@@ -560,6 +563,46 @@ export class Battle extends Phaser.Scene {
     return true;
   }
 
+  // 한 번 쓰고 버리던 스프라이트(시체·연기)를 되살려 쓴다: 처치마다 객체를 새로 만들고 지우느라 GC가 끊겼다
+  fxGet(x, y, key, frame) {
+    const sp = this.fxFree.pop();
+    if (!sp) return this.add.sprite(x, y, key, frame);
+    return sp.setActive(true).setVisible(true).setTexture(key, frame).setPosition(x, y).setAlpha(1).setScale(1).setAngle(0).setFlip(false, false)
+      .clearTint().setBlendMode(Phaser.BlendModes.NORMAL);
+  }
+  fxFree_(sp) {
+    if (!sp.active) return;
+    this.tweens.killTweensOf(sp); sp.off('animationcomplete'); sp.anims.stop();
+    sp.setActive(false).setVisible(false); this.fxFree.push(sp);
+  }
+
+  // 같은 칸(64px) 안의 몹만 훑으려고 프레임 처음에 한 번 격자에 담는다
+  rebuildMobs() {
+    const live = this.liveMobs, cells = this.gridCells, used = this.gridUsed;
+    live.length = 0;
+    for (let i = 0; i < used.length; i++) used[i].length = 0;
+    used.length = 0;
+    for (const m of this.mobs.getChildren()) {
+      if (m.dead || !m.active) continue;
+      live.push(m);
+      const k = (Math.floor(m.x / 64) + 2) * 128 + Math.floor(m.y / 64) + 2;
+      let c = cells.get(k);
+      if (!c) cells.set(k, c = []);
+      if (!c.length) used.push(c);
+      c.push(m);
+    }
+  }
+  // (x,y) 반지름 r 안쪽 칸에 든 몹(거리는 부른 쪽이 따로 잰다). r은 64 이하로 쓴다
+  mobsNear(x, y, r) {
+    const out = [], cells = this.gridCells;
+    const x0 = Math.floor((x - r) / 64) + 2, x1 = Math.floor((x + r) / 64) + 2, y0 = Math.floor((y - r) / 64) + 2, y1 = Math.floor((y + r) / 64) + 2;
+    for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
+      const c = cells.get(cx * 128 + cy);
+      if (c) for (let i = 0; i < c.length; i++) { const m = c[i]; if (!m.dead && m.active) out.push(m); }
+    }
+    return out;
+  }
+
   popup(x, y, n, crit, big, m) {
     // 화면이 숫자로 덮이지 않게: 치명타와 큰 숫자(100 이상)만 띄우고, 5개를 넘으면 오래된 것부터 지운다
     // 같은 몹을 0.4초 안에 또 때리면 새로 띄우지 않고 합산해 한 숫자로 보여 준다
@@ -567,7 +610,7 @@ export class Battle extends Phaser.Scene {
     const vr = viewRect(this);
     if (y - vr.y < 82 && x - vr.x < 148) return;
     const pp = m && m._pop;
-    if (pp && pp.t.active && this.bt - pp.at < 400) {
+    if (pp && pp.t.active && pp.t.pop === pp && this.bt - pp.at < 400) {
       pp.n += n; pp.at = this.bt; pp.crit = pp.crit || crit;
       pp.t.setText(fmt(pp.n)).setAlpha(1).setScale(1.25);
       if (pp.crit) pp.t.setColor('#ffd23f');
@@ -575,16 +618,24 @@ export class Battle extends Phaser.Scene {
       return;
     }
     if (!crit && n < 100 && Math.random() > 0.25) return;   // 일반 타격도 네 번에 한 번은 보여 강화 차이가 숫자로 보인다
-    if (this.popups.length >= 5) this.popups.shift().destroy();
-    const t = this.add.text(x + R(-6, 6), y, fmt(n), font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2))
-      .setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
+    if (this.popups.length >= 5) this.popFree_(this.popups.shift());
+    const st = font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2);
+    let t = this.popFree.pop();
+    if (t) t.setActive(true).setVisible(true).setAlpha(1).setStyle(st).setText(fmt(n)).setPosition(x + R(-6, 6), y).setScale(crit ? 1.6 : 1.3);
+    else t = this.add.text(x + R(-6, 6), y, fmt(n), st).setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
     this.popups.push(t);
-    if (m) m._pop = { t, n, at: this.bt, crit };
+    t.pop = null;
+    if (m) t.pop = m._pop = { t, n, at: this.bt, crit };
     this.tweens.add({ targets: t, scale: 1, duration: 110, ease: 'Back.Out' });
     this.tweens.add({
       targets: t, y: y - 16, alpha: 0, delay: crit ? 380 : 420, duration: 300,
-      onComplete: () => { t.destroy(); this.popups = this.popups.filter(p => p !== t); },
+      onComplete: () => { const i = this.popups.indexOf(t); if (i >= 0) { this.popups.splice(i, 1); this.popFree_(t); } },
     });
+  }
+
+  popFree_(t) {
+    if (!t.active) return;
+    this.tweens.killTweensOf(t); t.setActive(false).setVisible(false); this.popFree.push(t);
   }
 
   kill(m) {
@@ -608,19 +659,19 @@ export class Battle extends Phaser.Scene {
     // 시체가 칼 맞은 반대쪽으로 튕겨 나간다
     const ka = Phaser.Math.Angle.Between(this.hero.x, this.hero.y, m.x, m.y), kd = m.elite ? 10 : 18;
     if (this.anims.exists(m.kind + 'Die')) {
-      const c = this.add.sprite(m.x, m.y, m.texture.key).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff).play(m.kind + 'Die');
+      const c = this.fxGet(m.x, m.y, m.texture.key).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff).play(m.kind + 'Die');
       this.tweens.add({ targets: c, x: m.x + Math.cos(ka) * kd, y: m.y + Math.sin(ka) * kd, angle: Math.cos(ka) > 0 ? 25 : -25, duration: 180, ease: 'Quad.Out' });
-      this.time.delayedCall(60, () => c.clearTint());
-      c.once('animationcomplete', () => this.tweens.add({ targets: c, alpha: 0, delay: 250, duration: 400, onComplete: () => c.destroy() }));
+      this.time.delayedCall(60, () => c.active && c.clearTint());
+      c.once('animationcomplete', () => this.tweens.add({ targets: c, alpha: 0, delay: 250, duration: 400, onComplete: () => this.fxFree_(c) }));
     } else {
-      const c = this.add.sprite(m.x, m.y, m.texture.key, m.frame.name).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff);
-      this.tweens.add({ targets: c, x: m.x + Math.cos(ka) * kd, y: m.y + Math.sin(ka) * kd, angle: Math.cos(ka) > 0 ? 40 : -40, scaleX: c.scaleX * 1.4, scaleY: c.scaleY * 0.2, alpha: 0, duration: 220, ease: 'Quad.In', onComplete: () => c.destroy() });
+      const c = this.fxGet(m.x, m.y, m.texture.key, m.frame.name).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff);
+      this.tweens.add({ targets: c, x: m.x + Math.cos(ka) * kd, y: m.y + Math.sin(ka) * kd, angle: Math.cos(ka) > 0 ? 40 : -40, scaleX: c.scaleX * 1.4, scaleY: c.scaleY * 0.2, alpha: 0, duration: 220, ease: 'Quad.In', onComplete: () => this.fxFree_(c) });
     }
     this.goo.setParticleTint(m.color); this.goo.explode(m.elite ? 24 : 8, m.x, m.y);
     if (m.variant === 'split') for (const d of [-7, 7]) this.spawn(true, m.kind, { force: true, mini: true, at: { x: m.x + d, y: m.y + R(-4, 4) } })?.setTint(D.VARIANTS.split.tint);
     if (m.variant === 'burst') this.burst(m.x, m.y, m.dmg);
-    const sm = this.add.sprite(m.x, m.y - 2, 'fx1_r2s').setBlendMode(Phaser.BlendModes.ADD).setDepth(30).setAlpha(0.35).setScale(m.elite ? 1 : 0.5).setTint(m.color).play('fxSmoke');
-    sm.once('animationcomplete', () => sm.destroy());
+    const sm = this.fxGet(m.x, m.y - 2, 'fx1_r2s').setBlendMode(Phaser.BlendModes.ADD).setDepth(30).setAlpha(0.35).setScale(m.elite ? 1 : 0.5).setTint(m.color).play('fxSmoke');
+    sm.once('animationcomplete', () => this.fxFree_(sm));
     if (m.goblin) this.goblinDown(m);
     this.drop(m);
     this.tweens.killTweensOf(m);   // 폭탄 변종의 반복 맥박이 지운 몹을 붙잡지 않게
@@ -665,19 +716,30 @@ export class Battle extends Phaser.Scene {
   addGem(x, y, v) {
     // 보석이 너무 많으면 가장 먼 보석에 값을 합쳐 개수를 줄인다
     if (this.gems.countActive() > 160) {
-      const far = this.gems.getChildren().reduce((a, b) => (Phaser.Math.Distance.Squared(a.x, a.y, this.hero.x, this.hero.y) > Phaser.Math.Distance.Squared(b.x, b.y, this.hero.x, this.hero.y) ? a : b));
+      const far = this.farthest(this.gems.getChildren());
       far.v += v; far.setTexture(far.v >= 10 ? 'gem3' : far.v >= 3 ? 'gem2' : 'gem1');
       return;
     }
     const g = this.gems.create(x + R(-3, 3), y + R(-3, 3), v >= 10 ? 'gem3' : v >= 2 ? 'gem2' : 'gem1').setDepth(8);
-    g.v = v;
-    this.tweens.add({ targets: g, y: g.y - 6, duration: 140, yoyo: true, ease: 'Quad.Out' });
+    g.v = v; g.hopH = 6; g.hopMs = 140; g.hopT = 0; g.hopOff = 0;   // 튀어 오르는 연출은 트윈 대신 updatePickups에서 계산한다(보석마다 트윈이 하나씩 붙어 있었다)
+  }
+
+  // 목록에서 주인공과 가장 먼 것(제곱거리로 한 번씩만 잰다)
+  farthest(list) {
+    const h = this.hero; let far = null, fd = -1;
+    for (let i = 0; i < list.length; i++) { const o = list[i], dx = o.x - h.x, dy = o.y - h.y, d = dx * dx + dy * dy; if (d > fd) { fd = d; far = o; } }
+    return far;
   }
 
   addItem(x, y, kind, v = 1) {
+    // 은화가 60개를 넘게 쌓이면 가장 먼 은화에 값을 합친다(보석처럼): 후반 판에 100개 넘게 쌓여 그리고 훑는 값이 컸다
+    if (kind === 'silver') {
+      const list = this.items.getChildren(), sil = [];
+      for (let i = 0; i < list.length; i++) if (list[i].kind === 'silver' && list[i].active) sil.push(list[i]);
+      if (sil.length >= 60) { this.farthest(sil).v += v; return null; }
+    }
     const it = this.items.create(x, y, kind).setDepth(8);
-    it.kind = kind; it.v = v;
-    this.tweens.add({ targets: it, y: y - 8, duration: 160, yoyo: true, ease: 'Quad.Out' });
+    it.kind = kind; it.v = v; it.hopH = 8; it.hopMs = 160; it.hopT = 0; it.hopOff = 0;
     if (kind === 'loot') it.preFX?.addGlow(0xc890ff, 2, 0, false, 0.1, 6);
     if (kind === 'chest' || kind === 'meat' || kind === 'loot') this.tweens.add({ targets: it, scale: 1.15, duration: 400, yoyo: true, repeat: -1 });
     return it;
@@ -959,6 +1021,8 @@ export class Battle extends Phaser.Scene {
     if (this.paused) return;
     const dt = Math.min(delta, 50) * this.speed;
     this.bt += dt;
+    this.mobCollider.active = (this.frameN = (this.frameN || 0) + 1) % 2 === 0;
+    this.rebuildMobs();
     const r = this.run;
 
     // 웨이브 시간
@@ -1079,7 +1143,8 @@ export class Battle extends Phaser.Scene {
     this.mobs.getChildren().forEach(m => {
       if (m.dead || m.isBoss) return;
       m.t += dt;
-      m.setDepth(10 + m.y / WORLD);
+      const dp = 10 + m.y / WORLD;
+      if (Math.abs(dp - m.depth) > 0.0006) m.setDepth(dp);   // 1px 넘게 움직였을 때만(깊이가 바뀔 때마다 표시 목록을 다시 정렬한다)
       if (m.mark) {
         m.mark.setPosition(m.x, m.y + m.markY);
         // 광폭 변종은 붉은 잔상을 남긴다
@@ -1145,21 +1210,37 @@ export class Battle extends Phaser.Scene {
   updatePickups(dt) {
     const h = this.hero, r = this.run;
     const pick = D.PLAYER.pickup * (1 + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + this.lv3('magnet', 0.4) + r.bPick);
-    this.gems.getChildren().slice().forEach(g => {
-      const d = Phaser.Math.Distance.Between(g.x, g.y, h.x, h.y);
+    const hop = o => {   // 떨어질 때 살짝 튀는 연출(Quad.Out으로 올랐다 내려온다)
+      if (o.hopT === undefined) return;
+      o.hopT += dt;
+      const p = o.hopT < o.hopMs ? o.hopT / o.hopMs : o.hopT < o.hopMs * 2 ? 2 - o.hopT / o.hopMs : 0;
+      const off = -o.hopH * p * (2 - p);
+      o.y += off - o.hopOff; o.hopOff = off;
+      if (o.hopT >= o.hopMs * 2) o.hopT = undefined;
+    };
+    const pick2 = pick * pick, pick3 = pick * pick * 9, pickI = pick * 0.8, pickI2 = pickI * pickI;
+    const gl = this.gems.getChildren();
+    for (let i = gl.length - 1; i >= 0; i--) {   // 안에서 지우므로 뒤에서부터
+      const g = gl[i];
+      if (g.hopT !== undefined) hop(g);
+      const dx = g.x - h.x, dy = g.y - h.y, d2 = dx * dx + dy * dy;
       // 끌리기 시작하면 빠르게 출발해 가속한다: 느릿하게 따라오면 흡수 쾌감이 없다(220에서 출발하니 사용자가 느리다고 했다)
-      if (d < pick || g.pull) { g.pull = true; this.physics.moveToObject(g, h, Math.min(900, 360 + (g.sp = (g.sp || 0) + dt * 2.5))); }
+      if (d2 < pick2 || g.pull) { g.pull = true; this.physics.moveToObject(g, h, Math.min(900, 360 + (g.sp = (g.sp || 0) + dt * 2.5))); }
       // 조금 먼 보석도 플레이어 이동 속도(84)보다 빨리 끌려온다: 몹에 둘러싸여 보석까지 못 가면 레벨이 멈췄다
-      else if (d < pick * 3) this.physics.moveToObject(g, h, 160);
+      else if (d2 < pick3) this.physics.moveToObject(g, h, 160);
       else if (g.body.speed) g.setVelocity(0);
-      if (d < 14) { this.gainXp(g.v); g.destroy(); }   // 한 프레임에 15px까지 움직여 10이면 지나쳤다 돌아왔다
-    });
-    this.items.getChildren().slice().forEach(it => {
-      const d = Phaser.Math.Distance.Between(it.x, it.y, h.x, h.y);
-      if (d < pick * 0.8 || it.pull) { it.pull = true; this.physics.moveToObject(it, h, Math.min(700, 300 + (it.sp = (it.sp || 0) + dt * 2))); }
-      if (d < 12) this.pickup(it);
-    });
-    this.ebullets.getChildren().slice().forEach(b => { b.life -= dt; if (b.life <= 0) b.destroy(); });
+      if (d2 < 196) { this.gainXp(g.v); g.destroy(); }   // 한 프레임에 15px까지 움직여 10이면 지나쳤다 돌아왔다
+    }
+    const il = this.items.getChildren();
+    for (let i = il.length - 1; i >= 0; i--) {
+      const it = il[i];
+      if (it.hopT !== undefined) hop(it);
+      const dx = it.x - h.x, dy = it.y - h.y, d2 = dx * dx + dy * dy;
+      if (d2 < pickI2 || it.pull) { it.pull = true; this.physics.moveToObject(it, h, Math.min(700, 300 + (it.sp = (it.sp || 0) + dt * 2))); }
+      if (d2 < 144) this.pickup(it);
+    }
+    const bl = this.ebullets.getChildren();
+    for (let i = bl.length - 1; i >= 0; i--) { const b = bl[i]; b.life -= dt; if (b.life <= 0) b.destroy(); }
   }
 
   updateHud(time) {
@@ -1197,6 +1278,22 @@ export class Battle extends Phaser.Scene {
     // 조명
     this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);
     const L = this.env?.lightK < 1 || this.env?.blackT > 0 ? this.env.light.setScale(this.env.blackT > 0 ? 0.4 : this.env.lightK) : null;   // 심연·일식은 밝히는 범위가 좁다
+    // 어둠은 그림에 쓴 값(주인공·보이는 횃불 위치, 빛 크기, 농도)이 바뀐 프레임에만 다시 그린다.
+    // 카메라가 주인공을 따라가 주인공은 거의 화면 한가운데에 있어, 대부분 프레임은 그대로다(전체 화면 패스를 건너뛴다)
+    const key = this.darkKey, hx = Math.round(this.hero.x - cam.scrollX), hy = Math.round(this.hero.y - cam.scrollY);
+    const ls = L ? Math.round(L.scaleX * 1000) : -1;
+    let n = 0, same = key.length > 0 && key[0] === hx && key[1] === hy && key[2] === ls && key[3] === this.darkA;
+    if (!same) { key[0] = hx; key[1] = hy; key[2] = ls; key[3] = this.darkA; }
+    n = 4;
+    for (const t of this.torches) {
+      const sx = Math.round(t.x - cam.scrollX), sy = Math.round(t.y - cam.scrollY);
+      if (sx > -150 && sy > -150 && sx < W + 150 && sy < H + 150) {
+        if (key[n] !== sx || key[n + 1] !== sy) { same = false; key[n] = sx; key[n + 1] = sy; }
+        n += 2;
+      }
+    }
+    if (key.length !== n) { same = false; key.length = n; }
+    if (same) return;
     this.dark.clear().fill(0x06040c, this.darkA);
     if (L) this.dark.erase(L, this.hero.x - cam.scrollX, this.hero.y - cam.scrollY); else this.dark.erase('light', this.hero.x - cam.scrollX - 150, this.hero.y - cam.scrollY - 150);
     for (const t of this.torches) {

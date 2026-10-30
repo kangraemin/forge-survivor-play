@@ -37,7 +37,7 @@ export class Pet {
 
   near(maxD, n = 1, from = this) {
     const out = [];
-    this.s.mobs.getChildren().forEach(m => { if (!m.dead && m.active) { const d = D2(m, from); if (d < maxD) out.push([d, m]); } });
+    for (const m of this.s.liveMobs) { if (!m.dead && m.active) { const d = D2(m, from); if (d < maxD) out.push([d, m]); } }
     return out.sort((a, b) => a[0] - b[0]).slice(0, n).map(a => a[1]);
   }
 
