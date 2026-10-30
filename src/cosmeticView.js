@@ -114,7 +114,7 @@ export class CosmeticActor {
       const head = anchor ? anchor.slice(2, 4) : BASE_HEAD[row][fi];
       const at = anchorPoint(h, head[0], head[1], COS_ROWS[row]);
       this.head.setPosition(at.x, at.y).setOrigin(0.5, 0.8)
-        .setScale(0.66 * h.scaleX, 0.66 * h.scaleY).setAngle(h.angle).setFlipX(h.flipX).setAlpha(h.alpha).setDepth(h.depth + 0.02);
+        .setScale(0.95 * h.scaleX, 0.95 * h.scaleY).setAngle(h.angle).setFlipX(h.flipX).setAlpha(h.alpha).setDepth(h.depth + 0.02);
     }
     if (this.pet) {
       const f = h.flipX ? -1 : 1, q = 1 - Math.pow(0.9, dt / 16.7);

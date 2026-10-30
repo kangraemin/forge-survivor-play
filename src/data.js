@@ -365,14 +365,17 @@ export const FIRST_BUY_X2 = ['gem1', 'gem2', 'gem3'];
 // ── 한정 판매(상점 '특가' 칸) ──
 // 오늘의 특가: 하루 한 번 아래 꾸러미 하나를 무작위 할인율로 판다. 기기 시간 자정에 바뀐다
 export const DEALS = [
-  { id: 'dstone', name: '강화석 꾸러미', price: 3900, give: { stone: 200, guard: 2 } },
-  { id: 'dguard', name: '안전 꾸러미', price: 5900, give: { guard: 5, charm: 2 } },
-  { id: 'dgem', name: '보석 꾸러미', price: 5900, give: { gem: 600, sweep: 10 } },
-  { id: 'dgold', name: '금화 꾸러미', price: 3900, give: { goldStage: 10, stone: 80 } },
-  { id: 'dluck', name: '행운 꾸러미', price: 6900, give: { charm: 5, gem: 150 } },
+  { id: 'dstone', name: '강화석 꾸러미', give: { stone: 200, guard: 2 } },
+  { id: 'dguard', name: '안전 꾸러미', give: { guard: 5, charm: 2 } },
+  { id: 'dgem', name: '보석 꾸러미', give: { gem: 600, sweep: 10 } },
+  { id: 'dgold', name: '금화 꾸러미', give: { goldStage: 10, stone: 80 } },
+  { id: 'dluck', name: '행운 꾸러미', give: { charm: 5, gem: 150 } },
 ];
 export const DEAL_OFF = [30, 40, 50];   // 할인율(%)
-export const dealPrice = (d, off) => Math.round(d.price * (100 - off) / 10000) * 100;
+// 46차: 원가는 '실제 상시 판매가'(보석 상점 개당 보석값 x 10원)의 합. 상시 판매가 없는 구성품이 있으면 null(원가·할인 표시 안 함)
+const gemUnit = () => { const u = { gem: 1 }; GEM_SHOP.forEach(it => { const [k, v] = Object.entries(it.give)[0]; u[k] = it.cost / v; }); return u; };
+export const dealRegular = d => { const u = gemUnit(); let g = 0; for (const [k, v] of Object.entries(d.give)) { if (!u[k]) return null; g += u[k] * v; } return Math.round(g * 10 / 100) * 100; };
+export const dealPrice = (d, off) => Math.round(dealRegular(d) * (100 - off) / 10000) * 100;
 // 성장 꾸러미: 장 보스를 처음 잡은 뒤 24시간. 다음 등급 +0→+10에 드는 강화석(30 + 10×등급)의 2배와 방지권
 export const GROW = { ms: 24 * 3600000, price: [2900, 3900, 4900, 5900, 6900, 6900, 6900, 6900, 6900, 6900] };
 export const growGive = c => { const t = Math.min(c + 1, TIERS.length - 1); return { stone: 2 * (30 + 10 * t), guard: 3 + c, goldStage: 4 }; };

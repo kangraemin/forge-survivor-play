@@ -11,6 +11,20 @@ const BASIC = new Set(['arrow', 'gun', 'staff', 'awk']);
 // 각성 검기 색: 슬라임 초록·바닥에 묻혀 안 보였다(38차) → 흰빛 하늘 / 주황 / 보라
 const AWK_TINT = e => e >= 15 ? 0xe8a0ff : e >= 10 ? 0xffb050 : 0xd8f4ff;
 
+// 무기 꾸미기별 고유 베기 연출(cos_fx 프레임: 0꽃잎 1하트 2금별 3눈 4김 5물방울 6발자국 7별 8잎 9음표 11불꽃)
+const SKIN_SLASH = {
+  pinwheel: { spin: 540, frames: [7], n: 3, mode: 'arc' },
+  broom: { spin: 120, frames: [7, 2], n: 4, mode: 'arc' },
+  leek: { frames: [8], n: 5, mode: 'fan' },
+  fish: { frames: [5], n: 5, mode: 'drop' },
+  umbrella: { frames: [5, 3], n: 4, mode: 'drop' },
+  guitar: { frames: [9], n: 3, mode: 'rise' },
+  hammer: { frames: [1], n: 3, mode: 'rise' },
+  candy: { spin: 360, frames: [7, 1], n: 4, mode: 'arc' },
+  dragon: { frames: [11], n: 5, mode: 'arc' },
+  light: { frames: [2, 7], n: 5, mode: 'arc' },
+};
+
 export class Weapons {
   constructor(s) { this.s = s; this.cd = {}; this.orbs = []; this.patches = []; this.aura = null; }
 
@@ -57,13 +71,14 @@ export class Weapons {
     const sv = this.s.sv, g = this.enhBase(sv.enh);
     const theme = cosmetic(this.s.cosLook?.weapon)?.effect;
     const themes = { star: [0xa9caff, 30], leaf: [0x9be88a, -90], water: [0x87e8ff, 0], note: [0xe2a0ff, 95], heart: [0xff9dc3, 145], ember: [0xff9b60, 175], gold: [0xffe495, -150] };
-    if (themes[theme]) { const [tint, hue] = themes[theme]; return { ...g, tint, skin: { tint, hue } }; }
+    if (themes[theme]) { const [tint, hue] = themes[theme]; return { ...g, etint: g.tint || 0, tint, skin: { tint, hue } }; }
     const sk = (sv.skin && SKINS.find(x => x.id === sv.skin)) || cashW(sv);
     // 칼빛을 끼면 색만 바꾼다(크기는 강화 단계 그대로)
-    return sk ? { ...g, tint: sk.tint, skin: sk, ember: g.ember || sk.ember } : g;
+    return sk ? { ...g, etint: g.tint || 0, tint: sk.tint, skin: sk, ember: g.ember || sk.ember } : g;
   }
   enhBase(e) {
-    return e >= 15 ? { tint: 0xd06bff, scale: 1.45, ember: true, glow: true } : e >= 10 ? { tint: 0xff8a2a, scale: 1.3, ember: true, glow: true } : e >= 5 ? { tint: 0x5fc8ff, scale: 1.15 } : { tint: 0, scale: 1 };
+    // 46차: 각성마다 궤적 폭(wide)·길이(scale)·겹 수(layers)가 확 달라진다(표현만 — 판정 범위는 그대로)
+    return e >= 15 ? { tint: 0xd06bff, scale: 1.6, wide: 2.3, layers: 3, ember: true, glow: true } : e >= 10 ? { tint: 0xff8a2a, scale: 1.4, wide: 1.8, layers: 2, ember: true, glow: true } : e >= 5 ? { tint: 0x5fc8ff, scale: 1.2, wide: 1.4, layers: 1 } : { tint: 0, scale: 1, wide: 1, layers: 0 };
   }
   // +10부터 맞힌 자리에 불티가 튄다
   embers(x, y, color) {
@@ -72,6 +87,34 @@ export class Weapons {
       const p = s.add.circle(x, y, Phaser.Math.Between(1, 2), color).setBlendMode(Phaser.BlendModes.ADD).setDepth(29);
       const a = Math.random() * Math.PI * 2, d = 10 + Math.random() * 14;
       s.tweens.add({ targets: p, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 6, alpha: 0, duration: 320, onComplete: () => p.destroy() });
+    }
+  }
+
+  // 46차: 무기 꾸미기마다 베기 모양이 다르다. 기존 cos_fx 그림을 몇 개 날리는 가벼운 연출(피해 숫자보다 아래 층, 동시 6개 이하)
+  skinSlash(a, area) {
+    const s = this.s, id = s.cosLook?.weapon, def = SKIN_SLASH[id]; if (!def || s.over) return;
+    const h = s.hero, dir = Math.cos(a) >= 0 ? 1 : -1, ox = h.x, oy = h.y - 6;
+    if (def.spin) {   // 바람개비·빗자루: 무기 그림이 베기 자리에서 휙 돈다
+      const sp = s.add.image(ox + Math.cos(a) * 34 * area, oy + Math.sin(a) * 26 * area, `cos_${id}`).setDepth(29).setAlpha(0.95);
+      sp.setScale(26 / Math.max(sp.width, sp.height));
+      s.tweens.add({ targets: sp, angle: dir * def.spin, scale: sp.scaleX * 1.9, alpha: 0, duration: 320, ease: 'Cubic.Out', onComplete: () => sp.destroy() });
+    }
+    for (let i = 0; i < def.n; i++) {
+      const f = def.frames[i % def.frames.length], k = def.n > 1 ? i / (def.n - 1) - 0.5 : 0;
+      const p = s.add.image(ox, oy, 'cos_fx', f).setDepth(29).setScale(1.5).setAlpha(0.95);
+      let tx, ty, dur = 360;
+      if (def.mode === 'drop') {   // 생선: 궤적을 따라 물방울이 튀고 아래로 떨어진다
+        const r = (24 + 14 * (k + 0.5) * 2) * area; p.setPosition(ox + Math.cos(a) * r, oy + Math.sin(a) * r * 0.8);
+        tx = p.x + Math.cos(a) * 8 + RF(-6, 6); ty = p.y + 26; dur = 420;
+      } else if (def.mode === 'fan') {   // 대파: 잎이 부채꼴로 흩날리며 돈다
+        const aa = a + k * 1.3, r = 52 * area; tx = ox + Math.cos(aa) * r; ty = oy + Math.sin(aa) * r * 0.8; p.setPosition(ox + Math.cos(aa) * 18, oy + Math.sin(aa) * 14);
+        p.setAngle(RF(0, 360));
+        s.tweens.add({ targets: p, angle: p.angle + dir * 260, duration: 420 });
+      } else {   // 별·하트·음표·불꽃: 베는 호를 따라 반짝 퍼진다
+        const aa = a + k * 1.5, r = 40 * area; p.setPosition(ox + Math.cos(aa) * r * 0.5, oy + Math.sin(aa) * r * 0.4);
+        tx = ox + Math.cos(aa) * r * 1.35; ty = oy + Math.sin(aa) * r * 1.1 - (def.mode === 'rise' ? 14 : 0);
+      }
+      s.tweens.add({ targets: p, x: tx, y: ty, alpha: 0, scale: def.mode === 'drop' ? 1.1 : 2.1, duration: dur, ease: def.mode === 'drop' ? 'Quad.In' : 'Cubic.Out', onComplete: () => p.destroy() });
     }
   }
 
@@ -109,19 +152,23 @@ export class Weapons {
       const g0 = this.enhGlow(), tier = s.sv.tier;
       // 45차: 무기 단계가 전투에서 보이게(표현만, 판정 범위·피해는 그대로) — 단계마다 궤적이 커지고, 3단계부터 검 고유색, 6단계부터 한 겹 더 깐다
       const tt = TIERS[tier]?.tint, g = { ...g0, scale: g0.scale * (1 + 0.05 * tier), tint: g0.tint || (tier >= 3 ? tt : 0), glow: g0.glow || tier >= 6 };
+      const wd = g.wide || 1, sx0 = 0.85 * area * g.scale * (spear ? 1.5 : axe ? 1.3 : 1), sy0 = 0.85 * area * g.scale * (spear ? 0.35 : axe ? 1.3 : 1) * (spear ? 1 : wd);
       const fx = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setAlpha(0.85)
-        .setScale(0.85 * area * g.scale * (spear ? 1.5 : axe ? 1.3 : 1), 0.85 * area * g.scale * (spear ? 0.35 : axe ? 1.3 : 1)).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
+        .setScale(sx0, sy0).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
       if (g.skin) skinFx(fx, g.skin).setAlpha(1);
       else if (g.tint) fx.setTint(g.tint).setAlpha(1);
-      // +10부터 같은 궤적을 한 겹 더 크게 깔아 눈에 띄게 한다
-      if (g.glow) {
-        const fx2 = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(27).setAlpha(0.6)
-          .setScale(0.85 * area * g.scale * 1.25).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
-        if (g.skin) skinFx(fx2, g.skin); else fx2.setTint(g.tint);
-        fx.on('animationupdate', () => { if (fx2.active) fx2.setPosition(fx.x, fx.y); });
-        fx2.setPosition(h.x + Math.cos(a) * 22 * area, h.y - 4 + Math.sin(a) * 18 * area);
+      // +5부터 같은 궤적을 겹쳐 깐다: +5 한 겹(파랑) · +10 두 겹(주황, 더 넓게) · +15 세 겹(보라 + 흰 심지)
+      const layers = g.layers || (g.glow ? 1 : 0), et = g.etint || g.tint;
+      for (let li = 0; li < layers; li++) {
+        const fx2 = s.add.sprite(0, 0, 'fx1_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(27 - li * 0.1).setAlpha(0.6)
+          .setScale(sx0 * (1.2 + 0.18 * li), sy0 * (1.2 + 0.3 * li)).setRotation(a).setFlipY(Math.cos(a) < 0).play('fxSlash');
+        if (li === 2) fx2.setTint(0xffffff).setAlpha(0.85).setScale(sx0 * 0.9, sy0 * 0.45);
+        else if (et) fx2.setTint(et); else if (g.skin) skinFx(fx2, g.skin);
+        const pl = () => fx2.active && fx2.setPosition(h.x + Math.cos(a) * 22 * area, h.y - 4 + Math.sin(a) * 18 * area);
+        pl(); fx2.on('animationupdate', pl);
         fx2.once('animationcomplete', () => fx2.destroy());
       }
+      this.skinSlash(a, area);
       const fwd = spear ? 2 : 1;
       const place = () => fx.setPosition(h.x + Math.cos(a) * 22 * area * fwd, h.y - 4 + Math.sin(a) * 18 * area * fwd);
       place(); fx.on('animationupdate', place);
@@ -391,6 +438,7 @@ export class Weapons {
     s.face = Math.cos(ang) >= 0 ? 1 : -1;
     h.setFlipX(s.face < 0).play('slash', true);
     h.once('animationcomplete-slash', () => h.play('idle'));
+    this.skinSlash(ang, 1);
     const fx = s.gear.fx;
     // 원거리도 각성하면 공격 모양이 바뀐다: +5 칼바람이 함께 날고, +15 두 번째마다 사방으로 퍼진다
     const e = s.sv.enh; this.ns = (this.ns || 0) + 1;

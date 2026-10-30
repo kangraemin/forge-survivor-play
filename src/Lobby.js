@@ -1,10 +1,11 @@
 import { cosmeticPage } from './cosmeticShop.js';
+import { cosmetic } from './cosmetics.js';
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
-import { showAd, buy, grant, giveText, adsLeft, adsDaily, won, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, dayKey } from './shop.js';
+import { showAd, buy, grant, giveText, adsLeft, adsDaily, won, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
 import { ContentTab } from './contentTab.js';
@@ -26,7 +27,7 @@ export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
   // 씬 인스턴스는 재사용되니 전투에서 돌아올 때 잠금·체크 상태를 비운다
-  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = 'costume'; this.cosSelected = { costume: data.cosmetic }; this.legacySkins = false; } }
+  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
   // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
   get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
   get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
@@ -992,16 +993,17 @@ export class Lobby extends Phaser.Scene {
     track('view_item_list', { item_list_id: 'deal', items: [deal.id, grow?.id].filter(Boolean).join(','), gem: sv.gem });
     b.add(this.add.text(16, 74, '오늘의 특가', font(12, '#ffd75e')));
     timer(77, () => `남은 ${leftText(msToMidnight())}`);
-    const day = sv.deal.day; this.ticks.push({ redraw: () => dayKey() !== day });
+    const day = sv.deal.day; this.ticks.push({ redraw: () => String(kstDay()) !== day });
     b.add(panel(this, 12, 92, W - 24, 78, { line: deal.got ? COLOR.line : 0xffd75e }));
     b.add(this.add.rectangle(42, 131, 48, 48, 0x8a2f3a).setStrokeStyle(1, 0xff9a8a));
     b.add(this.add.text(42, 124, `-${deal.off}%`, font(13, '#ffffff')).setOrigin(0.5));
     b.add(this.add.text(42, 140, '할인', font9(10, '#ffd0d0')).setOrigin(0.5));
     b.add(this.add.text(76, 98, deal.name, font(12, '#ffffff')));
     b.add(this.add.text(76, 116, nb(giveText(deal.give, sv)), { ...font9(10, '#f2e4bc'), wordWrap: { width: W - 100 } }));
-    const was = this.add.text(76, 150, won(deal.base), font9(10, '#a1b2b6')); b.add(was);
-    b.add(this.add.rectangle(76, 157, was.width, 1, 0xa1b2b6).setOrigin(0, 0.5));
-    b.add(this.add.text(82 + was.width, 150, '하루 1번', font9(10, '#ff9ad0')));
+    // 46차: 원가는 보석 상점에서 실제로 파는 구성품 합계(상시 판매가)가 있을 때만 긋는다
+    const was = deal.base ? this.add.text(76, 150, `상시가 ${won(deal.base)}`, font9(10, '#a1b2b6')) : null;
+    if (was) { b.add(was); b.add(this.add.rectangle(76, 157, was.width, 1, 0xa1b2b6).setOrigin(0, 0.5)); }
+    b.add(this.add.text(was ? 82 + was.width : 76, 150, '하루 1번', font9(10, '#ff9ad0')));
     buyBtn(W - 52, 154, deal, deal.got);
     // 성장 꾸러미
     b.add(this.add.text(16, 180, '성장 꾸러미', font(12, '#9ae0ff')));

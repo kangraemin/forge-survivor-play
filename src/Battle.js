@@ -148,6 +148,8 @@ export class Battle extends Phaser.Scene {
     // 44차: 6장부터는 시작 몹 28마리가 곧바로 에워싸 무기 1개인 첫 30초에 쓰러졌다 → 일부만 두고 나머지는 화면 밖에서 차례로 들어온다
     const total = this.easy ? 24 : 28, first = this.endless || this.dungeon ? total : this.c === 0 ? (this.easy ? 10 : 16) : this.c >= 5 ? 8 : 16;   // 45차: 1-1도 시작 24마리가 이미 화면에 있었다 → 10(처음 판)·16마리만 두고 나머지는 7초에 걸쳐 들어온다(첫 레벨업 2.4초는 가까운 몹으로 유지)
     for (let i = 0; i < first; i++) this.spawn(true, null, first < total ? { at: this.spawnPoint(150, 230) } : {});   // 40이면 무기 1~2개인 첫 30초가 가장 위험했다(37차)
+    // 46차: 9장부터는 시작 10초 동안 처치가 없어 조용했다 — 약한 몹(체력 12%, 보상은 그대로)을 가까이 먼저 보내 첫 베기에 바로 쓰러지게 한다
+    if (this.c >= 8 && !this.endless && !this.dungeon && !this.isBoss) for (let i = 0; i < 5; i++) this.spawn(true, this.ch.mobs[0], { weak: 0.12, force: true, at: this.spawnPoint(55 + i * 8, 95 + i * 8) });
     for (let i = 0; i < total - first; i++) this.time.delayedCall(700 + i * (7000 / (total - first)), () => !this.over && this.spawn(false, null, { at: this.spawnPoint(250, 300) }));
     if (!this.bot) playBgm('battle', this.c);
     this.events.once('shutdown', stopBgm);
@@ -255,13 +257,15 @@ export class Battle extends Phaser.Scene {
     this.hp = this.maxHp;
     this.hero = this.physics.add.sprite(WORLD / 2, WORLD / 2, 'hero2_r0s').play('idle');
     dressHero(this.hero, this.cosLook);
-    this.hero.body.setSize(this.hero.width * 0.45, this.hero.height * 0.35).setOffset(this.hero.width * 0.275, this.hero.height * 0.6);
+    // 46차: 주인공 그림을 1.3배로 키운다(전투에서 작아 안 보였다). 피격 판정은 그대로 두려고 몸 상자는 같은 비율로 줄인다
+    this.HS = 1.3; this.hero.setScale(this.HS); this.hero.bs = this.HS;
+    this.hero.body.setSize(this.hero.width * 0.45 / this.HS, this.hero.height * 0.35 / this.HS).setOffset(this.hero.width * (0.5 - 0.225 / this.HS), this.hero.height * (0.775 - 0.175 / this.HS));
     this.hero.setCollideWorldBounds(true);
-    this.heroShadow = this.add.image(0, 0, 'shadow').setScale(1.6, 1.4);
+    this.heroShadow = this.add.image(0, 0, 'shadow').setScale(1.6 * 1.3, 1.4 * 1.3);
     // 몹 떼 속에서도 내 캐릭터가 바로 보이게 발밑에 밝은 고리
     // 고리 색은 강화 단계를 따른다(+5 파랑, +10 주황, +15 보라). +10부터는 몸에도 빛이 돈다
     const rc = sv.enh >= 15 ? 0xd06bff : sv.enh >= 10 ? 0xff8a2a : sv.enh >= 5 ? 0x5fc8ff : 0x9ae6ff;
-    this.heroRing = this.add.ellipse(0, 0, 24, 10, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(11.5);
+    this.heroRing = this.add.ellipse(0, 0, 24 * 1.3, 10 * 1.3, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(11.5);
     // +10 각성부터 발밑에 강화 색 기운이 맥박친다(+15는 더 크고 잔상이 남는다)
     if (sv.enh >= 10) {
       this.heroAura = this.add.image(0, 0, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(rc).setDepth(9.5).setAlpha(0.5).setScale(sv.enh >= 15 ? 1.2 : 0.9, sv.enh >= 15 ? 0.55 : 0.42);
@@ -278,7 +282,7 @@ export class Battle extends Phaser.Scene {
     this.heroSword = this.wtype.id === 'sword' || !!this.cosLook.weapon;
     if (this.heroWeapon) {
       // 검은 등급마다 다른 그림(w_sword0~9)을 손잡이 끝으로 쥔다. +5·+10·+15를 넘으면 검이 커지고 강화 색으로 빛난다
-      const eb = sv.enh >= 15 ? 3 : sv.enh >= 10 ? 2 : sv.enh >= 5 ? 1 : 0, sz = this.heroSword ? 17 + 1.6 * sv.tier + 2 * eb : 16;   // 45차: 검 단계가 오를수록 손에 든 검이 눈에 띄게 커진다(0단계 17 → 9단계 31+)
+      const eb = sv.enh >= 15 ? 3 : sv.enh >= 10 ? 2 : sv.enh >= 5 ? 1 : 0, sz = (this.heroSword ? 17 + 1.6 * sv.tier + 2 * eb : 16) * 1.45;   // 46차: 손에 든 무기·무기 스킨을 한 번 더 키운다(주인공 1.3배보다 더)   // 45차: 검 단계가 오를수록 손에 든 검이 눈에 띄게 커진다(0단계 17 → 9단계 31+)
       this.heroWeapon.setScale(sz / Math.max(this.heroWeapon.width, this.heroWeapon.height));   // 6단계 이후 그림은 16칸보다 크다
       if (this.heroSword) {
         this.heroWeapon.setOrigin(0.2, 0.8);
@@ -486,7 +490,7 @@ export class Battle extends Phaser.Scene {
     m.elite = elite;
     // 무한의 탑은 층마다 몹이 곱으로 세져 언젠가는 반드시 쓰러진다
     const tower = this.endless ? [Math.pow(D.ENDLESS.hpGrow, this.wave), Math.pow(D.ENDLESS.dmgGrow, this.wave)] : [1, 1];
-    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1) * tower[0] * (v?.hp || 1) * (opt.mini ? 0.35 : 1) * (this.mod?.hp || 1);
+    m.maxHp = m.hp = m0.hp * this.mobHpMul * D.timeHp(this.progress()) * (elite ? 8 : 1) * tower[0] * (v?.hp || 1) * (opt.mini ? 0.35 : 1) * (opt.weak || 1) * (this.mod?.hp || 1);
     m.dmg = m0.dmg * this.mobDmgMul * (elite ? 1.2 : 1) * tower[1];
     m.spd = m0.spd * (1 + 0.04 * this.c) * RF(0.9, 1.1) * (v?.spd || 1) * (opt.mini ? 1.2 : 1) * (this.mod?.spd || 1);
     if (v?.ai) m.ai = v.ai;
@@ -562,7 +566,13 @@ export class Battle extends Phaser.Scene {
     if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
     m.hitBy[src] = this.bt;
     const { dmg, crit } = this.dmgCalc(mult, tag);
-    m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1);   // 지친 보스·리치 왕에게 저주받은 적은 더 아프게 맞는다
+    const open = m.isBoss && m.expose > this.bt;   // 46차: 보스 페이즈 전환 뒤 짧게 약점이 드러난다 — 이때 맞으면 추가 피해
+    m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (open ? 1.5 : 1);
+    if (open && this.bt - (m.exposeTxt || 0) > 260) {
+      m.exposeTxt = this.bt;
+      const wt = this.add.text(m.x + RF(-14, 14), m.y - m.displayHeight * 0.35, '약점!', font(10, '#ffe060', 3)).setOrigin(0.5).setDepth(39);
+      this.tweens.add({ targets: wt, y: wt.y - 18, alpha: 0, duration: 520, onComplete: () => wt.destroy() });
+    }
     // 44차: 새 장은 몹 체력이 커서 첫 몹이 쓰러지기까지 30초가 걸려 Lv1에 머물렀다(9-1). 2장부터 Lv3 전까진 때릴 때마다 경험치가 조금씩 찬다(처치 경험치는 그대로, 70번 베면 1 → 첫 레벨업 15초 안팎)
     if (this.c >= 1 && !this.endless && this.run.lv < 3 && !m.isBoss && !m.mini && !this.over) this.fightXp = (this.fightXp || 0) + Math.min(0.5, mult / 70);   // 레벨업 창은 프레임 맨 앞에서 연다(맞히는 도중에 열지 않게)
     // 흰 번쩍임 + 찌그러짐
@@ -666,6 +676,8 @@ export class Battle extends Phaser.Scene {
       if (k === 3) { if (!crit) return; break; }
       y -= 12;
     }
+    // 46차: 큰 숫자가 주인공을 가렸다 — 주인공 반경(34px) 안에서 뜨는 숫자는 머리 위로 밀어 올린다
+    { const hh = this.hero, hr = 34; if (Math.hypot(x - hh.x, y - hh.y) < hr) y = hh.y - hr - 6 - Math.abs(x - hh.x) * 0.1; }
     if (y - vr.y < 82) return;
     const st =font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2);
     let t = this.popFree.pop();
@@ -1178,20 +1190,20 @@ export class Battle extends Phaser.Scene {
     const rock = moving && !slashing && h.anims.currentAnim?.key !== 'walkSide' ? Math.sin(this.walkT) * 8 : 0;
     h.setAngle(slashing ? 0 : rock + v.x * 4);
     // 휘두를 때의 늘어남(weapons.js)을 덮어쓰지 않게 그동안은 손대지 않는다
-    if (!slashing) h.setScale(1, moving ? 1 : 1 + Math.sin(this.walkT) * 0.025);
+    if (!slashing) h.setScale(this.HS, this.HS * (moving ? 1 : 1 + Math.sin(this.walkT) * 0.025));
     h.setAlpha(this.bt < this.iframe && Math.floor(this.bt / 60) % 2 ? 0.55 : 1);
     h.setDepth(10 + h.y / WORLD);
-    if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.height / 2 - 3); }
-    this.heroRing.setPosition(h.x, h.y + h.height / 2 - 2);
-    if (this.heroAura) this.heroAura.setPosition(h.x, h.y + h.height / 2 - 2);
+    if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.displayHeight / 2 - 3); }
+    this.heroRing.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
+    if (this.heroAura) this.heroAura.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
     // +15 각성: 움직이면 강화 색 잔상이 남는다
     if (moving && this.sv.enh >= 15 && this.bt - (this.lastGhost || 0) > 90) {
       this.lastGhost = this.bt;
       const gh = this.add.image(h.x, h.y, h.texture.key, h.frame.name).setFlipX(h.flipX).setScale(h.scaleX, h.scaleY).setTint(0xd06bff).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45).setDepth(h.depth - 0.01);
       this.tweens.add({ targets: gh, alpha: 0, duration: 260, onComplete: () => gh.destroy() });
     }
-    this.heroMark.setPosition(h.x, h.y - h.height / 2 - 4 + Math.sin(this.bt / 160) * 1.5);
-    this.heroShadow.setPosition(h.x, h.y + h.height / 2 - 2).setScale(1.6 * (1 - bob * 2), 1.4).setDepth(9);
+    this.heroMark.setPosition(h.x, h.y - h.displayHeight / 2 - 4 + Math.sin(this.bt / 160) * 1.5);
+    this.heroShadow.setPosition(h.x, h.y + h.displayHeight / 2 - 2).setScale(1.6 * 1.3 * (1 - bob * 2), 1.4 * 1.3).setDepth(9);
     if (this.heroWeapon) {
       const k = h.anims.currentAnim?.key, f = h.flipX ? -1 : 1;
       if (this.heroSword) {
@@ -1199,7 +1211,7 @@ export class Battle extends Phaser.Scene {
       } else {
         // 손 자리: 앞모습은 왼쪽 아래, 뒷모습은 오른쪽(몸 뒤), 옆모습·서 있기는 바라보는 쪽, 휘두를 땐 앞으로 뻗는다
         const [ox, oy, ang] = k === 'walkFront' ? [-9, 6, -20] : k === 'walkUp' ? [9, 5, 20] : k === 'slash' ? [13 * f, 0, 40 * f] : [6 * f, 7, 10 * f];
-        this.heroWeapon.setPosition(h.x + ox, h.y + oy - bob * h.height).setFlipX(f < 0).setAngle(ang + h.angle)
+        this.heroWeapon.setPosition(h.x + ox, h.y + oy - bob * h.displayHeight).setFlipX(f < 0).setAngle(ang + h.angle)
           .setDepth(h.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(h.alpha);
       }
     }
@@ -1209,6 +1221,16 @@ export class Battle extends Phaser.Scene {
 
   updateMobs(dt) {
     const h = this.hero;
+    // 46차: 방위(12칸)마다 접근 슬롯 상한 — 한쪽 방위에 몹이 벽처럼 쌓이면 넘치는 몹은 빈 방위로 돌아 들어온다
+    const SEC = 12, CAP = 5, cnt = this.secCnt ||= new Array(SEC);
+    cnt.fill(0);
+    const ml = this.mobs.getChildren();
+    for (let i = 0; i < ml.length; i++) {
+      const m = ml[i]; if (m.dead || m.isBoss || m.goblin || !m.active) { m.sec = -1; continue; }
+      const dx = m.x - h.x, dy = m.y - h.y, dd = dx * dx + dy * dy;
+      m.sec = dd < 190 * 190 && dd > 50 * 50 ? Math.floor(((Math.atan2(dy, dx) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2 / SEC)) : -1;
+      if (m.sec >= 0) cnt[m.sec]++;
+    }
     this.mobs.getChildren().forEach(m => {
       if (m.dead || m.isBoss) return;
       m.t += dt;
@@ -1229,8 +1251,16 @@ export class Battle extends Phaser.Scene {
       let dx = h.x - m.x, dy = h.y - m.y;
       const d = Math.hypot(dx, dy) || 1;
       // 45차: 멀리서는 영웅 한 점이 아니라 몹마다 다른 각도의 링(반지름 34px)을 향해 와서 한 점에 40~60마리가 뭉치지 않는다. 가까워지면(50px) 영웅을 곧장 향한다
+      if (m.slotT > 0) m.slotT -= dt;
+      if (m.sec >= 0 && cnt[m.sec] > CAP && !(m.slotT > 0)) {
+        for (let o = 1; o <= SEC / 2; o++) {
+          const alt = [(m.sec + o) % SEC, (m.sec - o + SEC) % SEC].find(q => cnt[q] < CAP);
+          if (alt !== undefined) { cnt[m.sec]--; cnt[alt]++; m.ringA = (alt + 0.5 + RF(-0.3, 0.3)) * Math.PI * 2 / SEC; m.slotT = 1100; break; }
+        }
+      }
       if (d > 50 && !m.goblin && m.ai !== 'ranged') {
-        const k = Math.min(1, (d - 50) / 60) * 34, ex = h.x + Math.cos(m.phase * 1.05) * k - m.x, ey = h.y + Math.sin(m.phase * 1.05) * k - m.y, ed = Math.hypot(ex, ey) || 1;
+        const re = m.slotT > 0, ra = re ? m.ringA : m.phase * 1.05;
+        const k = re ? Math.min(1, d / 90) * 78 : Math.min(1, (d - 50) / 60) * 34, ex = h.x + Math.cos(ra) * k - m.x, ey = h.y + Math.sin(ra) * k - m.y, ed = Math.hypot(ex, ey) || 1;
         dx = ex / ed * d; dy = ey / ed * d;
       }
       // 보물 고블린은 반대로 달아나다 12초가 지나면 사라진다

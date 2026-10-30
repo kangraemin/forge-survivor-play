@@ -77,9 +77,11 @@ export function buyCosmetic(sv, id, now = Date.now()) {
 export const WINTER = { from: Date.parse('2026-10-30T00:00:00+09:00'), until: Date.parse('2027-01-01T00:00:00+09:00'), label: '겨울 기념 판매 · 2026.10.30–12.31 KST' };
 export const available = (it, now = Date.now()) => it?.id !== 'santa' || (now >= WINTER.from && now < WINTER.until);
 export const COS_PACKS = [
-  { id: 'look_picnic', name: '꽃바람 소풍 세트', price: 3900, once: true, give: { cosmetics: ['girl', 'candy', 'ribbon'] }, gemCost: 1240 },
-  { id: 'look_bath', name: '온천 친구 세트', price: 4900, once: true, give: { cosmetics: ['capybara', 'baby_capy', 'sprout'] }, gemCost: 1480 },
+  { id: 'look_picnic', name: '꽃바람 소풍 세트', price: 12400, once: true, give: { cosmetics: ['girl', 'candy', 'ribbon'] }, gemCost: 1240 },
+  { id: 'look_bath', name: '온천 친구 세트', price: 14800, once: true, give: { cosmetics: ['capybara', 'baby_capy', 'sprout'] }, gemCost: 1480 },
 ];
+// 46차: 보석 10개 = 100원(보석 120개 = 1,200원) 기준. 묶음의 원화가 = 보석가 x 10, 보석가 = 개별가 합 x 0.8
+export const GEM_WON = 10;
 export const packBase = pack => pack.give.cosmetics.reduce((n, id) => n + cosmetic(id).cost, 0);
 export function buyCosmeticPack(sv, pack) {
   const c = wardrobe(sv);
@@ -90,7 +92,7 @@ export function buyCosmeticPack(sv, pack) {
 }
 export const todayLook = (now = Date.now()) => COSTUMES[Math.floor((now + 9 * 3600000) / 86400000) % 5];
 export function startTrial(sv, id) {
-  const c = wardrobe(sv), it = COSTUMES.find(x => x.id === id);
+  const c = wardrobe(sv), it = BODY_LOOKS.find(x => x.id === id);   // 46차: 유료 캐릭터 6종도 1판 체험
   if (!it || c.tried[id] || c.owned[id] || !available(it)) return false;
   c.tried[id] = true; c.pendingTrial = id; return true;
 }
@@ -98,7 +100,8 @@ export function startTrial(sv, id) {
 export function consumeTrial(sv) {
   const c = wardrobe(sv), look = equippedLook(sv), id = c.pendingTrial;
   delete c.pendingTrial;
-  if (!COSTUMES.some(x => x.id === id) || !c.tried[id]) return { look, trial: '' };
+  if (!BODY_LOOKS.some(x => x.id === id) || !c.tried[id]) return { look, trial: '' };
   c.finishedTrial = id;
-  return { look: { ...look, character: '', costume: id }, trial: id };
+  const isChar = CHARACTERS.some(x => x.id === id);
+  return { look: { ...look, character: isChar ? id : '', costume: isChar ? '' : id }, trial: id };
 }

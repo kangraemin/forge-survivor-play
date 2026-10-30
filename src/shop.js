@@ -46,15 +46,19 @@ export const adsLeft = (sv, kind) => adsDaily(sv, kind) - (sv.ads[kind] || 0);
 // 날짜는 그때그때 기기 시계로 본다(저장의 day는 앱을 다시 열 때만 바뀐다: 켜 둔 채 자정을 넘겨도 특가가 바뀌게)
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 const monthKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}`;
-export const msToMidnight = () => { const d = new Date(), m = new Date(d); m.setHours(24, 0, 0, 0); return m - d; };
+// 46차: 특가는 KST 날짜로 정한다(기기 시간대·클라이언트 랜덤과 무관하게 같은 날 같은 특가)
+const KST = 9 * 3600000, DAY = 86400000;
+export const kstDay = (now = Date.now()) => Math.floor((now + KST) / DAY);
+export const msToMidnight = (now = Date.now()) => DAY - ((now + KST) % DAY);
 export const leftText = ms => { const s = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map(n => String(n).padStart(2, '0')).join(':'); };
-// 오늘의 특가: 하루에 한 번 꾸러미·할인율을 뽑아 저장한다. 산 날은 got
+export const dealOf = (n = kstDay()) => ({ id: D.DEALS[n % D.DEALS.length].id, off: D.DEAL_OFF[Math.floor(n / D.DEALS.length) % D.DEAL_OFF.length] });
+// 오늘의 특가: KST 날짜 번호로 꾸러미·할인율이 정해진다. 산 날은 got
 export function todayDeal(sv) {
-  const day = dayKey();
-  if (sv.deal?.day !== day) { sv.deal = { day, id: D.DEALS[Math.floor(Math.random() * D.DEALS.length)].id, off: D.DEAL_OFF[Math.floor(Math.random() * D.DEAL_OFF.length)] }; save(); track('deal_roll', { id: sv.deal.id, off: sv.deal.off }); }
+  const n = kstDay(), day = String(n);
+  if (sv.deal?.day !== day) { sv.deal = { day, ...dealOf(n) }; save(); track('deal_roll', { id: sv.deal.id, off: sv.deal.off }); }
   const d = D.DEALS.find(x => x.id === sv.deal.id) || D.DEALS[0];
   // 결제 상품 id는 꾸러미·할인율마다 따로(앱 스토어에 가격별로 등록)
-  return { ...d, id: `deal_${d.id}_${sv.deal.off}`, base: d.price, off: sv.deal.off, price: D.dealPrice(d, sv.deal.off), got: !!sv.deal.got, onBuy: sv => { sv.deal.got = true; } };
+  return { ...d, id: `deal_${d.id}_${sv.deal.off}`, base: D.dealRegular(d), off: sv.deal.off, price: D.dealPrice(d, sv.deal.off), got: !!sv.deal.got, onBuy: sv => { sv.deal.got = true; } };
 }
 // 성장 꾸러미: 장 보스 첫 처치 뒤 24시간, 장마다 한 번
 export const growLeft = sv => sv.grow ? sv.grow.at + D.GROW.ms - Date.now() : 0;
@@ -172,7 +176,7 @@ export function itemBySku(sku) {
   const f = [...D.IAP, ...D.BIG_PACKS, ...COS_PACKS].find(x => x.id === sku);
   if (f) return f;
   const m = /^deal_(.+)_(\d+)$/.exec(sku), d = m && D.DEALS.find(x => x.id === m[1]);
-  if (d) return { ...d, id: sku, onBuy: sv => { if (sv.deal) sv.deal.got = true; } };
+  if (d) return { ...d, id: sku, price: D.dealPrice(d, +m[2]), onBuy: sv => { if (sv.deal) sv.deal.got = true; } };
   const g = /^grow(\d+)$/.exec(sku);
   if (g) { const c = +g[1] - 1; return { id: sku, once: true, c, price: D.GROW.price[Math.min(c, D.GROW.price.length - 1)], give: D.growGive(c) }; }
   return null;

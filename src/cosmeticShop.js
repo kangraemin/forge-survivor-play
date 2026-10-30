@@ -4,6 +4,7 @@ import { font, font9, panel, button, toast } from './ui.js';
 import { buy, won } from './shop.js';
 import { save } from './save.js';
 import { track } from './log.js';
+import * as D from './data.js';
 
 function icon(scene, parent, it, x, y, size = 28) {
   const body = it.kind === 'character' || it.kind === 'costume';
@@ -29,7 +30,9 @@ export function cosmeticPage(s) {
   b.add(s.add.text(105, 112, selected.name, { ...font(11), wordWrap: { width: 145 } }));
   b.add(s.add.text(105, 139, selected.desc, { ...font9(10, '#b4cfda'), wordWrap: { width: 143 } }));
   b.add(s.add.text(105, 171, kind === 'pet' ? '보스 펫과 함께 동행' : '외형·이펙트만 변경', font9(10, '#83d5c8')));
-  b.add(button(s, 200, 192, 94, 18, '기본으로 해제', () => { equipCosmetic(sv, kind, ''); redraw(); }, { size: 9 }));
+  const body = kind === 'character' || kind === 'costume', canTry = body && !state.owned[selected.id] && !state.tried[selected.id] && available(selected);
+  if (canTry) b.add(button(s, 118, 192, 76, 18, '1판 무료 체험', () => { if (startTrial(sv, selected.id)) { save(); { const n = Math.min(sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1); s.scene.start('Battle', { chapter: Math.floor(n / D.STAGES_PER_CHAPTER), stage: n % D.STAGES_PER_CHAPTER, bot: false }); } } }, { size: 9, color: 0x1f5a4a }));
+  b.add(button(s, canTry ? 214 : 200, 192, canTry ? 84 : 94, 18, '기본으로 해제', () => { equipCosmetic(sv, kind, ''); redraw(); }, { size: 9 }));
   all.slice(page * 6, page * 6 + 6).forEach((it, i) => {
     const x = 54 + (i % 3) * 81, y = 233 + Math.floor(i / 3) * 53;
     const bt = button(s, x, y, 76, 48, it.name, () => { s.cosSelected[kind] = it.id; redraw(); }, { size: 7, color: it.id === selected.id ? 0x43566d : 0x3a3846 });
@@ -56,8 +59,8 @@ export function cosmeticPacks(s, index = 0) {
   c.add(panel(s, 16, 93, 238, 306, { fill: 0x152332 }));
   c.add(s.add.text(135, 116, pack.name, font(15, '#ffe0a0')).setOrigin(0.5));
   pack.give.cosmetics.forEach((id, i) => { const it = cosmetic(id); icon(s, c, it, 61 + i * 74, 166, 42); c.add(s.add.text(61 + i * 74, 201, it.name, font9(8, '#dae7ed')).setOrigin(0.5)); });
-  c.add(s.add.text(135, 230, `각각 ${packBase(pack)} → 묶음 ${pack.gemCost} 보석`, font9(11, '#ffe0a0')).setOrigin(0.5));
-  c.add(s.add.text(135, 250, '보석 가격 기준 20% 할인 · 상시 판매\n원화는 별도 구매 선택 · 중복 구매 불가', { ...font9(10, '#b4cfda'), align: 'center' }).setOrigin(0.5));
+  c.add(s.add.text(135, 230, `따로 사면 ${packBase(pack)} → 묶음 ${pack.gemCost} 보석`, font9(11, '#ffe0a0')).setOrigin(0.5));
+  c.add(s.add.text(135, 250, '따로 사는 값보다 20% 저렴 · 상시 판매\n보석 10개 = 100원 기준이라 값어치는 같아요', { ...font9(10, '#b4cfda'), align: 'center' }).setOrigin(0.5));
   let purchasing = false;
   c.add(button(s, 135, 290, 210, 28, own ? '구성품 보유 · 개별 구매를 이용해요' : `${pack.gemCost} 보석으로 구매`, () => { if (purchasing) return; if (!buyCosmeticPack(sv, pack)) { toast(s, '보석이 부족해요'); return; } save(); c.close(); }, { color: 0x2f6b3a, size: 10 }).setEnabled(!own));
   const cash = button(s, 135, 325, 210, 28, `${won(pack.price)} 결제로 구매`, async () => {
@@ -70,16 +73,20 @@ export function cosmeticPacks(s, index = 0) {
 
 // 결과 위 빈 영역의 작은 추천 카드. 보상·재도전 버튼을 가리거나 자동 창을 띄우지 않는다.
 export function cosmeticResultCard(s, parent, win) {
-  if (s.bot || s.dungeon || s.endless || !(s.sv.stats.runs === 1 || (win && s.isBoss) || s.cosTrial)) return;
+  s.cosCard = false;
+  if (s.bot || s.dungeon || s.endless || !(s.sv.stats.runs === 1 || (win && s.isBoss) || s.cosTrial)) return false;
   const sv = s.sv, state = wardrobe(sv), it = cosmetic(s.cosTrial) || todayLook();
-  parent.add(panel(s, 20, 18, 230, 60, { fill: 0x142a31, line: 0x507b89 }));
-  icon(s, parent, it, 43, 48, 42);
-  parent.add(s.add.text(67, 26, `${s.cosTrial ? '체험 끝' : '오늘의 꾸미기'} · ${it.name}`, font9(10, '#d5e9ee')));
-  const trial = !s.cosTrial && !state.tried[it.id] && !state.owned[it.id] && available(it);
-  const bt = button(s, 153, 58, 172, 24, trial ? '이 옷 입고 다시 하기 · 1판 무료' : `꾸미기 보기 · ${it.cost} 보석`, () => {
+  s.cosCard = true;
+  parent.add(panel(s, 20, 24, 230, 56, { fill: 0x142a31, line: 0x507b89 }));
+  icon(s, parent, it, 43, 52, 40);
+  const owned = state.owned[it.id];
+  parent.add(s.add.text(67, 30, `${s.cosTrial ? '체험 끝' : '오늘의 꾸미기'} · ${it.name}`, font9(10, '#d5e9ee')));
+  const trial = !s.cosTrial && !state.tried[it.id] && !owned && available(it);
+  const bt = button(s, 153, 63, 172, 22, trial ? '이 옷 입고 다시 하기 · 1판 무료' : owned ? `${it.name} 착용하러 가기` : `${it.cost} 보석으로 구매하기`, () => {
     if (trial) {
       if (!startTrial(sv, it.id)) return; save();
       s.scene.start('Battle', { chapter: s.c, stage: s.s, hard: s.hard, bot: false });
     } else s.scene.start('Lobby', { tab: 'shop', cosmetic: it.id });
   }, { size: 9 }); parent.add(bt);
+  return true;
 }

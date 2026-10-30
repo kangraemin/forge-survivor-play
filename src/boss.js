@@ -54,6 +54,12 @@ export class BossAI {
       this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(`${this.b.name} · 지쳤다! 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}%`).setColor('#ff9a5a');
       s.banner('보스가 지쳤다!', `받는 피해 +${Math.round((D.BOSS_TIRED.mul - 1) * 100)}% · 몰아붙여라`);
     }
+    // 46차: 체력 70%·40%에서 페이즈가 바뀐다 — 보스가 포효하며 잠깐 멈추고(색 번쩍·화면 흔들림), 3초 동안 약점이 드러난다(맞으면 추가 피해)
+    if (!this.mid && this.bar) for (const [i, f] of [[1, 0.7], [2, 0.4]]) if ((this.phase || 0) < i && m.hp <= m.maxHp * f) this.phaseShift(i, f);
+    if (this.mark) {
+      if (m.expose > s.bt && m.active) this.mark.setPosition(m.x, m.y - m.displayHeight * 0.1).setScale((m.displayWidth * 0.5 / 28) * (1 + 0.08 * Math.sin(s.bt / 90)));
+      else { this.mark.destroy(); this.mark = null; }
+    }
     if (enraged && !this.rage) {
       this.rage = true; m.setTint(0xff8080); m.baseTint = 0xff8080; s.cameras.main.shake(300, 0.005); sfx('bossIn');
       const what = D.RAGE_WHAT[this.b.rage];
@@ -82,6 +88,20 @@ export class BossAI {
       this.t = (enraged ? 2400 : 3200) + R(0, 600);
       this[pat](enraged);
     }
+  }
+
+  phaseShift(i, f) {
+    const s = this.s, m = this.m;
+    this.phase = i; this.busy = Math.max(this.busy, 900); m.setVelocity(0, 0);
+    m.expose = s.bt + 3200;
+    s.cameras.main.shake(260, 0.006); s.cameras.main.flash(180, 255, 240, 200); sfx('bossIn');
+    const ring = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(30).setScale(0.4);
+    s.tweens.add({ targets: ring, scale: m.displayWidth / 28 + 1.4, alpha: 0, duration: 520, onComplete: () => ring.destroy() });
+    s.tweens.add({ targets: m, scaleX: m.scaleX * 1.15, scaleY: m.scaleY * 0.9, duration: 160, yoyo: true });
+    this.mark?.destroy();
+    this.mark = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(m.depth + 1).setAlpha(0.9);
+    s.banner(`페이즈 ${i + 1}!`, '약점이 드러났다 · 지금 몰아쳐라 (추가 피해)');
+    s.log?.('boss_phase', { boss: this.key, phase: i + 1, at: f });
   }
 
   // 예고: 빨간 원이 차오른 뒤 터진다
@@ -237,7 +257,7 @@ export class BossAI {
 
   die() {
     const s = this.s, m = this.m;
-    this.tele.destroy(); this.shadow.destroy();
+    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy();
     this.bar?.forEach(o => o.destroy());
     s.hitstop = 260;
     s.cameras.main.shake(600, 0.015);

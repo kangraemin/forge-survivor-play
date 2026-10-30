@@ -579,7 +579,7 @@ export class Overlay {
     // 도감: 이번 판 처치·획득으로 새로 찬 칸
     const dexNew = dexRefresh(sv);
     save();
-    if (dexNew > 0 && !s.bot) s.time.delayedCall(1200, () => toast(s, `도감 ${dexNew}칸 채움 · 최대 체력 +${Math.round(dexNew * DEX_HP * 1000) / 10}%`, '#9ae0ff', 60));
+    if (dexNew > 0 && !s.bot) s.time.delayedCall(1200, () => toast(s, `도감 ${dexNew}칸 채움 · 최대 체력 +${Math.round(dexNew * DEX_HP * 1000) / 10}%`, '#9ae0ff', s.cosCard ? 8 : 60));
     s.log('battle_end', { win, first, hard, dungeon: dun || 'none', progress: Math.round((win ? 1 : s.runProgress()) * 100), wave: s.wave, floors: s.endless ? floors : undefined, kills: r.kills, gold, stone, gem, power: D.powerOf(sv), rec: s.endless ? undefined : D.recPower(s.c, s.s), top_dmg: s.topHit(), revived: !!r.revived, cleared: sv.cleared, loot: loot.length, skills: Object.entries(r.skills).map(([k, v]) => k + v).join(',').slice(0, 100) });
     stopBgm();
     sfx(win ? 'win' : 'fail');
