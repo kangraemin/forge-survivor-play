@@ -568,6 +568,7 @@ export class Overlay {
     const s = this.s, sv = s.sv, r = s.run;
     if (this.done) return; this.done = true;
     s.over = true; s.physics.pause();
+    if (s.mode) return s.mode.result(win, this);   // 모드 판은 모드 전용 결과창(modes.js)
     const idx = s.c * D.STAGES_PER_CHAPTER + s.s, hard = s.hard, dun = s.dungeon;
     const prog = hard ? sv.hardCleared : sv.cleared;   // 어려움은 따로 센다
     const first = win && !s.endless && !dun && idx >= prog;

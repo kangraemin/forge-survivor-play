@@ -4,6 +4,7 @@ import { font, hiCam } from './ui.js';
 import { makeWeaponTextures } from './wart.js';
 import { updateGate, startCheck } from './updateGate.js';
 import { loadFx2, makeFx2Anims } from './fx2.js';
+import { MODE_SHEETS, MODE_IMAGES } from './modeArt.js';
 import { BODY_LOOKS, COS_ROWS, WEAPON_LOOKS, HEAD_LOOKS, CASH_PETS, AURAS } from './cosmetics.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
@@ -36,6 +37,8 @@ export class Boot extends Phaser.Scene {
     this.load.on('progress', v => { bar.width = 160 * v; });
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
     for (const k of REQUIRED.concat(OPTIONAL)) this.load.image(k, `assets/${k}.png`);
+    for (const [k, fw, fh] of MODE_SHEETS) this.load.spritesheet('ma_' + k, `assets/modes/${k}.png`, { frameWidth: fw, frameHeight: fh });   // 모드 그림(docs/modes_art.md)
+    for (const k of MODE_IMAGES) this.load.image('ma_' + k, `assets/modes/${k}.png`);
     for (const k of ['hero2_r0', 'hero2_r1', 'hero_r1', 'hero_r2', 'hero2_r2']) this.load.image('hn_' + k, `assets/hn_${k}.png`);   // 검을 지운 전투용 주인공(검은 Battle이 단계별로 쥔다)
     for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => this.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
     for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) this.load.image(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`);

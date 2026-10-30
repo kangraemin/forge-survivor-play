@@ -1,5 +1,6 @@
 // 도감·업적·칭호. 도감 칸을 채우면 영구 보너스(gearStats가 sv.dexB를 읽는다)
 import { MOBS, MOB_NAMES, BOSSES, HARD } from './data.js';
+import { MODE_DEFS, MODE_N, MODE_IDS, modeCount } from './modeData.js';
 import { WTYPES, PETS, SETS, EGGS, ownsW } from './gear.js';
 
 export const DEX_KILL = 100;                 // 몬스터 칸은 이만큼 잡아야 찬다
@@ -49,6 +50,8 @@ export const ACHIEVES = [
   { id: 'hard5', name: '지옥의 정복자', desc: '어려움 마지막 장 보스 격파', need: HARD.unlock, v: sv => sv.hardCleared || 0, gem: 150, title: '지옥의 정복자' },
   { id: 'tower10', name: '탑 오르기', desc: '무한의 탑 10층', need: 10, v: sv => sv.endBest || 0, gem: 30 },
   { id: 'tower25', name: '탑의 주인', desc: '무한의 탑 25층', need: 25, v: sv => sv.endBest || 0, gem: 100, title: '탑의 주인' },
+  // 모드 15판 완주 기념(다른 곳에서 얻을 수 없는 칭호)
+  ...MODE_IDS.map(id => ({ id: 'mode_' + id, name: MODE_DEFS[id].title, desc: MODE_DEFS[id].ach, need: MODE_N, v: sv => modeCount(sv, id), gem: 100, title: MODE_DEFS[id].title })),
   { id: 'day7', name: '단골 손님', desc: '출석 7일', need: 7, v: sv => sv.streak || 0, gem: 30 },
   { id: 'day30', name: '대장간 식구', desc: '출석 30일', need: 30, v: sv => sv.streak || 0, gem: 100, title: '대장간 식구' },
   { id: 'dun10', name: '보물 사냥꾼', desc: '일일 던전 10번', need: 10, v: sv => st(sv, 'dun'), gem: 40 },

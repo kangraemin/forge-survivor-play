@@ -6,7 +6,7 @@ export const KEY = 'forge-survivor-v1';
 export const BAK = [KEY + '.bak1', KEY + '.bak2'];   // 직전 저장 2개
 export const CORRUPT = KEY + '.corrupt';             // 읽지 못한 원본 문자열(지우지 않고 보관)
 // 저장 모양 버전. 저장 형식을 바꾸면 SCHEMA를 올리고 STEPS 끝에 한 단계를 더한다(앞 단계는 고치지 않는다)
-export const SCHEMA = 2;
+export const SCHEMA = 3;
 
 export const fresh = () => ({ schemaVersion: SCHEMA,
 
@@ -44,6 +44,7 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   ach: {}, title: '',      // 받은 업적, 낀 칭호
   // 한정 판매: 오늘의 특가 { day, id, off, got }, 성장 꾸러미 { c, at, shown }
   deal: null, grow: null,
+  modes: { clear: {} },    // 모드(지키기·점령·돌파·사냥) 깬 판: 'guard:1' 같은 키 -> 1
 });
 
 // STEPS[i]: schemaVersion i -> i+1. 각 단계는 값을 지우지 않고 없는 것만 채우거나 옮긴다. 이미 한 변환은 플래그로 다시 하지 않는다
@@ -72,6 +73,8 @@ const STEPS = [
   },
   // 1 -> 2: 구매 기록 사본. 저장이 날아가도 복원 함수(restorePurchases)가 되살릴 수 있게 따로 쌓는다
   mem => { mem.cosmetics = { owned: {}, equip: {}, tried: {}, ...mem.cosmetics }; mem.ledger ||= {}; collectLedger(mem); },
+  // 2 -> 3: 모드 진행 칸. 없던 저장은 빈 칸으로 채운다(본편 진행은 건드리지 않는다)
+  mem => { mem.modes = { ...mem.modes }; if (!mem.modes.clear || typeof mem.modes.clear !== 'object') mem.modes.clear = {}; },
 ];
 export class SaveError extends Error {}
 

@@ -10,6 +10,7 @@ import { showAd, buy, grant, giveText, adsLeft, adsDaily, won, firstX2, todayDea
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
 import { ContentTab } from './contentTab.js';
+import { ModeScreen } from './modeScreen.js';
 import { dexRefresh } from './codex.js';
 import { PETS, gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, hasW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 
@@ -28,7 +29,7 @@ export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
   // 씬 인스턴스는 재사용되니 전투에서 돌아올 때 잠금·체크 상태를 비운다
-  init(data) { this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
+  init(data) { if (data?.modeSel) { this.modeScr = true; this.modeId = data.modeSel; this.modeN = data.modeN ?? 0; } else this.modeScr = false; this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
   // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
   get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
   get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
@@ -373,6 +374,7 @@ export class Lobby extends Phaser.Scene {
 
   // ── 전투 탭 ──
   battleTab() {
+    if (this.modeScr) return this.modePage();
     if (this.tower) return this.towerPage();
     const sv = this.sv, b = this.body, c = this.selC, ch = D.CHAPTERS[c], hard = this.hard, prog = this.prog;
     const atk = D.powerOf(sv);
@@ -414,6 +416,7 @@ export class Lobby extends Phaser.Scene {
     pv.add(bs);
     const bossLeft = c * D.STAGES_PER_CHAPTER + D.STAGES_PER_CHAPTER - 1 - prog;
     pv.add(this.add.text(W - 34, AY + 52, bossLeft > 0 ? `보스까지 ${bossLeft}판` : bossLeft === 0 ? '보스 도전!' : '보스 격파', font(9, bossLeft < 0 ? '#a8a0c0' : '#ff9090', 3)).setOrigin(0.5, 0));
+    this.modeEntry(pv, AY);   // 모드 선택으로 가는 버튼(modeScreen.js)
     if (sv.title) pv.add(this.add.text(10, AY + 4, `「${sv.title}」`, font9(10, '#ffb050', 3)));
     // 돌아올 이유: 자리를 비워도 견습생이 번다(조용한 한 줄)
     if (sv.cleared >= 1) pv.add(this.add.text(sv.title ? 90 : 10, AY + 4, `견습생 금화 ${fmt(Math.round(D.dunBase(sv).gold * D.IDLE.perH))}/시간`, font9(9, '#d8d0e8', 3)));
@@ -1170,4 +1173,4 @@ export class Lobby extends Phaser.Scene {
 }
 
 const RF = Phaser.Math.FloatBetween;
-Object.assign(Lobby.prototype, GearTab, ContentTab);
+Object.assign(Lobby.prototype, GearTab, ContentTab, ModeScreen);
