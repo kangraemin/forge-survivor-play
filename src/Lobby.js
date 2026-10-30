@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, adsDaily, won, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, dayKey } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
@@ -49,6 +49,8 @@ export class Lobby extends Phaser.Scene {
     this.lastProg = this.prog;
     this.makeTextures();
     hiCam(this).setBackgroundColor('#0d0a14');
+    // 세로로 긴 폰(390x844)에서 판 위아래 남는 검은 띠를 전투 화면처럼 바닥 무늬로 채운다(44차)
+    setBackdrop(this, 'tiles', 0x6a5a82);
     this.bg = this.add.container(0, 0);
     this.body = this.add.container(0, 0);
     this.makeTop();

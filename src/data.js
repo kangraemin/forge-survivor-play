@@ -19,7 +19,7 @@ export const CHAPTERS = [
   { name: '증기 공방', tiles: 'tile12', mobs: ['clockimp', 'steelgiant', 'steamskull'], boss: 'steamgeneral', dur: 280, dark: 0.45, light: 0xff9a50, deco: 0xd09060, env: 'steam', note: '증기 분출구가 박자대로 뿜는다 · 태엽 임프는 오래 두면 빨라지고 강철 거신은 방어 자세를 취한다' },
   { name: '폭풍 평원', tiles: 'tile13', mobs: ['stormwolf', 'stormyeti', 'stormspirit'], boss: 'thunderdragon', dur: 288, dark: 0.4, light: 0x8ac8ff, deco: 0x90b0d0, env: 'storm', note: '피뢰침 기둥 곁에선 번개가 기둥에 떨어진다 · 기둥 둘레 몹이 함께 맞고 기둥에서 멀면 낙뢰가 나를 노린다 · 먹구름 설인 곁으로도 몰린다' },
   { name: '거울 궁전', tiles: 'tile14', mobs: ['mirrorknight', 'phantompriest', 'glassgarg'], boss: 'mirrorlord', dur: 296, dark: 0.35, light: 0x80ffe0, deco: 0x90e0d0, env: 'mirror', note: '거울 빛줄기 둘이 서로 반대로 돈다 · 빛나는 거울 기사를 치면 되받는다 · 환영 사제는 분신을 만든다' },
-  { name: '원초의 대장간', tiles: 'tile15', mobs: ['anvilimp', 'flamegiant', 'starskull'], boss: 'forgegod', dur: 304, dark: 0.5, light: 0xffd75e, deco: 0xe0b060, env: 'forge', note: '모루 위에 서면 무기가 달궈진다(최대 +50%) · 가득 차면 화상 · 불 균열과 낙뢰도 온다' },
+  { name: '원초의 대장간', tiles: 'tile15', mobs: ['anvilimp', 'flamegiant', 'starskull'], boss: 'forgegod', dur: 304, dark: 0.5, light: 0xffd75e, deco: 0xe0b060, env: 'forge', note: '모루 위에 2초 서면 달궈져 화염이 터지고 5초간 피해 +100%(식은 모루는 6초 쉼) · 불 균열과 낙뢰도 온다' },
 ];
 // 장마다 3판: 일반 → 일반(규칙·변종·중간 보스) → 보스. 6판일 땐 같은 맵·같은 몹이 이어져 x-5쯤 질렸다
 export const STAGES_PER_CHAPTER = 3;

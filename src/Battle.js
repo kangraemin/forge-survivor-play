@@ -150,7 +150,10 @@ export class Battle extends Phaser.Scene {
     this.eventAt = !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
     this.eventKind = Phaser.Utils.Array.GetRandom(D.EVENTS.kinds);
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
-    for (let i = 0; i < (this.easy ? 24 : 28); i++) this.spawn(true);   // 40이면 무기 1~2개인 첫 30초가 가장 위험했다(37차)
+    // 44차: 6장부터는 시작 몹 28마리가 곧바로 에워싸 무기 1개인 첫 30초에 쓰러졌다 → 일부만 두고 나머지는 화면 밖에서 차례로 들어온다
+    const total = this.easy ? 24 : 28, first = this.endless || this.dungeon || this.c === 0 ? total : this.c >= 5 ? 8 : 16;
+    for (let i = 0; i < first; i++) this.spawn(true, null, first < total ? { at: this.spawnPoint(150, 230) } : {});   // 40이면 무기 1~2개인 첫 30초가 가장 위험했다(37차)
+    for (let i = 0; i < total - first; i++) this.time.delayedCall(700 + i * (7000 / (total - first)), () => !this.over && this.spawn(false, null, { at: this.spawnPoint(250, 300) }));
     if (!this.bot) playBgm('battle', this.c);
     this.events.once('shutdown', stopBgm);
     // 앱을 내리거나 화면이 꺼지면 일시정지 창을 띄워 둔다(돌아왔을 때 이미 맞고 있지 않게)
@@ -558,10 +561,14 @@ export class Battle extends Phaser.Scene {
     m.hitBy[src] = this.bt;
     const { dmg, crit } = this.dmgCalc(mult, tag);
     m.hp -= dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1);   // 지친 보스·리치 왕에게 저주받은 적은 더 아프게 맞는다
+    // 44차: 새 장은 몹 체력이 커서 첫 몹이 쓰러지기까지 30초가 걸려 Lv1에 머물렀다(9-1). 2장부터 Lv3 전까진 때릴 때마다 경험치가 조금씩 찬다(처치 경험치는 그대로, 70번 베면 1 → 첫 레벨업 15초 안팎)
+    if (this.c >= 1 && !this.endless && this.run.lv < 3 && !m.isBoss && !m.mini && !this.over) this.fightXp = (this.fightXp || 0) + Math.min(0.5, mult / 70);   // 레벨업 창은 프레임 맨 앞에서 연다(맞히는 도중에 열지 않게)
     // 흰 번쩍임 + 찌그러짐
     // 보스는 몸집이 커서 흰 번쩍임이 화면을 덮는다: 붉게만 물들인다
-    if (m.isBoss) m.setTint(0xff8a8a); else m.setTintFill(0xffffff);
-    this.time.delayedCall(60, () => { if (m.active && !m.dead) { m.clearTint(); if (m.baseTint !== 0xffffff) m.setTint(m.baseTint); } });
+    // 13장(폭풍 평원)은 번개·붉은 원과 겹쳐 흰 덩어리가 몹을 지웠다: 옅은 푸른빛으로 짧게만 번쩍인다
+    const calmFx = this.env?.kind === 'storm';
+    if (m.isBoss) m.setTint(0xff8a8a); else m.setTintFill(calmFx ? 0xc8d4f0 : 0xffffff);
+    this.time.delayedCall(calmFx ? 40 : 60, () => { if (m.active && !m.dead) { m.clearTint(); if (m.baseTint !== 0xffffff) m.setTint(m.baseTint); } });
     if (!m.isBoss && !m.goblin) {
       const ox = from ? from.x : this.hero.x, oy = from ? from.y : this.hero.y;
       const ang = Phaser.Math.Angle.Between(ox, oy, m.x, m.y), k = kb * (crit ? 1.5 : 1) * m.kbRes;
@@ -575,7 +582,7 @@ export class Battle extends Phaser.Scene {
     }
     if (fx === 'big' || crit) {
       const s = this.add.sprite(m.x + RF(-4, 4), m.y + RF(-6, 2), 'fx1_r1s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31)
-        .setScale(crit ? 1.1 : 0.7).setRotation(RF(0, 6.28)).play('fxHit');
+        .setScale((crit ? 1.1 : 0.7) * (calmFx ? 0.6 : 1)).setAlpha(calmFx ? 0.65 : 1).setRotation(RF(0, 6.28)).play('fxHit');
       s.once('animationcomplete', () => s.destroy());
       if (crit) {
         const c2 = this.add.sprite(m.x, m.y, 'fx2_r0s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31).setScale(0.8).play('fxCrit');
@@ -635,7 +642,8 @@ export class Battle extends Phaser.Scene {
     // 같은 몹을 0.4초 안에 또 때리면 새로 띄우지 않고 합산해 한 숫자로 보여 준다
     // 왼쪽 위 스킬 아이콘 줄(HUD) 밑에 깔려 겹쳐 보이는 숫자는 띄우지 않는다
     const vr = viewRect(this);
-    if (y - vr.y < 82 && x - vr.x < 148) return;
+    // 44차: 상단 HUD 줄(82px) 안쪽엔 폭 전체에 띄우지 않는다('만' 글자가 '남은 1:16'에 걸렸다)
+    if (y - vr.y < 82) return;
     const pp = m && m._pop;
     if (pp && pp.t.active && pp.t.pop === pp && this.bt - pp.at < 400) {
       pp.n += n; pp.at = this.bt; pp.crit = pp.crit || crit;
@@ -646,7 +654,15 @@ export class Battle extends Phaser.Scene {
     }
     if (!crit && n < 100 && Math.random() > 0.25) return;   // 일반 타격도 네 번에 한 번은 보여 강화 차이가 숫자로 보인다
     if (this.popups.length >= 5) this.popFree_(this.popups.shift());
-    const st = font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2);
+    // 44차: 다른 몹의 숫자와 겹치면('7754 7779') 위로 비켜 띄운다. 세 칸을 올려도 겹치면 일반 타격은 접는다
+    for (let k = 0; k < 4; k++) {
+      const hit = this.popups.some(o => o.active && Math.abs(o.x - x) < 38 && Math.abs(o.y - y) < 11);
+      if (!hit) break;
+      if (k === 3) { if (!crit) return; break; }
+      y -= 12;
+    }
+    if (y - vr.y < 82) return;
+    const st =font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2);
     let t = this.popFree.pop();
     if (t) t.setActive(true).setVisible(true).setAlpha(1).setStyle(st).setText(fmt(n)).setPosition(x + R(-6, 6), y).setScale(crit ? 1.6 : 1.3);
     else t = this.add.text(x + R(-6, 6), y, fmt(n), st).setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
@@ -1051,6 +1067,7 @@ export class Battle extends Phaser.Scene {
     this.mobCollider.active = (this.frameN = (this.frameN || 0) + 1) % 2 === 0;
     this.rebuildMobs();
     const r = this.run;
+    if (this.fightXp > 0) { const fx = this.fightXp; this.fightXp = 0; if (r.lv < 3) this.gainXp(fx); }
 
     // 웨이브 시간
     if (!this.bossPhase) {
@@ -1062,9 +1079,11 @@ export class Battle extends Phaser.Scene {
       // 단 1-1은 처음 30초를 반쯤 비운다(25마리 → 22초에 69마리로 늘어 첫 판이 정신없었다)
       const first11 = !this.endless && this.c === 0 && this.s === 0 && this.bt < 30000;
       const early = !this.endless && this.s === 0 && this.bt < 20000 ? (this.easy ? 3 : 2) : 0;   // 첫 판 80초 처치 35라 심심했다(40차)
-      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 5 * f) * (this.dungeon ? 1.6 : 1) / 1000;   // 던전은 잡을 몹이 많아야 한다
+      // 44차: 2장부터는 첫 25초에 몹이 0.4배에서 차오른다(시작하자마자 에워싸이던 것을 완화)
+      const ramp = this.c >= 1 && !this.endless && !this.dungeon ? Math.min(1, 0.4 + this.bt / 25000 * 0.6) : 1;
+      this.spawnAcc = (this.spawnAcc || 0) + dt * (2.5 + early + D.stageSpawn(this.endless ? 0 : this.s) + 5 * f) * (this.dungeon ? 1.6 : 1) * ramp / 1000;   // 던전은 잡을 몹이 많아야 한다
       // 화면에 70마리가 넘으면 더 내보내지 않는다(3장에서 89마리까지 쌓여 저사양 폰이 버거웠다)
-      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 38 : 42) : 70)) this.spawn(); }
+      while (this.spawnAcc >= 1) { this.spawnAcc--; if (this.mobs.countActive() < (first11 ? (this.easy ? 38 : 42) : Math.min(70, ramp < 1 ? 30 + this.bt / 1000 * 1.6 : 70))) this.spawn(); }   // 2장부터 첫 25초는 동시 몹 상한도 30마리에서 차오른다(44차)
       // 웨이브마다 엘리트 1마리(중간), 포위는 웨이브 2부터
       if (!this.eliteDone && this.waveT > this.waveLen * (this.wave + this.c + this.s === 0 ? 0.55 : 0.5)) { this.eliteDone = true; this.spawn(false, this.ch.mobs[1], { elite: true, force: true }); }
       // 1-1 마지막 웨이브 후반: 다음 장 몹이 두 마리 잠깐 얼굴을 비춘다('앞으로 더 있다'). 약하게 줘서 난이도는 그대로

@@ -41,7 +41,24 @@ export class Boot extends Phaser.Scene {
     return key + 's';
   }
 
+  // 몹 시트에 어두운 외곽선 한 겹을 굽는다(13장: 번개·피격 빛이 겹쳐 몹이 배경에 묻혔다). 프레임마다 따로 그려 이웃 프레임으로 번지지 않는다
+  outline(key, frames = 4, color = '#0a0612') {
+    if (!this.textures.exists(key)) return;
+    const img = this.textures.get(key).getSourceImage(), fw = Math.floor(img.width / frames), fh = img.height;
+    const cv = document.createElement('canvas'); cv.width = img.width; cv.height = fh;
+    const cx = cv.getContext('2d'), tmp = document.createElement('canvas'), tc = tmp.getContext('2d');
+    tmp.width = fw; tmp.height = fh;
+    for (let f = 0; f < frames; f++) {
+      tc.globalCompositeOperation = 'source-over'; tc.clearRect(0, 0, fw, fh); tc.drawImage(img, f * fw, 0, fw, fh, 0, 0, fw, fh);
+      tc.globalCompositeOperation = 'source-in'; tc.fillStyle = color; tc.fillRect(0, 0, fw, fh);   // 같은 모양의 어두운 실루엣
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) cx.drawImage(tmp, f * fw + dx, dy);
+      cx.drawImage(img, f * fw, 0, fw, fh, f * fw, 0, fw, fh);
+    }
+    this.textures.remove(key); this.textures.addCanvas(key, cv);
+  }
+
   create() {
+    for (let r = 0; r < 3; r++) { this.outline('z13_r' + r); this.outline('z12_r' + r); }
     const A = (key, sheet, rate, repeat = -1, frames) => sheet &&
       this.anims.create({ key, frames: this.anims.generateFrameNumbers(sheet, frames ? { frames } : {}), frameRate: rate, repeat });
     // 전투 주인공은 검을 지운 시트(hn_)를 쓴다. 로비는 검이 그려진 원본 'idleL'

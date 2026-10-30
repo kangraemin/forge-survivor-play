@@ -43,8 +43,8 @@ export class Env {
     // 폭풍 평원: 피뢰침 기둥 — 가까이 있으면 낙뢰가 기둥에 떨어지고 기둥 둘레의 몹이 함께 맞는다
     if (this.kind === 'storm') this.rods = Array.from({ length: 4 }, () => { const q = this.farPoint(100, 440); return { x: q[0], y: q[1], hot: 0 }; });
     // 원초의 대장간: 화로 모루 — 위에 서면 무기가 달궈져 강해지지만 오래 서면 화상
-    if (this.kind === 'forge') { this.anvils = Array.from({ length: 3 }, () => { const q = this.farPoint(110, 400); return { x: q[0], y: q[1] }; }); this.heat = 0; this.onAnvil = false; this.heatGfx = s.add.graphics().setDepth(41); this.heatTxt = s.add.text(0, 0, '', font(8, '#ffd75e', 3)).setOrigin(0.5).setDepth(41); }
-    if (this.kind === 'abyss') this.lightK = 0.6;
+    if (this.kind === 'forge') { this.anvils = Array.from({ length: 3 }, () => { const q = this.farPoint(110, 400); return { x: q[0], y: q[1], cd: 0 }; }); this.heat = 0; this.forged = 0; this.onAnvil = false; this.heatGfx = s.add.graphics().setDepth(41); this.heatTxt = s.add.text(0, 0, '', font(8, '#ffd75e', 3)).setOrigin(0.5).setDepth(41); }
+    if (this.kind === 'abyss') this.lightK = 0.78;   // 44차: 0.6은 몹이 안 읽혔다
     if (this.kind === 'sand') for (let i = 0; i < 5; i++) { const q = this.farPoint(140, 560); this.pits.push({ x: q[0], y: q[1], r: 34, life: Infinity }); }
     if (this.kind === 'steam') for (let i = 0; i < 5; i++) { const q = this.farPoint(110, 540); this.vents.push({ x: q[0], y: q[1], r: 26, t: 600 + i * 900, ph: 'idle' }); }
     if (this.kind === 'mirror') {
@@ -77,8 +77,8 @@ export class Env {
   impulse(vx, vy, ms) { this.imp.push({ x: vx, y: vy, t: ms }); }
   blackout(ms) { this.blackT = ms; }
 
-  // 대장간 모루에서 달궈진 만큼 내 피해가 커진다(최대 +50%)
-  atkMul() { return this.heat > 20 ? 1 + 0.5 * Math.min(1, this.heat / 100) : 1; }
+  // 대장간 모루: 2초 서 있으면 달궈져 터지고(화염 폭발), 이어 5초간 내 피해 +100%(단조). 달구는 중에도 최대 +50%
+  atkMul() { return this.forged > 0 ? 2 : this.heat > 20 ? 1 + 0.5 * Math.min(1, this.heat / 100) : 1; }
   spdMul() { return this.slowT > 0 && !this.petIs('tidewyrm') ? (this.fx4('tide4') ? 0.73 : 0.55) : 1; }
   vel() {
     let x = 0, y = 0;
@@ -86,7 +86,14 @@ export class Env {
     if (this.wind && this.wind.k > 0.02) {
       const f = this.fx4('sky4') ? 0.6 : this.petIs('stormcaptain') ? 0.5 : 1, v = D.PLAYER.spd * 0.5 * this.wind.k * f;
       x += Math.cos(this.wind.a) * v; y += Math.sin(this.wind.a) * v;
-    }
+      // 순풍 가속: 바람 방향으로 달리면 더 빨라진다(맞바람은 밀리기만) — 바람을 읽고 올라타는 맛
+      const mv = this.s.mv, ml = mv ? Math.hypot(mv.x, mv.y) : 0;
+      this.tail = 0;
+      if (ml > 12) {
+        const dot = (mv.x * Math.cos(this.wind.a) + mv.y * Math.sin(this.wind.a)) / ml;
+        if (dot > 0.35) { this.tail = dot * this.wind.k; x += mv.x / ml * D.PLAYER.spd * 0.4 * this.tail; y += mv.y / ml * D.PLAYER.spd * 0.4 * this.tail; }
+      }
+    } else this.tail = 0;
     return { x, y };
   }
 
@@ -105,7 +112,7 @@ export class Env {
   addPit(x, y, r, life) { this.pits.push({ x, y, r, life }); }
   // 예고 원(빨강) → ms 뒤 onBoom
   warn(x, y, r, ms, onBoom) {
-    const s = this.s, g = s.add.graphics().setDepth(9), st = { f: 0 };
+    const s = this.s, g = s.add.graphics().setDepth(9), st = { f: 0 }, calm = this.kind === 'storm';   // 13장: 붉은 원이 몹 위를 덮어 몹이 안 읽혔다(44차)
     s.tweens.add({ targets: st, f: 1, duration: ms, onUpdate: () => { g.clear().fillStyle(0xff2030, 0.2).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(2, 0xff4050, 0.5 + 0.5 * Math.abs(Math.sin(st.f * 12))).strokeEllipse(x, y, r * 2, r * 1.5); }, onComplete: () => { g.destroy(); if (!s.over) onBoom(); } });
   }
   inEll(x, y, r) { const h = this.s.hero, dx = (h.x - x) / r, dy = (h.y + 8 - y) / (r * 0.75); return dx * dx + dy * dy <= 1; }
@@ -113,9 +120,9 @@ export class Env {
   strike(x, y, r = 26, ms = 900, rod = null) {
     if (rod) rod.hot = ms + 300;
     this.warn(x, y, r, ms, () => {
-      const s = this.s, l = s.add.line(0, 0, x, y - 140, x, y, 0xe8f0ff, 1).setOrigin(0).setLineWidth(4).setBlendMode(Phaser.BlendModes.ADD).setDepth(32);
-      s.tweens.add({ targets: l, alpha: 0, duration: 260, onComplete: () => l.destroy() });
-      s.cameras.main.flash(60, 220, 230, 255); sfx('crit', 90);
+      const s = this.s, l = s.add.line(0, 0, x, y - 140, x, y, 0xc8d8f0, 0.75).setOrigin(0).setLineWidth(3).setBlendMode(Phaser.BlendModes.ADD).setDepth(32);
+      s.tweens.add({ targets: l, alpha: 0, duration: 160, onComplete: () => l.destroy() });   // 44차: 밝기·지속을 낮췄다(13장 몹이 번개에 묻혔다)
+      s.cameras.main.flash(40, 90, 105, 150); sfx('crit', 90);
       if (this.inEll(x, y, r)) this.hurtEnv(1.5, 'bolt');
       if (rod) s.mobs.getChildren().slice().forEach(m => { if (m.active && !m.dead && Math.hypot(m.x - x, (m.y - y) / 0.75) <= r * 1.5) s.hitMob(m, 7, { src: 'rod', kb: 140, fx: 'big', from: { x, y } }); });
     });
@@ -217,28 +224,41 @@ export class Env {
       if (q.img) q.img.setTint(q.hot > 0 ? 0xffffff : 0xc8c8d0);
       else g.fillStyle(0x4a5668, 1).fillRect(q.x - 3, q.y - 30, 6, 30).fillStyle(0xc8d8f0, 1).fillRect(q.x - 1, q.y - 38, 2, 9).fillStyle(0xffffff, lit).fillCircle(q.x, q.y - 39, 3);
     }
-    // 대장간 모루: 서 있는 동안 달궈지고(공격력↑), 가득 차면 화상. 내려서면 식는다
+    // 대장간 모루: 2초 서 있으면 달궈져 화염이 터지고, 이어 5초간 피해 +100%(단조). 터진 모루는 6초 식어 다른 모루로 옮겨 가야 한다
     if (this.anvils) {
       let on = false;
+      this.forged = Math.max(0, this.forged - dt);
       for (const a of this.anvils) {
-        const near = this.inEll(a.x, a.y, 30); on = on || near;
+        a.cd = Math.max(0, a.cd - dt);
+        const cold = a.cd > 0, near = !cold && this.inEll(a.x, a.y, 30); on = on || near;
         const glow = Math.min(1, this.heat / 100);
-        g.fillStyle(0xff7a20, 0.12 + 0.3 * (near ? 1 : 0.4) + glow * 0.2).fillEllipse(a.x, a.y, 60, 45).lineStyle(1.5, 0xffd75e, near ? 0.9 : 0.45).strokeEllipse(a.x, a.y, 60, 45);
+        g.fillStyle(cold ? 0x6a7080 : 0xff7a20, cold ? 0.1 : 0.12 + 0.3 * (near ? 1 : 0.4) + glow * 0.2).fillEllipse(a.x, a.y, 60, 45).lineStyle(1.5, cold ? 0x8890a0 : 0xffd75e, near ? 0.9 : 0.45).strokeEllipse(a.x, a.y, 60, 45);
         if (a.img === undefined) a.img = s.textures.exists('prop15_f') ? s.add.image(a.x, a.y + 4, 'prop15_f', 0).setOrigin(0.5, 1).setDepth(10 + a.y / WORLD) : null;   // 모루 그림(없으면 사각 도형)
-        if (a.img) a.img.setTint(glow > 0.05 || near ? 0xffffff : 0xd0d0d0);
-        else g.fillStyle(0x2a2a34, 1).fillRect(a.x - 9, a.y - 10, 18, 6).fillRect(a.x - 5, a.y - 5, 10, 6).fillRect(a.x - 8, a.y, 16, 3).fillStyle(0xff9a40, 0.5 + glow * 0.5).fillRect(a.x - 9, a.y - 10, 18, 2);
+        if (a.img) a.img.setTint(cold ? 0x9098a8 : glow > 0.05 || near ? 0xffffff : 0xd0d0d0);
+        else g.fillStyle(0x2a2a34, 1).fillRect(a.x - 9, a.y - 10, 18, 6).fillRect(a.x - 5, a.y - 5, 10, 6).fillRect(a.x - 8, a.y, 16, 3).fillStyle(cold ? 0x808898 : 0xff9a40, 0.5 + glow * 0.5).fillRect(a.x - 9, a.y - 10, 18, 2);
       }
       this.onAnvil = on;
       const was = this.heat;
-      this.heat = Phaser.Math.Clamp(this.heat + (on ? dt / 45 : -dt / 90), 0, 100);
+      this.heat = Phaser.Math.Clamp(this.heat + (on ? dt / 20 : -dt / 90), 0, 100);
       if (was <= 20 && this.heat > 20 && !s.bot) sfx('level');
-      // 가득 찬 채 계속 서 있으면 화상
-      if (this.heat >= 100 && on) { this.burnT = (this.burnT ?? 0) - dt; if (this.burnT <= 0) { this.burnT = 500; this.hurtEnv(0.9, 'fire'); } }
+      // 가득 차면 터진다: 주변 몹에 화염 피해, 5초 단조 버프, 그 모루는 식는다
+      if (this.heat >= 100 && on) {
+        this.heat = 0; this.forged = 5000;
+        const a = this.anvils.find(q => q.cd <= 0 && this.inEll(q.x, q.y, 30)); if (a) a.cd = 6000;
+        for (const m of s.mobs.getChildren()) if (m.active && !m.dead && Phaser.Math.Distance.Between(m.x, m.y, h.x, h.y) < 120) s.hitMob(m, m.isBoss ? 2 : 5, { src: 'forgeburst', kb: 160, fx: 'big' });
+        sfx('boom'); s.cameras.main.shake(160, 0.006);
+        const ring = s.add.circle(h.x, h.y, 10, 0xff7a20, 0.55).setStrokeStyle(2, 0xffd75e).setDepth(41);
+        s.tweens.add({ targets: ring, scale: 12, alpha: 0, duration: 380, onComplete: () => ring.destroy() });
+      }
       const hg = this.heatGfx.clear();
-      if (this.heat > 1) {
+      if (this.forged > 0) {
+        const bx = h.x - 14, by = h.y - 34, f = this.forged / 5000;
+        hg.fillStyle(0x000000, 0.7).fillRect(bx - 1, by - 1, 30, 5).fillStyle(0xff3020, 1).fillRect(bx, by, 28 * f, 3);
+        this.heatTxt.setPosition(h.x, by - 6).setText('단조! 피해 +100%').setColor('#ff9a50');
+      } else if (this.heat > 1) {
         const bx = h.x - 14, by = h.y - 34, f = this.heat / 100;
-        hg.fillStyle(0x000000, 0.7).fillRect(bx - 1, by - 1, 30, 5).fillStyle(f >= 1 ? 0xff3020 : f > 0.2 ? 0xffa030 : 0x806040, 1).fillRect(bx, by, 28 * f, 3);
-        this.heatTxt.setPosition(h.x, by - 6).setText(f >= 1 ? '화상!' : f > 0.2 ? `달굼 +${Math.round(f * 50)}%` : '').setColor(f >= 1 ? '#ff6050' : '#ffd75e');
+        hg.fillStyle(0x000000, 0.7).fillRect(bx - 1, by - 1, 30, 5).fillStyle(f > 0.2 ? 0xffa030 : 0x806040, 1).fillRect(bx, by, 28 * f, 3);
+        this.heatTxt.setPosition(h.x, by - 6).setText(f > 0.2 ? `달굼 +${Math.round(f * 50)}%` : '').setColor('#ffd75e');
       } else this.heatTxt.setText('');
     }
     // 증기 분출구: 쉬다가 → 예고(1.1초) → 분출(0.6초)
@@ -295,14 +315,25 @@ export class Env {
     w.k += ((w.blow ? 1 : 0) - w.k) * Math.min(1, dt / 350);
     const warn = !w.blow && w.next < 1500, show = w.blow || warn;
     const a = warn ? w.pa : w.a, idx = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
-    this.windTxt.setAlpha(show ? 1 : 0).setText(`${w.blow ? '바람' : '곧 바람'} ${ar[idx]}`);
+    this.windTxt.setAlpha(show ? 1 : 0).setText(`${w.blow ? (this.tail > 0.3 ? '순풍! 가속' : '바람 — 같은 쪽으로 달려라') : '곧 바람'} ${ar[idx]}`);
     const g = this.streaks.clear();
-    if (w.k > 0.1) {
-      const cam = s.cameras.main, cx = Math.cos(w.a), cy = Math.sin(w.a);
-      for (let i = 0; i < 14; i++) {
-        const ph = ((s.bt * 0.35 + i * 53) % 280) / 280, ox = (i * 83) % 270, oy = (i * 131) % 480;
-        const x = cam.scrollX + ox + cx * ph * 90, y = cam.scrollY + oy + cy * ph * 90;
-        g.lineStyle(1, 0xffffff, 0.5 * w.k * (1 - ph)).lineBetween(x, y, x + cx * 12, y + cy * 12);
+    // 바람 줄: 부는 동안은 화면을 가로질러 길게 흐르고, 예고 땐 가는 줄이 먼저 그 방향으로 흐른다
+    const wk = Math.max(w.k, warn ? 0.4 * (1 - w.next / 1500) + 0.15 : 0);
+    if (wk > 0.08) {
+      const cam = s.cameras.main, ang = warn && w.k < 0.5 ? w.pa : w.a, cx = Math.cos(ang), cy = Math.sin(ang), sp = 0.55 + 0.5 * w.k;
+      const dw = D.W + 80, dh = D.H + 80;
+      for (let i = 0; i < 24; i++) {
+        const ph = ((s.bt * 0.0007 * sp * (0.7 + (i % 5) * 0.15) + i * 0.137) % 1 + 1) % 1;
+        // 줄은 바람 방향으로 화면을 가로질러 흐른다: 바람 축 위치는 ph, 직각 축 위치는 줄마다 고정
+        const along = ph * (Math.abs(cx) > 0.5 ? dw : dh) - 40, side = ((i * 97) % 100) / 100 * (Math.abs(cx) > 0.5 ? dh : dw) - 40;
+        const bx = Math.abs(cx) > 0.5 ? (cx > 0 ? along : dw - 80 - along) : side, by = Math.abs(cx) > 0.5 ? side : (cy > 0 ? along : dh - 80 - along);
+        const x = cam.scrollX + bx, y = cam.scrollY + by, len = 18 + (i % 4) * 9;
+        g.lineStyle(i % 3 === 0 ? 2 : 1, 0xeaf6ff, (0.18 + 0.32 * ((i % 4) / 3)) * wk * Math.sin(ph * Math.PI)).lineBetween(x, y, x + cx * len, y + cy * len);
+      }
+      // 순풍을 타면 몸 뒤로 속도선이 길게 남는다
+      if (this.tail > 0.2) {
+        const hh = s.hero, ml = Math.hypot(s.mv.x, s.mv.y) || 1, ux = s.mv.x / ml, uy = s.mv.y / ml;
+        for (let i = -2; i <= 2; i++) g.lineStyle(2, 0xffffff, 0.45 * this.tail).lineBetween(hh.x - ux * 8 - uy * i * 5, hh.y + 4 - uy * 8 + ux * i * 5, hh.x - ux * (24 + (i & 1) * 10) - uy * i * 5, hh.y + 4 - uy * (24 + (i & 1) * 10) + ux * i * 5);
       }
     }
   }
@@ -320,8 +351,8 @@ export class Env {
     const d = Math.hypot(h.x - m.x, h.y - m.y);
     // 심연: 멀리 있는 몹은 어둠에 묻힌다(시야 밖은 윤곽만)
     if (this.kind === 'abyss' && !m.isBoss && !m.dive) {
-      const sight = 150 * (this.fx4('sky4') ? 1.4 : this.petIs('voidlord') ? 1.25 : 1);
-      let a = d > sight ? 0.22 : d > sight * 0.7 ? 0.22 + (sight - d) / (sight * 0.3) * 0.78 : 1;
+      const sight = 175 * (this.fx4('sky4') ? 1.4 : this.petIs('voidlord') ? 1.25 : 1);
+      let a = d > sight ? 0.38 : d > sight * 0.7 ? 0.38 + (sight - d) / (sight * 0.3) * 0.62 : 1;
       if (m.fx === 'cloak') { const cs = sight * 0.7; a = d > cs ? 0.06 : d > cs * 0.75 ? 0.5 : 1; }
       m.setAlpha(a);
     }
