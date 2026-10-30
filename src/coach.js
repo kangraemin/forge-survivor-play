@@ -46,7 +46,7 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
     // 구멍 뚫린 어두운 막: 위·아래·왼·오른쪽 네 장
     const dim = (x, y, w, h) => w > 0 && h > 0 && c.add(scene.add.rectangle(x, y, w, h, 0x05030a, DIM).setOrigin(0));
     dim(0, 0, W, ry); dim(0, ry + rh, W, H - ry - rh); dim(0, ry, rx, rh); dim(rx + rw, ry, W - rx - rw, rh);
-    const hl = scene.add.rectangle(rx + rw / 2, ry + rh / 2, rw + 2, rh + 2).setStrokeStyle(2, 0xffb85c);
+    const hl = scene.add.rectangle(rx + rw / 2, ry + rh / 2, rw + 2, rh + 2).setStrokeStyle(2, 0x7fe6ee);
     c.add(hl); scene.tweens.add({ targets: hl, alpha: 0.35, duration: 450, yoyo: true, repeat: -1 });
     // 말풍선
     const ins = insetsGame(scene.game), minY = (inTossShell() ? ins.xTop : ins.top) + 6;   // 토스 X 버튼·노치 아래로
@@ -69,15 +69,15 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
     by = Math.max(minY, Math.min(H - 6 - hh, by));
     const bx = 14, up = by >= ry + rh;   // up: 말풍선이 구멍 아래라 화살표는 위를 가리킨다
     const bg = scene.add.graphics();
-    bg.fillStyle(0x1a1426, 0.98).fillRect(bx, by, BW, hh); bg.lineStyle(1, 0xffb85c, 1).strokeRect(bx + 0.5, by + 0.5, BW - 1, hh - 1);
+    bg.fillStyle(0x1a1426, 0.98).fillRect(bx, by, BW, hh); bg.lineStyle(1, 0x7fe6ee, 1).strokeRect(bx + 0.5, by + 0.5, BW - 1, hh - 1);
     c.add(bg);
     title.setPosition(bx + BW / 2, by + 10); c.add(title);
     lines.forEach((l, k) => { l.setPosition(bx + 10, by + ys[k]); c.add(l); });
     // 깜빡이는 화살표(구멍 중앙 x, 말풍선과 구멍 사이)
     const ax = Math.max(bx + 12, Math.min(bx + BW - 12, rx + rw / 2)), ay = up ? ry + rh + 9 : ry - 9;
-    const ar = scene.add.text(ax, ay, up ? '▲' : '▼', font(14, '#ffb85c')).setOrigin(0.5); c.add(ar);
+    const ar = scene.add.text(ax, ay, up ? '▲' : '▼', font(14, '#7fe6ee')).setOrigin(0.5); c.add(ar);
     scene.tweens.add({ targets: ar, y: ay + (up ? 4 : -4), alpha: 0.4, duration: 380, yoyo: true, repeat: -1 });
-    // 아래 줄: 왼쪽 건너뛰기(보조), 가운데 쪽수, 오른쪽 주황 버튼은 이 화면에 하나
+    // 아래 줄: 왼쪽 건너뛰기(보조), 가운데 쪽수, 오른쪽 주황 버튼은 이 화면에 하나(강조 테두리·화살표는 청록: 주황이 둘로 보이던 것 53차)
     const by2 = by + hh - 20;
     if (skip) c.add(button(scene, bx + 44, by2, 76, 24, t('coach.88130a'), () => end(true), { size: 10, color: 0x3a3846 }));
     if (steps.length > 1) c.add(scene.add.text(bx + BW / 2, by2, `${n + 1}/${steps.length}`, font9(9, '#a1b2b6')).setOrigin(0.5));

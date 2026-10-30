@@ -1,6 +1,7 @@
 import { cosmeticPage } from './cosmeticShop.js';
 import { openSettings } from './settingsPanel.js';
-import { tutorialDue, runTutorial, modeDue, runModeCoach } from './tutorial.js';
+import { tutorialDue, runTutorial, modeDue, runModeCoach, tabCoach } from './tutorial.js';
+import { nextGoal, salesOpen } from './nextGoal.js';
 import { cashHidden, shareHidden, adWord, trialInfo, openFull } from './platform/flags.js';   // 포털판(CrazyGames·itch): 현금 상품·공유 숨김
 import { shareBrag, braggable, bragGem, lobbyShareTick } from './share.js';
 import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmetics.js';
@@ -86,7 +87,7 @@ export class Lobby extends Phaser.Scene {
     else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; sv.popRun = sv.stats.runs; save(); this.time.delayedCall(250, () => this.missionWin(true)); }
     // 장 보스를 처음 잡고 오면 24시간 성장 꾸러미를 한 번 띄운다
     else if (this.offerOk() && growOffer(sv) && !sv.grow.shown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && !this.busy && this.growWin());
-    else if (this.offerOk() && sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
+    else if (this.offerOk() && salesOpen(sv) && sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
     // 2장 보스를 처음 잡고 오면 도전 버튼을 한 장짜리 코치마크로 짚는다(다른 창이 떠 있으면 다음 번에)
     if (modeDue(sv) && this.tab === 'battle' && !this.modeScr) this.time.delayedCall(600, () => !this.busy && this.tab === 'battle' && runModeCoach(this));
   }
@@ -213,7 +214,7 @@ export class Lobby extends Phaser.Scene {
         sv.gold += gold; sv.stone += stone; save(); this.refreshTop();
         tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
         sfx('coin'); db.label.setText(t('lobby.63b8a7')); track('idle_double', { gold, stone });
-      }, { size: 10, color: 0x2f6b3a });
+      }, { size: 10, color: 0x1d6f80 });   // 53차: 광고 2배는 청록(보조), 주황은 '좋아' 하나
       c.add(db);
     }
     c.add(button(this, W / 2, 330, 110, 26, t('lobby.764be8'), () => c.close(), { size: 11, color: 0x2f6b3a }));
@@ -386,6 +387,9 @@ export class Lobby extends Phaser.Scene {
     if (id === 'gear') this.gearTab();
     if (id === 'shop') this.shopTab();
     this.body.setAlpha(0); this.tweens.add({ targets: this.body, alpha: 1, duration: 150 });
+    // 53차: 장비·펫·교역은 그 탭을 처음 열 때 안내 한 장씩(메인 안내는 필수 3장만)
+    const tc = id === 'shop' ? 'tab_shop' : id === 'gear' ? (this.gearPage === 'pet' ? 'tab_pet' : this.gearPage === 'gear' ? 'tab_gear' : '') : '';
+    if (tc) this.time.delayedCall(450, () => this.tab === id && !this.busy && tabCoach(this, tc));
   }
 
   // 49차: 가변 높이 화면(H>480)에서 남는 높이를 채우는 배너. 상점은 위(본문을 아래로 민다), 나머지 탭은 본문 아래 탭바 위
@@ -412,6 +416,17 @@ export class Lobby extends Phaser.Scene {
       return;
     }
     if (bh < 34 || sv.cleared < 1) return;
+    const goal = nextGoal(sv, D.powerOf(sv));
+    // 53차: 첫 승급(또는 1장 클리어) 전에는 겨울·특가 띠를 숨기고 그 자리에 '다음 목표' 카드 하나만 둔다(판매 자체는 그대로, 노출 시점만)
+    if (!salesOpen(sv)) {
+      if (id !== 'battle' || this.tower || !goal) return;
+      const c = this.bn = this.add.container(0, 436).setDepth(10), w = W - 24;
+      c.add(panel(this, 12, 0, w, bh, { fill: 0x141b27, line: 0x7fe6ee }));
+      c.add(this.add.text(24, 6, goal.title, font(11, '#7fe6ee')));
+      c.add(this.add.text(24, 22, goal.sub, { ...font9(10, '#cfe0ea'), wordWrap: { width: w - 24 } }));
+      c.add(this.add.rectangle(12, 0, w, bh, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); track('goal_card_tap', { kind: goal.kind }); goal.to === 'forge' ? this.show('forge') : goal.to === 'challenge' ? this.goChallenge() : this.show('battle'); }));
+      return;
+    }
     const y0 = top ? 38 : 436, ts = todaySale(), win = available({ winter: true });
     if (top) this.body.y = bh + 4;
     const c = this.bn = this.add.container(0, y0).setDepth(10);
@@ -441,7 +456,9 @@ export class Lobby extends Phaser.Scene {
       return;
     }
     const half = (W - 24 - 6) / 2;
-    card(12, half, win ? 0x7ad0ff : COLOR.line, win ? t('lobby.4c24d0') : t('lobby.8306ca'), win ? '#9ae0ff' : '#ffffff', win ? t('lobby.01ac36', { length: winterItems().length }) : t('lobby.34a1d0'), () => goSkin(win ? 'winter' : 'character'));
+    // 53차: 승급이 증표에 막혔으면 왼쪽 칸을 '도전 X장 깨면 증표' 목표 카드로 바꾸고 바로 가기를 단다
+    if (goal?.kind === 'mark') card(12, half, 0x7fe6ee, goal.title, '#7fe6ee', goal.sub, () => this.goChallenge());
+    else card(12, half, win ? 0x7ad0ff : COLOR.line, win ? t('lobby.4c24d0') : t('lobby.8306ca'), win ? '#9ae0ff' : '#ffffff', win ? t('lobby.01ac36', { length: winterItems().length }) : t('lobby.34a1d0'), () => goSkin(win ? 'winter' : 'character'));
     card(12 + half + 6, half, 0xff9ad0, t('lobby.b0904d'), '#ff9ad0', t('lobby.f1b741', { name: ts.name, SALE_OFF }), () => goSkin(ts.kind, ts.id));
   }
 
@@ -791,7 +808,7 @@ export class Lobby extends Phaser.Scene {
       if (markBlock && !sv.tut.markAsk) { sv.tut.markAsk = true; save(); this.time.delayedCall(300, () => toast(this, tt('lobby.867885'), '#7fe6ee', 112)); }
       if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }
       else if (!okBoss) b.add(this.add.text(W / 2, 375, tt('lobby.1eecc2', { v: need / D.STAGES_PER_CHAPTER }), font9(10, '#ff9a8a')).setOrigin(0.5, 0));
-      else if (markBlock) b.add(this.add.text(W / 2, 375, tt('lobby.867885'), font9(10, '#7fe6ee')).setOrigin(0.5, 0));
+      else if (markBlock) { const g = nextGoal(sv), mt2 = this.add.text(W / 2, 375, g?.sub || tt('lobby.867885'), font9(10, '#7fe6ee')).setOrigin(0.5, 0).setInteractive({ useHandCursor: true }); mt2.on('pointerup', () => this.goChallenge()); b.add(mt2); }   // 53차: '도전 X장을 깨면 증표' 구체 목표 + 탭하면 도전으로
       else {
         // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
         const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
@@ -1126,7 +1143,8 @@ export class Lobby extends Phaser.Scene {
 
   // ── 특가: 오늘의 특가(하루 한 번 무작위 할인) · 성장 꾸러미(장 보스 첫 처치 뒤 24시간) · 큰 꾸러미(달마다 한 번) ──
   dealPage() {
-    const sv = this.sv, b = this.body, deal = todayDeal(sv), grow = growOffer(sv);
+    const sv = this.sv, deal = todayDeal(sv), grow = growOffer(sv);
+    let b = this.body;   // 53차: 접는 칸 아래 꾸러미는 b를 접이식 묶음으로 바꿔 그린다(아래 buyBtn 등이 b를 따라간다)
     const after = it => { this.refreshTop(); this.bump(4); toast(this, t('lobby.d19e31', { name: it.name }), '#ffd75e'); this.show('shop'); };
     const buyBtn = (x, y, it, sold, ghost = true) => {   // 한 화면에 채운 주황은 오늘의 특가 하나만(49차)
       const bt = button(this, x, y, 64, 26, sold ? t('lobby.b83fab') : priceLabel(it), async () => {
@@ -1158,6 +1176,12 @@ export class Lobby extends Phaser.Scene {
     const was = wasLabel ? this.add.text(76, 150, t('lobby.6af491', { won: wasLabel }), font9(10, '#a1b2b6')) : null;
     if (was) { b.add(was); b.add(this.add.rectangle(76, 157, was.width, 1, 0xa1b2b6).setOrigin(0, 0.5)); }
     buyBtn(W - 52, 154, deal, deal.got, false);
+    // 53차: 오늘의 특가만 크게 두고 나머지 꾸러미(성장·큰 꾸러미)는 접는다. 목록은 그대로 남아 있다
+    const moreN = (grow ? 1 : 0) + (sv.cleared < 2 * D.STAGES_PER_CHAPTER ? 1 : D.BIG_PACKS.length);
+    const open = !!this.dealMore;
+    b.add(button(this, W / 2, 190, W - 24, 22, open ? t('lobby.61eaf1') : t('lobby.60517d', { moreN }), () => { sfx('click'); this.dealMore = !open; track('deal_more', { open: !open }); this.show('shop'); }, { size: 10, color: 0x293845 }));
+    if (!open) return;
+    const sec = this.add.container(0, 26); this.body.add(sec); b = sec;
     // 성장 꾸러미
     b.add(this.add.text(16, 180, t('lobby.be1a56'), font(12, '#9ae0ff')));
     if (grow) {

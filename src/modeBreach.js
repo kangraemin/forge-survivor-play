@@ -164,6 +164,7 @@ export class BreachPath {
     g.fillStyle(0xffe8a0).fillRect(bx + bw - 6, 44, 3, 22);
     const gap = Math.round((this.sh - this.w) / 4);
     s.timeTxt.setText(t('modes.02f94d', { max: Math.max(0, Math.round((TOTAL - this.sh) / 4)) })).setColor('#ffffff');
+    const mDist = this.r.bigDist; if (mDist) mDist.setText(`${Math.max(0, Math.round((TOTAL - this.sh) / 4))}m`).setColor(gap < 25 ? '#ff7070' : '#ffffff');
     s.waveTxt.setText(t('modeBreach.235ac1', { max: Math.max(0, gap) })).setColor(gap < 25 ? '#ff7070' : '#a1b2b6');
     this.rule.hud?.();
   }

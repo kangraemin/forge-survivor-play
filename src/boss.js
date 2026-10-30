@@ -37,6 +37,7 @@ export class BossAI {
       if (dps > 0) m.maxHp = m.hp = Math.max(m.maxHp * 0.5, dps * (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last));
       s.log?.('boss_hp', { boss: key, mid, dps: Math.round(dps), hp: Math.round(m.maxHp) });
     }
+    this.spawnBt = s.bt; this.spawnDps = Math.round(s.realDps?.() || 0);   // 53차: 보스 스폰~처치 초와 그때 DPS를 남긴다(tools/boss_table.mjs)
     this.T = formula ? 0 : (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last) * 1000;   // 최소 버티는 시간(ms)
     // 1장 보스는 첫 보스라 20% 덜 아프게: 권장을 넘고도 체력 26% 남기고 졌다
     m.dmg = this.b.dmg * s.mobDmgMul * (!mid && s.c === 0 && !s.endless ? 0.8 : 1);
@@ -80,6 +81,22 @@ export class BossAI {
     if (this.T && (this.age || 0) < this.T && !m.dead) { const ex = Math.max(0.03, 1 - (this.age || 0) / this.T); if (m.hp < ex * m.maxHp) m.hp = ex * m.maxHp; }
   }
 
+  // 53차: 체력 맞춤 — 시작 체력은 '몹 쓸기 DPS'(여러 마리에 퍼진 값)라 보스 한 마리에 실제 들어가는 피해보다 높다. 싸운 지 14초부터 3초마다
+  // '보스에 실제 들어간 피해율 x 남은 목표 시간'보다 체력이 많으면 그만큼으로 깎는다(체력 비율은 그대로 두고 틀째). 중간보스는 85초·장 보스는 108초 안에 끝나고,
+  // 못 잡던 판(13장)도 기준 안으로 들어온다. 너무 빨리 닳는 쪽은 holdFloor(최소 버티는 시간)가 막는다
+  fit(dt) {
+    const m = this.m, age = this.age || 0;
+    if (!this.T || m.dead || age < 14000) return;
+    this.fitT = (this.fitT || 0) + dt;
+    if (this.fitT < 3000) return; this.fitT = 0;
+    const live = (age - 2300) / 1000, rate = (this.dealt || 0) / Math.max(1, live);
+    if (rate <= 0) return;
+    const left = Math.max(6, D.BOSS_FIT[this.mid ? 'mid' : 'last'] - live), need = rate * left;
+    if (m.hp <= need) return;
+    const f = Math.max(0.6, need / m.hp);
+    m.maxHp *= f; m.hp *= f;
+  }
+
   update(dt) {
     const s = this.s, m = this.m;
     if (!m.active || m.dead) return;
@@ -89,6 +106,7 @@ export class BossAI {
     this.age = (this.age || 0) + dt;
     // 50차: 시간 곡선 — 체력 비율이 (1 - 경과/목표시간)보다 빨리 닳으면 그 선까지 되채운다(보스가 숨을 고른다). 싸우는 중 레벨업·카드로 DPS가 늘어도, 고강화로 다시 해도 목표 시간 안엔 안 죽는다
     this.holdFloor();
+    this.fit(dt);
     if (this.bar && !this.mid && !this.tired && this.age > D.BOSS_TIRED.ms) {
       this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(t('boss.6683a5', { name: this.b.name, round: Math.round((D.BOSS_TIRED.mul - 1) * 100) })).setColor('#ff9a5a');
       s.banner(t('boss.4fceda'), t('boss.94d38c', { round: Math.round((D.BOSS_TIRED.mul - 1) * 100) }));
@@ -407,6 +425,8 @@ export class BossAI {
 
   die() {
     const s = this.s, m = this.m;
+    const rec = { boss: this.key, mid: this.mid, c: s.c, s: s.s, sec: Math.round((s.bt - this.spawnBt) / 100) / 10, hp: Math.round(m.maxHp), dps_spawn: this.spawnDps, dps_kill: Math.round(s.realDps?.() || 0), power: D.powerOf(s.sv), speed: s.time?.timeScale };
+    (s.bossTimes ||= []).push(rec); s.log?.('boss_time', rec);   // 봇·헤드리스는 s.bossTimes로 읽는다
     this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy(); this.markTxt?.destroy(); this.wborder?.destroy(); this.aura?.destroy(); this.shGfx?.destroy(); this.shBar?.forEach(o => o.destroy());
     this.bar?.forEach(o => o.destroy());
     s.hitstop = 260;

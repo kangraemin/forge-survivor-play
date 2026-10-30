@@ -38,11 +38,11 @@ export const ModeScreen = {
     sv.tut.markCard = true; save();
     const c = this.add.container(0, 0).setDepth(90);
     const dim = this.add.rectangle(0, 0, W, D.H, 0x000000, 0.55).setOrigin(0).setInteractive();
-    c.add(dim); c.add(panel(this, 24, 150, W - 48, 150, { fill: 0x16222c, line: 0x7fe6ee }));
+    c.add(dim); c.add(panel(this, 24, 150, W - 48, 160, { fill: 0x16222c, line: 0x7fe6ee }));
     c.add(markIcon(this, W / 2, 172, 20));
     c.add(this.add.text(W / 2, 192, t('modeScreen.bd273d'), font(14, '#7fe6ee')).setOrigin(0.5));
-    [t('modeScreen.8f15f0'), t('modeScreen.33fe79'), t('modeScreen.8944ef'), t('modeScreen.8dcecb')].forEach((l, i) => c.add(this.add.text(40, 214 + i * 15, l, font9(10, '#e8f6f8'))));
-    const ok = button(this, W / 2, 284, 96, 22, t('modeScreen.de96f0'), () => { sfx('click'); c.destroy(); }, { size: 11, color: 0x1d6f80 }); c.add(ok);
+    let my = 214; [t('modeScreen.8f15f0'), t('modeScreen.33fe79'), t('modeScreen.8944ef'), t('modeScreen.8dcecb')].forEach(l => { const lt = this.add.text(40, my, l, { ...font9(10, '#e8f6f8'), wordWrap: { width: W - 80 } }); c.add(lt); my += lt.height + 3; });   // 53차: 긴 언어는 줄바꿈(패널 밖으로 넘치던 것)
+    const ok = button(this, W / 2, 294, 96, 22, t('modeScreen.de96f0'), () => { sfx('click'); c.destroy(); }, { size: 11, color: 0x1d6f80 }); c.add(ok);
     sfx('click');
   },
   openModes() {
@@ -96,24 +96,26 @@ export const ModeScreen = {
     // 고른 판 정보
     const cfg = modeStage(id, n), open = modeOpen(sv, n), ch = D.CHAPTERS[n];
     b.add(this.add.text(24, 276, t('modeScreen.793516', { v: n + 1, v2: ch ? ch.name : '' }), font(12, '#ffd75e')));
-    let canGo = false;
+    let canGo = false, o = 0;
     if (!cfg) b.add(this.add.text(24, 294, t('modeScreen.f95728'), font9(10, '#a1b2b6')));
     else {
       b.add(this.add.text(24, 294, cfg.goal, font9(10, '#ffffff')));
-      cfg.note.split(' · ').forEach((s, i) => b.add(this.add.text(24, 308 + i * 13, s, font9(10, '#a1b2b6'))));
+      // 53차: 설명 줄이 3줄 이상(영어 등)이면 아래 줄을 그만큼 내린다. 예전엔 보상 줄과 겹쳤다
+      let ny = 308; cfg.note.split(' · ').forEach(s => { const nt = this.add.text(24, ny, s, { ...font9(10, '#a1b2b6'), wordWrap: { width: W - 48 } }); b.add(nt); ny += nt.height + 1; });
+      o = Math.max(0, Math.ceil(ny - 335));
       const rw = modeDone(sv, id, n) ? repeatReward(cfg.c, modeStars(sv, id, n) || 1) : modeReward(cfg.c, true);
-      b.add(this.add.text(24, 336, modeDone(sv, id, n) ? t('modeScreen.9c666f') : t('modeScreen.08604a'), font9(10, '#f2e4bc')));
-      { const g = markGain(sv, id, n), mt = this.add.text(W - 14, 349, g ? t('modeScreen.7a4a28') : t('modeScreen.cdc2b2'), font9(10, g ? '#7fe6ee' : '#6a7f86')).setOrigin(1, 0); b.add(mt); if (g) b.add(markIcon(this, mt.x - mt.width - 8, 355, 12)); }
-      b.add(this.add.text(24, 349, t('modeScreen.5ffb61', { fmt: fmt(rw.gold), stone: rw.stone, v: rw.gem ? t('modeScreen.7fece3', { gem: rw.gem }) : '' }), font9(10, '#f2e4bc')));
-      if (!open) b.add(this.add.text(24, 364, t('modeScreen.e21281', { v: n + 1 }), font9(10, '#ff9090')));
+      b.add(this.add.text(24, 336 + o, modeDone(sv, id, n) ? t('modeScreen.9c666f') : t('modeScreen.08604a'), font9(10, '#f2e4bc')));
+      { const g = markGain(sv, id, n), mt = this.add.text(W - 14, 349 + o, g ? t('modeScreen.7a4a28') : t('modeScreen.cdc2b2'), font9(10, g ? '#7fe6ee' : '#6a7f86')).setOrigin(1, 0); b.add(mt); if (g) b.add(markIcon(this, mt.x - mt.width - 8, 355 + o, 12)); }
+      b.add(this.add.text(24, 349 + o, t('modeScreen.5ffb61', { fmt: fmt(rw.gold), stone: rw.stone, v: rw.gem ? t('modeScreen.7fece3', { gem: rw.gem }) : '' }), font9(10, '#f2e4bc')));
+      if (!open) b.add(this.add.text(24, 364 + o, t('modeScreen.e21281', { v: n + 1 }), font9(10, '#ff9090')));
       else {
         canGo = true;
         const k = modeStars(sv, id, n), bt = modeBest(sv, id, n), tx = starTexts(cfg);
-        b.add(this.add.text(24, 364, t('modeScreen.bb225e', { repeat: '★'.repeat(k), repeat2: '☆'.repeat(3 - k), v: bt ? t('modeScreen.5bd986', { fmtT: fmtT(bt.t), hurt: bt.hurt }) : '' }), font9(10, k ? '#ffd75e' : '#a1b2b6')));
-        b.add(this.add.text(24, 377, `★ ${tx[0]}  ★★ ${tx[1]}  ★★★ ${tx[2]}`, font9(9, '#8d86a0')));
+        b.add(this.add.text(24, 364 + o, t('modeScreen.bb225e', { repeat: '★'.repeat(k), repeat2: '☆'.repeat(3 - k), v: bt ? t('modeScreen.5bd986', { fmtT: fmtT(bt.t), hurt: bt.hurt }) : '' }), font9(10, k ? '#ffd75e' : '#a1b2b6')));
+        b.add(this.add.text(24, 377 + o, `★ ${tx[0]}  ★★ ${tx[1]}  ★★★ ${tx[2]}`, { ...font9(9, '#8d86a0'), wordWrap: { width: W - 48 } }));
       }
     }
-    const go = button(this, W / 2, 408, 190, 32, t('modeScreen.e89cc8'), () => this.startModeBattle(id, n), { size: 14, color: 0x2f6b3a });
+    const go = button(this, W / 2, 420 + o, 190, 32, t('modeScreen.e89cc8'), () => this.startModeBattle(id, n), { size: 14, color: 0x2f6b3a });
     go.setEnabled(canGo);
     b.add(go);
   },

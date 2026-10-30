@@ -43,9 +43,13 @@ export class ModeRun {
     this.g = s.add.graphics().setDepth(6);       // 땅 위에 그리는 고리·게이지
     this.hg = s.add.graphics().setScrollFactor(0).setDepth(100);   // 화면 위쪽 진행 표시
     this.hud_ = [];
+    // 53차: 몹이 수십 마리 겹쳐도 내 캐릭터가 보이게 발밑에 밝은 청록 고리를 깐다(9장 점령·돌파에서 구분이 안 됐다)
+    this.heroRing = s.add.ellipse(0, 0, 38, 15).setStrokeStyle(2, 0x7fe6ee, 1).setDepth(s.heroDisc ? s.heroDisc.depth + 0.3 : 6);
+    s.tweens.add({ targets: this.heroRing, alpha: 0.55, duration: 450, yoyo: true, repeat: -1 });
     // 스킬 줄과 콤보 글자를 진행 표시 아래로 내린다
     s.skillRow.setPosition(8, 74); s.comboTxt.setPosition(W - 57, 80);
     this.mkTxt = (x, y, str, o, size = 10) => { const t = s.add.text(x, y, str, o || font9(size, '#ffffff')).setScrollFactor(0).setDepth(101); this.hud_.push(t); return t; };
+    if (this.id === 'breach') { this.bigDist = this.mkTxt(W / 2, 92, '', font(22, '#ffffff', 5)); this.bigDist.setOrigin(0.5).setAlpha(0.95); }   // 53차: 돌파 남은 거리를 화면 위 가운데에 크게(몹에 가려 작았다)
     if (this.id === 'breach' && c.path) { this.tw = this.bp = makeRule(this); this.bp.setup(); }   // 3~15장 돌파: 사행 길
     else {
       if (this.id === 'guard') this.setupGuard();
@@ -510,6 +514,7 @@ export class ModeRun {
   hud() {
     const s = this.s, c = this.cfg, g = this.hg, id = this.id;
     g.clear();
+    if (this.heroRing) this.heroRing.setPosition(s.hero.x, s.hero.y + s.hero.displayHeight / 2 - 2);
     const lim = this.limit, left = Math.max(0, Math.ceil((lim - s.waveT) / 1000));
     const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
     if (id === 'breach') { s.timeTxt.setText(''); }
@@ -545,6 +550,7 @@ export class ModeRun {
       const gap = Math.max(0, Math.round((this.wallY - s.hero.y) / 4));
       s.timeTxt.setText(t('modes.02f94d', { max: Math.max(0, Math.round((s.hero.y - this.goalY) / 4)) })).setColor('#ffffff');
       s.waveTxt.setText(t('modes.b33be9', { v: this.leg + 1, v2: c.legs || 1 })).setColor('#a1b2b6');
+      this.bigDist?.setText(`${Math.max(0, Math.round((s.hero.y - this.goalY) / 4))}m`).setColor(gap < 25 ? '#ff7070' : '#ffffff');
       this.wallInfo.setText(`${c.wallName || t('modes.8e939b')} ${gap}m`).setColor(gap < 25 ? '#ff7070' : '#a1b2b6');
       this.wallTxt.setText('').setPosition(0, 0);
     } else {

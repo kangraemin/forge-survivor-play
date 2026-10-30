@@ -1987,5 +1987,14 @@
  "data.744747": "태엽 무희",
  "settingsPanel.2247a8": "작게",
  "settingsPanel.2179da": "보통",
- "boot.7b30bf": "화면을 탭해서 시작"
+ "boot.7b30bf": "화면을 탭해서 시작",
+ "lobby.61eaf1": "다른 꾸러미 접기 ▲",
+ "lobby.60517d": "다른 꾸러미 {moreN}개 보기 ▼",
+ "nextGoal.34bfe9": "도전 증표 {have}/{need}",
+ "nextGoal.8a10a9": "도전 {name} {v}장을 깨면 증표 +1",
+ "nextGoal.63e2ee": "도전을 깰 때마다 증표 +1",
+ "nextGoal.0ea77b": "{stage} 전투력 {a}/{rec}",
+ "nextGoal.0ebe6a": "대장간에서 강화하면 깰 수 있어요",
+ "nextGoal.f32dd2": "{stage} 도전 준비 끝",
+ "nextGoal.baf639": "전투력이 충분해요. 출정하세요"
 }

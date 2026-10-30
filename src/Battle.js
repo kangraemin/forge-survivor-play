@@ -62,7 +62,7 @@ export class Battle extends Phaser.Scene {
     // 장면 인스턴스는 판끼리 재사용된다: 이벤트·축복·던전 고블린 상태를 비운다
     this.ultTip = null; this.eventDone = false; this.shrine = null; this.buffUntil = 0; this.buffTxt = null; this.dunGobT = null;
     // 보스 단계도 비운다(앞 판이 보스전으로 끝나면 다음 판이 웨이브 없이 영원히 이어졌다)
-    this.bossLvQ = 0; this.lvForce = false; this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.spawnAcc = 0;
+    this.bossLvQ = 0; this.lvForce = false; this.bossPhase = false; this.midBoss = null; this.shopShown = false; this.midDone = false; this.midWave = undefined; this.eliteDone = false; this.ringDone = false; this.tasteDone = false; this.healOrbDone = false; this.spawnAcc = 0;
     this.run = {
       lv: 1, xp: 0, silver: 0, kills: 0, mana: 0, stones: 0, chests: 0,
       skills: { sword: 1 }, evo: {}, freeReroll: 1, shopRound: 0,
@@ -86,6 +86,8 @@ export class Battle extends Phaser.Scene {
     if (this.hard) this.mobDmgMul = D.hardDmg(this.c, this.s) * (1 - this.tv('def'));
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless && !this.hard && !this.dungeon;
+    // 53차: 1-1은 어느 판이든 받는 피해 -15%(보상·다른 판 난이도는 그대로), 마지막 웨이브 앞에 회복 구슬 하나
+    this.stage1 = this.c === 0 && this.s === 0 && !this.endless && !this.hard && !this.dungeon && !this.mode;
     this.firstRun = this.easy && this.sv.stats.runs === 0;   // runs++는 시작 때 올라가니 판 도중엔 못 읽는다(42차)
     if (this.easy) { this.mobDmgMul *= 0.4;   // 0.55면 피해 다녀도 30초에 체력 54%(36차)
       // 두 번째 판은 30초 뒤 0.55로: 두 판 내내 체력이 안 닳아 카드 고르는 의미가 없었다(41차)
@@ -638,6 +640,7 @@ export class Battle extends Phaser.Scene {
     if (m.isBoss && m.shield > 0) dealt = m.bossAI.absorb(dealt, open);   // 49차: 쉴드 구간엔 약점이 열렸을 때 맞혀야 깎인다
     if (m.isBoss && m.invuln > this.bt) dealt = 0;   // 50차: 페이즈 전환 연출 동안 무적(1초 이내)
     this.trackDps(Math.min(dealt, Math.max(0, m.hp)));   // 과잉 피해는 뺀다
+    if (m.isBoss && m.bossAI) m.bossAI.dealt = (m.bossAI.dealt || 0) + Math.min(dealt, Math.max(0, m.hp));   // 53차: 보스에 실제로 들어간 피해(체력 맞춤용)
     m.hp -= dealt;
     if (m.isBoss) m.bossAI?.holdFloor?.();
     if (open && this.bt - (m.exposeTxt || 0) > 260) {
@@ -1069,7 +1072,8 @@ export class Battle extends Phaser.Scene {
     // 해골 장군 펫의 방패가 한 대를 막는다
     if (this.petShield) { this.iframe = this.bt + D.PLAYER.iframe; this.pet.block(); return; }
     // 광전사 4세트: 체력이 절반 아래면 덜 아프다(공격만 올라 위험하기만 했다)
-    const zerk = this.wtype.id === 'axe' && this.gear.fx.has('axe4') && this.hp < this.maxHp / 2 ? 0.8 : 1;
+    const st1 = this.stage1 && !this.practice ? 0.85 : 1;   // 53차: 1-1 한정 피해 -15%
+    const zerk = st1 * (this.wtype.id === 'axe' && this.gear.fx.has('axe4') && this.hp < this.maxHp / 2 ? 0.8 : 1);
     const d = Math.max(1, Math.round(dmg * zerk * (this.pet.fit > 1 && this.pet.def.tank ? 1 - PET_GOOD_DEF : 1)));
     const by = this.run.dmgBy; by[src] = (by[src] || 0) + d;
     this.hp -= d;
@@ -1267,6 +1271,8 @@ export class Battle extends Phaser.Scene {
           this.log('taste_next', { ch: 1 });
         }
       }
+      // 53차: 1-1 마지막 웨이브가 열리면(중간보스 직전) 회복 구슬 하나를 몸 곁에. 체력이 모자랄 때만 의미가 있게 항상 놓는다
+      if (this.stage1 && !this.healOrbDone && this.wave === this.waveCount - 1) { this.healOrbDone = true; this.addItem(this.hero.x + 24, this.hero.y - 12, 'meat'); this.log('stage1_heal_orb', { hp: Math.round(this.hp / this.maxHp * 100) }); }
       if (this.eventAt != null && !this.eventDone && this.progress() >= this.eventAt) { this.eventDone = true; this.surprise(this.eventKind); }
       // 던전: 15초마다 보물 고블린(알림 없이)
       if (this.dungeon && this.bt >= (this.dunGobT ??= D.DUNGEON.goblinSec * 1000)) { this.dunGobT += D.DUNGEON.goblinSec * 1000; this.spawnGoblin(true); }
