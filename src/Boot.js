@@ -126,9 +126,10 @@ export class Boot extends Phaser.Scene {
     // 로딩 배경(맨 먼저 받아 깔고, 아래 막대·글자는 그 위에)
     this.load.image('loading_bg', 'assets/loading_bg.jpg');
     this.load.once('filecomplete-image-loading_bg', () => this.add.image(0, 0, 'loading_bg').setOrigin(0).setDisplaySize(W, H).setDepth(-10));
-    const bar = this.add.rectangle(W / 2 - 80, H / 2, 0, 6, 0xffd75e).setOrigin(0, 0.5);
-    this.add.rectangle(W / 2, H / 2, 164, 10).setStrokeStyle(1, 0x5b4f7a);
-    this.add.text(W / 2, H / 2 - 20, tt('boot.e414a2'), font(16, '#ffd75e')).setOrigin(0.5);
+    // 55차: 제목·막대를 그림 위쪽 어두운 자리로 올린다(주인공 몸 위라 글자가 막대에 가려 보였다)
+    const ty = Math.round(H * 0.17), bar = this.add.rectangle(W / 2 - 80, ty + 26, 0, 6, 0xffd75e).setOrigin(0, 0.5).setDepth(5);
+    this.add.rectangle(W / 2, ty + 26, 164, 10).setStrokeStyle(1, 0x5b4f7a).setDepth(5);
+    const ttl = this.add.text(W / 2, ty, tt('boot.e414a2'), font(20, '#ffd75e', 4)).setOrigin(0.5).setDepth(5); ttl.setScale(Math.min(1, (W - 24) / ttl.width));
     this.load.on('progress', v => { bar.width = 160 * v; });
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
     // 모든 그림을 목록으로 모은 뒤, 첫 화면에 꼭 필요한 것만 지금 받는다. 나머지는 로비·전투가 열린 뒤 뒤에서 받는다(lazy.js)

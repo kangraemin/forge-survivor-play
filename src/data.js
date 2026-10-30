@@ -434,7 +434,7 @@ export const WEAK_MUL = 2.2;
 // 보석으로는 '시간'과 '안전'을 산다(소탕권·방지권·강화석). 무기 공격력을 직접 팔지 않아 실력·강화의 재미를 지킨다
 export const GEM_FREE = { daily: 20, stageFirst: 5, bossFirst: 50 };
 export const IAP = [
-  { id: 'starter', name: t('data.1fcc55'), price: 1200, once: true, tag: t('data.85be3c'), desc: t('data.3ee4ff'), give: { hskin: 'crimson', gem: 300, guard: 3, stone: 60, gold: 3000 } },
+  { id: 'starter', name: t('data.1fcc55'), price: 1200, once: true, tag: t('data.starterOnce'), desc: t('data.3ee4ff'), give: { hskin: 'crimson', gem: 300, guard: 3, stone: 60, gold: 3000 } },
   // 1,200원과 4,900원 사이가 비어 있었다: 꾸미기 둘을 한 번에(보석으로 사면 1,400)
   { id: 'cosm', name: t('data.69c6c8'), price: 3900, once: true, tag: t('data.5e6a58'), desc: t('data.aeeaa7'), give: { skin: 'frost', hskin: 'jade', gem: 100 } },
   { id: 'pass', name: t('data.9385e1'), price: 4900, tag: t('data.c8f6f3'), give: { gem: 300 }, passDays: 30 },
@@ -546,6 +546,18 @@ export const MISSIONS = [
   { id: 'enh', name: t('data.35b3d5'), need: 1 },
 ];
 export const MISSION_GIVE = { gem: 5, stone: 2 };
+// 55차: 대장간 의뢰 — 매일 3개(날짜 번호로 돌려 가며 고른다). 진행은 오늘 임무 칸(mis)의 같은 세는 값을 쓰고 받은 표시는 misGot('o_id')에 둔다
+// 확률·보상 수치는 그대로 두고 '강화에 실패해도 쌓이는 진행'을 더해 2장부터의 금화 벽 구간에 강화석·방지권이 들어오게 한다
+export const FORGE_ORDERS = [
+  { id: 'kill300', key: 'kill', need: 300, name: t('data.ordKill', { need: 300 }), give: { stone: 4 } },
+  { id: 'sweep2', key: 'sweep', need: 2, name: t('data.ordSweep', { need: 2 }), give: { stone: 3 } },
+  { id: 'enh3', key: 'enh', need: 3, name: t('data.ordEnh', { need: 3 }), give: { guard: 1 } },
+  { id: 'fail1', key: 'fail', need: 1, name: t('data.ordFail', { need: 1 }), give: { stone: 3 } },
+  { id: 'clear3', key: 'clear', need: 3, name: t('data.ordClear', { need: 3 }), give: { stone: 3 } },
+  { id: 'kill600', key: 'kill', need: 600, name: t('data.ordKill', { need: 600 }), give: { stone: 6 } },
+  { id: 'enh5', key: 'enh', need: 5, name: t('data.ordEnh', { need: 5 }), give: { guard: 1, stone: 2 } },
+];
+export const forgeOrdersToday = dayN => [0, 1, 2].map(i => FORGE_ORDERS[((dayN | 0) + i * 2) % FORGE_ORDERS.length]);
 export const MISSION_ALL = { gem: 10 };
 // 출석: 하루 빠지면 처음으로 돌아가지 않고 그 자리에 멈춘다
 export const LOGIN_REWARDS = [

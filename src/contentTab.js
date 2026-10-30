@@ -93,7 +93,7 @@ export const ContentTab = {
       const y = 102 + i * 40, have = Math.min(m.need, wk.mis[m.id] || 0), done = have >= m.need, got = wk.got[m.id];
       body.add(panel(this, 26, y, W - 52, 34, { fill: got ? 0x141018 : 0x293845 }));
       body.add(this.add.text(36, y + 5, m.name, font9(10, got ? '#6a6080' : '#ffffff')));
-      body.add(this.add.text(36, y + 19, `${fmt(have)}/${fmt(m.need)} · ${giveText(D.WEEKLY_GIVE)}`, font9(10, done ? '#5fdc6a' : '#a1b2b6')));
+      { const rt = this.add.text(36, y + 19, `${fmt(have)}/${fmt(m.need)} · ${giveText(D.WEEKLY_GIVE)}`, font9(10, done ? '#5fdc6a' : '#a1b2b6')); rt.setScale(Math.min(1, 144 / rt.width)); body.add(rt); }   // 55차: 버튼과 겹치지 않게 폭에 맞춘다
       const bt = button(this, W - 60, y + 17, 52, 24, got ? t('lobby.8d8680') : t('lobby.98d0f0'), () => {
         if (got || !done) return;
         wk.got[m.id] = true; track('weekly_claim', { id: m.id }); grant(sv, D.WEEKLY_GIVE); sfx('coin'); this.refreshTop(); redraw();
@@ -109,6 +109,28 @@ export const ContentTab = {
     const left = (8 - new Date().getDay()) % 7 || 7;
     body.add(this.add.text(W / 2, 312, t('contentTab.d3baf4', { left }), font9(10, '#a1b2b6')).setOrigin(0.5));
     body.add(this.add.text(W / 2, 330, t('contentTab.1ea30f'), font9(10, '#7d8f94')).setOrigin(0.5));
+  },
+
+  // ── 대장간 의뢰(임무 창 '의뢰' 칸 + 대장간 탭 칩) ──
+  orders() { return D.forgeOrdersToday(this.sv.dayN); },
+  ordersReady() { const sv = this.sv; return this.orders().filter(o => (sv.mis[o.key] || 0) >= o.need && !sv.misGot['o_' + o.id]).length; },
+  ordersDone() { const sv = this.sv; return this.orders().filter(o => sv.misGot['o_' + o.id]).length; },
+  ordersDraw(body, redraw) {
+    const sv = this.sv;
+    this.orders().forEach((o, i) => {
+      const y = 102 + i * 40, have = Math.min(o.need, sv.mis[o.key] || 0), done = have >= o.need, got = sv.misGot['o_' + o.id];
+      body.add(panel(this, 26, y, W - 52, 34, { fill: got ? 0x141018 : 0x293845 }));
+      body.add(this.add.text(36, y + 5, o.name, font9(10, got ? '#6a6080' : '#ffffff')));
+      { const rt = this.add.text(36, y + 19, t('lobby.ordRow', { have: fmt(have), need: fmt(o.need), give: giveText(o.give, sv) }), font9(10, done ? '#5fdc6a' : '#a1b2b6')); rt.setScale(Math.min(1, 144 / rt.width)); body.add(rt); }
+      const bt = button(this, W - 60, y + 17, 52, 24, got ? t('lobby.8d8680') : t('lobby.98d0f0'), () => {
+        if (got || !done) return;
+        sv.misGot['o_' + o.id] = true; track('order_claim', { id: o.id }); grant(sv, o.give); sfx('coin'); this.refreshTop(); redraw();
+      }, { size: 10, color: 0x2f6b3a });
+      bt.setEnabled(done && !got); body.add(bt);
+    });
+    body.add(this.add.text(W / 2, 236, t('lobby.ordTitle'), font(12, '#ffd75e')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 256, t('lobby.ordLine1'), font9(10, '#a1b2b6')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 272, t('lobby.ordLine2'), font9(10, '#a1b2b6')).setOrigin(0.5));
   },
 
   // ── 기록: 도감 / 업적 ──

@@ -158,6 +158,7 @@ export class Battle extends Phaser.Scene {
     // 깜짝 이벤트: 보스·무한의 탑·처음 판·던전이 아니면 판 중간에 하나(보물 고블린·황금 박쥐 떼·축복의 제단)
     this.eventAt = !this.practice && !this.mode && !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
     this.eventKind = Phaser.Utils.Array.GetRandom(D.EVENTS.kinds);
+    this.chestOk = !this.practice && !this.mode && !this.easy && !this.isBoss && !this.endless && !this.stage1; this.chest = null;
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
     // 44차: 6장부터는 시작 몹 28마리가 곧바로 에워싸 무기 1개인 첫 30초에 쓰러졌다 → 일부만 두고 나머지는 화면 밖에서 차례로 들어온다
     const total = this.easy ? 24 : 28, first = this.endless || this.dungeon ? total : this.c === 0 ? (this.easy ? 10 : 16) : this.c >= 5 ? 8 : 16;   // 45차: 1-1도 시작 24마리가 이미 화면에 있었다 → 10(처음 판)·16마리만 두고 나머지는 7초에 걸쳐 들어온다(첫 레벨업 2.4초는 가까운 몹으로 유지)
@@ -292,14 +293,17 @@ export class Battle extends Phaser.Scene {
     // 몹 떼 속에서도 내 캐릭터가 바로 보이게 발밑에 밝은 고리
     // 고리 색은 강화 단계를 따른다(+5 파랑, +10 주황, +15 보라). +10부터는 몸에도 빛이 돈다
     const rc = sv.enh >= 15 ? 0xd06bff : sv.enh >= 10 ? 0xff8a2a : sv.enh >= 5 ? 0x5fc8ff : 0x9ae6ff;
-    this.heroRing = this.add.ellipse(0, 0, 24 * 1.3, 10 * 1.3, rc, 0.18).setStrokeStyle(2, rc, 1).setDepth(HERO_D - 0.4);
+    // 55차: 몹 무리에 묻히지 않게 고리를 키우고 흰 바깥 고리를 하나 더 둔다. 몹이 모이면 몸에 흰 윤곽선이 켜진다
+    this.heroRing = this.add.ellipse(0, 0, 32 * 1.3, 13 * 1.3, rc, 0.22).setStrokeStyle(2, rc, 1).setDepth(HERO_D - 0.4);
+    this.heroRing2 = this.add.ellipse(0, 0, 40 * 1.3, 16 * 1.3).setStrokeStyle(1, 0xffffff, 0.75).setDepth(HERO_D - 0.35);
+    this.heroGlowW = this.hero.preFX?.addGlow(0xffffff, 0, 0, false, 0.1, 6);
     // +10 각성부터 발밑에 강화 색 기운이 맥박친다(+15는 더 크고 잔상이 남는다)
     if (sv.enh >= 10) {
       this.heroAura = this.add.image(0, 0, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(rc).setDepth(9.5).setAlpha(0.5).setScale(sv.enh >= 15 ? 1.2 : 0.9, sv.enh >= 15 ? 0.55 : 0.42);
       this.tweens.add({ targets: this.heroAura, alpha: 0.2, duration: 520, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     }
     // 몹 더미에 몸이 가려도 머리 위 작은 화살표로 어디 있는지 보인다
-    this.heroMark = this.add.triangle(0, 0, 0, 0, 8, 0, 4, 5, rc).setStrokeStyle(1, 0x000000, 0.6).setDepth(HERO_D + 2);
+    this.heroMark = this.add.triangle(0, 0, 0, 0, 11, 0, 5.5, 7, rc).setStrokeStyle(1.5, 0xffffff, 0.9).setDepth(HERO_D + 2);
     // 영웅 스킨: 몸 색을 바꾼다
     if (!this.hero.cosBody && heroSkin(sv).id) skinFx(this.hero, heroSkin(sv));
     if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
@@ -1002,7 +1006,33 @@ export class Battle extends Phaser.Scene {
     this.shrine = { g, arc, x, y, t: 0, life: 15000 };
     this.banner(tt('battle.1569b7'), tt('battle.f9e798')); sfx('level');
   }
+  // 보물 상자: 가까이 가면 열려 은화·경험치가 쏟아진다. 15초 안에 못 열면 사라진다(보상 수치는 판 보상과 따로, 판 안에서만 쓰는 은화·경험치)
+  spawnChest() {
+    const a = RF(0, Math.PI * 2), x = Phaser.Math.Clamp(this.hero.x + Math.cos(a) * 110, 30, WORLD - 30), y = Phaser.Math.Clamp(this.hero.y + Math.sin(a) * 110, 30, WORLD - 30);
+    const g = this.add.container(x, y).setDepth(7);
+    const glow = this.add.image(0, 0, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe08a).setScale(0.18).setAlpha(0.6);
+    const box = this.add.rectangle(0, 0, 18, 12, 0x8a5a2a).setStrokeStyle(2, 0xffd75e);
+    const lid = this.add.rectangle(0, -4, 18, 3, 0xffd75e);
+    const t = this.add.text(0, -22, tt('battle.chest'), font(9, '#ffd75e')).setOrigin(0.5);
+    g.add([glow, box, lid, t]);
+    this.tweens.add({ targets: glow, scale: 0.24, alpha: 0.35, duration: 600, yoyo: true, repeat: -1 });
+    this.chest = { g, x, y, life: 15000 };
+    sfx('level'); this.log('chest_spawn', { wave: this.wave });
+  }
+  updateChest(dt) {
+    const ch = this.chest; if (!ch) return;
+    ch.life -= dt;
+    if (Phaser.Math.Distance.Between(ch.x, ch.y, this.hero.x, this.hero.y) < 26) {
+      for (let i = 0; i < 5; i++) this.addItem(ch.x + R(-14, 14), ch.y + R(-12, 12), 'silver', 3);
+      for (let i = 0; i < 3; i++) this.addGem(ch.x + R(-10, 10), ch.y + R(-10, 10), 4);
+      if (this.hp < this.maxHp * 0.7) this.addItem(ch.x, ch.y - 10, 'meat');
+      this.cameras.main.flash(120, 255, 220, 120); sfx('coin'); this.log('chest_open', { wave: this.wave });
+      ch.life = 0;
+    }
+    if (ch.life <= 0) { this.tweens.killTweensOf(ch.g.list); ch.g.destroy(); this.chest = null; }
+  }
   updateShrine(dt) {
+    this.updateChest(dt);
     const r = this.run, sh = this.shrine;
     if (this.buffUntil && this.bt > this.buffUntil) {
       const b = D.EVENTS.shrineBuff; r.bDmg -= b.dmg; r.bSpd -= b.spd; this.buffUntil = 0; this.buffTxt?.setText('');
@@ -1278,6 +1308,8 @@ export class Battle extends Phaser.Scene {
       if (this.dungeon && this.bt >= (this.dunGobT ??= D.DUNGEON.goblinSec * 1000)) { this.dunGobT += D.DUNGEON.goblinSec * 1000; this.spawnGoblin(true); }
       if (this.wave >= 1 && !this.ringDone && this.waveT > this.waveLen * 0.25) { this.ringDone = true; this.encircle(); }
       if (this.waveT < dt * 2) { this.eliteDone = false; this.ringDone = false; }
+      // 55차: 웨이브 사이 작은 이벤트 — 두 번째 웨이브부터 격 웨이브마다 보물 상자(판 길이는 그대로, 단조로움만 깬다)
+      if (this.waveT < dt * 2 && this.wave >= 1 && this.wave % 2 === 1 && this.chestOk && !this.chest) this.spawnChest();
       // 15초마다 한쪽에서 대열이 밀려온다(그냥 몰려오기만 하지 않게). 처음 판의 1-1은 뺀다
       if (!this.easy && (this.formT = (this.formT || 0) + dt) > 15000) { this.formT = 0; this.formation(); }
       // x-2는 마지막 웨이브에 해골 장군(중간 보스)
@@ -1355,6 +1387,12 @@ export class Battle extends Phaser.Scene {
     h.setDepth(HERO_D + h.y / WORLD);
     if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.displayHeight / 2 - 3); }
     this.heroRing.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
+    this.heroRing2.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
+    if (this.heroGlowW && this.bt - (this.crowdT || 0) > 250) {   // 90px 안에 몹이 6마리 넘게 모이면 흰 윤곽선
+      this.crowdT = this.bt; let n = 0;
+      for (const m of this.mobs.getChildren()) if (!m.dead && Math.abs(m.x - h.x) < 90 && Math.abs(m.y - h.y) < 90 && ++n >= 6) break;
+      this.heroGlowW.outerStrength = n >= 6 ? 2.2 : 0;
+    }
     if (this.heroAura) this.heroAura.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
     // +15 각성: 움직이면 강화 색 잔상이 남는다
     if (moving && this.sv.enh >= 15 && this.bt - (this.lastGhost || 0) > 90) {

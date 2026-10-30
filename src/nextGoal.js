@@ -20,6 +20,16 @@ export function markTarget(sv) {
   return null;
 }
 
+// 힘이 모자랄 때 지금 할 행동 하나: 금화 부족이면 소탕·전투로 벌기, 강화석 부족이면 전투, 다 있으면 강화
+export function powerAct(sv) {
+  const enh = sv.enh | 0;
+  if (enh >= D.ENH_MAX) return { act: 'enh' };
+  const gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
+  if ((sv.gold | 0) < gold) return { act: (sv.sweep | 0) > 0 && (sv.cleared | 0) >= 1 ? 'sweep' : 'play', res: 'gold', have: sv.gold | 0, need: gold };
+  if ((sv.stone | 0) < stone) return { act: 'play', res: 'stone', have: sv.stone | 0, need: stone };
+  return { act: 'enh' };
+}
+
 export function nextGoal(sv, atk) {
   if (markBlocked(sv)) {
     const need = D.markNeed(sv.tier + 1), have = sv.mark | 0, tg = markTarget(sv);
@@ -27,6 +37,12 @@ export function nextGoal(sv, atk) {
   }
   if ((sv.cleared | 0) >= D.openTotal()) return null;
   const idx = sv.cleared | 0, c = Math.floor(idx / D.STAGES_PER_CHAPTER), s = idx % D.STAGES_PER_CHAPTER, rec = D.recOf(c, s, false), a = atk ?? D.powerOf(sv), stage = `${c + 1}-${s + 1}`;
-  if (a < rec) return { kind: 'power', to: 'forge', title: t('nextGoal.0ea77b', { stage, a, rec }), sub: t('nextGoal.0ebe6a') };
-  return { kind: 'go', to: 'battle', title: t('nextGoal.f32dd2', { stage }), sub: t('nextGoal.baf639') };
+  if (a < rec) {
+    const pa = powerAct(sv);
+    if (pa.act === 'enh') return { kind: 'power', act: 'enh', to: 'forge', stage, title: t('nextGoal.enh'), sub: t('nextGoal.enhSub', { stage }) };
+    const sub = pa.res === 'gold' ? t('nextGoal.haveGold', { have: pa.have, need: pa.need }) : t('nextGoal.haveStone', { have: pa.have, need: pa.need });
+    const title = pa.res === 'stone' ? t('nextGoal.earnStone') : pa.act === 'sweep' ? t('nextGoal.earnGoldSweep') : t('nextGoal.earnGoldPlay');
+    return { kind: 'power', act: pa.act, to: 'battle', stage, title, sub };
+  }
+  return { kind: 'go', to: 'battle', stage, title: t('nextGoal.f32dd2', { stage }), sub: t('nextGoal.baf639') };
 }

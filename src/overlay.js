@@ -734,7 +734,7 @@ export class Overlay {
     // 53차: 광고 2배·자랑하기 줄이 없으면(첫 판들) 가운데가 비었다 — 다음 목표를 그 자리에 한 줄로(탭하면 가야 할 곳으로)
     if (win && !s.endless && !dun && !hard && !adOn && !brag) {
       const g = nextGoal(sv, D.powerOf(sv));
-      if (g) c.add(s.add.text(W / 2, 306, g.sub, { ...font9(11, '#7fe6ee'), align: 'center', wordWrap: { width: W - 64 } }).setOrigin(0.5));
+      if (g) c.add(s.add.text(W / 2, 306, g.kind === 'power' ? `${g.stage} · ${g.title}` : g.sub, { ...font9(11, '#7fe6ee'), align: 'center', wordWrap: { width: W - 64 } }).setOrigin(0.5));
     }
     // itch.io 체험판: 전체판 링크(결과창 맨 아래 작은 글씨)
     const tl = trialInfo();

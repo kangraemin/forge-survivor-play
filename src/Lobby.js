@@ -10,7 +10,7 @@ import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, setMusic, setMusicLevel, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, markIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
-import { showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
+import { iapTag, showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
 import { inTossShell } from './safeArea.js';
@@ -110,7 +110,7 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv;
     const n = D.MISSIONS.filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length;
     const all = D.MISSIONS.every(m => sv.misGot[m.id]) && !sv.misGot.all;
-    return n + (all ? 1 : 0) + (sv.loginGot ? 0 : 1) + this.weeklyReady();
+    return n + (all ? 1 : 0) + (sv.loginGot ? 0 : 1) + this.weeklyReady() + this.ordersReady();
   }
   // auto: 하루 첫 접속에 저절로 뜬 창이면 출석 보상을 바로 준다(누를 필요 없이)
   missionWin(auto = false, page = 'day') {
@@ -132,17 +132,19 @@ export class Lobby extends Phaser.Scene {
     const draw = () => {
       body.removeAll(true);
       // 위: 오늘 / 이번 주 두 칸
-      [['day', t('lobby.276ef2')], ['week', t('lobby.db9056')]].forEach(([id, name], i) => {
-        const x = 74 + i * 92, on = this.misPage === id;
-        body.add(this.add.text(x, 80, name, font(on ? 13 : 11, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5));
-        if (on) body.add(this.add.rectangle(x, 92, 70, 2, 0xffd75e));
-        if (id === 'week' && this.weeklyReady()) body.add(this.add.circle(x + 44, 74, 3.5, 0xff3a3a));
-        const hit = this.add.rectangle(x, 80, 92, 24, 0, 0).setInteractive({ useHandCursor: true });
+      [['day', t('lobby.276ef2')], ['week', t('lobby.db9056')], ['order', t('lobby.ordTitle')]].forEach(([id, name], i) => {
+        const x = 46 + i * 66, on = this.misPage === id;
+        const nt = this.add.text(x, 80, name, font(on ? 13 : 11, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5); nt.setScale(Math.min(1, 62 / nt.width)); body.add(nt);
+        if (on) body.add(this.add.rectangle(x, 92, 56, 2, 0xffd75e));
+        if (id === 'week' && this.weeklyReady()) body.add(this.add.circle(x + 29, 74, 3.5, 0xff3a3a));
+        if (id === 'order' && this.ordersReady()) body.add(this.add.circle(x + 29, 74, 3.5, 0xff3a3a));
+        const hit = this.add.rectangle(x, 80, 66, 24, 0, 0).setInteractive({ useHandCursor: true });
         hit.on('pointerup', () => { if (this.misPage === id) return; sfx('click'); this.misPage = id; draw(); });
         body.add(hit);
       });
       body.add(button(this, W - 38, 80, 26, 22, 'X', () => c.close(), { size: 11, color: 0x3a3846 }));
       if (this.misPage === 'week') return this.weeklyDraw(body, draw);
+      if (this.misPage === 'order') return this.ordersDraw(body, draw);
       D.MISSIONS.forEach((m, i) => {
         const y = 102 + i * 40, have = Math.min(m.need, sv.mis[m.id] || 0), done = have >= m.need, got = sv.misGot[m.id];
         body.add(panel(this, 26, y, W - 52, 34, { fill: got ? 0x141018 : 0x293845 }));
@@ -244,7 +246,7 @@ export class Lobby extends Phaser.Scene {
     c.add(this.add.text(W / 2, 172, it.name, font(14, '#ffd75e')).setOrigin(0.5));
     c.add(gemIcon(this, W / 2, 204, 26));
     c.add(this.add.text(W / 2, 230, giveText(it.give), { ...font9(10, '#f2e4bc'), align: 'center', wordWrap: { width: W - 80 } }).setOrigin(0.5, 0));
-    c.add(this.add.text(W / 2, 268, `${it.tag}  ·  ${priceLabel(it)}`, font(11, '#ffd75e')).setOrigin(0.5));
+    { const tg = this.add.text(W / 2, 268, `${iapTag(it)}  ·  ${priceLabel(it)}`, font(11, '#ffd75e')).setOrigin(0.5); tg.setScale(Math.min(1, (W - 56) / tg.width)); c.add(tg); }
     c.add(button(this, 88, 310, 96, 28, t('lobby.2d4e13'), () => { track('starter_offer_close'); c.close(); }, { size: 11, color: 0x3a3846 }));
     c.add(button(this, 186, 310, 100, 28, t('lobby.c91e61'), async () => {
       track('starter_offer_click');
@@ -341,7 +343,7 @@ export class Lobby extends Phaser.Scene {
   refreshTop() { this.topTxt.forEach(t => t.setText(t.get())); this.bellDot?.setVisible(this.missionReady() > 0); this.bellHint?.setText(this.bellText()); }
   // 받을 것이 하나뿐이면 이름, 여럿이면 개수. 없으면 빈 글
   bellText() {
-    const sv = this.sv, n = D.MISSIONS.filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length;
+    const sv = this.sv, n = D.MISSIONS.filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length + this.ordersReady();
     const all = D.MISSIONS.every(m => sv.misGot[m.id]) && !sv.misGot.all, wk = this.weeklyReady(), lg = sv.loginGot ? 0 : 1;
     const kinds = (n + (all ? 1 : 0) > 0) + (wk > 0) + lg;
     if (!kinds) return '';
@@ -424,7 +426,7 @@ export class Lobby extends Phaser.Scene {
       c.add(panel(this, 12, 0, w, bh, { fill: 0x141b27, line: 0x7fe6ee }));
       c.add(this.add.text(24, 6, goal.title, font(11, '#7fe6ee')));
       c.add(this.add.text(24, 22, goal.sub, { ...font9(10, '#cfe0ea'), wordWrap: { width: w - 24 } }));
-      c.add(this.add.rectangle(12, 0, w, bh, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); track('goal_card_tap', { kind: goal.kind }); goal.to === 'forge' ? this.show('forge') : goal.to === 'challenge' ? this.goChallenge() : this.show('battle'); }));
+      c.add(this.add.rectangle(12, 0, w, bh, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.busy) return; sfx('click'); track('goal_card_tap', { kind: goal.kind, act: goal.act }); this.goGoal(goal); }));
       return;
     }
     const y0 = top ? 38 : 436, ts = todaySale(), win = available({ winter: true });
@@ -434,7 +436,9 @@ export class Lobby extends Phaser.Scene {
     const card = (x, w, line, title, tc, sub, fn) => {
       c.add(panel(this, x, 0, w, bh, { fill: 0x141b27, line }));
       c.add(this.add.text(x + 8, 6, title, font(11, tc)));
-      c.add(this.add.text(x + 8, 21, sub, { ...font9(10, '#a1b2b6'), wordWrap: { width: w - 16 } }).setLineSpacing(2));
+      const sb = this.add.text(x + 8, 21, sub, { ...font9(10, '#a1b2b6'), wordWrap: { width: w - 16 } }).setLineSpacing(2);
+      if (sb.height > 16 && sb.y + sb.height > bh - 16) { sb.setWordWrapWidth(null); sb.setScale(Math.max(0.6, Math.min(1, (w - 16) / sb.width))); }   // 55차: 두 줄이 되면 오른쪽 아래 '보러 가기'와 겹쳐, 한 줄로 줄인다
+      c.add(sb);
       c.add(this.add.text(x + w - 8, bh - 6, t('lobby.5d2a5b'), font9(9, '#7d8f94')).setOrigin(1, 1));
       c.add(this.add.rectangle(x, 0, w, bh, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy) fn(); }));
     };
@@ -458,8 +462,17 @@ export class Lobby extends Phaser.Scene {
     const half = (W - 24 - 6) / 2;
     // 53차: 승급이 증표에 막혔으면 왼쪽 칸을 '도전 X장 깨면 증표' 목표 카드로 바꾸고 바로 가기를 단다
     if (goal?.kind === 'mark') card(12, half, 0x7fe6ee, goal.title, '#7fe6ee', goal.sub, () => this.goChallenge());
+    else if (!win && D.openN() <= D.MAIN_CHAPTERS && sv.cleared >= 5 * D.STAGES_PER_CHAPTER) card(12, half, 0x9ae0ff, t('lobby.ch16Soon'), '#9ae0ff', t('lobby.3f8470'), () => { sfx('click'); toast(this, t('lobby.810f12'), '#9ae0ff', 112); });   // 55차: 후반 신호 — 16장 준비 중(표시만, 알림 신청 없음)
     else card(12, half, win ? 0x7ad0ff : COLOR.line, win ? t('lobby.4c24d0') : t('lobby.8306ca'), win ? '#9ae0ff' : '#ffffff', win ? t('lobby.01ac36', { length: winterItems().length }) : t('lobby.34a1d0'), () => goSkin(win ? 'winter' : 'character'));
     card(12 + half + 6, half, 0xff9ad0, t('lobby.b0904d'), '#ff9ad0', t('lobby.f1b741', { name: ts.name, SALE_OFF }), () => goSkin(ts.kind, ts.id));
+  }
+
+  // 다음 목표 카드·전투 카드 줄을 탭하면 갈 곳: 소탕으로 벌기는 방금 깬 판을 골라 소탕 버튼 앞으로
+  goGoal(goal) {
+    if (goal.to === 'forge') return this.show('forge');
+    if (goal.to === 'challenge') return this.goChallenge();
+    if (goal.act === 'sweep' || goal.act === 'play') { const top = Math.max(0, Math.min(this.prog, D.openTotal()) - 1); this.hard = false; this.selC = Math.floor(top / D.STAGES_PER_CHAPTER); this.selS = top % D.STAGES_PER_CHAPTER; }
+    this.show('battle');
   }
 
   // itch.io 체험판: 전체판 링크(토스·스토어). 다른 판에서는 아무것도 그리지 않는다
@@ -476,7 +489,7 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, b = this.body, c = this.selC, ch = D.CHAPTERS[c], hard = this.hard, prog = this.prog;
     const atk = D.powerOf(sv);
     // 챕터 제목과 화살표(어려움은 붉게)
-    b.add(this.add.text(W / 2, 56, tt('lobby.ee42ff', { v: hard ? tt('lobby.52de23') : '', v2: c + 1, name: ch.name }), font(15, hard ? '#ff7070' : '#ffd75e')).setOrigin(0.5));
+    b.add(this.add.text(W / 2, 56, (hard ? tt('lobby.chTitleHard', { n: c + 1, name: ch.name }) : tt('lobby.chTitle', { n: c + 1, name: ch.name })), font(15, hard ? '#ff7070' : '#ffd75e')).setOrigin(0.5));
     const unlockedC = Math.floor(Math.min(prog, D.openTotal() - 1) / D.STAGES_PER_CHAPTER);
     const arrow = (x, d, ok) => {
       const t = this.add.text(x, 56, d < 0 ? '◀' : '▶', font(14, ok ? '#ffffff' : '#3a3450')).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -557,9 +570,13 @@ export class Lobby extends Phaser.Scene {
     bar.fillStyle(0x2a2338, 1).fillRect(24, 316, W - 48, 6);
     bar.fillStyle(Phaser.Display.Color.HexStringToColor(pc).color, 1).fillRect(24, 316, Math.max(2, (W - 48) * ratio), 6);
     b.add(bar);
-    if (atk < rec) {
-      const t = this.add.text(24, 328, tt('lobby.e97348'), font(10, '#ffb070')).setInteractive({ useHandCursor: true });
-      t.on('pointerup', () => { sfx('click'); track('to_forge_click', { from: 'battle_tab', power: atk, rec, stage: `${c + 1}-${s + 1}` }); this.show('forge'); });
+    // 다음 목표 카드(파란 카드)가 같은 말을 하고 있으면 이 줄은 숨긴다. 아니면 지금 할 행동 하나만 말한다
+    const goalCardOn = !salesOpen(sv) && sv.cleared >= 1 && H - 490 >= 34;
+    if (atk < rec && goalCardOn) { /* 카드가 말한다 */ }
+    else if (atk < rec) {
+      const pg = nextGoal(sv, atk), act = pg?.kind === 'power' ? pg : { act: 'enh', to: 'forge', title: tt('nextGoal.enh') };
+      const t = this.add.text(24, 328, `${act.title}  ▶`, font(10, '#ffb070')).setInteractive({ useHandCursor: true });
+      t.on('pointerup', () => { sfx('click'); track('to_forge_click', { from: 'battle_tab', power: atk, rec, stage: `${c + 1}-${s + 1}`, act: act.act }); this.goGoal(act); });
       b.add(t);
     } else b.add(this.add.text(24, 328, done ? tt('lobby.c3bb9a') : tt('lobby.7053d6'), font9(10, '#7d8f94')));
     // 보상: 아이콘 + 숫자
@@ -633,7 +650,7 @@ export class Lobby extends Phaser.Scene {
   sweep(c, s) {
     const sv = this.sv, gold = D.goldOf(c, s, this.hard), stone = D.stoneOf(c, s, this.hard);
     if (sv.sweep <= 0) return;
-    sv.sweep--; sv.gold += gold; sv.stone += stone; mission('clear'); save();
+    sv.sweep--; sv.gold += gold; sv.stone += stone; mission('clear'); mission('sweep'); save();
     track('sweep', { stage: `${this.hard ? 'H' : ''}${c + 1}-${s + 1}`, gold, stone, left: sv.sweep });
     sfx('coin');
     for (let i = 0; i < 10; i++) {
@@ -745,6 +762,12 @@ export class Lobby extends Phaser.Scene {
     });
     if (!max) b.bringToTop(this.awakeTxt);
     this.swordAura(enh);
+    // 55차: 대장간 의뢰 칩(회색 — 주황 버튼은 강화 하나)
+    if (sv.cleared >= 1) {
+      const oc = button(this, 80, 232, 132, 20, tt('lobby.ordChip', { done: this.ordersDone(), n: this.orders().length }), () => { if (!this.busy) { sfx('click'); track('order_open'); this.missionWin(false, 'order'); } }, { size: 10, color: 0x3a3846 });
+      b.add(oc);
+      if (this.ordersReady() > 0) b.add(this.add.circle(142, 223, 4, 0xff3a3a));
+    }
     // 강화 단계 표시(20칸)
     b.add(this.add.rectangle(W / 2, 256, W - 32, 26, 0x0b111a, 0.75).setStrokeStyle(1, COLOR.line));
     for (let i = 0; i < D.ENH_MAX; i++) {
@@ -754,7 +777,7 @@ export class Lobby extends Phaser.Scene {
     // 정보 패널
     // 높이는 체크 줄 수만큼(부적 줄이 패널 테두리에 걸쳐 겹쳐 보였다)
     const nChk = max ? 0 : (enh >= D.DESTROY_FROM ? 1 : 0) + (sv.charm > 0 && D.ENH_RATE[enh] < 100 ? 1 : 0);
-    b.add(panel(this, 12, 272, W - 24, max ? 56 : 62 + nChk * 17, { fill: 0x15111f }));   // 빈 칸 없이 내용만큼
+    b.add(panel(this, 12, 272, W - 24, max ? 56 : 62 + nChk * 17 + (nChk === 2 ? 6 : 0), { fill: 0x15111f }));   // 빈 칸 없이 내용만큼
     if (max) {
       b.add(this.add.text(W / 2, 300, tt('lobby.6ea04e'), font(14, '#ffd75e')).setOrigin(0.5));
     } else {
@@ -803,7 +826,7 @@ export class Lobby extends Phaser.Scene {
       const pb = button(this, max ? W / 2 : 200, 404, max ? 180 : 110, 30, markBlock ? tt('lobby.24e1eb') : tt('lobby.3adf57', { fmt: fmt(cost) }), () => markBlock ? this.goChallenge() : this.promote(), { size: 12, color: markBlock ? 0x1d6f80 : 0x2f6b3a });
       pb.setEnabled(okBoss && (markBlock || sv.gold >= cost)); b.add(pb);
       if (mkNeed && okBoss) {
-        const mt = this.add.text(W / 2, 361, tt('lobby.ab8f9f', { mkHave, mkNeed }), font9(10, okMark ? '#7fe6ee' : '#ff9a8a')).setOrigin(0.5, 0); b.add(mt); b.add(markIcon(this, mt.x - mt.width / 2 - 9, 367, 12));
+        const mt = this.add.text(W / 2, 361, tt('lobby.ab8f9f', { mkHave, mkNeed }), font9(10, okMark ? '#7fe6ee' : '#ff9a8a')).setOrigin(0.5, 0); mt.setScale(Math.min(1, (W - 80) / mt.width)); b.add(mt); b.add(markIcon(this, mt.x - mt.displayWidth / 2 - 9, 367, 12));
       }
       if (markBlock && !sv.tut.markAsk) { sv.tut.markAsk = true; save(); this.time.delayedCall(300, () => toast(this, tt('lobby.867885'), '#7fe6ee', 112)); }
       if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }
@@ -812,7 +835,7 @@ export class Lobby extends Phaser.Scene {
       else {
         // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
         const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
-        b.add(this.add.text(W / 2, 372, tt('lobby.ade394', { tierName: D.tierName(sv.tier + 1, wtypeOf(sv)), fmt: fmt(now), fmt2: fmt(next), e }), font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
+        b.add(this.add.text(W / 2, 375, tt('lobby.ade394', { tierName: D.tierName(sv.tier + 1, wtypeOf(sv)), fmt: fmt(now), fmt2: fmt(next), e }), font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
       }
     }
   }
@@ -865,7 +888,7 @@ export class Lobby extends Phaser.Scene {
       if (sv.stats.destroyed >= 3 && grantEgg(sv, 'apron')) this.time.delayedCall(1800, () => toast(this, t('lobby.32ecbf'), '#ff8ae0'));
     }
     track('enhance', { result: outcome, from: enh, tier: sv.tier, rate: D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0), guard, charm, gold_cost: gold, gold_left: sv.gold, stone_left: sv.stone, queued: !!this.enhQ });
-    mission('enh'); sv.tut.forge = true;
+    mission('enh'); if (!win) mission('fail'); sv.tut.forge = true;
     save();
     this.refreshTop();
     // 망치질 세 번(확률이 낮을수록 한 번 더 뜸을 들인다). 연달아 세 번 넘게 두드리면 두 번으로 줄인다(천장 구간은 스무 번 가까이 두드려 지쳤다)
@@ -1138,7 +1161,7 @@ export class Lobby extends Phaser.Scene {
       if (!max) b.add(gemIcon(this, x + 70, y + 44, 8));
     });
     b.add(this.add.text(16, 338, t('lobby.03bf39'), font(10, '#ffb050')));
-    D.SYNERGY.forEach((x, i) => b.add(this.add.text(16 + (i % 2) * 122, 356 + Math.floor(i / 2) * 15, `${x.name}: ${D.SKILLS[x.a].name}+${D.SKILLS[x.b].name}`, font9(9, '#a1b2b6'))));
+    D.SYNERGY.forEach((x, i) => { const st = this.add.text(16, 356 + i * 14, `${x.name}: ${D.SKILLS[x.a].name}+${D.SKILLS[x.b].name}`, font9(9, '#a1b2b6')); st.setScale(Math.min(1, (W - 32) / st.width)); b.add(st); });   // 55차: 한 줄씩(영어에서 두 칸이 겹쳤다)
   }
 
   // ── 특가: 오늘의 특가(하루 한 번 무작위 할인) · 성장 꾸러미(장 보스 첫 처치 뒤 24시간) · 큰 꾸러미(달마다 한 번) ──
@@ -1218,7 +1241,8 @@ export class Lobby extends Phaser.Scene {
       b.add(gemIcon(this, 30, y + 25, 16));
       b.add(this.add.text(46, y + 1, it.name, font(10, '#ffb050')));
       const dt = this.add.text(46, y + 14, nb(it.desc), { ...font9(9, '#f2e4bc'), wordWrap: { width: W - 136 } }); b.add(dt);
-      b.add(this.add.text(46, y + 15 + dt.height, sold ? t('lobby.474c86') : it.tag, font9(9, '#ff9ad0')));
+      for (const k of [0.85, 0.75, 0.65]) if (dt.displayHeight > 23) { dt.setScale(k).setWordWrapWidth((W - 136) / k); }   // 55차: 영어에서 석 줄이 되면 줄여 두 줄에 담는다
+      { const tg = this.add.text(46, y + 38, sold ? t('lobby.474c86') : it.tag, font9(9, '#ff9ad0')); tg.setScale(Math.min(1, 134 / tg.width)); b.add(tg); }
       buyBtn(W - 52, y + 25, it, sold);
     });
   }
@@ -1247,8 +1271,8 @@ export class Lobby extends Phaser.Scene {
         const c = this.add.container(x, y); b.add(c);
         c.add(panel(this, 0, 0, 116, 52));
         c.add(icon(this, 18, 22, it.icon, 22));
-        c.add(this.add.text(34, 5, it.name, font(10)));
-        c.add(this.add.text(34, 20, it.desc || giveText(it.give, this.sv), font9(10, '#a1b2b6')));   // 이름을 되풀이하지 않고 쓰임새를 적는다
+        const gn = this.add.text(34, 5, it.name, font(10)); gn.setScale(Math.min(1, 78 / gn.width)); c.add(gn);   // 55차: 긴 이름은 칸 폭에 맞춘다
+        const gd = this.add.text(34, 20, it.desc || giveText(it.give, this.sv), font9(10, '#a1b2b6')); gd.setScale(Math.min(1, 78 / gd.width)); c.add(gd);   // 이름을 되풀이하지 않고 쓰임새를 적는다
         const ok = sv.gem >= it.cost;
         c.add(gemIcon(this, 40, 41, 10));
         c.add(this.add.text(50, 34, String(it.cost), font(10, ok ? '#ff9ad0' : '#7a5a6a')));
@@ -1297,9 +1321,9 @@ export class Lobby extends Phaser.Scene {
       b.add(panel(this, 12, y, W - 24, 46, { line: hot && !sold ? 0xffd75e : COLOR.line }));
       b.add(gemIcon(this, 30, y + 23, 18));
       b.add(this.add.text(46, y + 5, it.name, font(11, hot ? '#ffd75e' : '#ffffff')));
-      b.add(this.add.text(46, y + 20, it.desc || giveText(it.give) + (it.passDays ? t('lobby.d0b2c6', { gem: D.PASS_DAILY.gem }) : '') + (it.noAds ? t('lobby.a92d94') : ''), font9(it.desc ? 8 : 9, '#f2e4bc')));
-      const tag = it.id === 'pass' && sv.passLeft > 0 ? t('lobby.5661ab', { passLeft: sv.passLeft }) : [it.tag, firstX2(sv, it) && t('lobby.788a4a')].filter(Boolean).join(' · ');
-      if (tag) b.add(this.add.text(46, y + 32, tag, font9(9, firstX2(sv, it) ? '#ffd75e' : '#ff9ad0')));
+      { const ds = this.add.text(46, y + 20, it.desc || giveText(it.give) + (it.passDays ? t('lobby.d0b2c6', { gem: D.PASS_DAILY.gem }) : '') + (it.noAds ? t('lobby.a92d94') : ''), font9(it.desc ? 8 : 9, '#f2e4bc')); ds.setScale(Math.min(1, (W - 46 - 70) / ds.width)); b.add(ds); }   // 55차: 버튼 밑으로 깔리지 않게 폭에 맞춤
+      const tag = it.id === 'pass' && sv.passLeft > 0 ? t('lobby.5661ab', { passLeft: sv.passLeft }) : [iapTag(it), firstX2(sv, it) && t('lobby.788a4a')].filter(Boolean).join(' · ');
+      if (tag) { const tg = this.add.text(46, y + 32, tag, font9(9, firstX2(sv, it) ? '#ffd75e' : '#ff9ad0')); tg.setScale(Math.min(1, (W - 46 - 70) / tg.width)); b.add(tg); }
       const bt = button(this, W - 46, y + 23, 60, 26, sold ? t('lobby.b83fab') : priceLabel(it), async () => {
         if (this.busy || sold) return;
         this.busy = true;

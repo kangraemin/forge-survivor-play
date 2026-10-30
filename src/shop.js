@@ -27,6 +27,20 @@ const krwOf = id => { const f = D.IAP.find(x => x.id === id) || COS_PACKS.find(x
 // 스토어 앱이 같은 기준 원화 가격의 현지 문자열(forgePlatform.priceText)을 주면 그대로 쓰고, 없으면 원화
 const wonText = n => { try { const p = window.forgePlatform?.priceText?.(n); if (p) return p; } catch { /* 어댑터 오류는 무시 */ } return t('shop.9d2fd6', { toLocaleString: n.toLocaleString('ko-KR') }); };
 export const won = wonText;
+// 55차: 초보 꾸러미 '가치 N배'는 근거를 같은 줄에 적는다 — 구성품을 상시 판매가(보석 상점·꾸미기 보석값, 보석 1개=10원)로 환산한 합계. 상시 판매가가 없는 금화는 합계에서 뺀다(보수적)
+export function starterValue(it) {
+  const unit = {}; D.GEM_SHOP.forEach(g => { const [k, v] = Object.entries(g.give)[0]; unit[k] = g.cost / v; });
+  let gem = 0;
+  for (const [k, v] of Object.entries(it.give)) {
+    if (k === 'gem') gem += v;
+    else if (k === 'hskin') gem += HERO_SKINS.find(h => h.id === v)?.cost || 0;
+    else if (unit[k]) gem += unit[k] * v;
+  }
+  const krw = Math.round(gem * 10 / 100) * 100;
+  return { krw, x: Math.floor(krw * 10 / it.price) / 10 };
+}
+// 상품 이름표: 초보 꾸러미는 계산한 근거를 붙이고, 나머지는 data.js의 tag 그대로
+export const iapTag = it => { if (it.id !== 'starter') return it.tag; const v = starterValue(it); return v.x >= 2 ? t('shop.starterTag', { won: wonText(v.krw), x: v.x }) : it.tag; };
 // 스토어 문자열(예: "$4.99", "R$ 29,90", "1.200 ₫")의 숫자만 비율로 바꿔 같은 모양으로 돌려준다(정가·할인 표시용)
 function scaleStore(str, ratio) {
   const m = str.match(/\d[\d.,\s\u00a0]*\d|\d/);

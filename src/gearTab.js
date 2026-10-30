@@ -89,7 +89,7 @@ export const GearTab = {
     const parts = Object.keys(STATS).filter(k => g[k] > 0.0005).map(k => `${SHORT[k]} +${STATS[k].pct ? Math.round(g[k] * 100) + '%' : g[k].toFixed(1)}`);
     b.add(this.add.text(W / 2, 170, parts.length ? parts.join('  ') : tt('gearTab.047469'), { ...font9(9, '#f2e4bc'), align: 'center', wordWrap: { width: W - 20 } }).setOrigin(0.5, 0));
     const setLine = Object.entries(g.sets).map(([k, n]) => `${SETS[k].name} ${n}/4${n >= 4 ? ' ★' : n >= 2 ? ' ☆' : ''}${SETS[k].w && SETS[k].w !== sv.wtype ? '(' + WTYPES.find(w => w.id === SETS[k].w).name + ')' : ''}`).join('  ');
-    if (setLine) { const st = this.add.text(W / 2, 194, setLine, font9(9, '#ffb050')).setOrigin(0.5, 0); st.setScale(Math.min(1, (W - 16) / st.width)); b.add(st); }   // 세트가 여럿이면 양옆이 잘렸다
+    if (setLine) { const st = this.add.text(W / 2, 189, setLine, font9(9, '#ffb050')).setOrigin(0.5, 0); st.setScale(Math.min(1, (W - 16) / st.width)); b.add(st); }   // 세트가 여럿이면 양옆이 잘렸다
     // 가방
     const on = new Set(Object.values(sv.eq || {}));
     const inv = (sv.inv || []).slice().sort((a, c) => (on.has(c.u) - on.has(a.u)) || (c.r - a.r) || (itemScore(c) - itemScore(a)));
@@ -118,7 +118,7 @@ export const GearTab = {
       b.add(button(this, 120, 404, 40, 22, '▶', () => { if (this.busy) return; this.invPage = (this.invPage + 1) % pages; this.show('gear'); }, { size: 10 }));
     }
     // 가방 위 '한번에 정리': 등급을 골라 판매·분해(낀·잠근·숨겨진 장비는 뺀다). 빈 가방엔 두지 않는다
-    if (inv.length) b.add(button(this, W - 50, 206, 84, 18, tt('gearTab.520847'), () => { if (!this.busy) this.tidyWin(); }, { size: 9, color: 0x3a3846 }));
+    if (inv.length) b.add(button(this, W - 50, 214, 84, 16, tt('gearTab.520847'), () => { if (!this.busy) this.tidyWin(); }, { size: 9, color: 0x3a3846 }));
   },
 
   // 한번에 정리 창: 등급(일반·희귀·영웅)과 방식(판매·분해)을 고르고, 받을 금화·강화석 합계를 보고 확인한다
@@ -247,7 +247,7 @@ export const GearTab = {
       b.add(this.add.text(56, y + 5, open ? `${p.name}  Lv ${lv}` : `??? · ${p.hint}`, font(11, open ? '#ffffff' : '#6a6080')));
       if (!open) { b.add(this.add.text(56, y + 23, t('gearTab.267e2a'), font9(10, '#5c6e76'))); return; }
       const rl = roleOf(p.id);
-      if (rl && this.textures.exists(rl.icon)) { b.add(this.add.image(W - 91, y + 23, rl.icon).setScale(0.62)); b.add(this.add.text(W - 91, y + 37, rl.name, font9(8, rl.color)).setOrigin(0.5, 0)); }
+      if (rl && this.textures.exists(rl.icon)) { b.add(this.add.image(W - 91, y + 23, rl.icon).setScale(0.62)); { const rn = this.add.text(W - 93, y + 37, rl.name, font9(8, rl.color)).setOrigin(0.5, 0); rn.setScale(Math.min(1, 28 / rn.width)); b.add(rn); } }   // 55차: 오른쪽 버튼과 겹치지 않게
       const fitW = o => { o.setScale(Math.min(1, 118 / o.width)); return o; };   // 52차: 역할 아이콘·버튼과 겹치지 않게 폭 118 안으로
       b.add(fitW(this.add.text(56, y + 20, p.desc, font9(10, '#f2e4bc'))));
       const fit = t('gearTab.d8ac3d', { v: [...(p.good || []).map(chN), ...(p.id === 'demonlord' ? [t('gearTab.86b73a')] : [])].join('·') || '-', v2: p.weak ? t('gearTab.659c1c', { join: p.weak.map(chN).join('·') }) : '' });
@@ -266,8 +266,7 @@ export const GearTab = {
       fbt.setEnabled(!max && sv.gold >= cost); b.add(fbt);
     });
     // 한 줄이면 화면 양 끝이 잘려 두 줄로 나눈다
-    b.add(this.add.text(W / 2, 386, t('gearTab.cb9eee'), font9(9, '#a1b2b6')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 399, t('gearTab.0f4c32', { round: Math.round(g.pet * 100) }), font9(9, '#a1b2b6')).setOrigin(0.5));
+    for (const [yy, tx] of [[391, t('gearTab.cb9eee')], [404, t('gearTab.0f4c32', { round: Math.round(g.pet * 100) })]]) { const nt = this.add.text(W / 2, yy, tx, font9(9, '#a1b2b6')).setOrigin(0.5); nt.setScale(Math.min(1, (W - 24) / nt.width)); b.add(nt); }   // 55차: 긴 언어에서 화면 양 끝이 잘리지 않게 폭에 맞춘다
   },
 
   // 52차: 펫 설명 창(펫을 얻을 때 뜨는 것과 같은 카드) + 장착
@@ -287,7 +286,7 @@ export const GearTab = {
     const sv = this.sv, b = this.body, free = spFree(sv), wt = WTYPES.find(w => w.id === sv.wtype) || WTYPES[0];
     sv.sp ||= { str: 0, dex: 0, int: 0, vit: 0 };
     b.add(this.add.text(W / 2, 76, t('gearTab.735230', { free, spTotal: spTotal(sv.cleared) }), font(12, free ? '#ffd75e' : '#ffffff')).setOrigin(0.5));
-    b.add(this.add.text(W / 2, 92, t('gearTab.d33464'), font9(10, '#a1b2b6')).setOrigin(0.5));
+    { const nt = this.add.text(W / 2, 92, t('gearTab.d33464'), font9(10, '#a1b2b6')).setOrigin(0.5); nt.setScale(Math.min(1, (W - 24) / nt.width)); b.add(nt); }
     SP.forEach((st, i) => {
       const y = 104 + i * 54, v = sv.sp[st.id] || 0;
       b.add(panel(this, 12, y, W - 24, 48, { fill: 0x1a1528 }));
