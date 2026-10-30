@@ -15,11 +15,13 @@ function ac() {
 }
 // 백그라운드에서 돌아오면 소리가 멈춰 있었다. 50차: 'interrupted'·'suspended'를 모두 다시 깨우고, 돌아온 뒤 몇 번 더 재시도한다.
 // 깨워도 안 되거나 'closed'면 오디오를 새로 만들어 배경음을 이어 튼다(아이폰은 터치 안에서만 깨워 준다)
-let wakeTries = 0, wakeTimer = null;
+let wakeTries = 0, wakeTimer = null, acted = false;   // acted: 사용자가 한 번이라도 만졌나(만지기 전에 컨텍스트를 새로 지어 봐야 소용없다)
 function rebuild() {
   const had = bgm; const kind = had?.kind, ch = had?.ch;
   if (had) { clearInterval(had.timer); if (had.el) stopEl(had.el); bgm = null; }
   try { ctx && ctx.close(); } catch { /* 무시 */ }
+  if (lingering) { clearTimeout(lingering.dying); try { stopEl(lingering.el); } catch { /* 무시 */ } lingering = null; }
+  for (const k in preloaded) delete preloaded[k];   // 옛 컨텍스트에 묶인 요소는 못 쓴다
   ctx = null; master = null; noiseBuf = null;
   if (ac() && kind && musicOn) playBgm(kind, ch);
 }
@@ -39,13 +41,28 @@ function wakeSoon() {
   wakeTimer = setInterval(() => {
     wake();
     if (ctx && ctx.state === 'running') { clearInterval(wakeTimer); return; }
-    if (++wakeTries >= 6) { clearInterval(wakeTimer); if (ctx && ctx.state !== 'running' && !document.hidden) rebuild(); }
+    if (++wakeTries >= 6) { clearInterval(wakeTimer); if (ctx && ctx.state !== 'running' && !document.hidden && acted) rebuild(); }
   }, 400);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeSoon(); });
 window.addEventListener('pageshow', wakeSoon);
 window.addEventListener('focus', wakeSoon);
-['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click', 'keydown'].forEach(e => document.addEventListener(e, wake, true));
+// 54차: iOS는 touchend·click 같은 '활성화 제스처'에서만 resume이 먹는다(드래그·pointerdown만으로는 안 될 수 있다). 효과음과 음악은 같은 컨텍스트라 같은 길로 깨운다.
+// 깨웠는데도 running이 아니거나 시계(currentTime)가 안 가면 다음 제스처 안에서 컨텍스트를 새로 만든다(제스처 밖에서 만든 컨텍스트는 아이폰이 안 깨워 준다)
+let needRebuild = false;
+function gesture(e) {
+  acted = true;
+  if (!ctx && e && (e.type === 'touchend' || e.type === 'click' || e.type === 'pointerup')) ac();   // 첫 제스처가 드래그여도 끝날 때 컨텍스트를 만들고 깨운다
+  if (ctx && needRebuild && ctx.state !== 'running') { needRebuild = false; rebuild(); return; }
+  needRebuild = false;
+  wake();
+  if (!ctx || ctx.state === 'running') return;
+  const c = ctx, t0 = c.currentTime;
+  let p; try { p = c.resume(); } catch { /* 무시 */ }
+  const check = () => { if (ctx === c && (c.state !== 'running' || c.currentTime <= t0)) needRebuild = true; };
+  if (p && p.then) p.then(() => setTimeout(check, 300), () => { needRebuild = true; }); else setTimeout(check, 300);
+}
+['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click', 'keydown'].forEach(e => document.addEventListener(e, gesture, true));
 // 49차: 효과음·음악·진동을 따로 끈다(설정 창). 위쪽 ♪ 버튼은 셋 중 소리 둘을 함께 켜고 끈다
 export const setSound = v => { on = v; };
 export const setMusic = v => { musicOn = v; if (!v) stopBgm(); };
@@ -150,6 +167,18 @@ const BGM_FILES = {
 const BGM_BASE = 0.015;
 let musicMul = 1;   // 보통 1, 작게 0.5
 const bv = () => BGM_BASE * musicMul;
+// 54차: iOS Safari는 <audio>.volume을 JS로 못 바꾼다(항상 1.0) → 파일 음악을 WebAudio GainNode로 거쳐 크기를 정한다.
+// el.volume을 그대로 쓰는 기존 코드(페이드·감시·설정)가 GainNode를 움직이도록 요소마다 volume 속성을 가로챈다. 요소는 컨텍스트 하나에만 묶이므로 컨텍스트를 새로 만들면 요소도 새로 만든다
+function attachGain(el) {
+  if (!el || el._g) return;
+  const c = ctx || ac(); if (!c) return;
+  try {
+    const src = c.createMediaElementSource(el), g = c.createGain();
+    g.gain.value = bv(); src.connect(g); g.connect(c.destination);
+    el._g = g; el._gctx = c;
+    Object.defineProperty(el, 'volume', { configurable: true, get: () => g.gain.value, set: v => { g.gain.value = Math.max(0, Math.min(1, v)); } });
+  } catch { /* 연결 못 하면 요소 음량을 그대로 쓴다(데스크톱) */ }
+}
 const PGAIN = (lobby) => (lobby ? 0.018 : 0.022) * musicMul;   // 절차 BGM(0.22/0.28 → 0.018/0.022)
 export const setMusicLevel = lv => {
   musicMul = lv === 1 ? 0.5 : 1;
@@ -208,7 +237,7 @@ export function earlyBgm(enabled) {
   musicOn = !!enabled;
   if (!musicOn || bgm || typeof Audio === 'undefined') return;
   const file = bgmFile('lobby', 0); if (!file) return;
-  const el = new Audio(); el.loop = true; el.preload = 'auto'; el.volume = bv(); el.muted = held; el.src = file;
+  const el = new Audio(); attachGain(el); el.loop = true; el.preload = 'auto'; el.volume = bv(); el.muted = held; el.src = file;
   const st = { kind: 'lobby', ch: 0, file, el };
   el.addEventListener('error', () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); } });
   bgm = st;
@@ -219,6 +248,7 @@ const resumeAt = {};   // 보스 곡으로 넘어가기 전 전투 곡의 재생
 function startFile(kind, chapter, file, crossfade) {
   const pre = preloaded[file]; delete preloaded[file];
   const el = pre || new Audio(file);
+  attachGain(el);
   const at = kind !== 'boss' && resumeAt[file] > 0 ? resumeAt[file] : 0; delete resumeAt[file];
   if (pre || at) { try { el.currentTime = at; } catch { /* 무시 */ } }
   el.loop = true; el.preload = 'auto'; el.volume = bv(); el.muted = held;
@@ -240,7 +270,7 @@ function retryFile() {
   const w = bgm && bgm.want;
   if (!w || !musicOn || bgm.retrying) return;
   const old = bgm; old.retrying = true;
-  const el = new Audio(w.file);
+  const el = new Audio(w.file); attachGain(el);
   el.loop = true; el.volume = bv(); el.muted = held;
   el.play().then(() => {
     if (bgm !== old) { el.pause(); return; }
