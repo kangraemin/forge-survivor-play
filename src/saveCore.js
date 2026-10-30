@@ -1,5 +1,5 @@
 // 저장 핵심(순수 로직): 버전 변환 체인, 백업·복구, 내보내기 코드. 브라우저·Phaser에 기대지 않아 node에서 시험한다(tools/save_test.mjs)
-import { SWEEP_DAILY } from './data.js';
+import { SWEEP_DAILY, TIER_AT, markNeed } from './data.js';
 import { PET_OLD } from './gear.js';
 import { t } from './i18n.js';
 
@@ -7,7 +7,7 @@ export const KEY = 'forge-survivor-v1';
 export const BAK = [KEY + '.bak1', KEY + '.bak2'];   // 직전 저장 2개
 export const CORRUPT = KEY + '.corrupt';             // 읽지 못한 원본 문자열(지우지 않고 보관)
 // 저장 모양 버전. 저장 형식을 바꾸면 SCHEMA를 올리고 STEPS 끝에 한 단계를 더한다(앞 단계는 고치지 않는다)
-export const SCHEMA = 7;
+export const SCHEMA = 8;
 
 export const fresh = () => ({ schemaVersion: SCHEMA,
 
@@ -45,7 +45,8 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   ach: {}, title: '',      // 받은 업적, 낀 칭호
   // 한정 판매: 오늘의 특가 { day, id, off, got }, 성장 꾸러미 { c, at, shown }
   deal: null, grow: null,
-  modes: { clear: {}, stars: {}, best: {} },    // 모드(지키기·점령·돌파·사냥) 깬 판: 'guard:1' 같은 키 -> 1 · stars: 키 -> 별 비트 마스크(1 깨기·2 시간 안에·4 피해 적게) · best: 키 -> { t 가장 빠른 초, hurt 가장 적은 피해 % }
+  mark: 0, markN: 0, markGift: 0,   // 도전 증표 수, 오늘 다시 깨서 받은 수(하루 3번까지), 업데이트로 받은 선물 수(로비가 한 번 알리고 0으로)
+  modes: { clear: {}, stars: {}, best: {}, mark: {} },    // 모드(지키기·점령·돌파·사냥) 깬 판: 'guard:1' 같은 키 -> 1 · stars: 키 -> 별 비트 마스크(1 깨기·2 시간 안에·4 피해 적게) · best: 키 -> { t 가장 빠른 초, hurt 가장 적은 피해 % }
   // 공유 보상(share.js): 자랑하기 받은 날·받은 적 있나, 내 초대 코드, 나를 초대한 코드(첫 실행에만 저장), 그 코드를 서버에 알렸나,
   // 초대로 받은 보석 수(친구 수), 확정 중인 보상 {key,n}, 서버가 알려 준 초대한 친구 수·받을 수
   shareDay: '', shared: false, inviteCode: '', invitedBy: '', refChecked: false, inviteClaimed: false,
@@ -109,6 +110,20 @@ const STEPS = [
     const T = { '학살자': 'kill2', '강화 장인': 'enh15', '전설의 대장장이': 'enh20', '마왕 사냥꾼': 'demon', '심연의 방랑자': 'ch10', '원초의 대장장이': 'ch15', '지옥의 정복자': 'hard5', '탑의 주인': 'tower25', '대장간 식구': 'day30', '박물관장': 'dexAll', '시간의 대장장이': 'ch18', '수호자': 'mode_guard', '정복자': 'mode_capture', '돌파자': 'mode_breach', '추적자': 'mode_hunt' };   // i18n-ignore: 옛 저장의 칭호 글자
     if (typeof mem.title === 'string' && T[mem.title]) mem.title = T[mem.title];
     else if (typeof mem.title === 'string' && /[가-힣]/.test(mem.title)) mem.title = '';
+  },
+  // 7 -> 8: 도전 증표(54차). 이미 깬 도전 단계마다 증표를 소급해 주고(modes.mark로 '받음' 표시), 깬 장에 비해 못 올린 승급 몫이 있으면 그만큼은 채워 준다(업데이트로 갑자기 막히지 않게)
+  mem => {
+    mem.mark = Math.max(0, mem.mark | 0); mem.markN = Math.max(0, mem.markN | 0); mem.markGift = Math.max(0, mem.markGift | 0);
+    mem.modes = { ...mem.modes };
+    const m = mem.modes;
+    if (!m.clear || typeof m.clear !== 'object' || Array.isArray(m.clear)) m.clear = {};
+    if (!m.mark || typeof m.mark !== 'object' || Array.isArray(m.mark)) m.mark = {};
+    let n = 0;
+    for (const k of Object.keys(m.clear)) if (m.clear[k] && !m.mark[k]) { m.mark[k] = 1; n++; }
+    let back = 0;
+    for (let tr = (mem.tier | 0) + 1; tr < TIER_AT.length && (mem.cleared | 0) >= TIER_AT[tr]; tr++) back += markNeed(tr);
+    const gift = Math.max(n, back);
+    mem.mark += gift; mem.markGift += gift;
   },
 ];
 export class SaveError extends Error {}

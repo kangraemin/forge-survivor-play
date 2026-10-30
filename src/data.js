@@ -251,6 +251,12 @@ export const enhGold = (tier, enh) => Math.round(40 * tierCost(tier) * Math.pow(
 export const enhStone = (tier, enh) => Math.ceil((enh + 1) / 2) + tier;
 export const PROMOTE_NEED = 10;                            // 승급하려면 +10 이상
 export const promoteGold = tier => Math.round(600 * tierCost(tier + 1) / 50) * 50;
+// 54차: 도전 증표 — 도전(지키기·점령·돌파·사냥)에서만 나온다. 3장 무기(등급 3) 이상으로 올릴 때부터 승급에 든다
+// 장마다 도전 4개 중 2~3개만 하면 되는 양(1~2장 무기 승급은 지금처럼 증표 없음)
+export const MARK_NEED = [0, 0, 0, 2, 2, 2, 3, 3, 3, 3];   // 인덱스: 올라갈 등급
+export const markNeed = toTier => MARK_NEED[toTier] || 0;
+export const MODE_HP = 1.12, MODE_DMG = 1.1;              // 도전 난이도: 본편 같은 장 x-2 기준에서 몹 체력 +12%·피해 +10%로 고정(보상은 그대로)
+export const MARK_REPEAT_DAY = 3;                          // 이미 깬 단계를 다시 깨서 받는 증표는 하루 3번까지
 // 승급하면 지금 공격력 이상이 되는 가장 낮은 강화 수치에서 시작한다(+0부터면 223 → 190으로 약해졌다)
 export const promoteEnh = (tier, enh) => { let e = 0; while (e < PROMOTE_NEED - 1 && weaponAtk(tier + 1, e) < weaponAtk(tier, enh)) e++; return e; };
 

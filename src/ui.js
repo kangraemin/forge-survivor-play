@@ -168,6 +168,22 @@ export function skillIcon(scene, x, y, def, size) {
 }
 
 // 보석(유료 재화) 아이콘: 아이콘 시트에 없어 직접 그린 분홍 다이아
+// 54차: 도전 증표 그림(12x12 픽셀 메달 — 어두운 테두리·청록 바탕·밝은 가운데 십자 칼, 보석 아이콘과 같은 톤)
+export function markIcon(scene, x, y, size = 14) {
+  if (!scene.textures.exists('markc')) {
+    const g = scene.make.graphics({ add: false });
+    const px = (c, pts) => { g.fillStyle(c); pts.forEach(([a, b, w = 1, h = 1]) => g.fillRect(a, b, w, h)); };
+    px(0x0a2230, [[3, 0, 6], [1, 1, 10], [0, 2, 12, 8], [1, 10, 10], [3, 11, 6]]);
+    px(0x2fb6c9, [[3, 1, 6], [1, 2, 10, 8], [3, 10, 6]]);
+    px(0x7fe6ee, [[2, 3, 3, 2], [3, 2, 3]]);
+    px(0xffe27a, [[5, 3, 2, 6], [3, 5, 6, 2]]);
+    px(0xffffff, [[5, 3], [3, 5]]);
+    px(0x1d7f92, [[2, 9, 8], [9, 4, 1, 5]]);
+    g.generateTexture('markc', 12, 12); g.destroy();
+  }
+  return scene.add.image(x, y, 'markc').setScale(size / 12);
+}
+
 export function gemIcon(scene, x, y, size = 14) {
   if (!scene.textures.exists('gemc')) {
     const g = scene.make.graphics({ add: false });

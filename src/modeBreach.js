@@ -2,7 +2,7 @@
 // modes.js는 run.tw(= makeBreachRule 결과)에 setup · update · botDir · spawnPoint · spdMul · hud · prog 를 맡긴다.
 import { font } from './ui.js';
 import { sfx } from './sfx.js';
-import { modeAnim, wallArt, WALL_FILL } from './modeArt.js';
+import { modeAnim, wallArt, WALL_FILL, chSprite } from './modeArt.js';
 import { addPillar, clearPillars } from './modeRules.js';
 import { t } from './i18n.js';
 
@@ -54,6 +54,11 @@ export class BreachPath {
     const gp = this.at(TOTAL - 4);
     this.gate = modeAnim(s, s.add.sprite(gp.x + 26, gp.y, 'ma_finish_gate'), 'finish_gate').setDepth(8).setScale(2);
     r.glowAt(gp.x + 26, gp.y, 0xffe8a0, 1.4, 0.3);
+    // 장 테마 장치 그림: 가로 길 다섯 줄 가장자리에 번갈아 놓는다(없으면 놓지 않는다)
+    for (let k = 0; k < 5; k++) for (let j = 0; j < 2; j++) {
+      const q = this.at(this.lane(k, 0.28 + j * 0.42 + k % 2 * 0.08), ((k + j) % 2 ? 1 : -1) * (HW - 26));
+      chSprite(s, 'breach', c.c, q.x, q.y, 2, 6);
+    }
     // 길 밖을 어둡게(40px 칸을 가로로 묶어 칠한다)
     const sd = s.add.graphics().setDepth(3), CELL = 40;
     sd.fillStyle(0x000000, 0.5);

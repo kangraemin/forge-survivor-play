@@ -8,7 +8,7 @@ import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmeti
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, setMusic, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, markIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
@@ -52,6 +52,8 @@ export class Lobby extends Phaser.Scene {
     if (!sv.musicOff && sv.sound !== false) preloadBattleBgm();   // 1장 전투 곡을 로비에 있는 동안 받아 둔다
     // 1-1을 처음 깨고 오면 대장간으로 안내한다
     if (this.shopPage !== 'skin' && sv.cleared >= 1 && !sv.tut.forgeShown) { sv.tut.forgeShown = true; this.tab = 'forge'; save(); }
+    // 54차: 업데이트로 받은 도전 증표(이미 깬 도전·깬 장 몫)를 한 번 알린다
+    if (sv.markGift > 0) { const n = sv.markGift; sv.markGift = 0; save(); this.time.delayedCall(900, () => toast(this, t('lobby.8574d6', { n }), '#7fe6ee', 112)); }
     // 어려움은 마왕을 잡은 뒤에만. 전투 탭이 보던 난이도를 기억한다
     this.hard = !!sv.hardOn && D.hardOpen(sv);
     dexRefresh(sv);
@@ -311,6 +313,11 @@ export class Lobby extends Phaser.Scene {
       else this.add.existing(icon(this, x + 7, 17, ic, 14).setDepth(51));
       return t;
     });
+    // 54차: 도전 증표(승급 재료). 도전이 열리면 보석 아래 줄에 작게 보인다
+    if (sv.cleared >= D.STAGES_PER_CHAPTER) {
+      const mk = this.add.text(108 + 17, 23, '', font9(9, '#7fe6ee', 0)).setDepth(51); mk.get = () => String(sv.mark | 0);
+      markIcon(this, 108 + 7, 28, 10).setDepth(51); this.topTxt.push(mk);
+    }
     // 알림 종·소리·설정(48차): 종 44px, 소리 30px, 설정 톱니 44px로 따로 떨어뜨린다
     // 50차: 토스 안에서는 오른쪽 위 X 버튼과 겹치지 않게 세 아이콘을 왼쪽으로 모은다(누르는 칸도 좁힌다)
     const toss = inTossShell(), bx = toss ? 166 : 176, sx = toss ? 190 : 212, gx = toss ? 214 : 248, hw = toss ? 24 : 44;
@@ -774,10 +781,17 @@ export class Lobby extends Phaser.Scene {
     // 승급: +10 이상이고 그 등급 챕터 보스를 깨면 다음 등급 무기로(지금보다 약해지지 않는 강화 수치부터)
     if (sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1) {
       const need = D.TIER_AT[sv.tier + 1], okBoss = sv.cleared >= need, cost = D.promoteGold(sv.tier);
-      const pb = button(this, max ? W / 2 : 200, 404, max ? 180 : 110, 30, tt('lobby.3adf57', { fmt: fmt(cost) }), () => this.promote(), { size: 12, color: 0x2f6b3a });
-      pb.setEnabled(okBoss && sv.gold >= cost); b.add(pb);
+      // 54차: 3장 무기 이상으로 올릴 때부터 도전 증표가 든다. 모자라면 승급 버튼이 도전 화면으로 가는 버튼이 된다
+      const mkNeed = D.markNeed(sv.tier + 1), mkHave = sv.mark | 0, okMark = mkHave >= mkNeed, markBlock = okBoss && !okMark;
+      const pb = button(this, max ? W / 2 : 200, 404, max ? 180 : 110, 30, markBlock ? tt('lobby.24e1eb') : tt('lobby.3adf57', { fmt: fmt(cost) }), () => markBlock ? this.goChallenge() : this.promote(), { size: 12, color: markBlock ? 0x1d6f80 : 0x2f6b3a });
+      pb.setEnabled(okBoss && (markBlock || sv.gold >= cost)); b.add(pb);
+      if (mkNeed && okBoss) {
+        const mt = this.add.text(W / 2, 361, tt('lobby.ab8f9f', { mkHave, mkNeed }), font9(10, okMark ? '#7fe6ee' : '#ff9a8a')).setOrigin(0.5, 0); b.add(mt); b.add(markIcon(this, mt.x - mt.width / 2 - 9, 367, 12));
+      }
+      if (markBlock && !sv.tut.markAsk) { sv.tut.markAsk = true; save(); this.time.delayedCall(300, () => toast(this, tt('lobby.867885'), '#7fe6ee', 112)); }
       if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }
       else if (!okBoss) b.add(this.add.text(W / 2, 375, tt('lobby.1eecc2', { v: need / D.STAGES_PER_CHAPTER }), font9(10, '#ff9a8a')).setOrigin(0.5, 0));
+      else if (markBlock) b.add(this.add.text(W / 2, 375, tt('lobby.867885'), font9(10, '#7fe6ee')).setOrigin(0.5, 0));
       else {
         // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
         const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
@@ -933,11 +947,11 @@ export class Lobby extends Phaser.Scene {
   }
 
   promote() {
-    const sv = this.sv, cost = D.promoteGold(sv.tier);
-    if (this.busy || sv.gold < cost || sv.cleared < D.TIER_AT[sv.tier + 1]) return;
+    const sv = this.sv, cost = D.promoteGold(sv.tier), mk = D.markNeed(sv.tier + 1);
+    if (this.busy || sv.gold < cost || sv.cleared < D.TIER_AT[sv.tier + 1] || (sv.mark | 0) < mk) return;
     this.busy = true;
-    sv.gold -= cost; sv.enh = D.promoteEnh(sv.tier, sv.enh); sv.tier++; save(); this.refreshTop();
-    track('promote', { tier: sv.tier, cost, cleared: sv.cleared });
+    sv.gold -= cost; sv.mark = (sv.mark | 0) - mk; sv.enh = D.promoteEnh(sv.tier, sv.enh); sv.tier++; save(); this.refreshTop();
+    track('promote', { tier: sv.tier, cost, mark: mk, cleared: sv.cleared });
     sfx('win');
     this.cameras.main.flash(400, 200, 160, 255);
     const p = this.add.sprite(W / 2, 214, 'fx2_r2s').setOrigin(0.5, 1).setScale(2.4).setBlendMode(Phaser.BlendModes.ADD).setTint(0xc8a0ff).play('fxPillar');
@@ -945,6 +959,13 @@ export class Lobby extends Phaser.Scene {
     this.sparks(W / 2, 168, 60, 0xc8a0ff);
     this.flashText(t('lobby.fb5943', { tierName: D.tierName(sv.tier, wtypeOf(sv)) }), '#c8a0ff');
     this.time.delayedCall(1400, () => { this.busy = false; this.show('forge'); });
+  }
+
+  // 대장간 → 도전 화면(증표 모으러). 전투 탭에서 도전 선택 화면을 연다
+  goChallenge() {
+    if (this.busy) return;
+    sfx('click'); this.sv.tut.markGuide = true; save();
+    this.tab = 'battle'; this.openModes();
   }
 
   sparks(x, y, n, tint) {

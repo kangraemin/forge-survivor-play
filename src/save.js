@@ -29,7 +29,7 @@ export function load() {
   if (mem.day !== today) {
     if (mem.day) { mem.sweep = Math.min(SWEEP_MAX, mem.sweep + SWEEP_DAILY); mem.guard += 1; }
     // 출석 보석, 월정액은 남은 날이 있으면 매일 지급
-    mem.gem += GEM_FREE.daily; mem.ads = {}; mem.mis = {}; mem.misGot = {}; mem.dunN = 0;
+    mem.gem += GEM_FREE.daily; mem.ads = {}; mem.mis = {}; mem.misGot = {}; mem.dunN = 0; mem.markN = 0;
     // 출석: 어제 왔으면 하루 늘고, 며칠 빠졌으면 늘지 않는다(처음으로 돌아가지는 않는다)
     const n = dayNo(d);
     if (!mem.streak || n - mem.dayN === 1) mem.streak++;

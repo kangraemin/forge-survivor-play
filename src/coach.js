@@ -8,6 +8,7 @@ import { sfx } from './sfx.js';
 import { track } from './log.js';
 import { load, save } from './save.js';
 import { t } from './i18n.js';
+import { wrapTo } from './textfit.js';
 
 const DIM = 0.8, BW = W - 28;
 export const coachSeen = (sv, id) => !!sv.tut?.coach?.[id];
@@ -49,11 +50,19 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
     c.add(hl); scene.tweens.add({ targets: hl, alpha: 0.35, duration: 450, yoyo: true, repeat: -1 });
     // 말풍선
     const ins = insetsGame(scene.game), minY = (inTossShell() ? ins.xTop : ins.top) + 6;   // 토스 X 버튼·노치 아래로
-    const title = scene.add.text(BW / 2 + 14, 0, st.title, { ...font(13, '#ffd75e'), wordWrap: { width: BW - 20 } }).setOrigin(0.5, 0);
-    const lines = st.lines.map(s => scene.add.text(24, 0, '- ' + s, { ...font9(10, '#ffffff'), wordWrap: { width: BW - 22 } }).setLineSpacing(2));
-    let hh = 10 + title.height + 6;
-    const ys = lines.map(l => { const y = hh; hh += l.height + 4; return y; });
-    hh += 6 + 24 + 8;   // 아래 버튼 줄
+    // 말풍선 글자는 공용 글자 맞춤(textfit)이 다시 줄바꿈하며 높이를 바꿔 줄이 겹쳤다: 맞춤에서 빼고(isBtnLabel) 여기서 직접 줄바꿈·크기를 정한다
+    const room = H - 12 - minY, TW = BW - 22;
+    let title, lines, ys, hh;
+    for (let sz = 10; sz >= 7; sz -= 0.5) {
+      [title, ...(lines || [])].forEach(o => o && o.destroy());
+      title = scene.add.text(BW / 2 + 14, 0, st.title, { ...font(Math.min(13, sz + 3), '#ffd75e'), wordWrap: { width: BW - 20 } }).setOrigin(0.5, 0);
+      lines = st.lines.map(s => { const o = scene.add.text(24, 0, '', { ...font9(sz, '#ffffff'), wordWrap: { width: TW } }).setLineSpacing(2); o.isBtnLabel = true; o.setText(wrapTo(o, '- ' + s, TW)); return o; });
+      title.isBtnLabel = true; title.setText(wrapTo(title, st.title, BW - 20));
+      hh = 10 + title.height + 6;
+      ys = lines.map(l => { const y = hh; hh += l.height + 4; return y; });
+      hh += 6 + 24 + 8;   // 아래 버튼 줄
+      if (hh <= room) break;
+    }
     const below = ry + rh + 18 + hh <= H - 6, above = ry - 18 - hh >= minY;
     let by = below || !above ? ry + rh + 18 : ry - 18 - hh;
     if (!below && !above) by = Math.max(minY, Math.min(H - 6 - hh, (ry + rh / 2 > H / 2) ? ry - 18 - hh : ry + rh + 18));

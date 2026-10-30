@@ -1,13 +1,13 @@
 // 모드 규칙(지키기·점령·돌파·사냥). Battle.js는 this.mode 훅만 부른다. 설계표는 docs/modes.md, 값은 modeData.js
 import * as D from './data.js';
-import { font, font9, panel, button, fmt, viewRect, toast, icon, gemIcon } from './ui.js';
+import { font, font9, panel, button, fmt, viewRect, toast, icon, gemIcon, markIcon } from './ui.js';
 import { sfx, stopBgm } from './sfx.js';
 import { save, mission } from './save.js';
 import { addItems } from './gear.js';
 import { dexRefresh } from './codex.js';
-import { ensureModeArt, modeAnim, wallArt, WALL_FILL } from './modeArt.js';
+import { ensureModeArt, modeAnim, wallArt, WALL_FILL, chArt, chSprite } from './modeArt.js';
 import { makeRule } from './modeRules.js';
-import { MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward, STAR_HURT, starTexts, starMask, starCount, starFirstReward, repeatReward, fmtT } from './modeData.js';
+import { MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward, markGain, markLeftToday, STAR_HURT, starTexts, starMask, starCount, starFirstReward, repeatReward, fmtT } from './modeData.js';
 import { t, tt } from './i18n.js';
 
 const WORLD = 1600, W = D.W, H = D.H;
@@ -54,6 +54,7 @@ export class ModeRun {
       if (this.id === 'hunt') this.setupHunt();
       this.tw = makeRule(this);
       if (this.tw) { this.prey?.forEach((m, i) => this.tw.preyInit?.(m, i)); this.tw.setup?.(); }
+      if (this.id === 'hunt') this.huntDeco();
     }
     s.events.once('shutdown', () => { this.hud_.length = 0; });
   }
@@ -90,13 +91,13 @@ export class ModeRun {
   setupGuard() {
     const s = this.s, c = this.cfg, h = s.hero;
     const y = c.go ? MX + 150 : MX - 20;
-    const art = c.go ? 'cart' : 'anvil_guard';
+    const art = chArt(s, 'guard', c.c) || (c.go ? 'cart' : 'anvil_guard');   // 3~15장은 장 테마 그림
     const big = c.go ? 2.4 : 2.2;   // 50차: 주인공보다 크고 위 층에 그려 한눈에 보이게
     const sp = modeAnim(s, s.add.sprite(MX, y, 'ma_' + art), art).setDepth(35 + y / WORLD * 0.9);
     sp.setScale(big);
     const sh = s.add.ellipse(MX, y + 14 * big / 1.3, 60, 16, 0x000000, 0.5).setDepth(9);
     const max = Math.round(D.PLAYER.hp * c.hp * 2 * (c.c >= 2 ? Math.pow(D.chapterDmg(c.c) / D.chapterDmg(1), 0.85) : 1));   // 3장부터는 몹 피해가 커진 만큼 물건 체력도 키운다
-    this.item = { x: MX, y, sp, sh, hp: max, max, prog: 0, startY: y, flashT: 0, att: 0, big, glow: this.glowAt(MX, y, 0x9ad8ff, 1.3, 0.3), bar: s.add.graphics().setDepth(62), ico: s.add.image(0, 0, 'ma_mode_defend').setDisplaySize(15, 15).setDepth(62), lab: s.add.text(0, 0, c.go ? t('modes.4b9182') : t('modes.5599ae'), font(9, '#cfe8ff', 3)).setOrigin(0.5, 1).setDepth(62) };
+    this.item = { art, x: MX, y, sp, sh, hp: max, max, prog: 0, startY: y, flashT: 0, att: 0, big, glow: this.glowAt(MX, y, 0x9ad8ff, 1.3, 0.3), bar: s.add.graphics().setDepth(62), ico: s.add.image(0, 0, 'ma_mode_defend').setDisplaySize(15, 15).setDepth(62), lab: s.add.text(0, 0, c.go ? t('modes.4b9182') : t('modes.5599ae'), font(9, '#cfe8ff', 3)).setOrigin(0.5, 1).setDepth(62) };
     this.arrow = this.mkArrow(0x5fc8ff);
     h.setPosition(MX, y + 70);
     if (c.go) {   // 도착 지점 문과 길
@@ -154,7 +155,7 @@ export class ModeRun {
       s.waveT += dt; if (s.waveT >= this.limit) return this.finish(true);
     }
     // 노리는 몹이 닿으면 갉는다(m.atkT는 steer에서)
-    if (it.flashT > 0) { it.flashT -= dt; if (it.flashT <= 0) { it.sp.clearTint(); if (c.go && it.hp > 0) { it.sp.setTexture('ma_cart'); modeAnim(s, it.sp, 'cart'); } } }
+    if (it.flashT > 0) { it.flashT -= dt; if (it.flashT <= 0) { it.sp.clearTint(); if (it.art === 'cart' && it.hp > 0) { it.sp.setTexture('ma_cart'); modeAnim(s, it.sp, 'cart'); } } }
   }
   // 물건 머리 위 아이콘·체력바·화면 밖 화살표·바닥 고리
   drawItem() {
@@ -185,14 +186,14 @@ export class ModeRun {
     const s = this.s, it = this.item, c = this.cfg;
     if (this.ended || !it || it.hp <= 0) return;
     it.hp = Math.max(0, it.hp - d);
-    if (c.go && it.hp > 0) { it.sp.stop(); it.sp.setTexture('ma_cart_hit', (s.bt >> 6) & 1); it.flashT = 160; } else { it.sp.setTintFill(0xffffff); it.flashT = 90; }
+    if (it.art === 'cart' && it.hp > 0) { it.sp.stop(); it.sp.setTexture('ma_cart_hit', (s.bt >> 6) & 1); it.flashT = 160; } else { it.sp.setTintFill(0xffffff); it.flashT = 90; }
     if (!it.ringT || s.bt - it.ringT > 260) {   // 붉은 링이 퍼진다
       it.ringT = s.bt;
       const rg = s.add.circle(it.x, it.y, 26, 0xff4040, 0.12).setStrokeStyle(3, 0xff5050, 1).setDepth(63);
       s.tweens.add({ targets: rg, scale: 2.2, alpha: 0, duration: 340, onComplete: () => rg.destroy() });
     }
     if (!it.popT || s.bt - it.popT > 450) { it.popT = s.bt; const t = s.add.text(it.x + R(-8, 8), it.y - 20, '-' + Math.round(d), font(9, '#ff7070')).setOrigin(0.5).setDepth(40); s.tweens.add({ targets: t, y: t.y - 12, alpha: 0, duration: 500, onComplete: () => t.destroy() }); sfx('hurt', 200); }
-    if (it.hp <= 0) { if (c.go) { it.sp.stop(); it.sp.setTexture('ma_cart_broken').clearTint(); } this.finish(false, why || (c.go ? tt('modes.61e6dd') : tt('modes.0cad2e'))); }
+    if (it.hp <= 0) { if (it.art === 'cart') { it.sp.stop(); it.sp.setTexture('ma_cart_broken').clearTint(); } else if (it.art !== 'anvil_guard') { it.sp.stop(); it.sp.setTint(0x555566); } this.finish(false, why || (c.go ? tt('modes.61e6dd') : tt('modes.0cad2e'))); }
   }
 
   // ═══ 점령 ═══
@@ -204,8 +205,9 @@ export class ModeRun {
       const col = COL[i % COL.length];
       const fill = s.add.image(x, y, 'ma_zone_fill').setDisplaySize(c.r * 2.6, c.r * 2.6).setDepth(3).setTint(col).setAlpha(0.45);   // 50차: 거점마다 다른 색 바닥
       const sp = modeAnim(s, s.add.sprite(x, y, 'ma_zone_ring'), 'zone_ring').setDisplaySize(c.r * 2.4, c.r * 2.4).setDepth(4).setAlpha(1).setTint(col);
-      const flag = s.add.sprite(x, y - c.r - 12, 'ma_zone_banner', 0).setDepth(10 + y / WORLD).setTint(col).setScale(1.3);
-      const num = s.add.text(x, y - 2, String(i + 1), font(24, CSS[i % CSS.length], 4)).setOrigin(0.5).setDepth(7).setAlpha(0.9);
+      const mark = chSprite(s, 'capture', c.c, x, y - 6, 1.9, 10 + y / WORLD);   // 3~15장: 거점 표식(중립/점령 2프레임)
+      const flag = mark || s.add.sprite(x, y - c.r - 12, 'ma_zone_banner', 0).setDepth(10 + y / WORLD).setTint(col).setScale(1.3);
+      const num = s.add.text(x, y - 2 + (mark ? 30 : 0), String(i + 1), font(24, CSS[i % CSS.length], 4)).setOrigin(0.5).setDepth(7).setAlpha(0.9);
       const tx = s.add.text(x, y + c.r + 14, '0%', font(10, '#ffffff', 3)).setOrigin(0.5).setDepth(7);
       this.pts.push({ x, y, g: 0, done: false, sp, fill, flag, num, col, tx, glow: this.glowAt(x, y, col, 1.0, 0.22), spT: 0, gT: 3, tT: 800 });
     }
@@ -258,7 +260,7 @@ export class ModeRun {
         }
       }
       if (p.g >= 100) {
-        p.done = true; p.fill.setTint(0x7ddc6a).setAlpha(0.55); p.flag.setFrame(1).setTint(0x9dffa0); p.sp.setTint(0x9dffa0); p.tx.setText(t('modeData.7b547e')); p.num.setColor('#9dffa0'); p.glow.setTint(0x7ddc6a); sfx('level');
+        p.done = true; p.fill.setTint(0x7ddc6a).setAlpha(0.55); p.flag.setFrame(1); if (p.flag.texture.key === 'ma_zone_banner') p.flag.setTint(0x9dffa0); p.sp.setTint(0x9dffa0); p.tx.setText(t('modeData.7b547e')); p.num.setColor('#9dffa0'); p.glow.setTint(0x7ddc6a); sfx('level');
         toast(s, t('modes.668b49', { length: this.pts.filter(q => q.done).length, n: c.n }), '#7ddc6a', 100);
         return;
       }
@@ -360,6 +362,14 @@ export class ModeRun {
   }
 
   // ═══ 사냥 ═══
+  // 3~15장 사냥 장치 그림: 판 둘레에 일곱 군데(정예가 도망·숨는 자리). 파일이 없으면 놓지 않는다
+  huntDeco() {
+    const s = this.s, c = this.cfg;
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9 + 0.5, d = 150 + (i % 3) * 120, x = Phaser.Math.Clamp(MX + Math.cos(a) * d, 50, WORLD - 50), y = Phaser.Math.Clamp(MX + Math.sin(a) * d, 50, WORLD - 50);
+      chSprite(s, 'hunt', c.c, x, y, 2, 6);
+    }
+  }
   setupHunt() {
     const s = this.s, c = this.cfg, h = s.hero;
     this.prey = []; this.preyTotal = c.prey.length;
@@ -579,6 +589,8 @@ export class ModeRun {
     const mask = this.starsNow(win), stars = starCount(mask), sec = this.el / 1000, hurt = this.hurtFrac();
     const old = starMask(sv, this.id, this.n), fresh = win ? mask & ~old : 0;   // 이번에 처음 딴 별
     let rw = win ? (first ? modeReward(c.c, true) : repeatReward(c.c, stars)) : { gold: Math.round(D.clearGold(c.c, 1) * 0.3 * this.prog()), stone: 0, gem: 0 };
+    // 54차: 도전 증표 — 승급 재료. 첫 클리어 1개, 다시 깨면 하루 3번까지 1개(이긴 판만)
+    const mk = win ? markGain(sv, this.id, this.n) : 0, mkFull = win && !mk && !first && markLeftToday(sv) <= 0;
     let bonus = 0;
     for (const b of [2, 4]) if (fresh & b) { const f = starFirstReward(c.c); rw.gold += f.gold; rw.stone += f.stone; rw.gem += f.gem; bonus++; }
     rw.stone += r.stones;
@@ -587,15 +599,16 @@ export class ModeRun {
       const bs = (md.best ||= {})[key] || {}, sc = Math.round(sec), hp = Math.round(hurt * 100);
       md.best[key] = { t: bs.t ? Math.min(bs.t, sc) : sc, hurt: bs.hurt != null ? Math.min(bs.hurt, hp) : hp };
       mission('clear');
+      if (mk) { (md.mark ||= {}); if (md.mark[key]) sv.markN = (sv.markN | 0) + 1; else md.mark[key] = 1; sv.mark = (sv.mark | 0) + 1; }
     }
     sv.gold += rw.gold; sv.stone += rw.stone; sv.gem += rw.gem;
     if (r.loot?.length) addItems(sv, r.loot);
     dexRefresh(sv);
     save();
     stopBgm(); sfx(win ? 'win' : 'fail');
-    s.log('battle_end', { win, mode: this.id, n: this.n, first, stars, newStars: starCount(fresh), time: Math.round(sec), hurt: Math.round(hurt * 100), kills: r.kills, gold: rw.gold, stone: rw.stone, gem: rw.gem, power: D.powerOf(sv) });
+    s.log('battle_end', { win, mode: this.id, n: this.n, first, stars, newStars: starCount(fresh), time: Math.round(sec), hurt: Math.round(hurt * 100), kills: r.kills, gold: rw.gold, stone: rw.stone, gem: rw.gem, mark: mk, power: D.powerOf(sv) });
     const cnt = modeCount(sv, this.id);
-    s.registry.set('lastResult', { win, mode: this.id, n: this.n, stars, gold: rw.gold, stone: rw.stone, gem: rw.gem, kills: r.kills, lv: r.lv, progress: win ? 1 : this.prog(), t: s.bt });
+    s.registry.set('lastResult', { win, mode: this.id, n: this.n, stars, gold: rw.gold, stone: rw.stone, gem: rw.gem, mark: mk, kills: r.kills, lv: r.lv, progress: win ? 1 : this.prog(), t: s.bt });
     if (ui.c) { ui.c.destroy(); ui.c = null; ui.open = null; }
     ui.queue = []; ui.pendingLv = 0;
     const cc = ui.begin('result');
@@ -621,12 +634,14 @@ export class ModeRun {
     cc.add(s.add.rectangle(W / 2, 314, W - 80, 1, 0x293845));
     const rows = [[12, t('contentTab.a3755a'), rw.gold], [13, t('contentTab.5bf71e'), rw.stone]];
     if (rw.gem) rows.push([-1, t('lobby.1fed91'), rw.gem]);
+    if (mk) rows.push([-2, t('modes.c57bf4'), mk]);
     rows.forEach(([ic, name, n], i) => {
       const x = i % 2 ? 146 : 38, y = 330 + Math.floor(i / 2) * 22;
-      cc.add(ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
+      cc.add(ic === -2 ? markIcon(s, x + 8, y, 14) : ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
       { const nt = s.add.text(x + 20, y, name, font9(10, '#a1b2b6')).setOrigin(0, 0.5), mw = 66 - (('+' + fmt(n)).length * 7 + 3); if (nt.width > mw) nt.setScale(Math.max(0.6, mw / nt.width)); cc.add(nt); }
       cc.add(s.add.text(x + 88, y, '+' + fmt(n), font(12)).setOrigin(1, 0.5));
     });
+    if (mkFull) cc.add(s.add.text(W / 2, cnt >= MODE_N ? 399 : 388, t('modes.ec29b8'), font9(9, '#7fe6ee')).setOrigin(0.5));
     cc.add(s.add.text(W / 2, 372, t('modes.0b6006', { name: this.def.name, cnt, MODE_N }), font9(10, '#a1b2b6')).setOrigin(0.5));
     if (win && cnt >= MODE_N) cc.add(s.add.text(W / 2, 388, t('modes.124143', { title: this.def.title }), font(11, '#ffb050')).setOrigin(0.5));
     // 버튼: 주황은 하나. 이기면 다음 판(열려 있고 만들어져 있을 때), 졌으면 다시

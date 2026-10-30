@@ -95,6 +95,7 @@ export class Battle extends Phaser.Scene {
     else if (this.c === 0 && !this.endless && !this.hard && !this.dungeon && this.sv.stats.runs < 4) this.mobDmgMul *= this.sv.stats.runs < 3 ? 0.6 : 0.8;
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s) * (this.endless ? 1 : D.easeHp(this.c, this.s)) * spReq(this.endless ? sv.cleared : this.c * D.STAGES_PER_CHAPTER + this.s);
     if (this.hard) this.mobHpMul = D.hardHp(this.c, this.s);
+    if (this.mode) { this.mobHpMul *= D.MODE_HP; this.mobDmgMul *= D.MODE_DMG; }   // 54차: 도전은 본편 같은 장 x-2보다 조금 어렵게 고정(진행도 스케일링 없음)
     // 던전은 많이 잡는 판: 몹이 약하고 조금 덜 아프다
     if (this.dungeon) { this.mobHpMul *= D.DUNGEON.hp; this.mobDmgMul *= 0.8; }
 

@@ -66,3 +66,8 @@ export const repeatReward = (c, stars) => {
   const k = Math.max(1, Math.min(3, stars)), base = modeReward(c, false);
   return { gold: Math.round(D.clearGold(c, 1) * (0.4 + 0.2 * k) / 5) * 5, stone: Math.ceil(base.stone * (1 + 0.5 * (k - 1))), gem: 0 };
 };
+
+// 54차: 도전 증표. 단계를 처음 깨면 1개(그 단계에서 한 번만), 이미 깬 단계를 다시 깨면 하루 MARK_REPEAT_DAY번까지 1개
+export const markGot = (sv, id, n) => !!sv.modes?.mark?.[`${id}:${n}`];
+export const markLeftToday = sv => Math.max(0, D.MARK_REPEAT_DAY - (sv.markN | 0));
+export const markGain = (sv, id, n) => (modeDone(sv, id, n) && markGot(sv, id, n) ? markLeftToday(sv) > 0 : !markGot(sv, id, n)) ? 1 : 0;
