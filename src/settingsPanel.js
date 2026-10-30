@@ -11,6 +11,7 @@ import { openInvite } from './share.js';
 import { LANGS, LANG_NAME, lang, setLang, t, tt } from './i18n.js';
 import { shareHidden, cashHidden, trialInfo, openFull } from './platform/flags.js';   // 포털판 분기
 import { runTutorial } from './tutorial.js';
+import { notifyAvailable, notifyState, notifyEnable, notifyDisable } from './notify.js';
 import { setSound, setMusic, setMusicLevel, setVib, sfx, buzz, playBgm } from './sfx.js';
 
 // 문의·약관·개인정보: 웹 배포 레포(forge-survivor-play)의 정적 페이지. 원본은 docs/legal/. 문의 메일은 다른 앱(오늘의 눈썰미 사이트)이 이미 쓰는 주소
@@ -64,7 +65,21 @@ export function openSettings(scene) {
   c.add(scene.add.text(26, 98, info.join('\n'), font9(10, '#a1b2b6')).setLineSpacing(3));
   const row = (y, label, fn, color) => { const b = button(scene, W / 2, y, W - 60, 28, label, fn, { size: 11, color }); c.add(b); return b; };
   row(176, t('settingsPanel.14669c', { v: LANG_NAME[lang] }), () => langPicker(scene));
-  if (!shareHidden()) row(206, tt('settingsPanel.bf6a10'), () => { track('invite_open'); openInvite(scene); });   // 보석 보상 · share.js
+  // 재방문 알림(스토어 앱만): 친구 초대 칸을 반으로 나눠 나란히 둔다
+  const nOn = notifyAvailable(), half = nOn && !shareHidden();
+  if (!shareHidden()) {
+    const ib0 = button(scene, half ? W / 2 - 52 : W / 2, 206, half ? 102 : W - 60, 28, tt('settingsPanel.bf6a10'), () => { track('invite_open'); openInvite(scene); }, { size: 11, color: 0x3a3846 });   // 보석 보상 · share.js
+    c.add(ib0);
+  }
+  if (nOn) {
+    const paintN = () => { nb.label.setText(notifyState().on ? t('notify.setOn') : t('notify.setOff')); nb.label.setColor(notifyState().on ? '#ffffff' : '#7d8f94'); };
+    const nb = button(scene, half ? W / 2 + 52 : W / 2, 206, half ? 102 : W - 60, 28, '', async () => {
+      if (notifyState().on) await notifyDisable();
+      else if (await notifyEnable() === 'denied') toast(scene, t('notify.denied'), '#ffffff');
+      paintN();
+    }, { size: 11, color: 0x3a3846 });
+    c.add(nb); paintN();
+  }
   row(236, tt('settingsPanel.48157e'), () => {
     track('save_export');
     textDialog({ title: t('settingsPanel.9f6960'), note: t('settingsPanel.78d36c'), value: exportSave(), readonly: true });

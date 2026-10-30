@@ -21,6 +21,9 @@ import { dexRefresh, titleName } from './codex.js';
 import { itemName, PETS, gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, hasW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 import { t, tt } from './i18n.js';
 import { petCard } from './petRoles.js';
+import { openRank, rankVisible } from './rankPanel.js';
+import { loadTop, noteGear } from './rank.js';
+import { notifyAskDue, openNotifyAsk, notifySync, notifyInstall } from './notify.js';
 
 const { W, H } = D;
 const R = Phaser.Math.Between;
@@ -96,6 +99,16 @@ export class Lobby extends Phaser.Scene {
     else if (this.offerOk() && salesOpen(sv) && sv.cleared >= 2 && !sv.bought.starter && !sv.starterShown && this.tab === 'battle') this.time.delayedCall(250, () => this.tab === 'battle' && this.starterWin());
     // 2장 보스를 처음 잡고 오면 도전 버튼을 한 장짜리 코치마크로 짚는다(다른 창이 떠 있으면 다음 번에)
     if (modeDue(sv) && this.tab === 'battle' && !this.modeScr) this.time.delayedCall(600, () => !this.busy && this.tab === 'battle' && runModeCoach(this));
+    // 재방문 알림(스토어 앱만): 로비가 열릴 때마다 다시 걸고, 첫 판을 깬 뒤 한 번 권한을 묻는다(다른 창이 떠 있으면 다음 로비에서)
+    notifyInstall(); notifySync(sv);
+    if (notifyAskDue(sv)) {
+      let tries = 0;
+      const askLater = () => this.time.delayedCall(tries++ ? 3000 : 2600, () => {
+        if (!this.scene.isActive() || !notifyAskDue(sv)) return;
+        if (!this.busy && !this._coach && !this.tower) openNotifyAsk(this); else if (tries < 8) askLater();   // 코치마크·다른 창이 끝나길 기다린다
+      });
+      askLater();
+    }
   }
 
   // 지금 난이도에서 깬 판 수, 그 다음 도전할 판을 고른다
@@ -637,6 +650,12 @@ export class Lobby extends Phaser.Scene {
     const back = this.add.text(22, 56, '◀', font(14)).setOrigin(0.5).setInteractive({ useHandCursor: true });
     back.on('pointerup', () => { sfx('click'); this.tower = false; this.show('battle'); });
     b.add(back);
+    // 주간 랭킹: 서버에 랭킹이 있을 때만 버튼이 나온다(포털판·서버 없음은 아무것도 안 보인다, 요청도 없다)
+    const tok = this._rkTok = {};
+    if (rankVisible()) noteGear(sv), loadTop().then(d => {
+      if (!d || tok !== this._rkTok || !b.scene || !this.tower || this.tab !== 'battle') return;
+      b.add(button(this, W - 46, 56, 70, 20, t('rank.open'), () => { if (!this.busy) { sfx('click'); openRank(this); } }, { size: 10, color: 0x1d6f80 }));
+    });
     b.add(panel(this, 12, 74, W - 24, 92, { fill: 0x1a1430, line: 0x8a6ac8 }));
     b.add(this.add.text(W / 2, 100, t('lobby.88bdb0', { v: sv.endBest || 0 }), font(22, '#ffd75e')).setOrigin(0.5));
     b.add(this.add.text(W / 2, 128, t('lobby.447216', { v: c + 1, name: D.CHAPTERS[c].name }), font9(10, '#a1b2b6')).setOrigin(0.5));
@@ -906,7 +925,7 @@ export class Lobby extends Phaser.Scene {
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
     if (guard && !win) sv.guard--;   // 방지권은 칼을 지켜 냈을 때만 쓴다(성공해도 사라지면 아까워서 안 켰다)
     if (!win && danger) sv.gold += Math.round(gold * D.FAIL_REFUND);
-    if (win) { sv.enh++; sv.stats.maxEnh = Math.max(sv.stats.maxEnh || 0, sv.enh); }
+    if (win) { sv.enh++; sv.stats.maxEnh = Math.max(sv.stats.maxEnh || 0, sv.enh); noteGear(sv); }
     else if (outcome === 'shatter') {
       sv.enh = D.shatterTo(enh); sv.stats.destroyed++;
       // 대장장이 앞치마: 칼을 세 번 부수면
@@ -1016,7 +1035,7 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, cost = D.promoteGold(sv.tier), mk = D.markNeed(sv.tier + 1);
     if (this.busy || sv.gold < cost || sv.cleared < D.TIER_AT[sv.tier + 1] || (sv.mark | 0) < mk) return;
     this.busy = true;
-    sv.gold -= cost; sv.mark = (sv.mark | 0) - mk; sv.enh = D.promoteEnh(sv.tier, sv.enh); sv.tier++; save(); this.refreshTop();
+    sv.gold -= cost; sv.mark = (sv.mark | 0) - mk; sv.enh = D.promoteEnh(sv.tier, sv.enh); sv.tier++; noteGear(sv); save(); this.refreshTop();
     track('promote', { tier: sv.tier, cost, mark: mk, cleared: sv.cleared });
     sfx('win');
     this.cameras.main.flash(400, 200, 160, 255);

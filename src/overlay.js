@@ -15,6 +15,7 @@ import { t } from './i18n.js';
 import { petCard } from './petRoles.js';
 import { nextGoal } from './nextGoal.js';
 import { trackOnce } from './log.js';
+import { noteTower } from './rank.js';
 const R = Phaser.Math.Between;
 
 const { W, H } = D;
@@ -591,7 +592,7 @@ export class Overlay {
       gold = D.clearGold(s.c, D.STAGES_PER_CHAPTER - 1) * D.ENDLESS.goldPerFloor * floors;
       stone += D.ENDLESS.stonePerFloor * floors;
       gem = Math.max(0, floors - best) * D.ENDLESS.gemPerNewFloor;
-      sv.endBest = Math.max(best, floors);
+      sv.endBest = Math.max(best, floors); noteTower(floors);
       if (floors >= 3) mission('clear');
     } else if (dun) {
       // 일일 던전: 잡은 만큼(최소 20%) 요일 보상
