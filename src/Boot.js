@@ -3,7 +3,7 @@ import { W, H, MOBS, BOSSES } from './data.js';
 import { font, hiCam } from './ui.js';
 import { makeWeaponTextures } from './wart.js';
 import { updateGate, startCheck } from './updateGate.js';
-import { BODY_LOOKS, COS_ROWS, WEAPON_LOOKS, HEAD_LOOKS, CASH_PETS } from './cosmetics.js';
+import { BODY_LOOKS, COS_ROWS, WEAPON_LOOKS, HEAD_LOOKS, CASH_PETS, AURAS } from './cosmetics.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
@@ -36,10 +36,12 @@ export class Boot extends Phaser.Scene {
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
     for (const k of REQUIRED.concat(OPTIONAL)) this.load.image(k, `assets/${k}.png`);
     for (const k of ['hero2_r0', 'hero2_r1', 'hero_r1', 'hero_r2', 'hero2_r2']) this.load.image('hn_' + k, `assets/hn_${k}.png`);   // 검을 지운 전투용 주인공(검은 Battle이 단계별로 쥔다)
-    for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => this.load.spritesheet(`cos_${it.id}_${row}`, `assets/cosmetics/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
-    for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) this.load.image(`cos_${it.id}`, `assets/cosmetics/${it.id}.png`);
-    for (const it of CASH_PETS) this.load.spritesheet(`cos_${it.id}`, `assets/cosmetics/${it.id}.png`, { frameWidth: 28, frameHeight: 28 });
+    for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => this.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
+    for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) this.load.image(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`);
+    for (const it of CASH_PETS) { this.load.spritesheet(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`, { frameWidth: 28, frameHeight: 28 }); if (it.dir) this.load.spritesheet(`cos_${it.id}_slash`, `assets/${it.dir}/${it.id}_slash.png`, { frameWidth: 28, frameHeight: 28 }); }
     this.load.spritesheet('cos_fx', 'assets/cosmetics/fx.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('cos_fx2', 'assets/cosmetics2/fx.png', { frameWidth: 16, frameHeight: 16 });
+    for (const id of AURAS) this.load.spritesheet(`cos_aura_${id}`, `assets/cosmetics2/fx_${id}.png`, { frameWidth: 52, frameHeight: 52 });
     for (const k of ICONS) this.load.image(k, `assets/icon/${k}.png`);
     for (const id of WEAPONS) for (let t = 0; t < 10; t++) this.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
   }
@@ -108,7 +110,8 @@ export class Boot extends Phaser.Scene {
       if (!sh) { sh = this.sheet('mob_r' + (b.row % 3)); fallback[key] = true; }
       A(key, sh, 3);
     }
-    for (const it of CASH_PETS) A(`pet_${it.id}`, `cos_${it.id}`, 6);
+    for (const it of CASH_PETS) { A(`pet_${it.id}`, `cos_${it.id}`, 6); if (it.dir) A(`pet_${it.id}_slash`, `cos_${it.id}_slash`, 10, 0); }
+    for (const id of AURAS) A(`aura_${id}`, `cos_aura_${id}`, 8);
     this.registry.set('fallback', fallback);
     this.makeTextures();
     updateGate(this, this.upd).then(go => { if (go) this.scene.start('Lobby'); });   // 강제 업데이트면 여기서 멈춘다

@@ -1,4 +1,4 @@
-import { COS_TABS, COSMETICS, COS_PACKS, cosmetic, wardrobe, equippedLook, equipCosmetic, buyCosmetic, buyCosmeticPack, packBase, ownsCosmetic, available, WINTER, todayLook, startTrial, salePrice, todaySale, SALE_OFF } from './cosmetics.js';
+import { COS_TABS, COSMETICS, COS_PACKS, cosmetic, wardrobe, equippedLook, equipCosmetic, buyCosmetic, buyCosmeticPack, packBase, ownsCosmetic, available, isWinter, winterItems, WINTER, todayLook, startTrial, salePrice, todaySale, SALE_OFF } from './cosmetics.js';
 import { lookPreview } from './cosmeticView.js';
 import { font, font9, panel, button, toast } from './ui.js';
 import { buy, won } from './shop.js';
@@ -13,15 +13,16 @@ function icon(scene, parent, it, x, y, size = 28) {
 }
 export function cosmeticPage(s) {
   const sv = s.sv, b = s.body, state = wardrobe(sv);
-  const kind = COS_TABS.some(([k]) => k === s.skinTab) ? s.skinTab : (s.skinTab = 'character');
-  const all = COSMETICS.filter(it => it.kind === kind); s.cosSelected ||= {};
-  let selected = cosmetic(s.cosSelected[kind]);
-  if (selected?.kind !== kind) selected = cosmetic(equippedLook(sv)[kind]) || all[0];
-  s.cosSelected[kind] = selected.id;
+  const tab = COS_TABS.some(([k]) => k === s.skinTab) ? s.skinTab : (s.skinTab = available({ winter: true }) ? 'winter' : 'character');
+  const all = tab === 'winter' ? winterItems() : COSMETICS.filter(it => it.kind === tab); s.cosSelected ||= {};
+  let selected = cosmetic(s.cosSelected[tab]);
+  if (!all.includes(selected)) selected = (tab === 'winter' ? null : cosmetic(equippedLook(sv)[tab])) || all[0];
+  s.cosSelected[tab] = selected.id;
+  const kind = selected.kind;
   const page = Math.floor(all.indexOf(selected) / 6), pages = Math.ceil(all.length / 6);
   const redraw = () => { save(); s.refreshTop(); s.show('shop'); };
   COS_TABS.forEach(([k, label], i) => {
-    b.add(button(s, 29 + i * 53, 84, 50, 22, label, () => { s.skinTab = k; redraw(); }, { size: 10, color: kind === k ? 0x456074 : 0x3a3846 }));
+    b.add(button(s, 25 + i * 44, 84, 42, 22, label, () => { s.skinTab = k; redraw(); }, { size: 10, color: tab === k ? (k === 'winter' ? 0x3a7a9a : 0x456074) : k === 'winter' ? 0x2d4a5c : 0x3a3846 }));
   });
   const look = { ...equippedLook(sv), [kind]: selected.id };
   if (kind === 'costume') look.character = ''; if (kind === 'character') look.costume = '';
@@ -38,14 +39,14 @@ export function cosmeticPage(s) {
   const ts0 = todaySale();
   all.slice(page * 6, page * 6 + 6).forEach((it, i) => {
     const x = 54 + (i % 3) * 81, y = 233 + Math.floor(i / 3) * 53;
-    const bt = button(s, x, y, 76, 48, it.name, () => { s.cosSelected[kind] = it.id; redraw(); }, { size: 7, color: it.id === selected.id ? 0x43566d : 0x3a3846 });
+    const bt = button(s, x, y, 76, 48, it.name, () => { s.cosSelected[tab] = it.id; redraw(); }, { size: 7, color: it.id === selected.id ? 0x43566d : 0x3a3846 });
     bt.label.setY(15); b.add(bt); icon(s, b, it, x, y - 7, 28);
     if (state.owned[it.id]) b.add(s.add.text(x + 32, y - 21, '✓', font9(9, '#9be7cd')).setOrigin(1, 0));
     else if (it.id === ts0.id) b.add(s.add.text(x + 32, y - 21, '★', font9(9, '#ffd75e')).setOrigin(1, 0));
   });
-  b.add(button(s, 36, 330, 40, 22, '◀', () => { s.cosSelected[kind] = all[((page + pages - 1) % pages) * 6].id; redraw(); }, { size: 11 }).setEnabled(pages > 1));
+  b.add(button(s, 36, 330, 40, 22, '◀', () => { s.cosSelected[tab] = all[((page + pages - 1) % pages) * 6].id; redraw(); }, { size: 11 }).setEnabled(pages > 1));
   b.add(s.add.text(135, 330, `${page + 1} / ${pages} · ${all.length}종`, font9(10, '#b4cfda')).setOrigin(0.5));
-  b.add(button(s, 234, 330, 40, 22, '▶', () => { s.cosSelected[kind] = all[((page + 1) % pages) * 6].id; redraw(); }, { size: 11 }).setEnabled(pages > 1));
+  b.add(button(s, 234, 330, 40, 22, '▶', () => { s.cosSelected[tab] = all[((page + 1) % pages) * 6].id; redraw(); }, { size: 11 }).setEnabled(pages > 1));
   const own = ownsCosmetic(sv, selected.id), on = equippedLook(sv)[kind] === selected.id, sale = available(selected);
   const sp = salePrice(sv, selected), price = sp.price;
   const label = on ? '착용 중' : own ? '이 모습으로 착용' : !sale ? '판매 기간 종료' : sp.off ? `보석 ${price} (정가 ${selected.cost}) · 구매 후 착용` : `보석 ${selected.cost} · 구매 후 착용`;
@@ -55,25 +56,25 @@ export function cosmeticPage(s) {
     else if (!buyCosmetic(sv, selected.id)) { if (sv.gem < price) s.gemShort(price); return; }
     track(own ? 'cosmetic_equip' : 'cosmetic_buy', { id: selected.id, kind, cost: own ? 0 : price }); redraw();
   }, { size: 11, color: 0x2f6b3a }).setEnabled(!on && (own || sale)));
-  b.add(s.add.text(135, 387, selected.id === 'santa' ? WINTER.label : kind === 'costume' ? '의상은 기본 모험가용 · 선택하면 캐릭터가 전환돼요' : kind === 'character' ? '캐릭터 선택 시 의상 해제 · 장비 성능은 그대로' : '미리보기: 서기 → 걷기 → 베기 → 처치 효과', font9(9, '#a1b2b6')).setOrigin(0.5));
+  b.add(s.add.text(135, 387, isWinter(selected) ? WINTER.label : kind === 'costume' ? '의상은 기본 모험가용 · 선택하면 캐릭터가 전환돼요' : kind === 'character' ? '캐릭터 선택 시 의상 해제 · 장비 성능은 그대로' : '미리보기: 서기 → 걷기 → 베기 → 처치 효과', font9(9, '#a1b2b6')).setOrigin(0.5));
   const ts = todaySale();
   b.add(button(s, 47, 410, 78, 24, '★오늘의 판매', () => { s.skinTab = ts.kind; s.cosSelected[ts.kind] = ts.id; redraw(); }, { size: 9, color: 0x6a4a1a }));
-  b.add(button(s, 135, 410, 78, 24, '묶음 20%', () => cosmeticPacks(s), { size: 9 }));
+  b.add(button(s, 135, 410, 78, 24, '묶음 20%', () => cosmeticPacks(s, tab === 'winter' ? COS_PACKS.findIndex(p => p.winter) : 0), { size: 9 }));
   b.add(button(s, 223, 410, 78, 24, '이전 꾸미기', () => { s.legacySkins = true; redraw(); }, { size: 9 }));
 }
 export function cosmeticPacks(s, index = 0) {
-  const sv = s.sv, pack = COS_PACKS[index], c = s.modal(), own = pack.give.cosmetics.some(id => ownsCosmetic(sv, id));
+  const sv = s.sv, pack = COS_PACKS[index], c = s.modal(), own = pack.give.cosmetics.some(id => ownsCosmetic(sv, id)), inSeason = !pack.winter || available({ winter: true });
   c.add(panel(s, 16, 93, 238, 306, { fill: 0x152332 }));
   c.add(s.add.text(135, 116, pack.name, font(15, '#ffe0a0')).setOrigin(0.5));
   pack.give.cosmetics.forEach((id, i) => { const it = cosmetic(id); icon(s, c, it, 61 + i * 74, 166, 42); c.add(s.add.text(61 + i * 74, 201, it.name, font9(8, '#dae7ed')).setOrigin(0.5)); });
   c.add(s.add.text(135, 230, `따로 사면 ${packBase(pack)} → 묶음 ${pack.gemCost} 보석`, font9(11, '#ffe0a0')).setOrigin(0.5));
-  c.add(s.add.text(135, 250, '따로 사는 값보다 20% 저렴 · 상시 판매\n보석 10개 = 100원 기준이라 값어치는 같아요', { ...font9(10, '#b4cfda'), align: 'center' }).setOrigin(0.5));
+  c.add(s.add.text(135, 250, (pack.winter ? '따로 사는 값보다 20% 저렴 · 겨울 기간 한정\n' : '따로 사는 값보다 20% 저렴 · 상시 판매\n') + '보석 10개 = 100원 기준이라 값어치는 같아요', { ...font9(10, '#b4cfda'), align: 'center' }).setOrigin(0.5));
   let purchasing = false;
-  c.add(button(s, 135, 290, 210, 28, own ? '구성품 보유 · 개별 구매를 이용해요' : `${pack.gemCost} 보석으로 구매`, () => { if (purchasing) return; if (!buyCosmeticPack(sv, pack)) { toast(s, '보석이 부족해요'); return; } save(); c.close(); }, { color: 0x2f6b3a, size: 10 }).setEnabled(!own));
+  c.add(button(s, 135, 290, 210, 28, own ? '구성품 보유 · 개별 구매를 이용해요' : `${pack.gemCost} 보석으로 구매`, () => { if (purchasing) return; if (!buyCosmeticPack(sv, pack)) { toast(s, '보석이 부족해요'); return; } save(); c.close(); }, { color: 0x2f6b3a, size: 10 }).setEnabled(!own && inSeason));
   const cash = button(s, 135, 325, 210, 28, `${won(pack.price)} 결제로 구매`, async () => {
     if (purchasing) return; purchasing = true; cash.setEnabled(false); const ok = await buy(s, sv, pack); if (!c.active) return;
     if (ok) c.close(); else { purchasing = false; cash.setEnabled(true); }
-  }, { size: 11 }); c.add(cash.setEnabled(!own));
+  }, { size: 11 }); c.add(cash.setEnabled(!own && inSeason));
   c.add(button(s, 78, 371, 100, 24, '다른 묶음', () => { if (purchasing) return; c.close(); cosmeticPacks(s, (index + 1) % COS_PACKS.length); }, { size: 10 }));
   c.add(button(s, 192, 371, 100, 24, '닫기', () => { if (!purchasing) c.close(); }, { size: 10 }));
 }

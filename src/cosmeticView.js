@@ -1,5 +1,7 @@
-import { COS_ANCHORS, BASE_HEAD } from './cosmeticAnchors.js';
-import { BODY_LOOKS, COS_ROWS, cosmetic, EFFECT_FRAMES } from './cosmetics.js';
+import { COS_ANCHORS as ANCH1, BASE_HEAD } from './cosmeticAnchors.js';
+import { COS_ANCHORS2 } from './cosmeticAnchors2.js';
+const COS_ANCHORS = { ...ANCH1, ...COS_ANCHORS2 };
+import { BODY_LOOKS, COS_ROWS, cosmetic, EFFECT_FRAMES, AURAS, effectTex } from './cosmetics.js';
 
 export const HAND = {
   walkFront: { w: 37, f: [[7, 30, 115], [6, 31, 115], [7, 31, 115], [6, 32, 115]] },
@@ -68,7 +70,7 @@ export class CosmeticVfx {
     this.last[key] = this.clock;
     const frames = EFFECT_FRAMES[effect], n = event === 'walk' ? 1 : event === 'kill' ? 4 : 3;
     for (let i = 0; i < n; i++) {
-      const p = this.take('cos_fx', frames[(i + Math.floor(this.clock / 350)) % frames.length]); if (!p) break;
+      const p = this.take(effectTex(effect), frames[(i + Math.floor(this.clock / 350)) % frames.length]); if (!p) break;
       const a = event === 'slash' ? -1.2 + i * 0.8 : i * Math.PI * 2 / n;
       p.setPosition(x + (event === 'walk' ? -5 : Math.cos(a) * 14), y + (event === 'walk' ? 19 : -8 + Math.sin(a) * 12));
       p.setScale(event === 'kill' ? 0.65 : 0.5).setDepth((hero?.depth || 10) + 0.04);
@@ -97,7 +99,14 @@ export class CosmeticActor {
     this.effect = cosmetic(bodyId(look))?.effect;
     if (look.head) { this.head = scene.add.image(hero.x, hero.y, `cos_${look.head}`); parent?.add(this.head); }
     if (look.pet) { this.pet = scene.add.sprite(hero.x + 28, hero.y + 15, `cos_${look.pet}`).play(`pet_${look.pet}`); parent?.add(this.pet); }
-    this.onAnim = anim => { if (anim.key === 'slash') this.emit('slash'); };
+    const bid = bodyId(look);   // 유료 캐릭터 고유 주변 이펙트: 몸 둘레를 도는 얼음 고리(그림만, 능력치 무관)
+    if (AURAS.includes(bid)) { this.aura = scene.add.sprite(hero.x, hero.y, `cos_aura_${bid}`).play(`aura_${bid}`); parent?.add(this.aura); }
+    this.petSlash = 0;
+    this.onAnim = anim => {
+      if (anim.key !== 'slash') return;
+      this.emit('slash');
+      if (this.pet && scene.anims.exists(`pet_${look.pet}_slash`)) { this.pet.play(`pet_${look.pet}_slash`); this.petSlash = 360; }
+    };
     hero.on('animationstart', this.onAnim);
   }
   emit(event, x = this.hero.x, y = this.hero.y) {
@@ -116,20 +125,24 @@ export class CosmeticActor {
       this.head.setPosition(at.x, at.y).setOrigin(0.5, 0.8)
         .setScale(0.95 * h.scaleX, 0.95 * h.scaleY).setAngle(h.angle).setFlipX(h.flipX).setAlpha(h.alpha).setDepth(h.depth + 0.02);
     }
+    if (this.aura) {
+      this.aura.setPosition(h.x, h.y).setScale(h.scaleX, h.scaleY).setAlpha(0.8 * h.alpha).setVisible(h.visible).setDepth(h.depth + 0.015);
+    }
     if (this.pet) {
+      if (this.petSlash > 0 && (this.petSlash -= dt) <= 0) this.pet.play(`pet_${this.look.pet}`);
       const f = h.flipX ? -1 : 1, q = 1 - Math.pow(0.9, dt / 16.7);
       this.pet.x += (h.x + 30 * f - this.pet.x) * q; this.pet.y += (h.y + 16 + Math.sin(this.t / 180) * 2 - this.pet.y) * q;
       this.pet.setFlipX(f < 0).setDepth(h.depth - 0.01);
       this.pool.burst(cosmetic(this.look.pet)?.effect, 'walk', this.pet.x, this.pet.y - 14, h);
       // 보스 펫은 그대로 함께 동행. 자동 줍기는 은화 1개/8초, 반경56으로 제한한다.
-      if (!preview && ['ghost', 'baby_capy'].includes(this.look.pet) && (this.pickT += dt) >= 8000) {
+      if (!preview && ['ghost', 'baby_capy', 'mini_snowman'].includes(this.look.pet) && (this.pickT += dt) >= 8000) {
         this.pickT = 0;
         const it = this.s.items?.getChildren().find(o => o.kind === 'silver' && !o.pull && Math.hypot(o.x - h.x, o.y - h.y) < 56);
         if (it) { it.pull = true; this.pool.burst(cosmetic(this.look.pet).effect, 'kill', it.x, it.y, h); }
       }
     }
   }
-  destroy() { this.hero.off('animationstart', this.onAnim); this.pool.destroy(); this.head?.destroy(); this.pet?.destroy(); }
+  destroy() { this.hero.off('animationstart', this.onAnim); this.pool.destroy(); this.head?.destroy(); this.pet?.destroy(); this.aura?.destroy(); }
 }
 
 // 미리보기는 하나만 실행. 탭을 닫으면 update 리스너와 풀을 전부 해제한다.

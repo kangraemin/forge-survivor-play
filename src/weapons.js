@@ -25,6 +25,14 @@ const SKIN_SLASH = {
   light: { frames: [2, 7], n: 3, mode: 'arc' },
 };
 
+// 겨울 무기 4종: cos_fx2(눈·얼음·불꽃놀이 그림) 사용. 모양만 다르고 판정은 그대로
+Object.assign(SKIN_SLASH, {
+  icicle_sword: { tex: 'cos_fx2', frames: [1, 5, 0], n: 4, mode: 'arc' },
+  candy_cane: { tex: 'cos_fx2', spin: 360, frames: [9, 7], n: 3, mode: 'arc' },
+  ice_fishing_rod: { tex: 'cos_fx2', frames: [10, 0, 2], n: 4, mode: 'drop' },
+  firework_wand: { tex: 'cos_fx2', frames: [8, 11, 6], n: 4, mode: 'rise' },
+});
+
 export class Weapons {
   constructor(s) { this.s = s; this.cd = {}; this.orbs = []; this.patches = []; this.aura = null; }
 
@@ -101,7 +109,7 @@ export class Weapons {
     }
     for (let i = 0; i < def.n; i++) {
       const f = def.frames[i % def.frames.length], k = def.n > 1 ? i / (def.n - 1) - 0.5 : 0;
-      const p = s.add.image(ox, oy, 'cos_fx', f).setDepth(29).setScale(1.0).setAlpha(0.6);   // 47차: 호를 가늘고 옅게
+      const p = s.add.image(ox, oy, def.tex || 'cos_fx', f).setDepth(29).setScale(1.0).setAlpha(0.6);   // 47차: 호를 가늘고 옅게
       let tx, ty, dur = 360;
       if (def.mode === 'drop') {   // 생선: 궤적을 따라 물방울이 튀고 아래로 떨어진다
         const r = (24 + 14 * (k + 0.5) * 2) * area; p.setPosition(ox + Math.cos(a) * r, oy + Math.sin(a) * r * 0.8);

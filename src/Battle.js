@@ -1379,7 +1379,7 @@ export class Battle extends Phaser.Scene {
 
   updatePickups(dt) {
     const h = this.hero, r = this.run;
-    const pick = D.PLAYER.pickup * (1 + (['baby_dragon', 'chick'].includes(this.cosLook.pet) ? 0.08 : 0) + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + this.lv3('magnet', 0.4) + r.bPick);
+    const pick = D.PLAYER.pickup * (1 + (['baby_dragon', 'chick', 'penguin_sled', 'snow_rabbit'].includes(this.cosLook.pet) ? 0.08 : 0) + this.tv('mag') + 0.3 * (r.skills.magnet || 0) + this.lv3('magnet', 0.4) + r.bPick);
     const hop = o => {   // 떨어질 때 살짝 튀는 연출(Quad.Out으로 올랐다 내려온다)
       if (o.hopT === undefined) return;
       o.hopT += dt;

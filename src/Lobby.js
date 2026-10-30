@@ -304,13 +304,13 @@ export class Lobby extends Phaser.Scene {
       bell.on('pointerup', () => { if (this.busy) return; sfx('click'); track('bell_tap'); this.missionWin(); });
       this.bellDot = this.add.circle(W - 32, 10, 3, 0xed786f).setDepth(52);
       // 점만으론 무슨 알림인지 모른다(42차): 종 아래에 한 줄로 뭘 받는지 작게 보여 준다
-      this.bellHint = this.add.text(W - 8, 31, '', font(8, '#ffd75e', 2)).setOrigin(1, 0.5).setDepth(52);
+      this.bellHint = this.add.text(W - 32, 31, '', font(8, '#ffd75e', 2)).setOrigin(1, 0.5).setDepth(52);
     }
     // 소리 켜고 끄기
     const snd = this.add.text(W - 8, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
     snd.on('pointerup', () => { sv.sound = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
     // 설정(저장 내보내기·가져오기, 구매 복원)
-    const cfg = this.add.text(W - 8, 40, '설정', font(8, '#a1b2b6', 2)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
+    const cfg = this.add.text(W - 8, 31, '설정', font(8, '#a1b2b6', 2)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
     cfg.on('pointerup', () => { if (this.busy) return; sfx('click'); openSettings(this); });
     this.refreshTop();
   }
