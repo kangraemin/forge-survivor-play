@@ -57,6 +57,8 @@ export function ensureBattle(scene) {
   if (scene.mode) t.push(k => /^ma_/.test(k));
   return queue(scene, k => t.some(f => f(k)));
 }
+// 프롤로그처럼 정해진 그림만 받는 화면용(scene.preload 안): 키가 test에 맞는 것 중 아직 없는 것을 올린다
+export const ensureKeys = (scene, test) => queue(scene, test);
 export function ensureLobby(scene, data) {
   const sv = load(), lob = lobbyTest(sv), eq = equippedTest(equippedLook(sv));
   return queue(scene, k => lob(k) || eq(k) || (data?.modeSel && /^ma_/.test(k)));

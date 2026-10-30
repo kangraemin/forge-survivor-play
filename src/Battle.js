@@ -9,7 +9,8 @@ import { insetsGame } from './safeArea.js';
 import { Overlay } from './overlay.js';
 import { itemName, gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF, recPets, heroSkin } from './gear.js';
 import { Pet } from './pets.js';
-import { track, logCtx } from './log.js';
+import { track, logCtx, trackOnce } from './log.js';
+import { rc } from './remote.js';
 import { dexKill } from './codex.js';
 import { makeEnv } from './envfx.js';
 import { raidFlag, playOnce } from './fx2.js';
@@ -93,7 +94,7 @@ export class Battle extends Phaser.Scene {
     if (this.easy) { this.mobDmgMul *= 0.4;   // 0.55면 피해 다녀도 30초에 체력 54%(36차)
       // 두 번째 판은 30초 뒤 0.55로: 두 판 내내 체력이 안 닳아 카드 고르는 의미가 없었다(41차)
       if (this.sv.stats.runs === 1) this.time.delayedCall(30000, () => { this.mobDmgMul *= 0.55 / 0.4; });
-      this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
+      this.waveCount = 2; this.waveLen *= rc('first_run_len_mul'); }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
     // 쉬운 판이 끝나도 1장은 한 번에 ×1로 뛰지 않게 3·4판째는 0.6·0.8(39차: 3판째 절벽)
     else if (this.c === 0 && !this.endless && !this.hard && !this.dungeon && this.sv.stats.runs < 4) this.mobDmgMul *= this.sv.stats.runs < 3 ? 0.6 : 0.8;
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s) * (this.endless ? 1 : D.easeHp(this.c, this.s)) * spReq(this.endless ? sv.cleared : this.c * D.STAGES_PER_CHAPTER + this.s);
@@ -199,6 +200,12 @@ export class Battle extends Phaser.Scene {
     if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(t('battle.27535b', { pre: D.VARIANTS[nv[1]].pre, v: D.MOB_NAMES[this.ch.mobs[nv[0]]] }), D.VARIANTS[nv[1]].desc));
     if (!this.practice) { sv.stats.runs++; save(); }
     logCtx({ stage: this.mode ? `mode_${this.mode.id}_${this.mode.n + 1}` : this.endless ? 'tower' : this.dungeon ? 'dungeon' : `${this.hard ? 'H' : ''}${this.c + 1}-${this.s + 1}`, idx: this.endless || this.dungeon ? -1 : this.c * D.STAGES_PER_CHAPTER + this.s });
+    if (!this.bot && !this.practice && !this.mode && !this.endless && !this.dungeon && !this.hard) {   // 깔때기: 첫 판 시작·1-3 진입·2장 진입(한 기기에 한 번)
+      const ix = this.c * D.STAGES_PER_CHAPTER + this.s;
+      trackOnce('funnel_first_battle', { stage: `${this.c + 1}-${this.s + 1}` });
+      if (ix === 2) trackOnce('funnel_enter_1_3', { power: D.powerOf(sv) });
+      if (this.c === 1 && this.s === 0) trackOnce('funnel_enter_ch2', { power: D.powerOf(sv) });
+    }
     this.log('battle_start', { power: D.powerOf(sv), rec: this.endless || this.dungeon ? undefined : D.recOf(this.c, this.s, this.hard), hard: this.hard, dungeon: this.dungeon || 'none', tier: sv.tier, enh: sv.enh, mod: this.mod?.id || 'none', easy: this.easy, runs: sv.stats.runs, replay: !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s < sv.cleared, boss_stage: this.isBoss });
   }
 
@@ -1087,7 +1094,7 @@ export class Battle extends Phaser.Scene {
   }
 
   // 58차: 판 안에서 주운 금화(결과 보상에 더해진다. 져도 남는다)
-  goldUnit() { return Math.max(5, Math.round(D.goldOf(this.c, this.s, false) * 0.12 / 5) * 5); }
+  goldUnit() { return Math.max(5, Math.round(D.goldOf(this.c, this.s, false) * rc('gold_unit_rate') / 5) * 5); }
   addGold(x, y, v) {
     this.run.goldBag += v; sfx('coin', 60);
     const tx = this.add.text(x, y - 14, tt('battle.goldGain', { n: v }), font(11, '#ffd75e')).setOrigin(0.5).setDepth(40);
@@ -1096,7 +1103,7 @@ export class Battle extends Phaser.Scene {
   }
   // 금화 행렬: 한쪽 가장자리에서 금화 고블린이 줄지어 뛰어든다. 하나씩 달아나니 쫓아가 잡는다
   goldRush() {
-    const a = R(0, 3) * Math.PI / 2, v = this.goldUnit(), n = 5, ex = Math.cos(a), ey = Math.sin(a);
+    const a = R(0, 3) * Math.PI / 2, v = this.goldUnit(), n = Math.round(rc('gold_rush_n')), ex = Math.cos(a), ey = Math.sin(a);
     this.banner(tt('battle.goldRushT'), tt('battle.goldRushS', { n }));
     sfx('warn', 300); this.log('gold_rush', { v });
     for (let i = 0; i < n; i++) this.time.delayedCall(700 + i * 420, () => {
@@ -1344,13 +1351,13 @@ export class Battle extends Phaser.Scene {
         }
       }
       // 55차: 1-1 하이라이트 — 처음 판은 중간보스(약 1분 뒤)가 있고, 그 뒤 판은 둘째 웨이브 중간에 엘리트 셋이 한꺼번에 몰려온다(보상·스탯은 그대로, 150초 동안 밋밋하던 구간만 깬다)
-      if (this.stage1 && !this.easy && !this.raidDone && this.wave === 1 && this.waveT > this.waveLen * 0.35) {
+      if (this.stage1 && !this.easy && !this.raidDone && this.wave === 1 && this.waveT > this.waveLen * rc('stage1_raid_at')) {
         this.raidDone = true;
         for (let i = 0; i < 3; i++) this.spawn(false, this.ch.mobs[1], { elite: true, force: true });
         this.banner(t('battle.raidT'), t('battle.raidS')); sfx('bossIn'); this.log('stage1_raid', { bt: Math.round(this.bt / 1000) });
       }
       // 58차: 1-2 이후 일반 판 — 마지막에서 둘째 웨이브에 금화 행렬, 둘째 웨이브엔 장마다 다른 중반 이벤트(midPat.js MID_EVENTS)
-      if (this.goldOk && !this.isBoss && !this.rushDone && this.wave === Math.min(2, this.waveCount - 1) && this.waveT > this.waveLen * 0.2) { this.rushDone = true; this.goldRush(); }
+      if (this.goldOk && !this.isBoss && !this.rushDone && this.wave === Math.min(2, this.waveCount - 1) && this.waveT > this.waveLen * rc('gold_rush_at') && rc('gold_rush_n') > 0) { this.rushDone = true; this.goldRush(); }
       if (!this.stage1 && !this.midEvDone && !this.easy && !this.practice && !this.mode && !this.isBoss && !this.endless && !this.dungeon && this.wave === 1 && this.waveT > this.waveLen * 0.35) { this.midEvDone = true; runMidEvent(this); }
       // 53차: 1-1 마지막 웨이브가 열리면(중간보스 직전) 회복 구슬 하나를 몸 곁에. 체력이 모자랄 때만 의미가 있게 항상 놓는다
       if (this.stage1 && !this.healOrbDone && this.wave === this.waveCount - 1) { this.healOrbDone = true; this.addItem(this.hero.x + 24, this.hero.y - 12, 'meat'); this.log('stage1_heal_orb', { hp: Math.round(this.hp / this.maxHp * 100) }); }
@@ -1366,7 +1373,7 @@ export class Battle extends Phaser.Scene {
       // x-2는 마지막 웨이브에 해골 장군(중간 보스)
       const towerBoss = this.endless && this.wave % 3 === 2 && this.midWave !== this.wave && !this.midBoss;
       // 처음 판(1-1)도 마지막 웨이브 후반에 약한 해골 장군이 나온다: 끝이 밋밋하게 시간만 다 됐다(40차)
-      const easyBoss = this.easy && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * 0.25;   // 55차: 0.45→0.25 — 중간보스가 판 끝 쪽에서 나와 '남은 0:01'로 늘어지던 것을 앞당겨 전체 한 판을 줄인다
+      const easyBoss = this.easy && this.wave === this.waveCount - 1 && !this.midDone && this.waveT > this.waveLen * rc('first_boss_at');   // 55차: 0.45→0.25 — 중간보스가 판 끝 쪽에서 나와 '남은 0:01'로 늘어지던 것을 앞당겨 전체 한 판을 줄인다
       if (easyBoss || (towerBoss || this.s === 1 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
         const midKey = !this.endless && this.ch.mid && D.BOSSES[this.ch.mid] ? this.ch.mid : 'general';   // 장마다 다른 중간보스(무한의 탑은 해골 장군)
         this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, midKey, this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true);

@@ -11,7 +11,7 @@ import { load, save, mission } from './save.js';
 import { sfx, setSound, setMusic, setMusicLevel, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, markIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { iapTag, showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
-import { track, logUser } from './log.js';
+import { track, logUser, trackOnce } from './log.js';
 import { GearTab } from './gearTab.js';
 import { inTossShell } from './safeArea.js';
 import { ContentTab } from './contentTab.js';
@@ -912,6 +912,7 @@ export class Lobby extends Phaser.Scene {
       // 대장장이 앞치마: 칼을 세 번 부수면
       if (sv.stats.destroyed >= 3 && grantEgg(sv, 'apron')) this.time.delayedCall(1800, () => toast(this, t('lobby.32ecbf'), '#ff8ae0'));
     }
+    trackOnce('funnel_first_enhance', { result: outcome, from: enh });   // 깔때기: 첫 강화
     track('enhance', { result: outcome, from: enh, tier: sv.tier, rate: D.ENH_RATE[enh] + (charm ? D.CHARM_RATE : 0), guard, charm, gold_cost: gold, gold_left: sv.gold, stone_left: sv.stone, queued: !!this.enhQ });
     mission('enh'); if (!win) mission('fail'); sv.tut.forge = true;
     save();

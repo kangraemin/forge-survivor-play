@@ -14,6 +14,7 @@ import { dexRefresh, dexState, DEX_HP, titleName } from './codex.js';
 import { t } from './i18n.js';
 import { petCard } from './petRoles.js';
 import { nextGoal } from './nextGoal.js';
+import { trackOnce } from './log.js';
 const R = Phaser.Math.Between;
 
 const { W, H } = D;
@@ -655,6 +656,10 @@ export class Overlay {
     const dexNew = dexRefresh(sv);
     save();
     if (dexNew > 0 && !s.bot) s.time.delayedCall(1200, () => toast(s, t('overlay.b6f158', { dexNew, v: Math.round(dexNew * DEX_HP * 1000) / 10 }), '#9ae0ff', s.cosCard ? 8 : 60));
+    if (win && first && !hard && !s.endless && !dun && !s.bot && !s.mode) {   // 깔때기: 1-1·1-3 첫 클리어(한 기기에 한 번)
+      if (idx === 0) trackOnce('funnel_clear_1_1', { t: Math.round(s.bt / 1000), power: D.powerOf(sv) });
+      if (idx === 2) trackOnce('funnel_clear_1_3', { t: Math.round(s.bt / 1000), power: D.powerOf(sv) });
+    }
     s.log('battle_end', { win, first, hard, dungeon: dun || 'none', progress: Math.round((win ? 1 : s.runProgress()) * 100), wave: s.wave, floors: s.endless ? floors : undefined, kills: r.kills, gold, stone, gem, power: D.powerOf(sv), rec: s.endless ? undefined : D.recPower(s.c, s.s), top_dmg: s.topHit(), revived: !!r.revived, cleared: sv.cleared, loot: loot.length, skills: Object.entries(r.skills).map(([k, v]) => k + v).join(',').slice(0, 100) });
     endBgm();
     sfx(win ? 'win' : 'fail');

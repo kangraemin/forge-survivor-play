@@ -9,6 +9,7 @@ import { Boot, buildAnims } from './Boot.js';
 import { installLazy } from './lazy.js';
 import { Lobby } from './Lobby.js';
 import { Battle } from './Battle.js';
+import { Prologue } from './Prologue.js';
 import { load } from './save.js';
 import { captureRef, deviceId } from './share.js';
 import { initSafeArea } from './safeArea.js';
@@ -34,7 +35,7 @@ const start = () => {
     physics: { default: 'arcade', arcade: { debug: false } },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { activePointers: 2 },
-    scene: [Boot, Lobby, Battle],
+    scene: [Boot, Lobby, Battle, Prologue],
   });
   installTextFit(window.game);   // 긴 번역 글자를 상자 안에 맞춘다(한국어는 아무 일도 안 한다)
   // 판이 화면보다 조금 크면 줄일 때 픽셀이 빠져 글자가 깨진다: 줄일 때는 매끄럽게

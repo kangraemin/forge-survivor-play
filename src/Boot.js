@@ -166,14 +166,20 @@ export class Boot extends Phaser.Scene {
   }
 
   // 처음 켠 사람(한 판도 안 함)은 로비를 건너뛰고 곧바로 1-1. 이동·자동 공격은 전투의 손가락 표시(dragHint)가 알려 준다. 나머지는 로비
+  // 처음 보는 사람은 그 앞에 프롤로그(Prologue.js, 약 1분)를 한 번 본다: 프롤로그 자체가 바로 플레이라 포털판도 시작 탭·로딩 흐름은 그대로다
+  // ?prologue로 다시 볼 수 있고(진행 저장이 있으면 끝나고 로비로), ?noprologue·?bot은 건너뛴다
   enter() {
-    const sv = load();
+    const sv = load(), q = new URLSearchParams(location.search), force = q.has('prologue');
     startBg(this.game, buildAnims, sv);   // 남은 그림은 첫 화면이 뜬 뒤 뒤에서 받는다
-    if (!isFirstRun(sv) || new URLSearchParams(location.search).has('lobby')) return this.scene.start('Lobby');
+    const first = isFirstRun(sv);
+    if (!force && (!first || q.has('lobby'))) return this.scene.start('Lobby');
+    const pro = force || (!sv.prologue && !q.has('bot') && !q.has('noprologue'));
     setSound(sv.sound); setMusicLevel(sv.musicLvl); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);   // 로비가 하던 소리 설정을 대신
     this.game.canvas.addEventListener('pointerdown', () => unlock(), { once: true });
-    const go = () => { primeAudio('battle', 0); track('first_run_direct'); this.scene.start('Battle', { chapter: 0, stage: 0 }); };
-    const q = new URLSearchParams(location.search);
+    const go = () => {
+      primeAudio(pro ? 'boss' : 'battle', 0); track('first_run_direct');   // 프롤로그 음악은 15장 마지막 보스 곡(boss.mp3)
+      this.scene.start(pro ? 'Prologue' : 'Battle', pro ? { replay: !first } : { chapter: 0, stage: 0 });
+    };
     if (q.has('bot') || q.has('nogate') || window.__FORGE_PORTAL === 'crazygames') return go();   // CrazyGames는 사이트에서 이미 클릭해 들어오므로 시작 탭 화면 없이 바로 전투(소리는 첫 터치에 켜진다)
     // 54차: 아이폰은 드래그로 끝난 터치로는 소리를 못 켠다(움직이지 않은 탭만). 첫 판이 곧바로 드래그 전투라 시작 탭을 한 번 받는다
     this.registry.set('tapGate', true);   // 포털 어댑터가 이걸 보고 loadingStop을 보낸다

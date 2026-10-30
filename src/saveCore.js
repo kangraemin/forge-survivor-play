@@ -7,7 +7,7 @@ export const KEY = 'forge-survivor-v1';
 export const BAK = [KEY + '.bak1', KEY + '.bak2'];   // 직전 저장 2개
 export const CORRUPT = KEY + '.corrupt';             // 읽지 못한 원본 문자열(지우지 않고 보관)
 // 저장 모양 버전. 저장 형식을 바꾸면 SCHEMA를 올리고 STEPS 끝에 한 단계를 더한다(앞 단계는 고치지 않는다)
-export const SCHEMA = 8;
+export const SCHEMA = 9;
 
 export const fresh = () => ({ schemaVersion: SCHEMA,
 
@@ -53,6 +53,7 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   inviteRewards: 0, inviteAck: null, inviteTotal: 0, invitePending: 0,
   lang: '',                // 고른 언어(빈 값 = 기기 언어로 자동). 7부터
   bagAuto: 'salvage',      // 가방이 꽉 찼을 때 자동 정리: 'salvage'(분해) | 'sell'(판매)
+  prologue: 0,             // 첫 실행 프롤로그를 봤나(9부터). 진행 기록이 있는 옛 저장은 변환에서 1로 채운다
 });
 
 // STEPS[i]: schemaVersion i -> i+1. 각 단계는 값을 지우지 않고 없는 것만 채우거나 옮긴다. 이미 한 변환은 플래그로 다시 하지 않는다
@@ -124,6 +125,11 @@ const STEPS = [
     for (let tr = (mem.tier | 0) + 1; tr < TIER_AT.length && (mem.cleared | 0) >= TIER_AT[tr]; tr++) back += markNeed(tr);
     const gift = Math.max(n, back);
     mem.mark += gift; mem.markGift += gift;
+  },
+  // 8 -> 9: 첫 실행 프롤로그 본 표시. 이미 진행한 저장(깬 판·한 판·장비·강화 중 하나라도)은 프롤로그를 건너뛰도록 1로 채운다. 그 밖의 값은 건드리지 않는다
+  mem => {
+    const played = (mem.cleared | 0) > 0 || (mem.stats?.runs | 0) > 0 || (mem.hardCleared | 0) > 0 || (mem.enh | 0) > 0 || (mem.tier | 0) > 0 || (Array.isArray(mem.inv) && mem.inv.length > 0);
+    mem.prologue = (mem.prologue | 0) || (played ? 1 : 0);
   },
 ];
 export class SaveError extends Error {}

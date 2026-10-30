@@ -195,6 +195,9 @@ export const BOSSES = {
   general: { name: t('battle.20631e'), sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
 };
 
+// 첫 실행 프롤로그에서 주인공을 쓰러뜨리는 보스 = 15장 마지막 보스(같은 이름·같은 그림). 15장 보스 데이터를 따라가므로 따로 맞출 일이 없다
+export const PROLOGUE_BOSS = CHAPTERS[14].boss;
+
 // 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다. 4~5장 벽이 너무 높아 조금 낮췄다
 // 6장부터는 장마다 REC_G배씩 오른다(무기 등급이 2장마다 오르므로 등급 한 칸 2.56배 = 장당 1.6배). 5장까지는 예전 그대로
 export const REC_G = 1.4;
