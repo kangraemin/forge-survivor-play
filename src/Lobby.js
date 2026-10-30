@@ -6,7 +6,7 @@ import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmeti
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
-import { sfx, setSound, setMusic, setVib, unlock, playBgm } from './sfx.js';
+import { sfx, setSound, setMusic, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
 import { track, logUser } from './log.js';
@@ -46,6 +46,7 @@ export class Lobby extends Phaser.Scene {
     setSound(sv.sound); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);
     this.input.once('pointerdown', () => { unlock(); playBgm('lobby'); });
     playBgm('lobby');
+    if (!sv.musicOff && sv.sound !== false) preloadBattleBgm();   // 1장 전투 곡을 로비에 있는 동안 받아 둔다
     // 1-1을 처음 깨고 오면 대장간으로 안내한다
     if (this.shopPage !== 'skin' && sv.cleared >= 1 && !sv.tut.forgeShown) { sv.tut.forgeShown = true; this.tab = 'forge'; save(); }
     // 어려움은 마왕을 잡은 뒤에만. 전투 탭이 보던 난이도를 기억한다

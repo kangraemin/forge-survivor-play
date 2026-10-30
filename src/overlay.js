@@ -5,7 +5,7 @@ import { cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 // 전투 위에 뜨는 창: 레벨업 3택, 스킬 상자, 웨이브 사이 상점, 일시정지, 결과
 import * as D from './data.js';
 import { save, mission } from './save.js';
-import { sfx, stopBgm } from './sfx.js';
+import { sfx, endBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
 import { itemName, SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, lastTidy, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW } from './gear.js';
@@ -656,7 +656,7 @@ export class Overlay {
     save();
     if (dexNew > 0 && !s.bot) s.time.delayedCall(1200, () => toast(s, t('overlay.b6f158', { dexNew, v: Math.round(dexNew * DEX_HP * 1000) / 10 }), '#9ae0ff', s.cosCard ? 8 : 60));
     s.log('battle_end', { win, first, hard, dungeon: dun || 'none', progress: Math.round((win ? 1 : s.runProgress()) * 100), wave: s.wave, floors: s.endless ? floors : undefined, kills: r.kills, gold, stone, gem, power: D.powerOf(sv), rec: s.endless ? undefined : D.recPower(s.c, s.s), top_dmg: s.topHit(), revived: !!r.revived, cleared: sv.cleared, loot: loot.length, skills: Object.entries(r.skills).map(([k, v]) => k + v).join(',').slice(0, 100) });
-    stopBgm();
+    endBgm();
     sfx(win ? 'win' : 'fail');
     // 열린 창이 있으면 닫고 결과만 띄운다
     if (this.c) { this.c.destroy(); this.c = null; this.open = null; }

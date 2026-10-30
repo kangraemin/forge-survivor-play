@@ -141,7 +141,9 @@ const BGM_FILES = {
   lobby: 'assets/bgm/lobby.mp3',
   battle: [[0, 2, 'assets/bgm/ch1_3.mp3']],   // [시작 장, 끝 장, 파일]
 };
-const BGM_VOL = 0.6;
+// 파일 음악 기본 음량(0~1). 효과음 최대치(master 0.35 x 톤 0.25~0.45 = 약 -16dB)보다 한 단계 아래로 둔다.
+// 두 곡 모두 평균 -17.8dB·최대 -3dB라 0.6이면 최대가 -7.6dB로 효과음보다 컸다 → 0.2(평균 -32dB·최대 -17dB, 절차 BGM과 비슷). 음량 설정이 생기면 여기에 곱한다
+const BGM_VOL = 0.2;
 function bgmFile(kind, chapter) {
   const f = BGM_FILES[kind];
   if (!f) return null;
@@ -151,14 +153,48 @@ function bgmFile(kind, chapter) {
 }
 let lingering = null;   // 막 멈추라고 했지만 아직 살아 있는 파일 음악
 const badFiles = new Set();   // 불러오기 실패한 파일(다시 시도하지 않고 절차 BGM으로)
-function stopEl(el) {
+// 서서히 줄이고 멈춘다(ms). file이 있으면 요소를 버리지 않고 멈춰서 보관한다 → 다시 틀 때 파일을 새로 받지 않는다
+function stopEl(el, ms = 300, file = null) {
   if (!el) return;
-  let v = el.volume;
-  const t = setInterval(() => { v -= 0.2; if (v <= 0.02) { clearInterval(t); try { el.pause(); el.removeAttribute('src'); el.load(); } catch { /* 무시 */ } } else { try { el.volume = v; } catch { /* 일부 기기는 음량 고정 */ } } }, 60);
+  const n = Math.max(1, Math.round(ms / 60)), v0 = el.volume; let i = 0;
+  const t = setInterval(() => {
+    i++;
+    if (i >= n) {
+      clearInterval(t);
+      try { el.pause(); if (file && !badFiles.has(file) && !preloaded[file]) { preloaded[file] = el; el.volume = BGM_VOL; } else { el.removeAttribute('src'); el.load(); } } catch { /* 무시 */ }
+    } else { try { el.volume = Math.max(0, v0 * (1 - i / n)); } catch { /* 일부 기기는 음량 고정 */ } }
+  }, 60);
 }
-function startFile(kind, chapter, file) {
-  const el = new Audio(file);
+function fadeIn(el, ms = 800) {
+  const n = Math.max(1, Math.round(ms / 60)); let i = 0;
+  try { el.volume = 0; } catch { return; }
+  const t = setInterval(() => { i++; try { el.volume = Math.min(BGM_VOL, BGM_VOL * i / n); } catch { /* 무시 */ } if (i >= n) clearInterval(t); }, 60);
+}
+// 미리 받아 둔 음악 요소(재생은 아직 안 함). 장면이 열리기 전에 파일을 받아 두면 틀 때 바로 나온다
+const preloaded = {};
+export function preloadBgm(file) {
+  if (!file || preloaded[file] || badFiles.has(file) || (bgm && bgm.file === file) || typeof Audio === 'undefined') return;
+  try { const el = new Audio(); el.preload = 'auto'; el.loop = true; el.src = file; el.load(); preloaded[file] = el; } catch { /* 무시 */ }
+}
+export const preloadBattleBgm = () => preloadBgm(bgmFile('battle', 0));
+// 게임이 열리자마자(로딩 화면부터) 로비 곡을 튼다. 같은 요소를 로비가 이어 쓴다. 자동재생이 막히면 첫 터치(wake)에서 튼다
+export function earlyBgm(enabled) {
+  musicOn = !!enabled;
+  if (!musicOn || bgm || typeof Audio === 'undefined') return;
+  const file = bgmFile('lobby', 0); if (!file) return;
+  const el = new Audio(); el.loop = true; el.preload = 'auto'; el.volume = BGM_VOL; el.muted = held; el.src = file;
+  const st = { kind: 'lobby', ch: 0, file, el };
+  el.addEventListener('error', () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); } });
+  bgm = st;
+  const p = el.play();
+  if (p && p.catch) p.catch(() => { /* 막힘: 첫 입력 때 wake가 다시 튼다 */ });
+}
+function startFile(kind, chapter, file, crossfade) {
+  const pre = preloaded[file]; delete preloaded[file];
+  const el = pre || new Audio(file);
+  if (pre) { try { pre.currentTime = 0; } catch { /* 무시 */ } }
   el.loop = true; el.preload = 'auto'; el.volume = BGM_VOL; el.muted = held;
+  if (crossfade) fadeIn(el);
   const st = { kind, ch: chapter, file, el };
   const fail = () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); playBgm(kind, chapter); } };
   el.addEventListener('error', fail);
@@ -198,8 +234,9 @@ export function playBgm(kind, chapter = 0) {
     if (bgm.el.paused) bgm.el.play().catch(() => {});
     return;
   }
-  if (lingering) { clearTimeout(lingering.dying); stopEl(lingering.el); lingering = null; }
-  if (file && !badFiles.has(file) && typeof Audio !== 'undefined') { startFile(kind, chapter, file); return; }
+  let cross = false;
+  if (lingering) { clearTimeout(lingering.dying); stopEl(lingering.el, 800, lingering.file); lingering = null; cross = true; }   // 다른 곡으로 바뀔 때: 이전 곡은 0.8초 페이드아웃, 새 곡은 페이드인
+  if (file && !badFiles.has(file) && typeof Audio !== 'undefined') { startFile(kind, chapter, file, cross); return; }
   startProc(kind, chapter);
 }
 function startProc(kind, chapter, blocked) {
@@ -239,11 +276,24 @@ export function stopBgm() {
   clearInterval(bgm.timer);
   if (bgm.el) {   // 파일 음악: 바로 끄지 않고 잠깐 둔다 — 화면이 바뀌며 같은 곡을 곧 다시 틀면 이어서 쓴다
     const st = bgm; bgm = null;
-    st.dying = setTimeout(() => { if (lingering === st) lingering = null; stopEl(st.el); }, 350);
+    st.dying = setTimeout(() => { if (lingering === st) lingering = null; stopEl(st.el, 300, st.file); }, 350);
     lingering = st; return;
   }
   const g = bgm.g;
-  try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setValueAtTime(g.gain.value, ctx.currentTime); g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3); } catch { /* 무시 */ }
-  setTimeout(() => g.disconnect(), 400);
+  try { g.gain.cancelScheduledValues(ctx.currentTime); g.gain.setValueAtTime(g.gain.value, ctx.currentTime); g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8); } catch { /* 무시 */ }
+  setTimeout(() => g.disconnect(), 900);
   bgm = null;
+}
+
+// 결과창: 파일 음악은 그대로 이어 튼다(같은 곡 묶음의 다음 판·재도전에서 끊기지 않게). 절차 BGM(보스·모드)만 서서히 끈다
+export function endBgm() { if (bgm && !bgm.el) stopBgm(); }
+// 장면을 떠날 때: 파일 음악은 끄지 않고 잠깐(4초) 둔다 → 다음 판이 같은 곡이면 이어서 쓰고, 다른 곡(로비)이면 playBgm이 0.8초 페이드로 바꾼다
+export function leaveBgm() {
+  if (!bgm) return;
+  if (!bgm.el) { stopBgm(); return; }
+  clearInterval(bgm.timer);
+  const st = bgm; bgm = null;
+  if (lingering && lingering !== st) { clearTimeout(lingering.dying); stopEl(lingering.el, 300, lingering.file); }
+  st.dying = setTimeout(() => { if (lingering === st) lingering = null; stopEl(st.el, 800, st.file); }, 4000);
+  lingering = st;
 }

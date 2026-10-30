@@ -1,7 +1,7 @@
 // 전투: 웨이브 생존, 자동 공격 스킬, 레벨업 3택, 웨이브 사이 상점, 궁극기, 보스
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
-import { sfx, playBgm, stopBgm, buzz } from './sfx.js';
+import { sfx, playBgm, stopBgm, leaveBgm, buzz } from './sfx.js';
 import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx, setBackdrop, clearBackdrop } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
@@ -163,7 +163,7 @@ export class Battle extends Phaser.Scene {
     if (this.c >= 8 && !this.endless && !this.dungeon && !this.isBoss) for (let i = 0; i < 5; i++) this.spawn(true, this.ch.mobs[0], { weak: 0.12, force: true, at: this.spawnPoint(55 + i * 8, 95 + i * 8) });
     for (let i = 0; i < total - first; i++) this.time.delayedCall(700 + i * (7000 / (total - first)), () => !this.over && this.spawn(false, null, { at: this.spawnPoint(250, 300) }));
     if (!this.bot) playBgm(this.mode ? 'mode' : 'battle', this.c);   // 모드 판은 파일 음악 없이 절차 BGM
-    this.events.once('shutdown', stopBgm);
+    this.events.once('shutdown', leaveBgm);
     // 앱을 내리거나 화면이 꺼지면 일시정지 창을 띄워 둔다(돌아왔을 때 이미 맞고 있지 않게)
     const onHide = () => { if (!this.over && !this.paused && !this.bot) this.ui.pauseMenu(); };
     this.game.events.on('hidden', onHide); this.events.once('shutdown', () => this.game.events.off('hidden', onHide));
