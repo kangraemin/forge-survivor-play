@@ -12,7 +12,7 @@ import { t, tt } from './i18n.js';
 import { load } from './save.js';
 import { track } from './log.js';
 import { isFirstRun } from './coach.js';
-import { setSound, setMusic, setMusicLevel, setVib, unlock } from './sfx.js';
+import { setSound, setMusic, setMusicLevel, setVib, unlock, primeAudio } from './sfx.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
@@ -147,8 +147,18 @@ export class Boot extends Phaser.Scene {
     if (!isFirstRun(sv) || new URLSearchParams(location.search).has('lobby')) return this.scene.start('Lobby');
     setSound(sv.sound); setMusicLevel(sv.musicLvl); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);   // 로비가 하던 소리 설정을 대신
     this.game.canvas.addEventListener('pointerdown', () => unlock(), { once: true });
-    track('first_run_direct');
-    this.scene.start('Battle', { chapter: 0, stage: 0 });
+    const go = () => { primeAudio('battle', 0); track('first_run_direct'); this.scene.start('Battle', { chapter: 0, stage: 0 }); };
+    const q = new URLSearchParams(location.search);
+    if (q.has('bot') || q.has('nogate')) return go();
+    // 54차: 아이폰은 드래그로 끝난 터치로는 소리를 못 켠다(움직이지 않은 탭만). 첫 판이 곧바로 드래그 전투라 시작 탭을 한 번 받는다
+    this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.6).setDepth(900);
+    const tip = this.add.text(W / 2, H / 2 + 40, tt('boot.7b30bf'), font(14, '#ffffff')).setOrigin(0.5).setDepth(901);
+    this.tweens.add({ targets: tip, alpha: 0.35, duration: 700, yoyo: true, repeat: -1 });
+    const up = p => {
+      if (Math.hypot(p.upX - p.downX, p.upY - p.downY) > 12) return;   // 끌었다 뗀 건 탭이 아니다
+      this.input.off('pointerup', up); go();
+    };
+    this.input.on('pointerup', up);
   }
 
   // 픽셀 단위로 직접 그리는 작은 그림들

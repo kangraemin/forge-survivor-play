@@ -182,11 +182,35 @@ function attachGain(el) {
   } catch { /* 연결 못 하면 요소 음량을 그대로 쓴다(데스크톱) */ }
 }
 // iOS: 컨텍스트가 running이 되기 전에 요소를 play하면 MediaElementSource 경로가 무음이 된다 → running 전이면 미뤄 두었다가 running이 될 때 튼다
+let inGesture = false;   // primeAudio가 탭 핸들러 안에서 도는 동안: 아이폰은 play도 그 안에서만 허락하므로 running 전이어도 바로 튼다
 function playEl(el) {
-  if (el._g && ctx && ctx.state !== 'running') { el._pend = true; return Promise.resolve(); }
-  el._pend = false; return el.play();
+  if (el._g && ctx && ctx.state !== 'running' && !inGesture) { el._pend = true; return Promise.resolve(); }
+  el._pend = false; if (el._g && ctx && ctx.state !== 'running') el._early = true;
+  const pp = el.play(); el._pp = pp; return pp;
 }
-function onCtxState() { if (ctx && ctx.state === 'running' && bgm && bgm.el && bgm.el._pend && musicOn) playEl(bgm.el).catch(() => {}); }
+function onCtxState() {
+  if (!ctx || ctx.state !== 'running' || !bgm || !bgm.el || !musicOn) return;
+  const el = bgm.el;
+  if (el._early) {   // running 전에 튼 요소는 무음일 수 있어, 재생 약속이 끝난 뒤 한 번 끊고 다시 튼다(약속 중에 끊으면 AbortError)
+    el._early = false;
+    Promise.resolve(el._pp).catch(() => {}).then(() => { if (bgm && bgm.el === el) { el.pause(); return playEl(el); } }).catch(() => {});
+    return;
+  }
+  if (el._pend || el.paused) playEl(el).catch(() => {});
+}
+// 시작 탭(드래그가 아닌 움직이지 않은 탭)의 핸들러 안에서 부른다: 컨텍스트 깨우기 + 무음 버퍼 1회 + 음악 시작을 같은 동기 호출 안에서 한다(iOS 언락 관용구)
+export function primeAudio(kind = 'battle', chapter = 0) {
+  const c = ac(); if (!c) return;
+  inGesture = true;
+  try {
+    c.resume();
+    const b = c.createBuffer(1, 1, 22050), src = c.createBufferSource(); src.buffer = b; src.connect(c.destination); src.start(0);
+    console.info('primeAudio: resume+unlock in gesture, state=' + c.state);
+    if (musicOn) { playBgm(kind, chapter); if (bgm && bgm.el && bgm.el.paused) playEl(bgm.el).catch(() => {}); }
+  } catch { /* 무시 */ }
+  inGesture = false;
+}
+export const audioRunning = () => !ctx || ctx.state === 'running';
 // 무음 감지: 틀고 2초 뒤 GainNode 출력이 계속 0이면 이 경로를 버리고 새 요소를 직접 출력으로 튼다(한 요소는 한 MediaElementSource만 된다)
 function watchSilence(st, tries = 0) {
   setTimeout(() => {
@@ -294,6 +318,7 @@ function startFile(kind, chapter, file, crossfade) {
   const p = playEl(el);
   if (p && p.catch) p.catch(e => {
     if (bgm !== st) return;
+    if (e && e.name === 'AbortError') return;   // 끊고 다시 트는 중
     if (e && e.name === 'NotAllowedError') { bgm = null; startProc(kind, chapter, st); }   // 자동재생 막힘: 절차 BGM으로 대신하다 다음 터치에 파일로 바꾼다
     else fail();
   });

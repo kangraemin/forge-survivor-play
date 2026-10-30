@@ -1,7 +1,7 @@
 // 전투: 웨이브 생존, 자동 공격 스킬, 레벨업 3택, 웨이브 사이 상점, 궁극기, 보스
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
-import { sfx, playBgm, stopBgm, leaveBgm, buzz } from './sfx.js';
+import { sfx, playBgm, stopBgm, leaveBgm, buzz, audioRunning } from './sfx.js';
 import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx, setBackdrop, clearBackdrop } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
@@ -168,6 +168,9 @@ export class Battle extends Phaser.Scene {
     // 앱을 내리거나 화면이 꺼지면 일시정지 창을 띄워 둔다(돌아왔을 때 이미 맞고 있지 않게)
     const onHide = () => { if (!this.over && !this.paused && !this.bot) this.ui.pauseMenu(); };
     this.game.events.on('hidden', onHide); this.events.once('shutdown', () => this.game.events.off('hidden', onHide));
+    // 54차: 앱을 갔다 왔는데 소리 컨텍스트가 안 깨어 있으면(아이폰은 움직이지 않은 탭에서만 깨운다) 일시정지 창을 띄워 그 안의 탭으로 깨운다
+    const onShow = () => setTimeout(() => { if (!this.over && !this.paused && !this.bot && !audioRunning()) this.ui.pauseMenu(); }, 700);
+    this.game.events.on('visible', onShow); this.events.once('shutdown', () => this.game.events.off('visible', onShow));
     if (sv.stats.runs < 2 && !this.bot && !this.practice) this.dragHint();
     if (this.practice) this.practiceStart();
     if (this.practice) { /* 연습장 안내는 practiceStart */ }
