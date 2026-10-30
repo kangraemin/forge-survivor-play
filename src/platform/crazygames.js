@@ -106,6 +106,12 @@ export async function init() {
     ready = true;
     try { sdk.game.loadingStart(); } catch { /* 무시 */ }
     window.forgePlatform.storage = makeStorage();
+    // 데이터 모듈 연결: 계정 저장이 비어 있고 이 기기에 진행이 있으면 옮겨 쓴다(읽기·쓰기를 첫 화면 전에 한 번 거친다). 기존 localStorage 진행은 그대로 둔다
+    try {
+      const K = 'forge-survivor-v1', st = window.forgePlatform.storage;
+      const remote = sdk.data.getItem(K), local = localStorage.getItem(K);
+      if (remote == null && local != null) st.setItem(K, local);
+    } catch { /* 무시 */ }
     // 소리: 사이트 설정이 꺼짐이면 게임 안 토글로 켤 수 없다
     try {
       muteSetting = !!sdk.game.settings?.muteAudio; applyAudio();

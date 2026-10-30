@@ -5,7 +5,8 @@ import './log.js';
 import { W, H } from './data.js';
 import { PX } from './ui.js';
 import { installTextFit } from './textfit.js';
-import { Boot } from './Boot.js';
+import { Boot, buildAnims } from './Boot.js';
+import { installLazy } from './lazy.js';
 import { Lobby } from './Lobby.js';
 import { Battle } from './Battle.js';
 import { load } from './save.js';
@@ -16,6 +17,7 @@ import { earlyBgm, setMusicLevel } from './sfx.js';
 // 로딩 화면부터 로비 곡을 튼다(음악을 꺼 둔 저장값이면 틀지 않는다). 로비가 같은 요소를 이어 쓴다
 try { const s0 = load(); setMusicLevel(s0.musicLvl); earlyBgm(!s0.musicOff && s0.sound !== false); } catch { /* 저장소 문제는 게임을 막지 않는다 */ }
 
+installLazy(Battle, Lobby, buildAnims);   // 첫 화면 밖 그림은 뒤에서 받고, 화면 시작 직전에 필요한 것만 기다린다
 const start = () => {
   initSafeArea();
   // 초대 링크(?ref=)는 첫 실행 때 한 번만 저장한다. 기기 식별값도 미리 받아 둔다(공유 버튼이 바로 열리게)

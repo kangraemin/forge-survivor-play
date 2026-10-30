@@ -13,6 +13,7 @@ import { load } from './save.js';
 import { track } from './log.js';
 import { isFirstRun } from './coach.js';
 import { HAVE } from './assetList.js';   // assets/ 맨 위 PNG 목록(tools/gen_asset_list.mjs). 없는 선택 그림은 요청하지 않아 404·'Missing resource'가 없다
+import { registerAssets, criticalKeys, startBg, quietDupes } from './lazy.js';
 import { setSound, setMusic, setMusicLevel, setVib, unlock, primeAudio } from './sfx.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
@@ -33,70 +34,45 @@ const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar'
 // 무기 그림 PNG(assets/weapon/<종류><등급>.png). 있으면 makeWeaponTextures가 건너뛴다
 const WEAPONS = ['sword', 'spear', 'axe', 'bow', 'gun', 'knuckle', 'staff'];
 
-export class Boot extends Phaser.Scene {
-  constructor() { super('Boot'); }
+function sheet(s, key, frames = 4) {
+  if (!s.textures.exists(key)) return null;
+  const img = s.textures.get(key).getSourceImage();
+  if (s.textures.exists(key + 's')) return key + 's';
+  s.textures.addSpriteSheet(key + 's', img, { frameWidth: Math.floor(img.width / frames), frameHeight: img.height });
+  return key + 's';
+}
 
-  init() { this.upd = startCheck(); }   // 버전 확인은 그림을 받는 동안 같이 돈다
-
-  preload() {
-    hiCam(this);
-    // 로딩 배경(맨 먼저 받아 깔고, 아래 막대·글자는 그 위에)
-    this.load.image('loading_bg', 'assets/loading_bg.png');
-    this.load.once('filecomplete-image-loading_bg', () => this.add.image(0, 0, 'loading_bg').setOrigin(0).setDisplaySize(W, H).setDepth(-10));
-    const bar = this.add.rectangle(W / 2 - 80, H / 2, 0, 6, 0xffd75e).setOrigin(0, 0.5);
-    this.add.rectangle(W / 2, H / 2, 164, 10).setStrokeStyle(1, 0x5b4f7a);
-    this.add.text(W / 2, H / 2 - 20, tt('boot.e414a2'), font(16, '#ffd75e')).setOrigin(0.5);
-    this.load.on('progress', v => { bar.width = 160 * v; });
-    this.load.on('loaderror', f => console.warn('missing asset', f.key));
-    for (const k of REQUIRED.concat(OPTIONAL.filter(k => HAVE.has(k)))) this.load.image(k, `assets/${k}.png`);
-    for (const [k, fw, fh] of MODE_SHEETS) this.load.spritesheet('ma_' + k, `assets/modes/${k}.png`, { frameWidth: fw, frameHeight: fh });   // 모드 그림(docs/modes_art.md)
-    for (const [k, fw, fh] of CH_SHEETS) this.load.spritesheet('ma_' + k, `assets/modes/${k}.png`, { frameWidth: fw, frameHeight: fh });   // 3~15장 장 테마 그림(파일이 없으면 도형으로)
-    for (const k of MODE_IMAGES) this.load.image('ma_' + k, `assets/modes/${k}.png`);
-    for (const k of ['hero2_r0', 'hero2_r1', 'hero_r1', 'hero_r2', 'hero2_r2']) this.load.image('hn_' + k, `assets/hn_${k}.png`);   // 검을 지운 전투용 주인공(검은 Battle이 단계별로 쥔다)
-    for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => this.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
-    for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) this.load.image(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`);
-    for (const it of CASH_PETS) { this.load.spritesheet(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`, { frameWidth: 28, frameHeight: 28 }); if (it.dir) this.load.spritesheet(`cos_${it.id}_slash`, `assets/${it.dir}/${it.id}_slash.png`, { frameWidth: 28, frameHeight: 28 }); }
-    loadPetRoles(this);
-    this.load.image('ban_ch16', 'assets/banner/chapter16_96.png'); this.load.image('ban_ch16_big', 'assets/banner/chapter16_150.png');
-    this.load.spritesheet('cos_fx','assets/cosmetics/fx.png', { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet('cos_fx2', 'assets/cosmetics2/fx.png', { frameWidth: 16, frameHeight: 16 });
-    for (const id of AURAS) this.load.spritesheet(`cos_aura_${id}`, `assets/cosmetics2/fx_${id}.png`, { frameWidth: 52, frameHeight: 52 });
-    loadFx2(this);
-    for (const k of LATE_IMAGES) this.load.image(k, `assets/ch16-18/${k}.png`);
-    for (const k of ICONS) this.load.image(k, `assets/icon/${k}.png`);
-    for (const id of WEAPONS) for (let t = 0; t < 10; t++) this.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
+// 몹 시트에 어두운 외곽선 한 겹을 굽는다(13장: 번개·피격 빛이 겹쳐 몹이 배경에 묻혔다). 프레임마다 따로 그려 이웃 프레임으로 번지지 않는다
+const outlined = new Set();
+function outline(s, key, frames = 4, color = '#0a0612') {
+  if (!s.textures.exists(key) || outlined.has(key)) return;
+  outlined.add(key);
+  const img = s.textures.get(key).getSourceImage(), fw = Math.floor(img.width / frames), fh = img.height;
+  const cv = document.createElement('canvas'); cv.width = img.width; cv.height = fh;
+  const cx = cv.getContext('2d'), tmp = document.createElement('canvas'), tc = tmp.getContext('2d');
+  tmp.width = fw; tmp.height = fh;
+  for (let f = 0; f < frames; f++) {
+    tc.globalCompositeOperation = 'source-over'; tc.clearRect(0, 0, fw, fh); tc.drawImage(img, f * fw, 0, fw, fh, 0, 0, fw, fh);
+    tc.globalCompositeOperation = 'source-in'; tc.fillStyle = color; tc.fillRect(0, 0, fw, fh);   // 같은 모양의 어두운 실루엣
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) cx.drawImage(tmp, f * fw + dx, dy);
+    cx.drawImage(img, f * fw, 0, fw, fh, f * fw, 0, fw, fh);
   }
+  s.textures.remove(key); s.textures.addCanvas(key, cv);
+}
 
-  sheet(key, frames = 4) {
-    if (!this.textures.exists(key)) return null;
-    const img = this.textures.get(key).getSourceImage();
-    if (this.textures.exists(key + 's')) return key + 's';
-    this.textures.addSpriteSheet(key + 's', img, { frameWidth: Math.floor(img.width / frames), frameHeight: img.height });
-    return key + 's';
-  }
 
-  // 몹 시트에 어두운 외곽선 한 겹을 굽는다(13장: 번개·피격 빛이 겹쳐 몹이 배경에 묻혔다). 프레임마다 따로 그려 이웃 프레임으로 번지지 않는다
-  outline(key, frames = 4, color = '#0a0612') {
-    if (!this.textures.exists(key)) return;
-    const img = this.textures.get(key).getSourceImage(), fw = Math.floor(img.width / frames), fh = img.height;
-    const cv = document.createElement('canvas'); cv.width = img.width; cv.height = fh;
-    const cx = cv.getContext('2d'), tmp = document.createElement('canvas'), tc = tmp.getContext('2d');
-    tmp.width = fw; tmp.height = fh;
-    for (let f = 0; f < frames; f++) {
-      tc.globalCompositeOperation = 'source-over'; tc.clearRect(0, 0, fw, fh); tc.drawImage(img, f * fw, 0, fw, fh, 0, 0, fw, fh);
-      tc.globalCompositeOperation = 'source-in'; tc.fillStyle = color; tc.fillRect(0, 0, fw, fh);   // 같은 모양의 어두운 실루엣
-      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) cx.drawImage(tmp, f * fw + dx, dy);
-      cx.drawImage(img, f * fw, 0, fw, fh, f * fw, 0, fw, fh);
-    }
-    this.textures.remove(key); this.textures.addCanvas(key, cv);
-  }
-
-  create() {
-    for (let r = 0; r < 3; r++) { this.outline('z13_r' + r); this.outline('z12_r' + r); }
-    const A = (key, sheet, rate, repeat = -1, frames) => sheet &&
-      this.anims.create({ key, frames: this.anims.generateFrameNumbers(sheet, frames ? { frames } : {}), frameRate: rate, repeat });
+export function buildAnims(s) {
+    for (let r = 0; r < 3; r++) { outline(s, 'z13_r' + r); outline(s, 'z12_r' + r); }
+    const T = k => (s.textures.exists(k) ? k : null);
+    // 이미 있는 애니메이션은 같은 그림이면 그대로 두고, 뒤늦게 받은 진짜 그림으로 바뀐 것만 다시 만든다(fallback 몹 -> 전용 그림)
+    const A = (key, sheetKey, rate, repeat = -1, frames) => {
+      if (!sheetKey) return;
+      const old = s.anims.get(key);
+      if (old) { if (old.frames[0]?.textureKey === sheetKey) return; s.anims.remove(key); }
+      s.anims.create({ key, frames: s.anims.generateFrameNumbers(sheetKey, frames ? { frames } : {}), frameRate: rate, repeat });
+    };
     // 전투 주인공은 검을 지운 시트(hn_)를 쓴다. 로비는 검이 그려진 원본 'idleL'
-    const hn = k => this.sheet('hn_' + k) || this.sheet(k);
+    const hn = k => sheet(s, 'hn_' + k) || sheet(s, k);
     A('walkFront', hn('hero2_r0'), 8);
     A('walkUp', hn('hero2_r1'), 8);
     A('walkSide', hn('hero_r1'), 8);
@@ -105,39 +81,85 @@ export class Boot extends Phaser.Scene {
     A('idle', pose, 2.5, -1, [2, 3]);
     A('hurtPose', pose, 1, 0, [0]);
     A('dashPose', pose, 1, 0, [1]);
-    A('idleL', this.sheet('hero2_r2'), 2.5, -1, [2, 3]);
-    A('fxSlash', this.sheet('fx1_r0'), 32, 0);
-    A('fxHit', this.sheet('fx1_r1'), 30, 0);
-    A('fxSmoke', this.sheet('fx1_r2'), 16, 0);
-    A('fxCrit', this.sheet('fx2_r0'), 22, 0);
-    A('fxSpin', this.sheet('fx2_r1'), 20, 0);
-    A('fxPillar', this.sheet('fx2_r2'), 10, 0);
-    makeFx2Anims(this);
-    for (let i = 0; i < 4; i++) this.sheet('icons_r' + i);
+    A('idleL', sheet(s, 'hero2_r2'), 2.5, -1, [2, 3]);
+    A('fxSlash', sheet(s, 'fx1_r0'), 32, 0);
+    A('fxHit', sheet(s, 'fx1_r1'), 30, 0);
+    A('fxSmoke', sheet(s, 'fx1_r2'), 16, 0);
+    A('fxCrit', sheet(s, 'fx2_r0'), 22, 0);
+    A('fxSpin', sheet(s, 'fx2_r1'), 20, 0);
+    A('fxPillar', sheet(s, 'fx2_r2'), 10, 0);
+    makeFx2Anims(s);
+    for (let i = 0; i < 4; i++) sheet(s, 'icons_r' + i);
 
     // 몬스터: 전용 그림이 없으면 1챕터 같은 줄 몬스터를 색만 바꿔 쓴다
-    const fallback = {};
+    const fallback = s.registry.get('fallback') || {};
     for (const [key, m] of Object.entries(MOBS)) {
-      let sh = this.sheet(`${m.sheet}_r${m.row}`);
-      if (!sh) { sh = this.sheet(`mob_r${m.row}`); fallback[key] = true; }
+      let sh = sheet(s, `${m.sheet}_r${m.row}`);
+      if (sh) delete fallback[key]; else { sh = sheet(s, `mob_r${m.row}`); fallback[key] = true; }
       A(key, sh, m.ai === 'swarm' ? 10 : m.ai === 'tank' ? 6 : 7);
-      if (m.lateCh) A(key + 'Atk', this.sheet(`${m.sheet}_r${m.row}_attack`), 9);   // 16~18장 몹의 공격 준비·발동 그림
+      if (m.lateCh) A(key + 'Atk', sheet(s, `${m.sheet}_r${m.row}_attack`), 9);   // 16~18장 몹의 공격 준비·발동 그림
       if (m.die !== undefined) {
-        const d = this.sheet('mob2_r' + m.die);
+        const d = sheet(s, 'mob2_r' + m.die);
         A(key + 'Hurt', d, 1, 0, [0]);
         A(key + 'Die', d, 14, 0, [0, 1, 2, 3]);
       }
     }
     for (const [key, b] of Object.entries(BOSSES)) {
-      let sh = this.sheet(`${b.sheet}_r${b.row}`, 2);
-      if (!sh) { sh = this.sheet('mob_r' + (b.row % 3)); fallback[key] = true; }
+      let sh = sheet(s, `${b.sheet}_r${b.row}`, 2);
+      if (sh) delete fallback[key]; else { sh = sheet(s, 'mob_r' + (b.row % 3)); fallback[key] = true; }
       A(key, sh, 3);
-      if (b.lateCh && !b.mid) A(key + 'Tele', this.sheet(`${b.sheet}_r${b.row}_telegraph`, 2), 5);   // 16~18장 보스의 패턴 예고 그림
+      if (b.lateCh && !b.mid) A(key + 'Tele', sheet(s, `${b.sheet}_r${b.row}_telegraph`, 2), 5);   // 16~18장 보스의 패턴 예고 그림
     }
-    for (const it of CASH_PETS) { A(`pet_${it.id}`, `cos_${it.id}`, 6); if (it.dir) A(`pet_${it.id}_slash`, `cos_${it.id}_slash`, 10, 0); }
-    makePetRoleAnims(this);
-    for (const id of AURAS) A(`aura_${id}`, `cos_aura_${id}`, 8);
-    this.registry.set('fallback', fallback);
+    for (const it of CASH_PETS) { A(`pet_${it.id}`, T(`cos_${it.id}`), 6); if (it.dir) A(`pet_${it.id}_slash`, T(`cos_${it.id}_slash`), 10, 0); }
+    makePetRoleAnims(s);
+    for (const id of AURAS) A(`aura_${id}`, T(`cos_aura_${id}`), 8);
+  s.registry.set('fallback', fallback);
+}
+
+export class Boot extends Phaser.Scene {
+  constructor() { super('Boot'); }
+
+  init() { this.upd = startCheck(); quietDupes(this.game); }   // 버전 확인은 그림을 받는 동안 같이 돈다
+
+  preload() {
+    hiCam(this);
+    // 로딩 배경(맨 먼저 받아 깔고, 아래 막대·글자는 그 위에)
+    this.load.image('loading_bg', 'assets/loading_bg.jpg');
+    this.load.once('filecomplete-image-loading_bg', () => this.add.image(0, 0, 'loading_bg').setOrigin(0).setDisplaySize(W, H).setDepth(-10));
+    const bar = this.add.rectangle(W / 2 - 80, H / 2, 0, 6, 0xffd75e).setOrigin(0, 0.5);
+    this.add.rectangle(W / 2, H / 2, 164, 10).setStrokeStyle(1, 0x5b4f7a);
+    this.add.text(W / 2, H / 2 - 20, tt('boot.e414a2'), font(16, '#ffd75e')).setOrigin(0.5);
+    this.load.on('progress', v => { bar.width = 160 * v; });
+    this.load.on('loaderror', f => console.warn('missing asset', f.key));
+    // 모든 그림을 목록으로 모은 뒤, 첫 화면에 꼭 필요한 것만 지금 받는다. 나머지는 로비·전투가 열린 뒤 뒤에서 받는다(lazy.js)
+    const rec = [], S = { load: {
+      image: (k, u) => rec.push(['image', k, u]),
+      spritesheet: (k, u, c) => rec.push(['spritesheet', k, u, c]),
+    } };
+    for (const k of REQUIRED.concat(OPTIONAL.filter(k => HAVE.has(k)))) S.load.image(k, `assets/${k}.png`);
+    for (const [k, fw, fh] of MODE_SHEETS) S.load.spritesheet('ma_' + k, `assets/modes/${k}.png`, { frameWidth: fw, frameHeight: fh });   // 모드 그림(docs/modes_art.md)
+    for (const [k, fw, fh] of CH_SHEETS) S.load.spritesheet('ma_' + k, `assets/modes/${k}.png`, { frameWidth: fw, frameHeight: fh });   // 3~15장 장 테마 그림(파일이 없으면 도형으로)
+    for (const k of MODE_IMAGES) S.load.image('ma_' + k, `assets/modes/${k}.png`);
+    for (const k of ['hero2_r0', 'hero2_r1', 'hero_r1', 'hero_r2', 'hero2_r2']) S.load.image('hn_' + k, `assets/hn_${k}.png`);   // 검을 지운 전투용 주인공(검은 Battle이 단계별로 쥔다)
+    for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => S.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
+    for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) S.load.image(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`);
+    for (const it of CASH_PETS) { S.load.spritesheet(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`, { frameWidth: 28, frameHeight: 28 }); if (it.dir) S.load.spritesheet(`cos_${it.id}_slash`, `assets/${it.dir}/${it.id}_slash.png`, { frameWidth: 28, frameHeight: 28 }); }
+    loadPetRoles(S);
+    S.load.image('ban_ch16', 'assets/banner/chapter16_96.png'); S.load.image('ban_ch16_big', 'assets/banner/chapter16_150.png');
+    S.load.spritesheet('cos_fx','assets/cosmetics/fx.png', { frameWidth: 16, frameHeight: 16 });
+    S.load.spritesheet('cos_fx2', 'assets/cosmetics2/fx.png', { frameWidth: 16, frameHeight: 16 });
+    for (const id of AURAS) S.load.spritesheet(`cos_aura_${id}`, `assets/cosmetics2/fx_${id}.png`, { frameWidth: 52, frameHeight: 52 });
+    loadFx2(S);
+    for (const k of LATE_IMAGES) S.load.image(k, `assets/ch16-18/${k}.png`);
+    for (const k of ICONS) S.load.image(k, `assets/icon/${k}.png`);
+    for (const id of WEAPONS) for (let t = 0; t < 10; t++) S.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
+    registerAssets(rec);
+    const need = criticalKeys(load(), { REQUIRED, ICONS });
+    for (const [t, k, u, c] of rec) if (need(k)) (t === 'image' ? this.load.image(k, u) : this.load.spritesheet(k, u, c));
+  }
+
+  create() {
+    buildAnims(this);
     this.makeTextures();
     updateGate(this, this.upd).then(async go => { if (go && !(await bootSync().catch(() => false))) this.enter(); });   // 서버 저장이 이 기기보다 앞서면 받아서 화면을 다시 불러온다   // 강제 업데이트면 여기서 멈춘다
   }
@@ -145,12 +167,13 @@ export class Boot extends Phaser.Scene {
   // 처음 켠 사람(한 판도 안 함)은 로비를 건너뛰고 곧바로 1-1. 이동·자동 공격은 전투의 손가락 표시(dragHint)가 알려 준다. 나머지는 로비
   enter() {
     const sv = load();
+    startBg(this.game, buildAnims, sv);   // 남은 그림은 첫 화면이 뜬 뒤 뒤에서 받는다
     if (!isFirstRun(sv) || new URLSearchParams(location.search).has('lobby')) return this.scene.start('Lobby');
     setSound(sv.sound); setMusicLevel(sv.musicLvl); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);   // 로비가 하던 소리 설정을 대신
     this.game.canvas.addEventListener('pointerdown', () => unlock(), { once: true });
     const go = () => { primeAudio('battle', 0); track('first_run_direct'); this.scene.start('Battle', { chapter: 0, stage: 0 }); };
     const q = new URLSearchParams(location.search);
-    if (q.has('bot') || q.has('nogate')) return go();
+    if (q.has('bot') || q.has('nogate') || window.__FORGE_PORTAL === 'crazygames') return go();   // CrazyGames는 사이트에서 이미 클릭해 들어오므로 시작 탭 화면 없이 바로 전투(소리는 첫 터치에 켜진다)
     // 54차: 아이폰은 드래그로 끝난 터치로는 소리를 못 켠다(움직이지 않은 탭만). 첫 판이 곧바로 드래그 전투라 시작 탭을 한 번 받는다
     this.registry.set('tapGate', true);   // 포털 어댑터가 이걸 보고 loadingStop을 보낸다
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.6).setDepth(900);
