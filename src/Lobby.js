@@ -3,7 +3,7 @@ import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, unlock, playBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon } from './ui.js';
-import { showAd, buy, grant, giveText, adsLeft, won, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, dayKey } from './shop.js';
+import { showAd, buy, grant, giveText, adsLeft, adsDaily, won, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, dayKey } from './shop.js';
 import { track, logUser } from './log.js';
 import { GearTab } from './gearTab.js';
 import { ContentTab } from './contentTab.js';
@@ -110,7 +110,7 @@ export class Lobby extends Phaser.Scene {
       // 위: 오늘 / 이번 주 두 칸
       [['day', '오늘의 임무'], ['week', '이번 주 도전']].forEach(([id, name], i) => {
         const x = 74 + i * 92, on = this.misPage === id;
-        body.add(this.add.text(x, 80, name, font(on ? 13 : 11, on ? '#ffd75e' : '#8a80a0')).setOrigin(0.5));
+        body.add(this.add.text(x, 80, name, font(on ? 13 : 11, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5));
         if (on) body.add(this.add.rectangle(x, 92, 70, 2, 0xffd75e));
         if (id === 'week' && this.weeklyReady()) body.add(this.add.circle(x + 44, 74, 3.5, 0xff3a3a));
         const hit = this.add.rectangle(x, 80, 92, 24, 0, 0).setInteractive({ useHandCursor: true });
@@ -143,7 +143,7 @@ export class Lobby extends Phaser.Scene {
       D.LOGIN_REWARDS.map(scaled).forEach((g, i) => {
         const x = W / 2 + (i - 3) * 31, y = 324, past = i < day || (i === day && sv.loginGot), today = i === day;
         body.add(this.add.rectangle(x, y, 28, 50, today ? 0x3b2f5c : 0x15111f).setStrokeStyle(1, today ? 0xffd75e : 0x293845));
-        body.add(this.add.text(x, y - 16, `${i + 1}일`, font9(10, today ? '#ffd75e' : '#8a80a0')).setOrigin(0.5).setPadding(0, 2));
+        body.add(this.add.text(x, y - 16, `${i + 1}일`, font9(10, today ? '#ffd75e' : '#7d8f94')).setOrigin(0.5).setPadding(0, 2));
         const [k, v] = Object.entries(g)[0];
         body.add(k === 'gem' ? gemIcon(this, x, y - 3, 12) : icon(this, x, y - 3, { goldStage: 12, stone: 13, guard: 11, sweep: 15 }[k], 14));
         body.add(this.add.text(x, y + 10, k === 'goldStage' ? fmt(Math.round(D.dunBase(sv).gold * v)) : String(v), font9(10, '#ffffff')).setOrigin(0.5));
@@ -180,7 +180,7 @@ export class Lobby extends Phaser.Scene {
       c.add(icon(this, x, 214, ic, 26));
       const t = this.add.text(x, 242, '+' + fmt(v), font(13, col)).setOrigin(0.5); c.add(t); tx.push(t);
     });
-    c.add(gem ? this.add.text(W / 2, 268, `오래 기다렸다! 보석 +${gem}`, font(10, '#ff9ad0')).setOrigin(0.5) : this.add.text(W / 2, 268, `최대 ${D.IDLE.capH}시간까지 쌓인다`, font9(9, '#8a80a0')).setOrigin(0.5));
+    c.add(gem ? this.add.text(W / 2, 268, `오래 기다렸다! 보석 +${gem}`, font(10, '#ff9ad0')).setOrigin(0.5) : this.add.text(W / 2, 268, `최대 ${D.IDLE.capH}시간까지 쌓인다`, font9(9, '#7d8f94')).setOrigin(0.5));
     if (adsLeft(sv, 'double') > 0) {
       const db = button(this, W / 2, 296, 180, 24, sv.noAds ? '2배 받기' : '광고 보고 2배 ▶', async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
@@ -272,13 +272,24 @@ export class Lobby extends Phaser.Scene {
       const bell = this.add.image(W - 40, 17, 'bell').setDepth(51).setInteractive({ useHandCursor: true });
       bell.on('pointerup', () => { if (this.busy) return; sfx('click'); track('bell_tap'); this.missionWin(); });
       this.bellDot = this.add.circle(W - 32, 10, 3, 0xed786f).setDepth(52);
+      // 점만으론 무슨 알림인지 모른다(42차): 종 아래에 한 줄로 뭘 받는지 작게 보여 준다
+      this.bellHint = this.add.text(W - 8, 31, '', font(8, '#ffd75e', 2)).setOrigin(1, 0.5).setDepth(52);
     }
     // 소리 켜고 끄기
     const snd = this.add.text(W - 8, 17, sv.sound ? '♪' : '×', font(13)).setOrigin(1, 0.5).setDepth(51).setInteractive({ useHandCursor: true });
     snd.on('pointerup', () => { sv.sound = !sv.sound; track('sound_toggle', { on: sv.sound }); setSound(sv.sound); snd.setText(sv.sound ? '♪' : '×'); save(); sfx('click'); if (sv.sound) playBgm('lobby'); });
     this.refreshTop();
   }
-  refreshTop() { this.topTxt.forEach(t => t.setText(t.get())); this.bellDot?.setVisible(this.missionReady() > 0); }
+  refreshTop() { this.topTxt.forEach(t => t.setText(t.get())); this.bellDot?.setVisible(this.missionReady() > 0); this.bellHint?.setText(this.bellText()); }
+  // 받을 것이 하나뿐이면 이름, 여럿이면 개수. 없으면 빈 글
+  bellText() {
+    const sv = this.sv, n = D.MISSIONS.filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length;
+    const all = D.MISSIONS.every(m => sv.misGot[m.id]) && !sv.misGot.all, wk = this.weeklyReady(), lg = sv.loginGot ? 0 : 1;
+    const kinds = (n + (all ? 1 : 0) > 0) + (wk > 0) + lg;
+    if (!kinds) return '';
+    if (kinds > 1) return `보상 ${n + (all ? 1 : 0) + wk + lg}개`;
+    return lg ? '출석 보상' : wk ? `주간 보상 ${wk}개` : `임무 보상 ${n + (all ? 1 : 0)}개`;
+  }
   bump(i) { const t = this.topTxt[i]; this.tweens.add({ targets: t, scale: 1.3, duration: 90, yoyo: true }); }
 
   makeTabs() {
@@ -407,7 +418,7 @@ export class Lobby extends Phaser.Scene {
       const t = this.add.text(24, 328, '대장간에서 강화하면 깰 수 있다  ▶', font(10, '#ffb070')).setInteractive({ useHandCursor: true });
       t.on('pointerup', () => { sfx('click'); track('to_forge_click', { from: 'battle_tab', power: atk, rec, stage: `${c + 1}-${s + 1}` }); this.show('forge'); });
       b.add(t);
-    } else b.add(this.add.text(24, 328, done ? '깬 곳이다. 소탕으로 빠르게 모을 수 있다' : '이길 만하다', font9(10, '#8a80a0')));
+    } else b.add(this.add.text(24, 328, done ? '깬 곳이다. 소탕으로 빠르게 모을 수 있다' : '이길 만하다', font9(10, '#7d8f94')));
     // 보상: 아이콘 + 숫자
     b.add(this.add.rectangle(W / 2, 344, W - 48, 1, 0x2e2740));
     b.add(this.add.text(24, 352, done ? '보상' : '첫 보상', font9(10, '#a1b2b6')));
@@ -487,20 +498,31 @@ export class Lobby extends Phaser.Scene {
   }
 
   // ── 대장간 탭 ──
-  // 강화 단계마다 칼 모습이 달라진다: +5 푸른 빛, +10 불티, +15 보랏빛 룬이 칼 둘레를 돈다
+  // 강화 단계마다 칼 모습이 달라진다(42차): +5 푸른 빛, +10 불티·주황 테, +15 보랏빛 룬, +20 금백 광채·빛기둥
+  // 구간 번호(0~4): 크기·빛·테두리·이펙트를 구간마다 한 단계씩 키운다
+  static stageOf(enh) { return enh >= 20 ? 4 : enh >= 15 ? 3 : enh >= 10 ? 2 : enh >= 5 ? 1 : 0; }
   swordAura(enh) {
-    const b = this.body, sw = this.sword, col = enh >= 15 ? 0xd06bff : enh >= 10 ? 0xff8a2a : 0x5fc8ff;
-    if (enh < 5) return;
-    sw.preFX?.addGlow(col, enh >= 15 ? 6 : enh >= 10 ? 5 : 3, 0, false, 0.1, 12);
-    const ring = this.add.image(W / 2, 168, 'disc').setScale(1.1).setTint(col).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD);
+    const b = this.body, sw = this.sword, st = Lobby.stageOf(enh);
+    const col = [0, 0x5fc8ff, 0xff8a2a, 0xd06bff, 0xfff2b0][st];
+    if (st < 1) return;
+    sw.preFX?.addGlow(col, [0, 3, 5, 7, 9][st], 0, false, 0.1, 12);
+    // 모서리 괄호 테두리: 직각·1px, 구간이 오를수록 커지고 밝아진다
+    const hw = [0, 46, 54, 62, 70][st], hh = hw - 2, cl = [0, 8, 10, 13, 16][st], fr = this.add.graphics();
+    fr.lineStyle(st >= 3 ? 2 : 1, col, 0.9);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
+      const x = W / 2 + sx * hw, y = 168 + sy * hh;
+      fr.lineBetween(x, y, x - sx * cl, y); fr.lineBetween(x, y, x, y - sy * cl);
+    });
+    b.addAt(fr, 0);
+    const ring = this.add.image(W / 2, 168, 'disc').setScale(1.1 + st * 0.15).setTint(col).setAlpha(0.2 + st * 0.06).setBlendMode(Phaser.BlendModes.ADD);
     b.addAt(ring, 0);
-    this.tweens.add({ targets: ring, scale: 1.35, alpha: 0.12, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    if (enh >= 10) for (let i = 0; i < 7; i++) {
-      const e = this.add.circle(W / 2 + R(-22, 22), 200, R(1, 2), i % 2 ? 0xffd75e : 0xff7a2a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
+    this.tweens.add({ targets: ring, scale: ring.scale + 0.25, alpha: 0.1, duration: 800 - st * 100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    if (st >= 2) for (let i = 0; i < (st >= 4 ? 16 : st >= 3 ? 11 : 6); i++) {
+      const e = this.add.circle(W / 2 + R(-24, 24), 205, R(1, st >= 4 ? 3 : 2), st >= 4 ? 0xfff2b0 : i % 2 ? 0xffd75e : 0xff7a2a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
       b.add(e);
-      this.tweens.add({ targets: e, y: R(118, 140), x: e.x + R(-10, 10), alpha: { from: 0.9, to: 0 }, duration: R(900, 1400), delay: i * 180, repeat: -1 });
+      this.tweens.add({ targets: e, y: R(110, 140), x: e.x + R(-10, 10), alpha: { from: 0.9, to: 0 }, duration: R(900, 1400), delay: i * 130, repeat: -1 });
     }
-    if (enh >= 15) {
+    if (st >= 3) {
       const rc = this.add.container(W / 2, 168);
       for (let i = 0; i < 6; i++) {
         const a = i * Math.PI / 3;
@@ -508,6 +530,19 @@ export class Lobby extends Phaser.Scene {
       }
       b.add(rc);
       this.tweens.add({ targets: rc, angle: 360, duration: 6000, repeat: -1 });
+    }
+    if (st >= 4) {
+      // 바깥 룬 고리는 반대로 돌고, 칼 뒤로 빛기둥이 선다
+      const rc2 = this.add.container(W / 2, 168);
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        rc2.add(this.add.rectangle(Math.cos(a) * 60, Math.sin(a) * 60, 4, 4, 0xfff2b0).setAngle(45).setBlendMode(Phaser.BlendModes.ADD));
+      }
+      b.add(rc2);
+      this.tweens.add({ targets: rc2, angle: -360, duration: 9000, repeat: -1 });
+      const beam = this.add.rectangle(W / 2, 168, 26, 150, 0xfff2b0, 0.16).setBlendMode(Phaser.BlendModes.ADD);
+      b.addAt(beam, 0);
+      this.tweens.add({ targets: beam, alpha: 0.06, duration: 900, yoyo: true, repeat: -1 });
     }
   }
 
@@ -539,11 +574,11 @@ export class Lobby extends Phaser.Scene {
       b.add(this.awakeTxt);
     }
     // 모루 위의 칼
-    const halo = this.halo = this.add.image(W / 2, 170, 'disc').setScale(1.6).setTint(enh >= 10 ? 0xffd75e : 0x9ad8ff).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD);
+    const stg = Lobby.stageOf(enh), halo = this.halo = this.add.image(W / 2, 170, 'disc').setScale(1.6 + stg * 0.2).setTint([0x9ad8ff, 0x7fd0ff, 0xffb060, 0xd890ff, 0xfff2b0][stg]).setAlpha(0.3 + stg * 0.07).setBlendMode(Phaser.BlendModes.ADD);
     // 강화할수록 칼이 커지고 빛깔이 물든다(+5 푸른, +10 주황, +15 보라). 그림은 든 무기 종류를 따른다
     const wid = wtypeOf(sv).id;
-    this.sword = weaponIcon(this, W / 2, 168, wid, sv.tier, 72 * (1 + Math.min(enh, 20) * 0.012));
-    const et = enh >= 15 ? 0xf0c0ff : enh >= 10 ? 0xffc088 : enh >= 5 ? 0xb8e4ff : 0;
+    this.sword = weaponIcon(this, W / 2, 168, wid, sv.tier, 72 * [1, 1.1, 1.22, 1.36, 1.5][stg] * (1 + (enh % 5) * 0.01));
+    const et = enh >= 20 ? 0xfff4c8 : enh >= 15 ? 0xf0c0ff : enh >= 10 ? 0xffc088 : enh >= 5 ? 0xb8e4ff : 0;
     // 룬 등급 색(t.tint)은 검 시트 그림용: 다른 종류는 등급 색을 그림에 이미 칠해 뒀다
     if (t.tint && wid === 'sword') this.sword.setTint?.(t.tint); else if (et) this.sword.setTint?.(et);
     this.tweens.add({ targets: this.sword, y: 162, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
@@ -825,7 +860,7 @@ export class Lobby extends Phaser.Scene {
     const sv = this.sv, b = this.body, page = this.skinTab ||= 'blade';
     [['blade', '칼빛'], ['hero', '영웅'], ['weapon', '무기']].forEach(([id, name], i) => {
       const x = 50 + i * 85, on = page === id;
-      b.add(this.add.text(x, 84, name, font(11, on ? '#ffffff' : '#8a80a0')).setOrigin(0.5));
+      b.add(this.add.text(x, 84, name, font(11, on ? '#ffffff' : '#7d8f94')).setOrigin(0.5));
       if (on) b.add(this.add.rectangle(x, 95, 50, 2, 0xffffff));
       const hit = this.add.rectangle(x, 86, 80, 22, 0, 0).setInteractive({ useHandCursor: true });
       hit.on('pointerup', () => { if (this.busy) return; this.skinTab = id; sfx('click'); this.show('shop'); });
@@ -980,7 +1015,7 @@ export class Lobby extends Phaser.Scene {
       return;
     }
     b.add(this.add.text(16, 262, '큰 꾸러미', font(12, '#ffb050')));
-    b.add(this.add.text(W - 16, 265, '보석 첫 구매 2배와 따로', font9(9, '#8a80a0')).setOrigin(1, 0));
+    b.add(this.add.text(W - 16, 265, '보석 첫 구매 2배와 따로', font9(9, '#7d8f94')).setOrigin(1, 0));
     D.BIG_PACKS.forEach((it, i) => {
       const y = 280 + i * 70, sold = soldOut(sv, it);
       b.add(panel(this, 12, y, W - 24, 66, { line: sold ? COLOR.line : 0xffb050 }));
@@ -1033,7 +1068,7 @@ export class Lobby extends Phaser.Scene {
         const y = 296 + i * 40, left = adsLeft(sv, k);
         b.add(panel(this, 16, y - 18, W - 32, 36));
         b.add(this.add.text(28, y - 14, ad.name, font(11)));
-        b.add(this.add.text(28, y + 1, left ? `오늘 ${left}번 더 받을 수 있다` : '오늘은 다 받았다', font9(10, left ? '#a1b2b6' : '#8a80a0')));
+        b.add(this.add.text(28, y + 1, left ? (adsDaily(sv, k) > ad.daily ? `첫 7일 하루 ${adsDaily(sv, k)}번 · ${left}번 남음` : `오늘 ${left}번 더 받을 수 있다`) : '오늘은 다 받았다', font9(10, left ? '#a1b2b6' : '#7d8f94')));
         const bt = button(this, W - 52, y, 64, 24, !left ? '내일' : sv.noAds ? '받기' : '보기 ▶', async () => {
           if (this.busy || adsLeft(sv, k) <= 0) return;
           this.busy = true;

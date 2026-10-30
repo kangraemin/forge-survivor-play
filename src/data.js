@@ -61,7 +61,7 @@ export const RUN_MODS = [
 ];
 export const RUN_MOD_CHANCE = 0.6;
 // x-2는 판 규칙이 정해져 있다(장마다 돌아가며). 다시 할 땐 위 확률로 다른 규칙이 섞인다
-export const stageMod = c => RUN_MODS[[0, 2, 1, 0, 2][c % 5]];
+export const stageMod = c => RUN_MODS[[2, 0, 1, 0, 2][c % 5]];   // 1-2는 질풍: 1-1 다음 판이 바로 1-2라 첫 규칙이 여기서 보여야 한다(41차)
 
 // 보스: sheet/row는 2프레임 시트. hp는 1챕터 배율 기준 값(챕터 배율이 곱해진다)
 // rage: 체력 절반 아래에서 새로 섞여 나오는 공격(같은 패턴만 반복된다는 평가)
@@ -229,7 +229,7 @@ export const SHOP_ITEMS = [
   { id: 'mana', name: '마나 수정', icon: 13, price: 20, desc: '궁극기 게이지 가득' },
   { id: 'magnet', name: '탐욕의 동전', icon: 12, price: 16, desc: '이번 판 줍는 거리 +25%' },
 ];
-export const SHOP_SLOTS = 4;
+export const SHOP_SLOTS = 3;   // 장비 1 + 나머지 2(4칸은 90초 판이 자꾸 끊겼다)(42차)
 // 상인이 파는 장비 기본가(일반·희귀·영웅·전설). 장비 칸은 매번 하나 나온다
 export const SHOP_GEAR_PRICE = [18, 30, 56, 98];   // 영구 장비라도 물약(18~22)과 견줘 비싸 보였다
 export const shopPrice = (base, round) => Math.floor((base + round * 3) * (1 + 0.1 * round));
@@ -346,7 +346,8 @@ export const GEM_SHOP = [
 ];
 // 보상형 광고: 하루 횟수 제한
 export const ADS = {
-  gem: { name: '보석 +20', daily: 3, give: { gem: 20 } },   // 하루 60: 월정액(하루 80)보다 적게 두되 볼 맛은 나게(39차: +10은 볼 이유가 없다)
+  // 하루 60: 월정액(하루 80)보다 적게 두되 볼 맛은 나게(39차: +10은 볼 이유가 없다). early: 처음 7일은 하루 5번(40차)
+  gem: { name: '보석 +20', daily: 3, early: 5, give: { gem: 20 } },
   sweep: { name: '소탕권 +2', daily: 2, give: { sweep: 2 } },
   double: { daily: 10 },   // 클리어 보상 2배
 };

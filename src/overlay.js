@@ -4,7 +4,7 @@ import { save, mission } from './save.js';
 import { sfx, stopBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
-import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW, SETS } from './gear.js';
+import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW } from './gear.js';
 import { itemBox } from './gearTab.js';
 import { dexRefresh, DEX_HP } from './codex.js';
 
@@ -117,6 +117,8 @@ export class Overlay {
     c.add(s.add.text(W / 2, 100, `레벨 ${s.run.lv}`, font(18, '#ffffff')).setOrigin(0.5));
     // 처음 하는 사람에게는 같은 자리에서 고르는 법을 알려 준다(카드와 겹치지 않게)
     const firstLv = s.sv.stats.runs <= 1 && s.run.lv === 2;
+    // 추천 딱지는 처음 3번의 레벨업까지 남긴다(첫 장만 보고 나머지는 못 고른다는 평가)(42차)
+    const recLv = s.sv.stats.runs <= 1 && s.run.lv <= 4;
     c.add(s.add.text(W / 2, 122, firstLv ? '▼ 아래 카드 하나를 눌러 고르세요' : '스킬 하나를 고르세요', font9(11, firstLv ? '#ffffff' : '#a1b2b6')).setOrigin(0.5));
     const cards = s.add.container(0, 0); c.add(cards);
     // 다시 뽑기와 헷갈렸다: 카드의 '빼기'는 그 카드만 바꾼다고 짧게 적는다(긴 설명은 화면 밖으로 넘쳤다)
@@ -144,8 +146,10 @@ export class Overlay {
       banTxt.setText('');
       const glow = s.add.rectangle(W / 2, 172, 236, 76).setStrokeStyle(2, 0xffffff).setAlpha(0); c.add(glow);
       s.tweens.add({ targets: glow, alpha: 1, duration: 350, yoyo: true, repeat: -1, delay: 300 });
-      // 세 장이 다 새 스킬이라 뭘 골라야 할지 몰랐다: 첫 장에 '추천'
-      c.add(s.add.text(W / 2 + 100, 140, '추천', font(9, '#ffffff')).setOrigin(0.5).setBackgroundColor('#2f7a3a').setPadding(3, 1, 3, 1));
+    }
+    // 세 장이 다 새 스킬이라 뭘 골라야 할지 몰랐다: 첫 장에 '추천'
+    if (recLv) {
+      c.add(s.add.text(W / 2 - 94, 139, '추천', font(9, '#ffffff')).setOrigin(0.5).setBackgroundColor('#2f7a3a').setPadding(3, 1, 3, 1));
     }
     // 무료 → 은화 → 은화가 모자라면 보석
     const label = () => r.freeReroll > 0 ? '3장 모두 다시 뽑기 (무료)' : r.silver >= this.lvReroll() ? `3장 모두 다시 뽑기 · 은화 ${this.lvReroll()}` : `3장 모두 다시 뽑기 · 보석 ${D.REROLL_GEM}`;
@@ -342,7 +346,7 @@ export class Overlay {
     const round = r.shopRound;
     s.log('run_shop_open', { round, silver: r.silver });
     let rerolls = 0;
-    c.add(panel(s, 10, 60, W - 20, 380, { fill: 0x1a1426 }));
+    c.add(panel(s, 10, 60, W - 20, 358, { fill: 0x1a1426 }));   // 3칸 가로 카드라 창이 짧아졌다(42차)
     c.add(s.add.text(W / 2, 78, '떠돌이 상인', font(15, '#ffd75e')).setOrigin(0.5));
     c.add(s.add.text(W / 2, 96, '은화는 판이 끝나면 사라진다', font9(10, '#a1b2b6')).setOrigin(0.5));
     const silverTxt = s.add.text(W / 2, 116, '', font(12, '#e8eef8')).setOrigin(0.5); c.add(silverTxt);
@@ -354,24 +358,25 @@ export class Overlay {
     // 한 칸은 늘 장비다(세트가 잘 나온다). 나머지 세 칸은 물약·강화
     const gearCard = () => {
       const item = makeItem(s.c, { boost: round >= 1 ? 1 : 0, w: s.wtype.id, setP: 0.6 });
-      const set = item.set && SETS[item.set];
-      return { id: 'gear', item, name: item.n, desc: `${statText(...Object.entries(item.st)[0])}${set ? `\n${set.name} 세트` : ''}`, price: Math.floor(D.shopPrice(D.SHOP_GEAR_PRICE[item.r], round) * off), sold: false };
+      return { id: 'gear', item, name: item.n, desc: statText(...Object.entries(item.st)[0]), price: Math.floor(D.shopPrice(D.SHOP_GEAR_PRICE[item.r], round) * off), sold: false };
     };
-    const roll = () => { stock = [gearCard(), ...Phaser.Utils.Array.Shuffle(D.SHOP_ITEMS.slice()).slice(0, D.SHOP_SLOTS - 1).map(it => ({ ...it, price: Math.floor(D.shopPrice(it.price, round) * off), sold: false }))]; };
+    // 체력이 절반 넘게 남았으면 회복 물약은 안 판다(1-2에서 늘 가득이라 살 일이 없었다)(42차)
+    const roll = () => { stock = [gearCard(), ...Phaser.Utils.Array.Shuffle(D.SHOP_ITEMS.filter(it => it.id !== 'meat' || s.hp < s.maxHp * 0.5)).slice(0, D.SHOP_SLOTS - 1).map(it => ({ ...it, price: Math.floor(D.shopPrice(it.price, round) * off), sold: false }))]; };
     const draw = () => {
       grid.removeAll(true);
       silverTxt.setText(`보유 은화 ${r.silver}`);
       hpTxt.setText(`체력 ${Math.min(Math.ceil(s.hp), Math.round(s.maxHp))} / ${Math.round(s.maxHp)}`);
+      // 설명이 길어 끊겼다: 가로 한 줄 카드 3장(아이콘·이름+한 줄 설명·가격)(42차)
       stock.forEach((it, i) => {
-        const x = 75 + (i % 2) * 120, y = 190 + Math.floor(i / 2) * 104;
+        const x = W / 2, y = 178 + i * 70;   // 체력 줄(132)과 겹치지 않게 아래로
         const can = !it.sold && r.silver >= it.price;
         const g = s.add.container(x, y);
-        g.add(panel(s, -56, -46, 112, 92, { fill: it.sold ? 0x141018 : 0x261f3a, line: can ? 0xffd75e : 0x4a4060 }));
-        g.add((it.item ? itemBox(s, 0, -26, it.item, 26) : icon(s, 0, -26, it.icon, 26)).setAlpha(it.sold ? 0.3 : 1));
-        g.add(s.add.text(0, -8, it.name, font(10, it.sold ? '#666' : it.item ? RARITY[it.item.r].css : '#ffffff')).setOrigin(0.5));
-        g.add(s.add.text(0, 7, it.desc, { ...font9(10, '#a1b2b6'), align: 'center', wordWrap: { width: 104 } }).setOrigin(0.5, 0).setLineSpacing(-1));
-        g.add(s.add.text(0, 37, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
-        g.setSize(112, 92).setInteractive({ useHandCursor: true });
+        g.add(panel(s, -115, -31, 230, 62, { fill: it.sold ? 0x141018 : 0x261f3a, line: can ? 0xffd75e : 0x4a4060 }));
+        g.add((it.item ? itemBox(s, -91, 0, it.item, 26) : icon(s, -91, 0, it.icon, 26)).setAlpha(it.sold ? 0.3 : 1));
+        g.add(s.add.text(-66, -10, it.name, font(11, it.sold ? '#666' : it.item ? RARITY[it.item.r].css : '#ffffff')).setOrigin(0, 0.5));
+        g.add(s.add.text(-66, 9, it.desc, font9(10, '#a1b2b6')).setOrigin(0, 0.5));
+        g.add(s.add.text(108, 0, it.sold ? '구매함' : `은화 ${it.price}`, font(10, it.sold ? '#666' : can ? '#ffd75e' : '#ff7070')).setOrigin(1, 0.5));
+        g.setSize(230, 62).setInteractive({ useHandCursor: true });
         onTap(g, () => {
           if (it.sold) return;
           if (r.silver < it.price) { sfx('deny'); s.tweens.add({ targets: g, x: x + 3, duration: 40, yoyo: true, repeat: 2 }); return; }
@@ -387,13 +392,13 @@ export class Overlay {
       rb.label.setText(`다시 뽑기  은화 ${D.rerollCost(round, rerolls)}`);
       rb.setEnabled(r.silver >= D.rerollCost(round, rerolls));
     };
-    const rb = button(s, 80, 410, 120, 28, '', () => {
+    const rb = button(s, 80, 388, 120, 28, '', () => {
       const cost = D.rerollCost(round, rerolls);
       if (r.silver < cost) return;
       r.silver -= cost; rerolls++; sfx('buy'); roll(); draw(); s.updateHud(s.time.now);
       s.log('run_shop_reroll', { round, n: rerolls, cost });
     }, { size: 9 });
-    const go = button(s, 200, 410, 100, 28, '출발 ▶', () => { if (c !== this.c) return; s.log('run_shop_leave', { round, silver: r.silver, bought: stock.filter(it => it.sold).length }); r.shopRound++; this.end(c); onDone?.(); }, { size: 12, color: 0x2f6b3a });
+    const go = button(s, 200, 388, 100, 28, '출발 ▶', () => { if (c !== this.c) return; s.log('run_shop_leave', { round, silver: r.silver, bought: stock.filter(it => it.sold).length }); r.shopRound++; this.end(c); onDone?.(); }, { size: 12, color: 0x2f6b3a });
     c.add([rb, go]);
     roll(); draw();
     if (s.bot) s.time.delayedCall(200, () => {
@@ -462,7 +467,7 @@ export class Overlay {
     if (sv.gem >= D.REVIVE_GEM) {
       c.add([gm, gemIcon(s, W / 2 - 62, 268, 12)]);
       c.add(s.add.text(W / 2 + 70, 288, `보유 ${sv.gem}`, font9(10, '#ff9ad0')).setOrigin(1, 0));
-    } else { gm.destroy(); c.add(s.add.text(W / 2, 266, `보석 부활은 ${D.REVIVE_GEM}개 필요 (보유 ${sv.gem})`, font9(10, '#8a80a0')).setOrigin(0.5)); }
+    } else { gm.destroy(); c.add(s.add.text(W / 2, 266, `보석 부활은 ${D.REVIVE_GEM}개 필요 (보유 ${sv.gem})`, font9(10, '#7d8f94')).setOrigin(0.5)); }
     c.add(ad);
     c.add(button(s, W / 2, 316, 80, 20, '포기', () => {
       if (busy || c !== this.c) return;
@@ -646,6 +651,7 @@ export class Overlay {
     });
     if (!wNew && loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#a1b2b6')).setOrigin(0, 0.5));
     const nextIdx = Math.min(hard ? sv.hardCleared : sv.cleared, D.CHAPTERS.length * D.STAGES_PER_CHAPTER - 1);
+    const nextName = `${Math.floor(nextIdx / D.STAGES_PER_CHAPTER) + 1}-${nextIdx % D.STAGES_PER_CHAPTER + 1}`;   // 다음 판 이름을 버튼에 적어 어디로 가는지 보이게(42차)
     // 던전: 남은 횟수가 있으면 바로 한 번 더
     if (dun) {
       const left = D.DUNGEON.daily - (sv.dunN || 0);
@@ -680,14 +686,14 @@ export class Overlay {
     // 다음 판 전투력이 권장의 80%도 안 되면 대장간이 주인공(그대로 보스에 들어가 25초 만에 쓰러졌다)
     const weak = win && !s.endless && D.powerOf(sv) < D.recOf(Math.floor(nextIdx / D.STAGES_PER_CHAPTER), nextIdx % D.STAGES_PER_CHAPTER, hard) * (nextIdx < D.STAGES_PER_CHAPTER ? 0.65 : 0.8);   // 1장은 강화 한두 번이면 넘는다
     if (weak) {
-      c.add(button(s, 68, 424, 76, 28, '다음 판', () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, hard, bot: s.bot }); }, { color: 0x3a3846 }));
+      c.add(button(s, 68, 424, 76, 28, `다음 판 ${nextName}`, () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, hard, bot: s.bot }); }, { color: 0x3a3846, size: 10 }));
       c.add(button(s, 176, 424, 136, 32, '대장간에서 정비 ▶', () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0x2f6b3a }));
       s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
       return;
     }
     const big = fw || close;   // 아깝게 졌으면 '한 번 더'가 주인공
     c.add(button(s, big ? 68 : 82, 424, big ? 76 : 100, big ? 28 : 30, fw ? '로비' : close ? '대장간' : '대장간으로', () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3a3846 }));
-    c.add(button(s, big ? 176 : 190, 424, big ? 136 : 100, big ? 32 : 30, win ? (s.endless ? '다시 도전' : s.s === 1 && !s.isBoss ? '보스 도전 ▶' : '다음 스테이지 ▶') : close ? '한 번 더 ▶' : '다시', () => {
+    c.add(button(s, big ? 176 : 190, 424, big ? 136 : 100, big ? 32 : 30, win ? (s.endless ? '다시 도전' : s.s === 1 && !s.isBoss ? '보스 도전 ▶' : `다음 판 ${nextName} ▶`) : close ? '한 번 더 ▶' : '다시', () => {
       s.log('result_action', { act: win ? 'next' : 'retry', win });
       if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });
       const n = win ? nextIdx : idx;

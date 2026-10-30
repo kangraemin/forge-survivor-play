@@ -74,7 +74,10 @@ export class Battle extends Phaser.Scene {
     if (this.hard) this.mobDmgMul = D.hardDmg(this.c, this.s) * (1 - this.tv('def'));
     // 처음 두 판의 1-1은 맞는 피해를 줄이고 시작 몹도 적게(조작을 익히는 동안 지지 않게)
     this.easy = this.sv.stats.runs < 2 && this.c === 0 && this.s === 0 && !this.endless && !this.hard && !this.dungeon;
+    this.firstRun = this.easy && this.sv.stats.runs === 0;   // runs++는 시작 때 올라가니 판 도중엔 못 읽는다(42차)
     if (this.easy) { this.mobDmgMul *= 0.4;   // 0.55면 피해 다녀도 30초에 체력 54%(36차)
+      // 두 번째 판은 30초 뒤 0.55로: 두 판 내내 체력이 안 닳아 카드 고르는 의미가 없었다(41차)
+      if (this.sv.stats.runs === 1) this.time.delayedCall(30000, () => { this.mobDmgMul *= 0.55 / 0.4; });
       this.waveCount = 2; this.waveLen *= 0.8; }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
     // 쉬운 판이 끝나도 1장은 한 번에 ×1로 뛰지 않게 3·4판째는 0.6·0.8(39차: 3판째 절벽)
     else if (this.c === 0 && !this.endless && !this.hard && !this.dungeon && this.sv.stats.runs < 4) this.mobDmgMul *= this.sv.stats.runs < 3 ? 0.6 : 0.8;
@@ -97,9 +100,11 @@ export class Battle extends Phaser.Scene {
     this.physics.add.overlap(this.hero, this.mobs, (h, m) => !m.dead && !m.goblin && this.hurt(m.dmg, (m.elite ? 'elite_' : '') + m.kind));
     this.physics.add.overlap(this.hero, this.ebullets, (h, b) => { this.hurt(b.dmg, 'shot'); b.destroy(); });
 
-    // 왼쪽 위 기준 카메라라 주인공이 가운데 오도록 반 화면만큼 밀고, 경계도 그만큼 옮긴다(clampX는 가운데 기준 계산)
-    // 위·아래 끝에서는 HUD(위 64px)·궁극기 버튼(아래 56px)에 주인공이 가리지 않게 경계를 그만큼 넓힌다
-    hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(W / 2, H / 2).setBounds(W / 2, H / 2 - 64, WORLD, WORLD + 64 + 56).setRoundPixels(true);
+    // 왼쪽 위 기준 카메라라 주인공이 가운데 오도록 반 화면만큼 밀고, 경계도 그만큼 옮긴다
+    // Phaser는 줌 카메라의 경계를 (화면폭 - 보이는폭)/2 = W*(PX-1)/2 만큼 안쪽으로 잡는다. 예전엔 W/2만 더해 오른쪽·아래 끝에서 주인공이 화면 밖으로 나가고 위·왼쪽은 검은 빈 곳이 보였다(42차)
+    // 위·아래 끝에서는 HUD(위 64px)·궁극기 버튼(아래 56px)에 주인공이 가리지 않게, 좌우는 40px 바깥 바닥(어둡게 덮인 곳)까지 보이게 경계를 넓힌다
+    const MX = 40, MT = 64, MB = 56;
+    hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(W / 2, H / 2).setBounds(W * (PX - 1) / 2 - MX, H * (PX - 1) / 2 - MT, WORLD + 2 * MX, WORLD + MT + MB).setRoundPixels(true);
     // 화면 흔들림: 공격·피격마다 흔들려 머리가 아팠다. 작은 흔들림은 없애고 큰 것(보스·엘리트)만 약하고 짧게
     const cam = this.cameras.main, shake = Phaser.Cameras.Scene2D.Camera.prototype.shake;
     cam.shake = (d, i = 0.005, ...r) => i <= 0.005 ? cam : shake.call(cam, Math.min(d, 250), i * 0.4, ...r);
@@ -124,8 +129,8 @@ export class Battle extends Phaser.Scene {
     // x-2 첫 도전은 그 장의 규칙이 정해져 나오고, 다시 할 땐 뽑는다
     const firstTry = !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s >= (this.hard ? sv.hardCleared : sv.cleared);
     // 어려움은 늘 판 규칙이 붙는다(같은 맵에 바닥만 붉어 새 판으로 안 느껴졌다)
-    // 1-1 두 번째 판은 질풍을 붙인다: 처음 두 판에 판 규칙이 안 보여 매번 같은 게임 같았다(40차)
-    this.mod = this.easy && sv.stats.runs === 1 ? D.RUN_MODS.find(m => m.id === 'rush') : this.easy || this.isBoss || this.endless || this.dungeon ? null : this.s === 1 && firstTry ? D.stageMod(this.c)
+    // 1-1 두 번째 판은 떼를 붙인다: 처음 두 판에 판 규칙이 안 보여 매번 같은 게임 같았다(40차). 질풍은 바로 다음 1-2 몫(41차)
+    this.mod = this.easy && sv.stats.runs === 1 ? D.RUN_MODS.find(m => m.id === 'horde') : this.easy || this.isBoss || this.endless || this.dungeon ? null : this.s === 1 && firstTry ? D.stageMod(this.c)
       : this.hard ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s)))
       : sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s))) : null;   // 변종이 없는 판엔 '변종 소굴'은 빼고 뽑는다
     this.hordeKind = this.mod?.id === 'horde' ? this.ch.mobs[R(0, 2)] : null;
@@ -169,23 +174,27 @@ export class Battle extends Phaser.Scene {
     const ts = this.textures.get(key).getSourceImage();
     const T = ts.width / 4;
     if (!this.textures.exists(key + '_t')) this.textures.addSpriteSheet(key + '_t', ts, { frameWidth: T, frameHeight: T });
-    const rt = this.add.renderTexture(0, 0, WORLD, WORLD).setOrigin(0).setDepth(-10);
+    // 월드 밖 M만큼도 바닥을 깐다: 카메라가 위 64·아래 56px 더 내려가 맵 끝에 검은 빈 곳이 보였다(41차: 버그처럼 보인다)
+    const M = 96;
+    const rt = this.add.renderTexture(-M, -M, WORLD + 2 * M, WORLD + 2 * M).setOrigin(0).setDepth(-10);
     const stamp = this.make.image({ key: key + '_t', add: false });
     const c = WORLD / 2;
     // 가운데 광장·길 안쪽으로 들어간 거리(밖이면 음수)
     const inside = (x, y) => Math.max(190 - Math.hypot(x - c, y - c), 50 - Math.abs(x - c), 50 - Math.abs(y - c));
     // 바깥 바닥을 전부 깔고, 광장 바닥은 경계에서 서서히 짙어지게 겹친다(경계 타일을 쓰면 계단식 사각 패치로 보였다)
-    for (let y = 0; y < WORLD; y += T) for (let x = 0; x < WORLD; x += T) {
+    for (let y = -M; y < WORLD + M; y += T) for (let x = -M; x < WORLD + M; x += T) {
       const n = Math.random(), cx = x + T / 2, cy = y + T / 2;
       // 3번 그림(밝은 변종)은 3장부터 색을 입히면 사각으로 튄다
       stamp.setFrame(n < 0.85 || this.c >= 2 ? Phaser.Math.RND.pick([0, 2]) : 3).setAngle(R(0, 3) * 90).setAlpha(1);
-      rt.draw(stamp, cx, cy);
+      rt.draw(stamp, cx + M, cy + M);
       const a = Phaser.Math.Clamp((inside(cx, cy) + T * 0.8) / (T * 2.4), 0, 1);
       if (a <= 0) continue;
       stamp.setFrame(Math.random() < 0.85 ? R(4, 5) : R(8, 9)).setAngle(R(0, 3) * 90).setAlpha(a * a);
-      rt.draw(stamp, cx, cy);
+      rt.draw(stamp, cx + M, cy + M);
     }
     stamp.setAlpha(1);
+    // 못 가는 바깥은 어둡게 덮어 끝이라는 걸 보인다
+    this.add.graphics().setDepth(-9).fillStyle(0x000000, 0.5).fillRect(-M, -M, WORLD + 2 * M, M).fillRect(-M, WORLD, WORLD + 2 * M, M).fillRect(-M, 0, M, WORLD).fillRect(WORLD, 0, M, WORLD);
     // 전용 바닥 그림이 없는 챕터는 1챕터 바닥에 색을 입힌다
     const TINT = [0xffffff, 0x8a9ab8, 0xd07050, 0xd8f0ff, 0x9a70b0];
     if (this.hard) rt.setTint(0xd87a7a);   // 어려움은 바닥이 붉게 물든다
@@ -893,7 +902,11 @@ export class Battle extends Phaser.Scene {
         if (this.isBoss) { this.ui.shop(() => this.startBoss()); }
         else this.ui.result(true);
       } else if (this.endless) this.ui.shop(() => this.banner(`${this.wave + 1}층`, this.wave % 3 === 2 ? '해골 장군이 온다' : '더 세진다'));
-      else this.ui.shop(() => this.banner(`웨이브 ${this.wave + 1} / ${this.waveCount}`, this.wave === this.waveCount - 1 ? '마지막 웨이브' : '버텨라'));
+      else {
+        const next = () => this.banner(`웨이브 ${this.wave + 1} / ${this.waveCount}`, this.wave === this.waveCount - 1 ? '마지막 웨이브' : '버텨라');
+        // 맨 처음 판은 상인을 건너뛴다: 80초 판 한가운데 4칸 상점이 흐름을 끊었다(41차)
+        if (this.firstRun) next(); else this.ui.shop(next);
+      }
     });
   }
 

@@ -77,7 +77,7 @@ export function load() {
     // 출석: 어제 왔으면 하루 늘고, 며칠 빠졌으면 늘지 않는다(처음으로 돌아가지는 않는다)
     const n = dayNo(d);
     if (!mem.streak || n - mem.dayN === 1) mem.streak++;
-    mem.dayN = n; mem.loginGot = false;
+    mem.dayN = n; mem.loginGot = false; mem.day0 ??= n;   // 처음 온 날(광고 보석 첫 7일 5회)
     if (mem.passLeft > 0) { mem.passLeft--; mem.gem += PASS_DAILY.gem; mem.sweep += PASS_DAILY.sweep; track('pass_daily', { left: mem.passLeft }); }
     track('daily_reset', { streak: mem.streak, returning: !!mem.day, gem: mem.gem });
     mem.day = today;

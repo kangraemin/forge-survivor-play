@@ -53,7 +53,7 @@ export const ContentTab = {
     ['일', '월', '화', '수', '목', '금', '토'].forEach((d, i) => {
       const x = W / 2 + (i - 3) * 32, t = D.DUN_TYPES[D.DUN_WEEK[i]], on = i === today;
       c.add(this.add.rectangle(x, 166, 29, 34, on ? 0x3b2f5c : 0x15111f).setStrokeStyle(1, on ? 0xffd75e : 0x293845));
-      c.add(this.add.text(x, 157, d, font9(10, on ? '#ffd75e' : '#8a80a0')).setOrigin(0.5));
+      c.add(this.add.text(x, 157, d, font9(10, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5));
       c.add(this.add.text(x, 173, SHORT[D.DUN_WEEK[i]], font9(9, t.css)).setOrigin(0.5));
     });
     c.add(this.add.text(28, 196, '규칙', font(11, '#c8a0ff')));
@@ -68,7 +68,7 @@ export const ContentTab = {
       c.add(ic < 0 ? gemIcon(this, rx, 312, 12) : icon(this, rx, 312, ic, 14));
       const t = this.add.text(rx + 10, 305, v, font(11)); c.add(t); rx += 24 + t.width;
     });
-    c.add(this.add.text(W / 2, 342, left > 0 ? `오늘 ${left}번 남았다` : '오늘은 다 했다. 내일 또 열린다', font9(10, left > 0 ? '#a1b2b6' : '#8a80a0')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 342, left > 0 ? `오늘 ${left}번 남았다` : '오늘은 다 했다. 내일 또 열린다', font9(10, left > 0 ? '#a1b2b6' : '#7d8f94')).setOrigin(0.5));
     const go = button(this, W / 2, 380, 150, 30, left > 0 ? '입장' : '내일 다시', () => {
       if (left <= 0) return;
       sv.dunN = (sv.dunN || 0) + 1; save();
@@ -107,7 +107,7 @@ export const ContentTab = {
     ab.setEnabled(allDone && !wk.got.all); body.add(ab);
     const left = (8 - new Date().getDay()) % 7 || 7;
     body.add(this.add.text(W / 2, 312, `${left}일 뒤 월요일에 새 도전이 열린다`, font9(10, '#a1b2b6')).setOrigin(0.5));
-    body.add(this.add.text(W / 2, 330, '오늘의 임무와 같이 센다', font9(10, '#8a80a0')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 330, '오늘의 임무와 같이 센다', font9(10, '#7d8f94')).setOrigin(0.5));
   },
 
   // ── 기록: 도감 / 업적 ──
@@ -121,7 +121,7 @@ export const ContentTab = {
       body.removeAll(true);
       [['dex', '도감'], ['ach', '업적']].forEach(([id, name], i) => {
         const x = 90 + i * 90, on = this.recPage === id;
-        body.add(this.add.text(x, 64, name, font(on ? 13 : 11, on ? '#ffd75e' : '#8a80a0')).setOrigin(0.5));
+        body.add(this.add.text(x, 64, name, font(on ? 13 : 11, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5));
         if (on) body.add(this.add.rectangle(x, 76, 44, 2, 0xffd75e));
         if (id === 'ach' && achReady(sv) > 0) body.add(this.add.circle(x + 24, 58, 3.5, 0xff3a3a));
         const hit = this.add.rectangle(x, 64, 80, 24, 0, 0).setInteractive({ useHandCursor: true });
@@ -144,7 +144,7 @@ export const ContentTab = {
       const x = 18 + i * gw, on = i === this.dexG, full = g.n === g.list.length;
       body.add(this.add.rectangle(x + gw / 2, 134, gw - 3, 32, on ? 0x3b2f5c : 0x15111f).setStrokeStyle(1, full ? 0xffd75e : on ? 0xc8a0ff : 0x293845));
       body.add(this.add.text(x + gw / 2, 127, g.name, font9(10, on ? '#ffffff' : '#a1b2b6')).setOrigin(0.5));
-      body.add(this.add.text(x + gw / 2, 141, `${g.n}/${g.list.length}`, font9(9, full ? '#ffd75e' : '#8a80a0')).setOrigin(0.5));
+      body.add(this.add.text(x + gw / 2, 141, `${g.n}/${g.list.length}`, font9(9, full ? '#ffd75e' : '#7d8f94')).setOrigin(0.5));
       const hit = this.add.rectangle(x + gw / 2, 134, gw - 3, 32, 0, 0).setInteractive({ useHandCursor: true });
       hit.on('pointerup', () => { if (this.dexG === i) return; sfx('click'); this.dexG = i; redraw(); });
       body.add(hit);
@@ -168,14 +168,14 @@ export const ContentTab = {
       }
       const col = g.id === 'set' && cell.on ? SETS[cell.id].css : cell.on ? '#ffffff' : '#6a6080';
       body.add(this.add.text(cx, ty, cell.name, font9(cell.name.length > 6 ? 9 : 10, col)).setOrigin(0.5, 0));
-      body.add(this.add.text(cx, ty + 12, cell.sub, { ...font9(9, cell.on ? '#5fdc6a' : '#8a80a0'), align: 'center', wordWrap: { width: cw - 8 } }).setOrigin(0.5, 0));
+      body.add(this.add.text(cx, ty + 12, cell.sub, { ...font9(9, cell.on ? '#5fdc6a' : '#7d8f94'), align: 'center', wordWrap: { width: cw - 8 } }).setOrigin(0.5, 0));
     });
   },
 
   achDraw(body, redraw) {
     const sv = this.sv, own = titles(sv);
     // 칭호: 가진 것 중에서 돌려 고른다
-    body.add(this.add.text(24, 86, `칭호  ${sv.title || '없음'}`, font(11, sv.title ? '#ffb050' : '#8a80a0')));
+    body.add(this.add.text(24, 86, `칭호  ${sv.title || '없음'}`, font(11, sv.title ? '#ffb050' : '#7d8f94')));
     const tb = button(this, W - 56, 92, 64, 22, own.length ? '바꾸기' : '없음', () => {
       const list = ['', ...own], i = list.indexOf(sv.title || '');
       sv.title = list[(i + 1) % list.length]; save(); track('title_set', { title: sv.title || 'none' }); redraw();
