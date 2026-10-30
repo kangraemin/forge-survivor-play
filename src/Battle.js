@@ -2,7 +2,7 @@
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, playBgm, stopBgm } from './sfx.js';
-import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx } from './ui.js';
+import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx, setBackdrop, clearBackdrop } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
 import { Overlay } from './overlay.js';
@@ -200,9 +200,14 @@ export class Battle extends Phaser.Scene {
     // 전용 바닥 그림이 없는 챕터는 1챕터 바닥에 색을 입힌다
     const TINT = [0xffffff, 0x8a9ab8, 0xd07050, 0xd8f0ff, 0x9a70b0];
     const decoTint = this.ch.deco ?? (this.c ? TINT[this.c] : 0xffffff);   // 6장부터는 장 데이터의 deco 색
-    if (this.hard) rt.setTint(0xd87a7a);   // 어려움은 바닥이 붉게 물든다
-    else if (!tintless && this.c > 0) rt.setTint(TINT[this.c] ?? 0xffffff);
-    else if (this.s === 1 && !this.endless) rt.setTint(0xb8c0dc);   // x-2는 바닥을 식혀 x-1과 다른 곳처럼
+    let floorTint = 0xffffff;
+    if (this.hard) floorTint = 0xd87a7a;   // 어려움은 바닥이 붉게 물든다
+    else if (!tintless && this.c > 0) floorTint = TINT[this.c] ?? 0xffffff;
+    else if (this.s === 1 && !this.endless) floorTint = 0xb8c0dc;   // x-2는 바닥을 식혀 x-1과 다른 곳처럼
+    if (floorTint !== 0xffffff) rt.setTint(floorTint);
+    // 세로로 긴 폰(390x844)에서 게임 판 위아래 남는 띠를 같은 바닥으로 채운다
+    setBackdrop(this, key, floorTint);
+    this.events.once('shutdown', clearBackdrop);
     if (!this.textures.exists('decos')) {
       const ds = this.textures.get('deco').getSourceImage();
       this.textures.addSpriteSheet('decos', ds, { frameWidth: ds.width / 4, frameHeight: ds.height });
@@ -250,6 +255,7 @@ export class Battle extends Phaser.Scene {
     // 주인공 그림은 검을 들고 있다: 다른 무기면 손에 그 무기 그림을 겹쳐 든다
     const wk = `w_${this.wtype.id}${sv.tier}`;
     this.heroWeapon = this.wtype.id !== 'sword' && this.textures.exists(wk) ? this.add.image(0, 0, wk) : null;
+    if (this.heroWeapon) this.heroWeapon.setScale(16 / Math.max(this.heroWeapon.width, this.heroWeapon.height));   // 6단계 이후 그림은 16칸보다 크다
     this.face = 1; this.walkT = 0; this.iframe = 0;
     this.atk = D.weaponAtk(sv.tier, sv.enh);
   }
@@ -285,7 +291,7 @@ export class Battle extends Phaser.Scene {
     this.hpTxt = sf(this.add.text(64, 17, '', font(10)).setOrigin(0.5));
     this.lvTxt = sf(this.add.text(8, 31, 'Lv 1', font(10, '#f2e4bc')));
     // 콤보는 가운데 위(오른쪽 숫자 밑에 붙어 처치 수와 헷갈렸다)
-    this.comboTxt = sf(this.add.text(W / 2, 72, '', font(12, '#ffb347')).setOrigin(0.5).setAlpha(0));
+    this.comboTxt = sf(this.add.text(W - 57, 52, '', font(11, '#ffb347')).setOrigin(0.5).setAlpha(0));   // 스킬 아이콘 줄(왼쪽 위)과 겹치지 않게 처치 칸 아래
     // 시간은 HP 칸(끝 108)과 처치 칸(시작 182) 사이 가운데: 화면 가운데(135)면 '남은 0:33'이 HP 칸에 붙었다(40차)
     this.timeTxt = sf(this.add.text(145, 16, '', font(14)).setOrigin(0.5));
     this.waveTxt = sf(this.add.text(145, 31, '', font(9, '#a1b2b6')).setOrigin(0.5));
@@ -350,11 +356,11 @@ export class Battle extends Phaser.Scene {
     // 앞 배너가 떠 있으면 줄을 세워 하나씩 띄운다(39차: 맵·변종·각성 배너가 겹쳐 덮였다)
     if (this.bannerObjs) { if ((this.bannerQ ||= []).length < 3) this.bannerQ.push([big, small]); return; }
     const y = 150;
-    const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.7).setScrollFactor(0).setDepth(110).setScale(1, 0);
+    const b = this.add.rectangle(W / 2, y, W, 46, 0x000000, 0.7).setScrollFactor(0).setDepth(110).setScale(1, 0).setAlpha(0);   // 글자보다 띠가 먼저 떠 '가로 어두운 띠'로 보였다(43차): 띠도 글자와 함께 나타난다
     const t1 = this.add.text(W / 2, y - 7, big, font(15, '#ffd75e', 4)).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
     const t2 = this.add.text(W / 2, y + 12, small, font9(11, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(111).setAlpha(0);
-    this.tweens.add({ targets: b, scaleY: 1, duration: 160, ease: 'Back.Out' });
-    this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 220, delay: 80 });
+    this.tweens.add({ targets: b, scaleY: 1, alpha: 0.7, duration: 160, ease: 'Back.Out' });
+    this.tweens.add({ targets: [t1, t2], alpha: 1, x: { from: W / 2 - 20, to: W / 2 }, duration: 200, delay: 0 });
     this.bannerObjs = [b, t1, t2];
     this.tweens.add({ targets: [b, t1, t2], alpha: 0, delay: 1500, duration: 300, onComplete: () => { [b, t1, t2].forEach(o => o.destroy()); if (this.bannerObjs?.[0] === b) this.bannerObjs = null; const n = this.bannerQ?.shift(); if (n && !this.over) this.banner(...n); } });
   }
@@ -510,7 +516,7 @@ export class Battle extends Phaser.Scene {
   // ── 피해 ──
   dmgCalc(mult, tag) {
     const r = this.run, crit = Math.random() < 0.08 + this.tv('luck');
-    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0) + this.lv3('might', 0.1)) * (tag === 'pet' ? 1 : this.wM) * (this.wtype.id === 'axe' && this.gear.fx.has('axe4') && this.hp < this.maxHp / 2 ? 1.3 : 1) * RF(0.9, 1.1);
+    const base = this.atk * mult * (1 + this.tv('atk') + r.bDmg + 0.1 * (r.skills.might || 0) + this.lv3('might', 0.1)) * (this.env?.atkMul() ?? 1) * (tag === 'pet' ? 1 : this.wM) * (this.wtype.id === 'axe' && this.gear.fx.has('axe4') && this.hp < this.maxHp / 2 ? 1.3 : 1) * RF(0.9, 1.1);
     return { dmg: Math.round(base * (crit ? 2 : 1)), crit };
   }
 
@@ -547,23 +553,36 @@ export class Battle extends Phaser.Scene {
       }
       this.spark.explode(crit ? 12 : 5, m.x, m.y);
     } else this.spark.explode(3, m.x, m.y);
-    this.popup(m.x, m.y - 12, dmg, crit, fx === 'big');
+    this.popup(m.x, m.y - 12, dmg, crit, fx === 'big', m);
     sfx(crit ? 'crit' : 'hit', 45, 1 + 0.1 * Math.min(3, Math.floor(this.sv.enh / 5)));
     if (m.parryUntil > this.bt) this.env?.onHit(m);
     if (m.hp <= 0) this.kill(m);
     return true;
   }
 
-  popup(x, y, n, crit, big) {
-    // 화면이 숫자로 덮이지 않게: 치명타와 큰 숫자(100 이상)만 띄우고, 8개를 넘으면 오래된 것부터 지운다
+  popup(x, y, n, crit, big, m) {
+    // 화면이 숫자로 덮이지 않게: 치명타와 큰 숫자(100 이상)만 띄우고, 5개를 넘으면 오래된 것부터 지운다
+    // 같은 몹을 0.4초 안에 또 때리면 새로 띄우지 않고 합산해 한 숫자로 보여 준다
+    // 왼쪽 위 스킬 아이콘 줄(HUD) 밑에 깔려 겹쳐 보이는 숫자는 띄우지 않는다
+    const vr = viewRect(this);
+    if (y - vr.y < 82 && x - vr.x < 148) return;
+    const pp = m && m._pop;
+    if (pp && pp.t.active && this.bt - pp.at < 400) {
+      pp.n += n; pp.at = this.bt; pp.crit = pp.crit || crit;
+      pp.t.setText(fmt(pp.n)).setAlpha(1).setScale(1.25);
+      if (pp.crit) pp.t.setColor('#ffd23f');
+      this.tweens.add({ targets: pp.t, scale: 1, duration: 90 });
+      return;
+    }
     if (!crit && n < 100 && Math.random() > 0.25) return;   // 일반 타격도 네 번에 한 번은 보여 강화 차이가 숫자로 보인다
     if (this.popups.length >= 5) this.popups.shift().destroy();
     const t = this.add.text(x + R(-6, 6), y, fmt(n), font(crit ? 14 : big ? 11 : 9, crit ? '#ffd23f' : '#ffffff', crit ? 3 : 2))
       .setOrigin(0.5).setDepth(40).setScale(crit ? 1.6 : 1.3);
     this.popups.push(t);
+    if (m) m._pop = { t, n, at: this.bt, crit };
     this.tweens.add({ targets: t, scale: 1, duration: 110, ease: 'Back.Out' });
     this.tweens.add({
-      targets: t, y: y - 16, alpha: 0, delay: crit ? 380 : 220, duration: 300,
+      targets: t, y: y - 16, alpha: 0, delay: crit ? 380 : 420, duration: 300,
       onComplete: () => { t.destroy(); this.popups = this.popups.filter(p => p !== t); },
     });
   }
@@ -1167,8 +1186,8 @@ export class Battle extends Phaser.Scene {
     this.ultIcon.setAlpha(full ? 1 : 0.45).setScale((full ? 1 + Math.sin(time / 120) * 0.08 : 1) * (this.ultIcon.baseScale ||= this.ultIcon.scaleX));
     // 궁극기를 한 번도 안 써 봤으면 처음 찼을 때 말풍선으로 짚어 준다
     if (full && !this.sv.tut.ult && !this.ultTip) {
-      this.ultTip = this.add.text(this.ultPos.x + 20, this.ultPos.y - 40, '궁극기가 찼다! 눌러 봐 ▼', font(10, '#ffd75e')).setOrigin(1, 0.5).setBackgroundColor('#2a1e3a').setPadding(4, 2, 4, 2).setScrollFactor(0).setDepth(101);
-      this.tweens.add({ targets: this.ultTip, y: '-=4', duration: 400, yoyo: true, repeat: -1 });
+      this.ultTip = this.add.text(this.ultPos.x - 28, this.ultPos.y, '궁극기가 찼다! 눌러 봐 ▶', font(10, '#ffd75e')).setOrigin(1, 0.5).setBackgroundColor('#2a1e3a').setPadding(4, 2, 4, 2).setScrollFactor(0).setDepth(101);
+      this.tweens.add({ targets: this.ultTip, x: '-=4', duration: 400, yoyo: true, repeat: -1 });
       // 말풍선만으론 안 눌렀다(38차): 버튼 둘레로 금빛 고리가 계속 퍼진다
       const ur = this.add.circle(this.ultPos.x, this.ultPos.y, 24).setStrokeStyle(3, 0xffd75e).setScrollFactor(0).setDepth(101);
       this.tweens.add({ targets: ur, scale: 1.8, alpha: 0, duration: 700, repeat: -1 });

@@ -46,11 +46,11 @@ export const SETS = {
   frost: { name: '서리 수호자', pre: '서리 수호자의', css: '#9ae8ff', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '맞으면 주변 적을 2초 얼린다(6초마다)', minC: 1 },
   wind: { name: '바람 사냥꾼', pre: '바람 사냥꾼의', css: '#a8ffb0', two: { spd: 0.12 }, twoTxt: '이동 속도 +12%', fourTxt: '모든 스킬 재사용 대기 -18%', minC: 2 },
   // 6장~ 세트: 4세트 효과는 그 장의 지형을 다룬다(envfx.js)
-  tide: { name: '심해 파수꾼', pre: '심해 파수꾼의', css: '#5ae0d0', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '물웅덩이에 느려지지 않고 독구름 피해가 절반이다', minC: 5 },
-  crystal: { name: '수정 세공사', pre: '수정 세공사의', css: '#c080ff', two: { cd: 0.08 }, twoTxt: '재사용 대기 -8%', fourTxt: '레이저·낙뢰 같은 지형 피해를 40% 덜 받는다', minC: 7 },
-  sky: { name: '폭풍 순례자', pre: '폭풍 순례자의', css: '#e8f4ff', two: { spd: 0.08 }, twoTxt: '이동 속도 +8%', fourTxt: '바람에 밀리지 않고 어둠 속에서도 시야가 넓다', minC: 9 },
-  steam: { name: '증기 기술자', pre: '증기 기술자의', css: '#e08a50', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '분출구·불·번개 피해를 절반만 받는다', minC: 11 },
-  mirror: { name: '거울 수호자', pre: '거울 수호자의', css: '#90ffe8', two: { atk: 0.08 }, twoTxt: '모든 피해 +8%', fourTxt: '거울 빛줄기·되받기 피해를 절반만 받는다', minC: 13 },
+  tide: { name: '심해 파수꾼', pre: '심해 파수꾼의', css: '#5ae0d0', two: { def: 0.06 }, twoTxt: '받는 피해 -6%', fourTxt: '물웅덩이 감속이 약 40% 줄고 독구름 피해도 40% 줄어든다', minC: 5 },
+  crystal: { name: '수정 세공사', pre: '수정 세공사의', css: '#c080ff', two: { cd: 0.08 }, twoTxt: '재사용 대기 -8%', fourTxt: '레이저·낙뢰 같은 지형 피해를 약 40% 덜 받는다', minC: 7 },
+  sky: { name: '폭풍 순례자', pre: '폭풍 순례자의', css: '#e8f4ff', two: { spd: 0.08 }, twoTxt: '이동 속도 +8%', fourTxt: '바람에 밀리는 힘이 약 40% 줄고 어둠 속 시야가 넓다', minC: 9 },
+  steam: { name: '증기 기술자', pre: '증기 기술자의', css: '#e08a50', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '분출구·불·번개 피해를 약 40% 덜 받는다', minC: 11 },
+  mirror: { name: '거울 수호자', pre: '거울 수호자의', css: '#90ffe8', two: { atk: 0.08 }, twoTxt: '모든 피해 +8%', fourTxt: '거울 빛줄기·되받기 피해를 약 40% 덜 받는다', minC: 13 },
   thorn: { name: '가시 덩굴', pre: '가시 덩굴', css: '#7fd06a', two: { hp: 0.1 }, twoTxt: '최대 체력 +10%', fourTxt: '맞으면 주변 적에게 가시가 박힌다', minC: 0 },
   gold: { name: '황금 상인', pre: '황금 상인의', css: '#ffd75e', two: { mag: 0.3 }, twoTxt: '줍는 거리 +30%', fourTxt: '은화 +50%, 상인 물건 20% 할인', minC: 1 },
   // 무기 전용 세트: 그 무기를 들고 싸울 때만 나온다(상인도 판다)

@@ -18,8 +18,14 @@ export const hiCam = scene => scene.cameras.main.setOrigin(0).setZoom(PX);
 // 카메라 기준점을 왼쪽 위로 옮겨 Phaser의 worldView(가운데 기준 계산)가 어긋난다 → 보이는 영역은 이걸로 구한다
 export const viewRect = scene => { const c = scene.cameras.main; return new Phaser.Geom.Rectangle(c.scrollX, c.scrollY, c.width / c.zoom, c.height / c.zoom); };
 
-// 상단 바 칸이 좁아 4글자 안팎으로 자른다(반올림하면 99999가 100.0k가 되니 버림)
-export const fmt = n => n >= 1e6 ? Math.floor(n / 1e5) / 10 + 'M' : n >= 10000 ? Math.floor(n / 1000) + 'k' : String(Math.floor(n));
+// 큰 수는 한국식 단위로: 1.2만 · 54.8만 · 1230만 · 1.2억 (버림 — 반올림하면 9999.9가 1만이 되는 등 어긋난다)
+export const fmt = n => {
+  n = Math.floor(n);
+  if (n >= 1e8) return (n >= 1e9 ? Math.floor(n / 1e8) : Math.floor(n / 1e7) / 10) + '억';
+  if (n >= 1e6) return Math.floor(n / 1e4) + '만';
+  if (n >= 1e4) return Math.floor(n / 1e3) / 10 + '만';
+  return String(n);
+};
 
 // 패널·버튼은 디자인 인계(잿불 성채 style_guide) 규격: 직각 면 + 1px 선, 그림자·광택 없음
 export function panel(scene, x, y, w, h, { fill = COLOR.panel, line = COLOR.line, alpha = 0.94 } = {}) {
@@ -110,8 +116,10 @@ export function skinFx(sprite, sk) {
 // 무기 그림: 검은 아이콘 시트의 등급 그림, 나머지 종류는 Boot에서 그린 w_<종류><등급>
 export function weaponIcon(scene, x, y, wid, tier = 0, size = 22) {
   const key = `w_${wid}${tier}`;
-  if (wid === 'sword' && scene.textures.exists('icons_r0s') || !scene.textures.exists(key)) return icon(scene, x, y, TIERS[tier].icon, size);
-  return scene.add.image(x, y, key).setScale(size / 16);
+  // 검 0~4단계는 아이콘 시트 그림, 6단계 이후는 단계마다 따로 그린 w_sword<등급>(크기가 달라도 size에 맞춘다)
+  if (wid === 'sword' && tier < 5 && scene.textures.exists('icons_r0s') || !scene.textures.exists(key)) return icon(scene, x, y, TIERS[tier].icon, size);
+  const im = scene.add.image(x, y, key);
+  return im.setScale(size / Math.max(im.width, im.height));
 }
 
 // 스킬 아이콘: 아이콘 칸이 모자라 같은 그림을 쓰는 스킬은 색으로 구분한다
@@ -155,3 +163,19 @@ export function fixedContainer(scene, x = 0, y = 0) {
   pin(c);
   return c;
 }
+
+// 게임 판(270x480)이 폰 화면보다 가로로 길쭉하지 않아 위아래에 남는 띠: 검게 두지 않고 지금 맵 바닥 무늬로 채운다
+// (캔버스 밖 페이지 배경이라 게임 좌표와 무관. 어둡게 눌러 판보다 눈에 띄지 않게 한다)
+export function setBackdrop(scene, key, tint = 0xffffff) {
+  try {
+    const src = scene.textures.get(key).getSourceImage(), T = src.width / 4;
+    const cv = document.createElement('canvas'); cv.width = cv.height = T;
+    const cx = cv.getContext('2d');
+    cx.drawImage(src, 0, 0, T, T, 0, 0, T, T);
+    if (tint !== 0xffffff) { cx.globalCompositeOperation = 'multiply'; cx.fillStyle = '#' + tint.toString(16).padStart(6, '0'); cx.fillRect(0, 0, T, T); }
+    const b = document.body.style;
+    b.backgroundImage = 'linear-gradient(rgba(8,6,14,.4),rgba(8,6,14,.4)),url(' + cv.toDataURL() + ')';
+    b.backgroundSize = 'auto,' + T * 2 + 'px ' + T * 2 + 'px'; b.backgroundRepeat = 'repeat'; b.imageRendering = 'pixelated';
+  } catch { /* 배경을 못 깔아도 게임은 그대로 */ }
+}
+export function clearBackdrop() { const b = document.body.style; b.backgroundImage = ''; b.imageRendering = ''; }

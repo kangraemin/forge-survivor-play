@@ -11,15 +11,15 @@ export const CHAPTERS = [
   { name: '마왕성', tiles: 'tile5', mobs: ['dknight', 'cultist', 'gargoyle'], boss: 'demonlord', dur: 210, dark: 0.5, light: 0xff4060 },
   // 6장부터: env는 장 고유 지형·환경(envfx.js), note는 '새로운 점' 한 줄(판 시작 때 알려 준다). 설계표 docs/chapters.md
   { name: '가라앉은 신전', tiles: 'tile6', mobs: ['drowned', 'coral', 'wraith'], boss: 'tidewyrm', dur: 232, dark: 0.45, light: 0x5ae0d0, deco: 0x7ad8d0, env: 'tide', note: '바닥의 물웅덩이를 밟으면 느려진다 · 물귀신은 물속에 잠겨 피한다' },
-  { name: '독안개 늪', tiles: 'tile7', mobs: ['toxslime', 'rotgiant', 'sporespider'], boss: 'swampqueen', dur: 240, dark: 0.5, light: 0x9aff5a, deco: 0x9ac060, env: 'fog', note: '독안개가 떠다닌다 · 포자 거미는 지나간 길에 독구름을 남긴다' },
+  { name: '독안개 늪', tiles: 'tile7', mobs: ['toxslime', 'rotgiant', 'sporespider'], boss: 'swampqueen', dur: 240, dark: 0.5, light: 0x9aff5a, deco: 0x9ac060, env: 'fog', note: '늪 물살이 몸을 실어 간다 · 독안개도 물살을 타고 떠다닌다 · 포자 거미는 지나간 길에 독구름을 남긴다' },
   { name: '수정 광산', tiles: 'tile8', mobs: ['crystbat', 'crystgolem', 'prism'], boss: 'crystcolossus', dur: 248, dark: 0.5, light: 0xc080ff, deco: 0xb090ff, env: 'beam', note: '수정 기둥이 레이저를 쏘며 돈다 · 프리즘 정령의 탄은 갈라진다' },
   { name: '하늘 성채', tiles: 'tile9', mobs: ['galewolf', 'citknight', 'galegarg'], boss: 'stormcaptain', dur: 256, dark: 0.3, light: 0xe8f4ff, deco: 0xd8e8ff, env: 'wind', note: '바람이 방향을 바꿔 가며 분다 · 돌풍 가고일이 밀어낸다' },
   { name: '심연', tiles: 'tile10', mobs: ['voidslime', 'abysspider', 'voidpriest'], boss: 'voidlord', dur: 264, dark: 0.62, light: 0x6a5aff, deco: 0x6a70c0, env: 'abyss', note: '시야가 좁다 · 어둠 속 적은 가까이 와야 보인다' },
   { name: '모래 폐도', tiles: 'tile11', mobs: ['sandskel', 'scorpion', 'mirage'], boss: 'sandcolossus', dur: 272, dark: 0.3, light: 0xffd070, deco: 0xe0c080, env: 'sand', note: '유사 구덩이가 끌어당긴다 · 모래 해골은 한 번 되살아나고 전갈은 모래에 숨었다 튀어나온다' },
   { name: '증기 공방', tiles: 'tile12', mobs: ['clockimp', 'steelgiant', 'steamskull'], boss: 'steamgeneral', dur: 280, dark: 0.45, light: 0xff9a50, deco: 0xd09060, env: 'steam', note: '증기 분출구가 박자대로 뿜는다 · 태엽 임프는 오래 두면 빨라지고 강철 거신은 방어 자세를 취한다' },
-  { name: '폭풍 평원', tiles: 'tile13', mobs: ['stormwolf', 'stormyeti', 'stormspirit'], boss: 'thunderdragon', dur: 288, dark: 0.4, light: 0x8ac8ff, deco: 0x90b0d0, env: 'storm', note: '낙뢰가 예고 원 뒤에 떨어진다 · 먹구름 설인 곁으로 번개가 몰린다' },
+  { name: '폭풍 평원', tiles: 'tile13', mobs: ['stormwolf', 'stormyeti', 'stormspirit'], boss: 'thunderdragon', dur: 288, dark: 0.4, light: 0x8ac8ff, deco: 0x90b0d0, env: 'storm', note: '피뢰침 기둥 곁에선 번개가 기둥에 떨어진다 · 기둥 둘레 몹이 함께 맞고 기둥에서 멀면 낙뢰가 나를 노린다 · 먹구름 설인 곁으로도 몰린다' },
   { name: '거울 궁전', tiles: 'tile14', mobs: ['mirrorknight', 'phantompriest', 'glassgarg'], boss: 'mirrorlord', dur: 296, dark: 0.35, light: 0x80ffe0, deco: 0x90e0d0, env: 'mirror', note: '거울 빛줄기 둘이 서로 반대로 돈다 · 빛나는 거울 기사를 치면 되받는다 · 환영 사제는 분신을 만든다' },
-  { name: '원초의 대장간', tiles: 'tile15', mobs: ['anvilimp', 'flamegiant', 'starskull'], boss: 'forgegod', dur: 304, dark: 0.5, light: 0xffd75e, deco: 0xe0b060, env: 'forge', note: '낙뢰와 불 균열이 함께 온다 · 쇠모루 임프는 죽으면 모루가 떨어진다' },
+  { name: '원초의 대장간', tiles: 'tile15', mobs: ['anvilimp', 'flamegiant', 'starskull'], boss: 'forgegod', dur: 304, dark: 0.5, light: 0xffd75e, deco: 0xe0b060, env: 'forge', note: '모루 위에 서면 무기가 달궈진다(최대 +50%) · 가득 차면 화상 · 불 균열과 낙뢰도 온다' },
 ];
 // 장마다 3판: 일반 → 일반(규칙·변종·중간 보스) → 보스. 6판일 땐 같은 맵·같은 몹이 이어져 x-5쯤 질렸다
 export const STAGES_PER_CHAPTER = 3;
@@ -218,6 +218,11 @@ export const promoteEnh = (tier, enh) => { let e = 0; while (e < PROMOTE_NEED - 
 // 2장부터 10% 더 준다: 후반 강화 한 번에 판이 너무 많이 들었다(25%면 완주가 3.7시간으로 짧아졌다)
 export const clearGold = (c, s) => Math.round(75 * chCost(c) * (1 + 0.2 * oldS(s)) * (c >= 1 ? 1.1 : 1) / 5) * 5;
 export const FIRST_CLEAR_MUL = 2.5;
+// 새 장 도입 보상: 6장부터 장 첫 판(x-1)에 처음 들어가면 금화 꾸러미와 소탕권을 준다(6장부터 금화 쓸 곳이 갑자기 늘어 막히던 구간 완충). 기존 보상은 그대로
+// 마지막 장(15장) 보스를 처음 잡을 때 따로 받는 완주 보상(업적·무기·펫과 별개). 장비는 한 등급 위로 2개
+export const FINALE = { gem: 150, sweep: 3, guard: 2, stone: 40, items: 2 };
+export const CHAPTER_INTRO = { from: 5, goldMul: 2, sweep: 1 };
+export const introOf = c => c >= CHAPTER_INTRO.from ? { gold: Math.round(clearGold(c, 0) * CHAPTER_INTRO.goldMul / 5) * 5, sweep: CHAPTER_INTRO.sweep } : null;
 export const clearStone = (c, s) => 3 + oldS(s) + c * 2;
 export const FAIL_STONE_RATE = 0.5;                        // 져도 강화석을 같은 식으로 조금 준다(0개면 허탈했다)
 // 자리를 비운 동안 견습생이 번다: 30분 넘게 비우면, 최대 8시간까지 시간당 지금 스테이지 클리어 보상의 50%(25%면 8시간이 두 판어치라 돌아올 맛이 없었다)

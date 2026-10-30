@@ -60,7 +60,7 @@ export class Lobby extends Phaser.Scene {
     // 자리를 비웠다 돌아오면 견습생이 번 것을 먼저 준다(다른 창보다 앞)
     const idle = this.idleReward();
     if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
-    else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e'));
+    else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, '대장간이 열렸다! 칼을 강화해 보자', '#ffd75e', 112));
     // 세 판을 하고 난 뒤부터(처음엔 창이 연달아 뜨지 않게): 출석 창, 1-3을 깨면 첫 결제 꾸러미 한 번
     else if (!sv.loginGot && sv.stats.runs >= 3 && sv.loginPop !== sv.day) { sv.loginPop = sv.day; save(); this.time.delayedCall(250, () => this.missionWin(true)); }
     // 장 보스를 처음 잡고 오면 24시간 성장 꾸러미를 한 번 띄운다
@@ -400,7 +400,7 @@ export class Lobby extends Phaser.Scene {
     b.add(this.add.text(24, 273, sub, { ...font9(10, '#a1b2b6'), wordWrap: { width: W - 48 } }));
     // 전투력: 숫자 두 개보다 막대 하나가 빨리 읽힌다
     const pc = D.powerCol(atk, rec, s), ratio = Math.min(1, atk / rec);   // rec는 난이도에 맞춘 권장
-    const pl = this.add.text(24, 300, '전투력', font9(10, '#a1b2b6')), pt = this.add.text(24 + pl.width + 6, 299, `${atk} / ${rec}`, font(11, pc));
+    const pl = this.add.text(24, 300, '전투력', font9(10, '#a1b2b6')), pt = this.add.text(24 + pl.width + 6, 299, `${fmt(atk)} / ${fmt(rec)}`, font(11, pc));
     b.add([pl, pt]);
     // 이 맵에 잘 듣는 펫(데려가고 있으면 초록). 보상 줄과 겹치지 않게 전투력 줄 오른쪽에 둔다
     const rps = recPets(sv, c);
@@ -473,6 +473,13 @@ export class Lobby extends Phaser.Scene {
   startBattle(c, s, endless = false, hard = false, dungeon = null) {
     if (this.busy) return; this.busy = true;
     const sv = this.sv, rec = D.recOf(c, s, hard), pw = D.powerOf(sv);
+    // 새 장 첫 판에 처음 들어가면 도입 보상(금화 꾸러미 + 소탕권). 한 번만
+    const intro = !endless && !dungeon && !hard && s === 0 && D.introOf(c);
+    if (intro && !(sv.intro ||= {})[c]) {
+      sv.intro[c] = 1; sv.gold += intro.gold; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + intro.sweep); save();
+      toast(this, `새 장 도입 보상  금화 +${fmt(intro.gold)}  소탕권 +${intro.sweep}`, '#ffd75e');
+      track('chapter_intro', { c, gold: intro.gold });
+    }
     track('battle_start_click', { stage: endless ? 'tower' : dungeon ? 'dungeon' : `${hard ? 'H' : ''}${c + 1}-${s + 1}`, idx: c * D.STAGES_PER_CHAPTER + s, power: pw, rec, ratio: Math.round(pw / rec * 100) / 100, replay: c * D.STAGES_PER_CHAPTER + s < (hard ? sv.hardCleared : sv.cleared), tier: sv.tier, enh: sv.enh, hard, dungeon: dungeon || 'none' });
     sfx('bossIn');
     this.cameras.main.fadeOut(250);
@@ -564,7 +571,7 @@ export class Lobby extends Phaser.Scene {
     b.add(this.add.text(14, 40, '대장간', font(18, '#f2e4bc', 0)));
     b.add(this.add.text(W - 14, 44, max ? `+${enh} 최고` : `+${enh} → +${enh + 1}`, font(13, enh >= 15 ? '#ff9a3a' : '#ffb85c', 0)).setOrigin(1, 0));
     b.add(this.add.text(14, 64, D.tierName(sv.tier, wtypeOf(sv)), font(11, '#a1b2b6', 0)));
-    b.add(this.add.text(W - 14, 64, `공격력 ${Math.round(D.weaponAtk(sv.tier, enh))}${max ? '' : ` → ${Math.round(D.weaponAtk(sv.tier, enh + 1))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1) / D.weaponAtk(sv.tier, enh) - 1) * 100)}%)`}`, font(11, '#73d6c1', 0)).setOrigin(1, 0));
+    b.add(this.add.text(W - 14, 64, `공격력 ${fmt(Math.round(D.weaponAtk(sv.tier, enh)))}${max ? '' : ` → ${fmt(Math.round(D.weaponAtk(sv.tier, enh + 1)))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1) / D.weaponAtk(sv.tier, enh) - 1) * 100)}%)`}`, font(11, '#73d6c1', 0)).setOrigin(1, 0));
     // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
     if (!max) {
       const next = (Math.floor(enh / D.ENH_MILESTONE) + 1) * D.ENH_MILESTONE;
@@ -580,7 +587,7 @@ export class Lobby extends Phaser.Scene {
     this.sword = weaponIcon(this, W / 2, 168, wid, sv.tier, 72 * [1, 1.1, 1.22, 1.36, 1.5][stg] * (1 + (enh % 5) * 0.01));
     const et = enh >= 20 ? 0xfff4c8 : enh >= 15 ? 0xf0c0ff : enh >= 10 ? 0xffc088 : enh >= 5 ? 0xb8e4ff : 0;
     // 룬 등급 색(t.tint)은 검 시트 그림용: 다른 종류는 등급 색을 그림에 이미 칠해 뒀다
-    if (t.tint && wid === 'sword') this.sword.setTint?.(t.tint); else if (et) this.sword.setTint?.(et);
+    if (t.tint && wid === 'sword' && sv.tier < 5) this.sword.setTint?.(t.tint); else if (et) this.sword.setTint?.(et);
     this.tweens.add({ targets: this.sword, y: 162, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     this.hammer = this.add.image(W / 2 + 54, 130, 'hammer').setScale(2.2).setOrigin(0.5, 0.9).setAngle(30);
     b.add([halo, this.sword, this.hammer]);
@@ -655,7 +662,7 @@ export class Lobby extends Phaser.Scene {
       else {
         // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
         const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
-        b.add(this.add.text(W / 2, 372, `${D.tierName(sv.tier + 1, wtypeOf(sv))}: 공격력 ${now} → ${next} (+${e}부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
+        b.add(this.add.text(W / 2, 372, `${D.tierName(sv.tier + 1, wtypeOf(sv))}: 공격력 ${fmt(now)} → ${fmt(next)} (+${e}부터)`, font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
       }
     }
   }
@@ -734,7 +741,7 @@ export class Lobby extends Phaser.Scene {
         const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));
         this.cameras.main.flash(220, 255, 220, 120);
         this.sparks(W / 2, 168, 30, 0xffffff);
-        const t = this.add.text(W / 2, 222, `공격력 ${a0} → ${a1}`, font(18, '#ffe08a', 4)).setOrigin(0.5).setDepth(60).setScale(0.3);
+        const t = this.add.text(W / 2, 222, `공격력 ${fmt(a0)} → ${fmt(a1)}`, font(18, '#ffe08a', 4)).setOrigin(0.5).setDepth(60).setScale(0.3);
         this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.Out' });
         this.tweens.add({ targets: t, y: 210, alpha: 0, delay: 900, duration: 400, onComplete: () => t.destroy() });
       }

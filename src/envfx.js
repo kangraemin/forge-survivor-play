@@ -3,7 +3,7 @@
 // 장 기믹(CHAPTERS[c].env): tide 물웅덩이 · fog 독안개 · beam 수정 레이저 · wind 바람 · abyss 어둠
 import * as D from './data.js';
 import { sfx } from './sfx.js';
-import { font } from './ui.js';
+import { font, viewRect } from './ui.js';
 
 const WORLD = 1600;
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
@@ -38,6 +38,12 @@ export class Env {
       this.windTxt = s.add.text(D.W / 2, 112, '', font(9, '#e8f4ff')).setOrigin(0.5).setScrollFactor(0).setDepth(100).setAlpha(0);
       this.streaks = s.add.graphics().setDepth(27);
     }
+    // 독안개 늪: 늪 물살 — 띠 안에 서 있으면 흐르는 쪽으로 몸이 실려 간다(독구름도 같이 흐른다)
+    if (this.kind === 'fog') this.streams = [{ ax: 'x', pos: 560, w: 120, dir: 1 }, { ax: 'x', pos: 1050, w: 120, dir: -1 }, { ax: 'y', pos: 1190, w: 110, dir: 1 }];
+    // 폭풍 평원: 피뢰침 기둥 — 가까이 있으면 낙뢰가 기둥에 떨어지고 기둥 둘레의 몹이 함께 맞는다
+    if (this.kind === 'storm') this.rods = Array.from({ length: 4 }, () => { const q = this.farPoint(100, 440); return { x: q[0], y: q[1], hot: 0 }; });
+    // 원초의 대장간: 화로 모루 — 위에 서면 무기가 달궈져 강해지지만 오래 서면 화상
+    if (this.kind === 'forge') { this.anvils = Array.from({ length: 3 }, () => { const q = this.farPoint(110, 400); return { x: q[0], y: q[1] }; }); this.heat = 0; this.onAnvil = false; this.heatGfx = s.add.graphics().setDepth(41); this.heatTxt = s.add.text(0, 0, '', font(8, '#ffd75e', 3)).setOrigin(0.5).setDepth(41); }
     if (this.kind === 'abyss') this.lightK = 0.6;
     if (this.kind === 'sand') for (let i = 0; i < 5; i++) { const q = this.farPoint(140, 560); this.pits.push({ x: q[0], y: q[1], r: 34, life: Infinity }); }
     if (this.kind === 'steam') for (let i = 0; i < 5; i++) { const q = this.farPoint(110, 540); this.vents.push({ x: q[0], y: q[1], r: 26, t: 600 + i * 900, ph: 'idle' }); }
@@ -71,12 +77,14 @@ export class Env {
   impulse(vx, vy, ms) { this.imp.push({ x: vx, y: vy, t: ms }); }
   blackout(ms) { this.blackT = ms; }
 
-  spdMul() { return this.slowT > 0 && !this.petIs('tidewyrm') && !this.fx4('tide4') ? 0.55 : 1; }
+  // 대장간 모루에서 달궈진 만큼 내 피해가 커진다(최대 +50%)
+  atkMul() { return this.heat > 20 ? 1 + 0.5 * Math.min(1, this.heat / 100) : 1; }
+  spdMul() { return this.slowT > 0 && !this.petIs('tidewyrm') ? (this.fx4('tide4') ? 0.73 : 0.55) : 1; }
   vel() {
     let x = 0, y = 0;
     for (const i of this.imp) { x += i.x; y += i.y; }
     if (this.wind && this.wind.k > 0.02) {
-      const f = this.fx4('sky4') ? 0 : this.petIs('stormcaptain') ? 0.5 : 1, v = D.PLAYER.spd * 0.5 * this.wind.k * f;
+      const f = this.fx4('sky4') ? 0.6 : this.petIs('stormcaptain') ? 0.5 : 1, v = D.PLAYER.spd * 0.5 * this.wind.k * f;
       x += Math.cos(this.wind.a) * v; y += Math.sin(this.wind.a) * v;
     }
     return { x, y };
@@ -88,8 +96,8 @@ export class Env {
     if (imm && this.petIs(imm)) return;
     let k = 1;
     if (this.fx4('crystal4') && (src === 'laser' || src === 'bolt')) k *= 0.6;
-    if (this.fx4('steam4') && (src === 'vent' || src === 'steam' || src === 'fire' || src === 'bolt')) k *= 0.5;
-    if (this.fx4('mirror4') && (src === 'laser' || src === 'reflect')) k *= 0.5;
+    if (this.fx4('steam4') && (src === 'vent' || src === 'steam' || src === 'fire' || src === 'bolt')) k *= 0.6;
+    if (this.fx4('mirror4') && (src === 'laser' || src === 'reflect')) k *= 0.6;
     s.hurt(this.base * mul * k, src);
   }
 
@@ -102,12 +110,14 @@ export class Env {
   }
   inEll(x, y, r) { const h = this.s.hero, dx = (h.x - x) / r, dy = (h.y + 8 - y) / (r * 0.75); return dx * dx + dy * dy <= 1; }
   // 낙뢰: 예고 → 번개
-  strike(x, y, r = 26, ms = 900) {
+  strike(x, y, r = 26, ms = 900, rod = null) {
+    if (rod) rod.hot = ms + 300;
     this.warn(x, y, r, ms, () => {
       const s = this.s, l = s.add.line(0, 0, x, y - 140, x, y, 0xe8f0ff, 1).setOrigin(0).setLineWidth(4).setBlendMode(Phaser.BlendModes.ADD).setDepth(32);
       s.tweens.add({ targets: l, alpha: 0, duration: 260, onComplete: () => l.destroy() });
       s.cameras.main.flash(60, 220, 230, 255); sfx('crit', 90);
       if (this.inEll(x, y, r)) this.hurtEnv(1.5, 'bolt');
+      if (rod) s.mobs.getChildren().slice().forEach(m => { if (m.active && !m.dead && Math.hypot(m.x - x, (m.y - y) / 0.75) <= r * 1.5) s.hitMob(m, 7, { src: 'rod', kb: 140, fx: 'big', from: { x, y } }); });
     });
   }
 
@@ -145,7 +155,7 @@ export class Env {
       g.fillStyle(0x7ad040, a).fillEllipse(c.x, c.y, c.r * 2 * wob, c.r * 1.5 * wob).fillStyle(0xb8ff70, a * 0.6).fillEllipse(c.x - c.r * 0.2, c.y - c.r * 0.1, c.r * 1.1, c.r * 0.8)
         .lineStyle(1.5, 0xd8ff90, a + 0.15).strokeEllipse(c.x, c.y, c.r * 2 * wob, c.r * 1.5 * wob);
       const dx = (h.x - c.x) / c.r, dy = (h.y + 8 - c.y) / (c.r * 0.75);
-      if (tick && dx * dx + dy * dy < 1 && !this.petIs('swampqueen')) this.hurtEnv(this.fx4('tide4') ? 0.4 : 0.8, 'poison');
+      if (tick && dx * dx + dy * dy < 1 && !this.petIs('swampqueen')) this.hurtEnv(this.fx4('tide4') ? 0.48 : 0.8, 'poison');
     }
     // 수정 레이저
     const gt = this.gfxTop; gt.clear();
@@ -177,6 +187,56 @@ export class Env {
         if (this.inEll(p.x, p.y, p.r * 0.5)) this.slowT = 160;
       }
     }
+    // 늪 물살
+    if (this.streams) {
+      const cam = viewRect(s), hv = D.PLAYER.spd * 0.42;
+      for (const st of this.streams) {
+        const x = st.ax === 'x', lo = st.pos - st.w / 2, vx = x ? cam.x : lo, vy = x ? lo : cam.y, vw = x ? cam.width : st.w, vh = x ? st.w : cam.height;
+        g.fillStyle(0x3a8a5a, 0.2).fillRect(vx, vy, vw, vh).fillStyle(0xb8ff90, 0.28).fillRect(vx, vy, x ? vw : 1.5, x ? 1.5 : vh).fillRect(x ? vx : vx + vw - 1.5, x ? vy + vh - 1.5 : vy, x ? vw : 1.5, x ? 1.5 : vh);
+        const along = x ? cam.x : cam.y, len = x ? cam.width : cam.height;
+        for (let i = 0; i < 7; i++) {
+          const ph = (((s.bt * 0.05 * st.dir + i * 47) % 50) + 50) % 50, a = Math.floor(along / 50) * 50 + ph + i * 50 - 50;
+          if (a < along - 8 || a > along + len + 8) continue;
+          for (const o of [-0.28, 0, 0.28]) {
+            const c = st.pos + o * st.w, d = 5 * st.dir;
+            g.lineStyle(1.5, 0xe0ffc0, 0.5);
+            if (x) g.lineBetween(a - d, c - 4, a + d, c).lineBetween(a + d, c, a - d, c + 4); else g.lineBetween(c - 4, a - d, c, a + d).lineBetween(c, a + d, c + 4, a - d);
+          }
+        }
+        const on = x ? Math.abs(h.y + 8 - st.pos) < st.w / 2 : Math.abs(h.x - st.pos) < st.w / 2;
+        if (on && !this.petIs('swampqueen')) this.impulse(x ? st.dir * hv : 0, x ? 0 : st.dir * hv, 60);
+        for (const c of this.clouds) if (c.drift && (x ? Math.abs(c.y - st.pos) : Math.abs(c.x - st.pos)) < st.w / 2) { if (x) c.x += st.dir * 14 * dt / 1000; else c.y += st.dir * 14 * dt / 1000; }
+      }
+    }
+    // 피뢰침 기둥
+    if (this.rods) for (const q of this.rods) {
+      q.hot = Math.max(0, q.hot - dt);
+      const lit = q.hot > 0 ? 0.6 + 0.4 * Math.abs(Math.sin(s.bt / 60)) : 0.3;
+      g.fillStyle(0xe8f4ff, lit * 0.25).fillCircle(q.x, q.y - 2, q.hot > 0 ? 36 : 22).lineStyle(1, 0xe8f4ff, lit * 0.6).strokeEllipse(q.x, q.y, 64, 48);
+      g.fillStyle(0x4a5668, 1).fillRect(q.x - 3, q.y - 30, 6, 30).fillStyle(0xc8d8f0, 1).fillRect(q.x - 1, q.y - 38, 2, 9).fillStyle(0xffffff, lit).fillCircle(q.x, q.y - 39, 3);
+    }
+    // 대장간 모루: 서 있는 동안 달궈지고(공격력↑), 가득 차면 화상. 내려서면 식는다
+    if (this.anvils) {
+      let on = false;
+      for (const a of this.anvils) {
+        const near = this.inEll(a.x, a.y, 30); on = on || near;
+        const glow = Math.min(1, this.heat / 100);
+        g.fillStyle(0xff7a20, 0.12 + 0.3 * (near ? 1 : 0.4) + glow * 0.2).fillEllipse(a.x, a.y, 60, 45).lineStyle(1.5, 0xffd75e, near ? 0.9 : 0.45).strokeEllipse(a.x, a.y, 60, 45);
+        g.fillStyle(0x2a2a34, 1).fillRect(a.x - 9, a.y - 10, 18, 6).fillRect(a.x - 5, a.y - 5, 10, 6).fillRect(a.x - 8, a.y, 16, 3).fillStyle(0xff9a40, 0.5 + glow * 0.5).fillRect(a.x - 9, a.y - 10, 18, 2);
+      }
+      this.onAnvil = on;
+      const was = this.heat;
+      this.heat = Phaser.Math.Clamp(this.heat + (on ? dt / 45 : -dt / 90), 0, 100);
+      if (was <= 20 && this.heat > 20 && !s.bot) sfx('level');
+      // 가득 찬 채 계속 서 있으면 화상
+      if (this.heat >= 100 && on) { this.burnT = (this.burnT ?? 0) - dt; if (this.burnT <= 0) { this.burnT = 500; this.hurtEnv(0.9, 'fire'); } }
+      const hg = this.heatGfx.clear();
+      if (this.heat > 1) {
+        const bx = h.x - 14, by = h.y - 34, f = this.heat / 100;
+        hg.fillStyle(0x000000, 0.7).fillRect(bx - 1, by - 1, 30, 5).fillStyle(f >= 1 ? 0xff3020 : f > 0.2 ? 0xffa030 : 0x806040, 1).fillRect(bx, by, 28 * f, 3);
+        this.heatTxt.setPosition(h.x, by - 6).setText(f >= 1 ? '화상!' : f > 0.2 ? `달굼 +${Math.round(f * 50)}%` : '').setColor(f >= 1 ? '#ff6050' : '#ffd75e');
+      } else this.heatTxt.setText('');
+    }
     // 증기 분출구: 쉬다가 → 예고(1.1초) → 분출(0.6초)
     for (const v of this.vents) {
       v.t -= dt;
@@ -197,6 +257,8 @@ export class Env {
       if (this.boltT <= 0) {
         this.boltT = this.kind === 'forge' ? 3400 : 2400;
         // 먹구름 설인이 가까이 있으면 번개가 그쪽으로 몰린다
+        const rod = this.rods?.filter(q => dist(q, h) < 250).sort((a, b) => dist(a, h) - dist(b, h))[0];
+        if (rod && Math.random() < 0.85) { this.strike(rod.x, rod.y, 32, 1000, rod); return; }
         const yeti = s.mobs.getChildren().find(m => m.active && !m.dead && m.fx === 'lure' && dist(m, h) < 230);
         const tx = yeti && Math.random() < 0.6 ? yeti.x + R(-16, 16) : h.x + R(-90, 90), ty = yeti && Math.random() < 0.6 ? yeti.y + R(-10, 10) : h.y + R(-70, 70);
         this.strike(Phaser.Math.Clamp(tx, 40, WORLD - 40), Phaser.Math.Clamp(ty, 40, WORLD - 40));

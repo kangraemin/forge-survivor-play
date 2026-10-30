@@ -29,7 +29,7 @@ export class Boot extends Phaser.Scene {
     this.load.on('loaderror', f => console.warn('missing asset', f.key));
     for (const k of REQUIRED.concat(OPTIONAL)) this.load.image(k, `assets/${k}.png`);
     for (const k of ICONS) this.load.image(k, `assets/icon/${k}.png`);
-    for (const id of WEAPONS) for (let t = 0; t < 5; t++) this.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
+    for (const id of WEAPONS) for (let t = 0; t < 10; t++) this.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
   }
 
   sheet(key, frames = 4) {

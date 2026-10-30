@@ -7,6 +7,7 @@ import { showAd, adsLeft } from './shop.js';
 import { SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW } from './gear.js';
 import { itemBox } from './gearTab.js';
 import { dexRefresh, DEX_HP } from './codex.js';
+const R = Phaser.Math.Between;
 
 const { W, H } = D;
 const DEPTH = 150;
@@ -37,6 +38,21 @@ export class Overlay {
     c.setAlpha(0); s.tweens.add({ targets: c, alpha: 1, duration: 250, delay: 600 });
   }
 
+  // 마지막 장 클리어 연출: 금빛 불꽃비와 큰 글씨(누르는 곳 없이 3초 뒤 걷힌다)
+  finale() {
+    const s = this.s, c = fixedContainer(s).setDepth(DEPTH + 20);
+    s.cameras.main.flash(500, 255, 220, 120); sfx('win');
+    const band = s.add.rectangle(W / 2, 240, W, 70, 0x000000, 0.75), t1 = s.add.text(W / 2, 228, '모든 장을 완주했다!', font(16, '#ffd75e', 4)).setOrigin(0.5), t2 = s.add.text(W / 2, 252, '원초의 대장신이 쓰러졌다', font9(11, '#ffffff')).setOrigin(0.5);
+    c.add([band, t1, t2]);
+    for (let i = 0; i < 48; i++) {
+      const sp = s.add.rectangle(R(0, W), -10, R(2, 3), R(3, 5), Phaser.Utils.Array.GetRandom([0xffd75e, 0xff9a40, 0xfff0b0, 0xff6030]));
+      c.add(sp);
+      s.tweens.add({ targets: sp, y: R(260, 500), x: sp.x + R(-24, 24), angle: R(-180, 180), duration: R(1400, 2600), delay: R(0, 1400), ease: 'Sine.In', onComplete: () => sp.destroy() });
+    }
+    c.setAlpha(0); s.tweens.add({ targets: c, alpha: 1, duration: 250 });
+    s.tweens.add({ targets: c, alpha: 0, delay: 3200, duration: 500, onComplete: () => c.destroy() });
+  }
+
   begin(name) {
     const s = this.s;
     this.open = name;
@@ -61,11 +77,19 @@ export class Overlay {
     this.open = null; this.c = null;
     s.tweens.add({ targets: c, alpha: 0, duration: 120, onComplete: () => c.destroy() });
     // 다음 창을 여는 10ms 동안 다른 창이 끼어들지 않게 자리를 잡아 둔다
-    if (this.pendingLv > 0) { this.pendingLv--; this.open = 'next'; s.time.delayedCall(10, () => { if (this.open !== 'next') return; this.open = null; this.levelUp(true); }); return; }
+    if (this.pendingLv > 0) { this.pendingLv--; this.open = 'next'; s.time.delayedCall(10, () => { if (this.open !== 'next') return; this.open = null; this.levelUp(true); this.settle(); }); return; }
     const next = this.queue.shift();
-    if (next) { this.open = 'next'; s.time.delayedCall(10, () => { if (this.open !== 'next') return; this.open = null; next(); }); return; }
-    s.paused = false; s.physics.resume(); s.anims.resumeAll();
-    s.showUlt?.(true);
+    if (next) { this.open = 'next'; s.time.delayedCall(10, () => { if (this.open !== 'next') return; this.open = null; next(); this.settle(); }); return; }
+    this.resume();
+  }
+  resume() { const s = this.s; s.paused = false; s.physics.resume(); s.anims.resumeAll(); s.showUlt?.(true); }
+  // 대기열 항목이 창을 열지 않고 끝났으면(이미 더 좋은 장비·봇 자동 장착 등) 다음 항목으로 넘기거나 일시정지를 푼다
+  settle() {
+    if (this.open || this.s.over) return;
+    if (this.pendingLv > 0) { this.pendingLv--; this.levelUp(true); this.settle(); return; }
+    const n = this.queue.shift();
+    if (n) { n(); this.settle(); return; }
+    this.resume();
   }
 
   // ── 레벨업: 3장 중 하나 ──
@@ -522,6 +546,9 @@ export class Overlay {
     gold = Math.round(gold);
     // 장비: 이기면 1개(보스는 2개, 한 등급 위로), 무한의 탑은 3층부터 1개. 판에서 주운 것은 져도 남는다
     const loot = r.loot.slice();
+    // 마지막 장 보스를 처음 잡으면 완주 보상
+    const finale = first && !hard && s.isBoss && s.c === D.CHAPTERS.length - 1;
+    if (finale) { gem += D.FINALE.gem; sweep += D.FINALE.sweep; guard += D.FINALE.guard; stone += D.FINALE.stone; for (let i = 0; i < D.FINALE.items; i++) loot.push(makeItem(s.c, { boost: 2 })); }
     // 처음 깬 판은 한 등급 위로(판마다 받는 게 손에 잡히게)
     // 어려움은 5장 수치 장비가 한 등급 위로 나온다
     if (win && !s.endless && !dun) for (let i = 0; i < (s.isBoss ? 2 : 1); i++) loot.push(makeItem(hard ? D.CHAPTERS.length - 1 : s.c, { boost: hard || s.isBoss || first ? 1 : 0 }));
@@ -589,8 +616,8 @@ export class Overlay {
     }
     if (!win && !s.endless && !dun && !close) {   // 아깝게 졌으면 '한 번 더'만 권한다(강화하자와 둘로 갈렸다)
       const pw = D.powerOf(sv), rp = D.recOf(s.c, s.s, hard);
-      c.add(s.add.text(W / 2, 266, `내 전투력 ${pw} / 권장 ${rp}`, font(11, D.powerCol(pw, rp, s.s))).setOrigin(0.5));
-      c.add(pw >= rp ? s.add.text(W / 2, 282, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#a1b2b6')).setOrigin(0.5) : s.add.text(W / 2, 282, `권장까지 ${rp - pw} 모자란다. 강화하자`, font9(11, '#f2e4bc')).setOrigin(0.5));
+      c.add(s.add.text(W / 2, 266, `내 전투력 ${fmt(pw)} / 권장 ${fmt(rp)}`, font(11, D.powerCol(pw, rp, s.s))).setOrigin(0.5));
+      c.add(pw >= rp ? s.add.text(W / 2, 282, s.isBoss ? '보스는 권장보다 20% 넉넉히 · 패턴을 피하자' : '권장은 넘었다 · 체력·갑옷 훈련도 챙기자', font9(10, '#a1b2b6')).setOrigin(0.5) : s.add.text(W / 2, 282, `권장까지 ${fmt(rp - pw)} 모자란다. 강화하자`, font9(11, '#f2e4bc')).setOrigin(0.5));
     }
     // 자랑하기: 이겼거나 탑 기록을 넘으면 공유(친구가 들어올 길이 없었다). 하루 한 번 보석
     const brag = !s.bot && !dun && (win || (s.endless && floors > best));
@@ -636,6 +663,7 @@ export class Overlay {
     if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : font9(10, '#a1b2b6')).setOrigin(0.5));
     // 보스 펫 합류는 결과 창 위에 따로 크게 띄운다(한 줄 글씨로는 못 보고 지나갔다)
     if (newPet && !s.bot) this.petJoin(newPet);
+    if (finale && !s.bot) this.finale();
     // 새 무기는 장비 아이콘 대신 무기 이름 칸으로 보여 준다(장비 그림이 나와 무엇을 얻었는지 헷갈렸다)
     if (wNew) {
       const st = { str: '힘', dex: '민첩', int: '지능' }[wNew.stat];
