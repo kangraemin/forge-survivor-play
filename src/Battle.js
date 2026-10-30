@@ -1264,6 +1264,7 @@ export class Battle extends Phaser.Scene {
       if (easyBoss || (towerBoss || this.s === 1 && !this.endless && this.wave === this.waveCount - 1 && !this.midDone) && this.waveT > this.waveLen * 0.3) {
         this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, 'general', this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true, easyBoss);
         this.banner(t('battle.20631e'), t('battle.a76043')); sfx('bossIn');
+        if (!this.bot && !this.mode) playBgm('boss', this.c);   // 중간보스 곡. 잡으면 boss.js die()가 전투 곡으로 되돌린다
       }
     } else {
       // 보스전에도 졸개가 꾸준히 나온다(1.2마리면 화면이 비어 보였다)

@@ -1,6 +1,6 @@
 // 보스: 패턴을 돌아가며 쓴다. 모든 공격은 빨간 예고 표시가 먼저 뜨고, 체력 절반 이하면 빨라진다
 import * as D from './data.js';
-import { sfx } from './sfx.js';
+import { sfx, playBgm } from './sfx.js';
 import { insetsGame } from './safeArea.js';
 import { font, toast, viewRect } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
@@ -429,6 +429,7 @@ export class BossAI {
       for (let i = 0; i < 8; i++) s.addItem(x + R(-16, 16), y + R(-16, 16), 'silver', 5);
       s.addItem(x, y, 'chest'); s.run.stones += 3;
       s.midBoss = null;
+      if (!s.bot && !s.mode && !s.over) playBgm('battle', s.c);   // 중간보스를 잡으면 전투 곡으로 되돌아간다(보스 전 위치에서 이어서)
       return;
     }
     s.run.silver += D.DROP.bossSilver;
