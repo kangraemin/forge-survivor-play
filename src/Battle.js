@@ -205,6 +205,8 @@ export class Battle extends Phaser.Scene {
     const M = 96;
     const rt = this.add.renderTexture(-M, -M, WORLD + 2 * M, WORLD + 2 * M).setOrigin(0).setDepth(-10);
     const stamp = this.make.image({ key: key + '_t', add: false });
+    // draw()를 칸마다 부르면 부를 때마다 임시 그림판을 만들었다 지워 소프트웨어 GL(녹화·일부 기기)에서 30초씩 멈췄다: 한 번 열고 한 번에 그린다
+    rt.beginDraw();
     const c = WORLD / 2;
     // 가운데 광장·길 안쪽으로 들어간 거리(밖이면 음수)
     const inside = (x, y) => Math.max(190 - Math.hypot(x - c, y - c), 50 - Math.abs(x - c), 50 - Math.abs(y - c));
@@ -212,19 +214,20 @@ export class Battle extends Phaser.Scene {
     if (key === 'tile9' || key === 'tile12') {
       // 9·12장 바닥은 160x120 한 장이 통째로 이어지는 그림이라 회전·광장 겹침 없이 깐다(칸을 섞으면 사각 이음새가 보였다)
       const big = this.make.image({ key, add: false }).setOrigin(0);
-      for (let y = 0; y < WORLD + 2 * M; y += ts.height) for (let x = 0; x < WORLD + 2 * M; x += ts.width) rt.draw(big, x, y);
+      for (let y = 0; y < WORLD + 2 * M; y += ts.height) for (let x = 0; x < WORLD + 2 * M; x += ts.width) rt.batchDraw(big, x, y);
       big.destroy();
     } else
     for (let y = -M; y < WORLD + M; y += T) for (let x = -M; x < WORLD + M; x += T) {
       const n = Math.random(), cx = x + T / 2, cy = y + T / 2;
       // 3번 그림(밝은 변종)은 3장부터 색을 입히면 사각으로 튄다
       stamp.setFrame(n < 0.85 || this.c >= 2 ? Phaser.Math.RND.pick([0, 2]) : 3).setAngle(R(0, 3) * 90).setAlpha(1);
-      rt.draw(stamp, cx + M, cy + M);
+      rt.batchDraw(stamp, cx + M, cy + M);
       const a = Phaser.Math.Clamp((inside(cx, cy) + T * 0.8) / (T * 2.4), 0, 1);
       if (a <= 0) continue;
       stamp.setFrame(Math.random() < 0.85 ? R(4, 5) : R(8, 9)).setAngle(R(0, 3) * 90).setAlpha(a * a);
-      rt.draw(stamp, cx + M, cy + M);
+      rt.batchDraw(stamp, cx + M, cy + M);
     }
+    rt.endDraw();
     stamp.setAlpha(1);
     // 못 가는 바깥은 어둡게 덮어 끝이라는 걸 보인다
     this.add.graphics().setDepth(-9).fillStyle(0x000000, 0.5).fillRect(-M, -M, WORLD + 2 * M, M).fillRect(-M, WORLD, WORLD + 2 * M, M).fillRect(-M, 0, M, WORLD).fillRect(WORLD, 0, M, WORLD);
