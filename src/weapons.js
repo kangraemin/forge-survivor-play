@@ -5,6 +5,7 @@ import { sfx } from './sfx.js';
 import { skinFx, viewRect } from './ui.js';
 import { SKILLS, PASSIVE_LV3, SKINS, synOf, SYN_CD, TIERS } from './data.js';
 import { cashW } from './gear.js';
+import { sync as synSync, onCast as synCast, onBoom as synBoom, SRC_SK } from './synergy.js';
 
 const RF = Phaser.Math.FloatBetween, R = Phaser.Math.Between;
 // 무기 기본 공격 투사체(각성 폭발 연쇄 대상)
@@ -61,12 +62,14 @@ export class Weapons {
   }
 
   update(dt) {
+    synSync(this.s);
     for (const [k, lv] of Object.entries(this.sk)) {
       if (SKILLS[k].type !== 'active') continue;
       this.cd[k] = (this.cd[k] ?? 300) - dt;
       if (this.cd[k] <= 0) {
         // 시너지: 짝 스킬을 함께 가지면 더 자주 나간다
-        this.cd[k] = this[k](lv) * this.cdMul() * (synOf(k, this.sk).length ? SYN_CD : 1);
+        this.cd[k] = this[k](lv) * this.cdMul() * (synOf(k, this.sk).some(x => x.cd) ? SYN_CD : 1);
+        synCast(this.s, k);
         // 대마법사 4세트: 기본 공격 말고 스킬이 10% 확률로 한 번 더 나간다
         if (k !== 'sword' && k !== 'orb' && k !== 'holy' && this.s.wtype.id === 'staff' && this.s.gear.fx.has('staff4') && Math.random() < 0.1) this.s.time.delayedCall(150, () => !this.s.over && this[k](lv));
       }
@@ -240,7 +243,7 @@ export class Weapons {
       fx.once('animationcomplete', () => fx.destroy());
       sfx('swing');
       s.mobs.getChildren().slice().forEach(m => {
-        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, h.x, h.y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 140, fx: 'big', tag: 'melee' });
+        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, h.x, h.y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 140, fx: 'big', tag: 'melee', skill: 'spin' });
       });
     });
     once(0); if (lv >= 5) once(260);
@@ -278,7 +281,7 @@ export class Weapons {
     list.forEach((m, i) => s.time.delayedCall(i * 70, () => {
       if (!m.active) return;
       this.zap(m.x, m.y);
-      s.hitMob(m, mult, { kb: 30, fx: 'big', tag: 'magic' });
+      s.hitMob(m, mult, { kb: 30, fx: 'big', tag: 'magic', skill: 'bolt' });
       if (lv >= 5) {
         // 근처 두 마리로 튄다
         s.mobs.getChildren().filter(o => o !== m && !o.dead && Phaser.Math.Distance.Between(o.x, o.y, m.x, m.y) < (evo ? 90 : 60)).slice(0, evo ? 4 : 2)
@@ -326,7 +329,7 @@ export class Weapons {
     s.mobs.getChildren().slice().forEach(m => {
       if (m.dead) return;
       const dx = m.x - s.hero.x, dy = (m.y - s.hero.y - 6) / 0.75;
-      if (Math.hypot(dx, dy) < rad + (m.isBoss ? 16 : 0)) { s.hitMob(m, mult, { kb: 0, tag: 'magic' }); hit++; if (lv >= 4) m.slow = 600; }
+      if (Math.hypot(dx, dy) < rad + (m.isBoss ? 16 : 0)) { s.hitMob(m, mult, { kb: 0, tag: 'magic', skill: 'holy' }); hit++; if (lv >= 4) m.slow = 600; }
     });
     if (evo && hit && s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + Math.min(hit, 5) * 0.4);
   }
@@ -354,7 +357,7 @@ export class Weapons {
     sfx('shoot');
     return 1800;
   }
-  explode(x, y, lv, awk = false) {
+  explode(x, y, lv, awk = false, skill = 'fireball') {
     // awk: +10 각성 연쇄 폭발은 1.4배 넓고 흰 테가 한 겹 더 퍼진다(화염구 폭발과 구분)
     const s = this.s, rad = 30 * this.area() * (lv >= 3 ? 1.3 : 1) * (awk ? 1.4 : 1), mult = 1.3 * (lv >= 2 ? 1.3 : 1);
     if (awk) { const wr = s.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffffff).setScale(0.3).setDepth(32); s.tweens.add({ targets: wr, scale: rad / 24, alpha: 0, duration: 320, onComplete: () => wr.destroy() }); }
@@ -365,8 +368,9 @@ export class Weapons {
     s.cameras.main.shake(70, 0.003);
     sfx('boom', 80);
     s.mobs.getChildren().slice().forEach(m => {
-      if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, x, y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 120, fx: 'big', from: { x, y }, tag: 'magic' });
+      if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, x, y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 120, fx: 'big', from: { x, y }, tag: 'magic', skill: skill === 'none' ? undefined : skill });
     });
+    synBoom(s, x, y, skill);
     if (lv >= 5) {
       const p = s.add.image(x, y, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff5a1a).setScale(rad / 32, rad / 32 * 0.7).setDepth(7).setAlpha(0.6);
       this.patches.push({ x, y, rad, t: 2000, g: p, tick: 0 });
@@ -435,7 +439,7 @@ export class Weapons {
       s.cameras.main.shake(90, 0.004);
       sfx('boom', 80);
       s.mobs.getChildren().slice().forEach(m => {
-        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, x, y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 160, fx: 'big', from: { x, y }, tag: 'melee' });
+        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, x, y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 160, fx: 'big', from: { x, y }, tag: 'melee', skill: 'quake' });
       });
     });
     once(0); if (lv >= 5) once(320);
@@ -501,7 +505,7 @@ export class Weapons {
       const ar = s.add.image(x, y - 90, 'dagger').setTint(0xffe0a0).setScale(1.4).setRotation(Math.PI / 2).setDepth(30);
       s.tweens.add({ targets: ar, y, duration: 180, ease: 'Quad.In', onComplete: () => {
         ar.destroy();
-        s.mobs.getChildren().slice().forEach(o => { if (!o.dead && Phaser.Math.Distance.Between(o.x, o.y, x, y) < 16 + (o.isBoss ? 20 : 0)) s.hitMob(o, mult, { kb: 40, tag: 'ranged' }); });
+        s.mobs.getChildren().slice().forEach(o => { if (!o.dead && Phaser.Math.Distance.Between(o.x, o.y, x, y) < 16 + (o.isBoss ? 20 : 0)) s.hitMob(o, mult, { kb: 40, tag: 'ranged', skill: 'volley', pierce: true }); });
       } });
     }));
     sfx('shoot', 50);
@@ -516,7 +520,7 @@ export class Weapons {
     for (let i = 0; i < n; i++) {
       const t = Phaser.Utils.Array.GetRandom(list), x = t.x, y = t.y;
       const g = s.add.circle(h.x, h.y - 4, 3, 0x6a7a4a).setDepth(30);
-      s.tweens.add({ targets: g, x, y, duration: 420, ease: 'Sine.Out', onComplete: () => { g.destroy(); this.explode(x, y, Math.min(5, lv + 1)); } });
+      s.tweens.add({ targets: g, x, y, duration: 420, ease: 'Sine.Out', onComplete: () => { g.destroy(); this.explode(x, y, Math.min(5, lv + 1), false, 'grenade'); } });
       s.tweens.add({ targets: g, scale: 1.8, duration: 210, yoyo: true });
     }
     return 2000;
@@ -591,7 +595,8 @@ export class Weapons {
         if (Phaser.Math.Distance.Between(m.x, m.y, b.x, b.y) > 10 + (m.isBoss ? 22 : m.displayWidth * 0.25)) continue;
         b.seen.add(m);
         if (b.explode) { dead = true; break; }
-        s.hitMob(m, b.mult, { kb: b.kb, from: b, tag: b.tag });
+        s.hitMob(m, b.mult, { kb: b.kb, from: b, tag: b.tag, skill: b.skill || SRC_SK[b.src], pierce: b.pierce >= 2 });
+        if (m.isBoss && (b.src === 'ice' || b.src === 'palm')) m.slow = Math.max(m.slow || 0, 1500);   // 66차: 얼음·기공파가 보스를 둔하게 한다(빠른 보스 해법)
         // +10 각성: 기본 공격(화살·총알·마력탄)으로 잡은 적이 터진다(너무 잦으면 화면이 덮여 간격 제한)
         if (m.dead && BASIC.has(b.src) && s.sv.enh >= 10 && s.bt - (this.lastChain || 0) > 160) { this.lastChain = s.bt; const x = m.x, y = m.y; s.time.delayedCall(70, () => !s.over && this.explode(x, y, s.sv.enh >= 15 ? 3 : 1, true)); }
         // 지팡이 마력탄: 맞힌 자리 주변도 마력이 터진다

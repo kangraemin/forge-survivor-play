@@ -368,7 +368,8 @@ export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 46 };
 // 49차: 첫 카드는 8~12초(2초에 뜨던 것을 늦춤). 2레벨 필요량을 늘렸다
 const XP_EARLY = [0, 26, 10, 18, 28, 40];
 // 63차: 1장(early)은 6레벨부터 필요량 ×1.3 — 카드 창은 그대로이고 뜨는 횟수만 줄인다
-export const xpNeed = (lv, early = false) => lv <= 5 ? XP_EARLY[lv] : Math.round(Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6)) * (early ? 1.3 : 1));
+// 66차: 6레벨부터 필요량을 줄여 한 판 레벨업을 늘린다(빌드가 한 판 안에 자라게. 보상은 그대로)
+export const xpNeed = (lv, early = false) => lv <= 5 ? XP_EARLY[lv] : Math.round(Math.max(42, Math.round((8 + (lv - 1) * 11) * 0.45)) * (early ? 1.2 : 1));
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 
@@ -532,14 +533,31 @@ export const bookSkillLv = lv => lv + 1;
 export const DUP_W_STONE = 40;
 // 시너지: 짝 스킬을 둘 다 가지면 두 스킬 모두 더 자주 나간다
 export const SYNERGY = [
-  { a: 'bolt', b: 'ice', name: t('data.7ee23b') },
-  { a: 'fireball', b: 'holy', name: t('data.9965d7') },
-  { a: 'spin', b: 'dagger', name: t('data.3798c8') },
-  { a: 'dagger', b: 'bolt', name: t('data.11b32f') },
-  { a: 'spin', b: 'holy', name: t('data.11600d') },
+  { a: 'bolt', b: 'ice', name: t('data.7ee23b'), cd: true },
+  { a: 'fireball', b: 'holy', name: t('data.9965d7'), cd: true },
+  { a: 'spin', b: 'dagger', name: t('data.3798c8'), cd: true },
+  { a: 'dagger', b: 'bolt', name: t('data.11b32f'), cd: true },
+  { a: 'spin', b: 'holy', name: t('data.11600d'), cd: true },
+  // 66차: 무기 전용 스킬과 맞물리는 짝. 쿨다운이 아니라 실제 상호작용이다(synergy.js)
+  // prime이 적에게 상태(빙결·화상·감전·표식)를 걸고, pay 스킬이 그 상태의 적을 맞히면 추가 피해와 연쇄가 터진다
+  { a: 'wave', b: 'ice', name: t('syn.frostwave'), fx: 'pay', pay: 'wave', prime: 'ice' },
+  { a: 'wave', b: 'spin', name: t('syn.whirl'), fx: 'whirl' },
+  { a: 'javelin', b: 'ice', name: t('syn.icelance'), fx: 'pay', pay: 'javelin', prime: 'ice' },
+  { a: 'javelin', b: 'dagger', name: t('syn.splitjav'), fx: 'split', pay: 'javelin' },
+  { a: 'quake', b: 'fireball', name: t('syn.lavacrack'), fx: 'lava' },
+  { a: 'quake', b: 'holy', name: t('syn.holycrack'), fx: 'pay', pay: 'quake', prime: 'holy' },
+  { a: 'volley', b: 'ice', name: t('syn.frostarrow'), fx: 'pay', pay: 'volley', prime: 'ice' },
+  { a: 'volley', b: 'dagger', name: t('syn.chainshot'), fx: 'split', pay: 'volley' },
+  { a: 'grenade', b: 'bolt', name: t('syn.shockboom'), fx: 'pay', pay: 'grenade', prime: 'bolt' },
+  { a: 'grenade', b: 'dagger', name: t('syn.fragnade'), fx: 'frag' },
+  { a: 'palm', b: 'spin', name: t('syn.spinpalm'), fx: 'twin' },
+  { a: 'palm', b: 'ice', name: t('syn.frostpalm'), fx: 'pay', pay: 'palm', prime: 'ice' },
+  { a: 'missile', b: 'fireball', name: t('syn.firemissile'), fx: 'pay', pay: 'missile', prime: 'fireball' },
+  { a: 'missile', b: 'holy', name: t('syn.holymissile'), fx: 'pay', pay: 'missile', prime: 'holy' },
 ];
 // 수호 구슬은 대기 시간 없이 늘 돌아서 '더 자주'가 효과가 없다: 시너지 짝에 넣지 않는다
 export const SYN_CD = 0.75;
+// 짝 효과가 쿨다운(cd)인 것만 재사용 시간을 줄인다(SYN_CD). 나머지는 synergy.js가 처리한다
 export const synOf = (k, skills) => SYNERGY.filter(x => (x.a === k && skills[x.b]) || (x.b === k && skills[x.a]));
 export const restoreGem = enh => 30 + enh * 10;
 export const GEM_SHOP = [

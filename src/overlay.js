@@ -234,7 +234,7 @@ export class Overlay {
     const ownTxt = () => t('overlay.37d916', { silver: r.silver, gem: s.sv.gem });
     const own = s.add.text(W / 2, 422, ownTxt(), font9(11, '#e8eef8')).setOrigin(0.5); c.add(own);
     this.lvOwn = () => own.active && own.setText(ownTxt());
-    if (s.bot) s.time.delayedCall(150, () => this.pick(cards.list[0]?.key));
+    if (s.bot) s.time.delayedCall(150, () => this.pick((window.__botPick && window.__botPick(cards.list.map(o => o.key))) ?? cards.list[0]?.key));   // 66차: ?bot 측정에서 카드 규칙(A/B/C)을 끼운다(window.__botPick이 없으면 첫 장)
   }
   lvReroll() { return 8 + 6 * (this.s.run.lvRerolls || 0); }
   // 진화할 수 있는 스킬이 있는가(있으면 자동 강화로 넘기지 않고 카드 창을 연다)

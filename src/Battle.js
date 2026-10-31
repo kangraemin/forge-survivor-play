@@ -23,6 +23,8 @@ import { t, tt } from './i18n.js';
 import { line } from './lines.js';
 import { setupWide } from './wide.js';
 import { isTest } from './testMode.js';
+import { onHit as synHit } from './synergy.js';
+import { weakMul } from './bossWeak.js';
 import { tst, testBattleStart } from './testBattle.js';   // 테스트 모드(바로 가기·무적·배속)
 const { W, H } = D;
 const WORLD = 1600;
@@ -672,7 +674,7 @@ export class Battle extends Phaser.Scene {
 
   // src: 같은 무기가 같은 몹을 너무 자주 때리지 않게 하는 키. kb: 밀려나는 세기
   // tag: 스킬 갈래(근접·원거리·마법·펫). 스탯 힘·민첩·지능이 갈래별 피해를 올린다
-  hitMob(m, mult, { src = 'x', cd = 0, kb = 60, fx = 'small', from, tag } = {}) {
+  hitMob(m, mult, { src = 'x', cd = 0, kb = 60, fx = 'small', from, tag, skill, pierce } = {}) {
     if (!m.active || m.dead || m.dive) return false;   // 물귀신은 잠겨 있는 동안 맞지 않는다
     if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
     m.hitBy[src] = this.bt;
@@ -680,6 +682,8 @@ export class Battle extends Phaser.Scene {
     const open = m.isBoss && m.expose > this.bt;   // 46차: 보스 페이즈 전환 뒤 짧게 약점이 드러난다 — 이때 맞으면 추가 피해
     if (open && this.bt - (this.weakAt || -1e9) > 260) { this.weakAt = this.bt; sfx('weak', 120); playOnce(this, 'weakpoint_break', m.x, m.y - m.displayHeight * 0.1, { sx: Math.max(1.4, m.displayWidth * 0.45 / 48), depth: 43 }); }
     let dealt = dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (m.marked > this.bt ? 1.4 : 1) * (open ? D.WEAK_MUL : 1);
+    if (skill && this.synFx) dealt *= synHit(this, m, skill);   // 66차: 스킬 짝 효과(빙결 파쇄·화상 폭발 등)
+    if (m.isBoss && m.bossAI?.wk) dealt *= weakMul(this, m, { tag, pierce, skill });   // 66차: 보스 약점·해법
     if (m.isBoss && m.shield > 0) dealt = m.bossAI.absorb(dealt, open);   // 49차: 쉴드 구간엔 약점이 열렸을 때 맞혀야 깎인다
     if (m.isBoss && m.invuln > this.bt) dealt = 0;   // 50차: 페이즈 전환 연출 동안 무적(1초 이내)
     this.trackDps(Math.min(dealt, Math.max(0, m.hp)));   // 과잉 피해는 뺀다
@@ -1151,7 +1155,7 @@ export class Battle extends Phaser.Scene {
       this.log('level_up', { wave: this.wave });
       this.lvTxt.setText('Lv ' + r.lv);
       // 3~5레벨과 7레벨부터 홀수 레벨(7·9·11…)을 카드 없이 자동 소강화로 넘긴다: 한 판 카드 창을 4~5번으로(49차, 80초에 7번 떴다). 2레벨 카드로 첫 스킬을 먼저 고른다. 성장 레벨 수는 같다. 진화가 열렸으면 창을 연다
-      if (((r.lv >= 3 && r.lv <= 5) || (r.lv >= 7 && r.lv % 2 === 1)) && !this.ui.evoReady()) this.ui.autoLevel();
+      if ((r.lv === 3 || r.lv === 5 || (r.lv >= 9 && r.lv % 2 === 1)) && !this.ui.evoReady()) this.ui.autoLevel();
       else if (this.bossLive()) this.bossLvQ = (this.bossLvQ || 0) + 1;   // 52차: 보스전 중엔 카드 창을 모아 두었다 페이즈 사이·처치 후에 연다
       else this.ui.levelUp();
     }
@@ -1375,6 +1379,8 @@ export class Battle extends Phaser.Scene {
         this.banner(t('battle.raidT'), t('battle.raidS')); sfx('bossIn'); this.log('stage1_raid', { bt: Math.round(this.bt / 1000) });
       }
       // 58차: 1-2 이후 판(60차: x-3 보스 판도 포함) — 마지막에서 둘째 웨이브에 금화 행렬, 둘째 웨이브엔 장마다 다른 중반 이벤트(midPat.js MID_EVENTS)
+      // 66차: 중간보스가 나오는 마지막 웨이브에는 금화 행렬을 겹쳐 띄우지 않는다(배너가 겹쳤다). 그 웨이브면 이번 판은 건너뛴다
+      if (!this.rushDone && !this.endless && (this.s === 1 || this.easy) && this.wave >= this.waveCount - 1 && (this.midDone || this.waveT > this.waveLen * 0.15)) this.rushDone = true;
       if (this.goldOk && !this.rushDone && this.wave === Math.min(2, this.waveCount - 1) && this.waveT > this.waveLen * rc('gold_rush_at') && rc('gold_rush_n') > 0) { this.rushDone = true; this.goldRush(); }
       if (!this.stage1 && !this.midEvDone && !this.easy && !this.practice && !this.mode && !this.endless && !this.dungeon && this.wave === 1 && this.waveT > this.waveLen * 0.35) { this.midEvDone = true; runMidEvent(this); }
       // 53차: 1-1 마지막 웨이브가 열리면(중간보스 직전) 회복 구슬 하나를 몸 곁에. 체력이 모자랄 때만 의미가 있게 항상 놓는다
@@ -1700,7 +1706,7 @@ export class Battle extends Phaser.Scene {
       }
     }
     if (key.length !== n) { same = false; key.length = n; }
-    if (same) return;
+    if (same || (this.bot && window.__fast)) return;   // 66차: 측정용 빨리 돌리기(?bot, tools/botfast.mjs)는 어둠 덮개를 다시 그리지 않는다(그리기 비용만, 판정과 무관)
     this.dark.clear().fill(0x06040c, this.darkA);
     if (L) this.dark.erase(L, this.hero.x - cam.scrollX, this.hero.y - cam.scrollY); else this.dark.erase('light', this.hero.x - cam.scrollX - 150, this.hero.y - cam.scrollY - 150);
     for (const t of this.torches) {
@@ -1731,7 +1737,9 @@ export class Battle extends Phaser.Scene {
     // 보석·고기 쪽으로 살짝 끌림, 가운데로 복귀
     let best = null, bd = 1e9;
     this.items.getChildren().concat(this.gems.getChildren()).forEach(g => { const d = Phaser.Math.Distance.Squared(g.x, g.y, h.x, h.y); if (d < bd) { bd = d; best = g; } });
-    if (best && bd < 150 * 150) { const d = Math.sqrt(bd) + 1; ax += (best.x - h.x) / d * 0.6; ay += (best.y - h.y) / d * 0.6; }
+    if (best && bd < 320 * 320) { const d = Math.sqrt(bd) + 1, safe = Math.hypot(ax, ay) < 2.5; ax += (best.x - h.x) / d * (safe ? 1.6 : 0.6); ay += (best.y - h.y) / d * (safe ? 1.6 : 0.6); }   // 66차: 봇이 멀리 떨어진 보석을 못 줍아 레벨이 안 올랐다(사람은 보석을 향해 걷는다)
+    // 66차: 사람은 보석을 향해 걸어가 줍는다. 봇은 몹에 둘러싸여 못 가므로, 보석을 끌어당겨(보석이 많으면 가장 먼 보석에 값이 합쳐져 거기 쌓인다) 레벨 흐름을 사람에 가깝게 한다(측정 전용 ?bot)
+    this.gems.getChildren().forEach(g => { const dx = g.x - h.x, dy = g.y - h.y; if (dx * dx + dy * dy < 1200 * 1200) g.pull = true; });
     ax += (WORLD / 2 - h.x) / 2000; ay += (WORLD / 2 - h.y) / 2000;
     const bd2 = this.mode?.botDir(); if (bd2) { ax += bd2.x; ay += bd2.y; }   // 모드 목표 쪽으로
     const v = new Phaser.Math.Vector2(ax, ay);

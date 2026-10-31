@@ -11,6 +11,7 @@
 //  데이터     /sdk/data/       : SDK.data.getItem/setItem/removeItem/clear (localStorage 모양). 제출 때 'Progress Save'를 켜야 동작. 1MB 한도. 꺼져 있으면 dataModuleDisabled
 //  요건       /requirements/*  : 인앱결제는 초대제(Xsolla), 앱스토어 링크·다른 플랫폼 홍보 금지, 영어 현지화 필수, 상대 경로만, 최초 다운로드 50MB(모바일 홈 20MB) 이하
 import { holdAudio } from '../sfx.js';
+import { t } from '../i18n.js';
 
 let sdk = null, ready = false, adBusy = false, adHold = false, muteSetting = false;
 const applyAudio = () => holdAudio(adHold || muteSetting);
@@ -19,7 +20,7 @@ const applyAudio = () => holdAudio(adHold || muteSetting);
 let blocker = null, note = null;
 function dom(css, text) { const e = document.createElement('div'); e.style.cssText = css; e.textContent = text; document.body.appendChild(e); return e; }
 function block(on) {
-  if (on && !blocker) blocker = dom('position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#ffd75e;font:14px G11,sans-serif', '광고를 불러오는 중…');
+  if (on && !blocker) blocker = dom('position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#ffd75e;font:14px G11,sans-serif', t('platform.adLoading'));
   if (!on && blocker) { blocker.remove(); blocker = null; }
 }
 function notice(msg) {
@@ -49,7 +50,7 @@ function request(type) {
         adStarted: () => { started = true; block(false); pauseGame(true); },
         adFinished: () => end(true),
         adError: e => {
-          if (type === 'rewarded') notice(e?.code === 'unfilled' ? '지금은 볼 수 있는 광고가 없어요.\n잠시 뒤에 다시 눌러 주세요.' : '광고를 불러오지 못했어요.');
+          if (type === 'rewarded') notice(e?.code === 'unfilled' ? t('platform.adNone') : t('platform.adFail'));
           end(false);
         },
       });
@@ -118,7 +119,7 @@ export async function init() {
       sdk.game.addSettingsChangeListener?.(s => { muteSetting = !!s?.muteAudio; applyAudio(); });
     } catch { /* 무시 */ }
     watch();
-    Promise.resolve(sdk.ad.hasAdblock?.()).then(b => { window.forgePlatform.adblock = !!b; if (b) setTimeout(() => notice('광고 차단 중이라 광고 보상 버튼이 동작하지 않을 수 있어요.\n게임은 그대로 즐길 수 있어요.'), 3000); }).catch(() => {});
+    Promise.resolve(sdk.ad.hasAdblock?.()).then(b => { window.forgePlatform.adblock = !!b; if (b) setTimeout(() => notice(t('platform.adblock')), 3000); }).catch(() => {});
   } catch {
     ready = false;
   }

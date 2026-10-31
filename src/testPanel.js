@@ -111,7 +111,7 @@ function build() {
   });
   for (let s = 0; s < D.STAGES_PER_CHAPTER; s++) g.row.append(btn(m.stage(s + 1), () => go(s)));
   g.row.append(
-    btn(m.mid, () => go(0, { testGo: { mid: true } })),
+    btn(m.mid, () => go(1, { testGo: { mid: true } })),
     btn(m.boss, () => go(D.STAGES_PER_CHAPTER - 1, { testGo: { boss: true } })),
     fl, btn(`${m.tower} ${m.floor}`, () => act(sc => startBattle(sc, { chapter: c(), stage: 0, endless: true, testGo: { floor: Math.max(1, +fl.value | 0) } }))),
     btn(m.dungeon, () => act(sc => startBattle(sc, { chapter: c(), stage: 0, dungeon: D.dunToday() }))),

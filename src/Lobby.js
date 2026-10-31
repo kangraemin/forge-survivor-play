@@ -1244,7 +1244,7 @@ export class Lobby extends Phaser.Scene {
       if (!max) b.add(gemIcon(this, x + 70, y + 44, 8));
     });
     b.add(this.add.text(16, 338, t('lobby.03bf39'), font(10, '#ffb050')));
-    D.SYNERGY.forEach((x, i) => { const st = this.add.text(16, 356 + i * 14, `${x.name}: ${D.SKILLS[x.a].name}+${D.SKILLS[x.b].name}`, font9(9, '#a1b2b6')); st.setScale(Math.min(1, (W - 32) / st.width)); b.add(st); });   // 55차: 한 줄씩(영어에서 두 칸이 겹쳤다)
+    D.SYNERGY.forEach((x, i) => { const cw = (W - 32) / 2 - 4, col = i % 2, row = i >> 1; const st = this.add.text(16 + col * (cw + 8), 356 + row * 14, `${x.name}: ${D.SKILLS[x.a].name}+${D.SKILLS[x.b].name}`, font9(9, '#a1b2b6')); st.setScale(Math.min(1, cw / st.width)); b.add(st); });   // 66차: 짝이 19개로 늘어 두 줄 칸으로   // 55차: 한 줄씩(영어에서 두 칸이 겹쳤다)
   }
 
   // ── 특가: 오늘의 특가(하루 한 번 무작위 할인) · 성장 꾸러미(장 보스 첫 처치 뒤 24시간) · 큰 꾸러미(달마다 한 번) ──

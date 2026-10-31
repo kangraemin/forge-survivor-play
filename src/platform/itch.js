@@ -1,7 +1,8 @@
 // itch.io 무료 체험판: 광고 없음, 현금 상품 숨김, 전체판(토스·스토어) 링크
 // 전체판 주소: 스토어 URL이 아직 없어 웹판 주소를 자리로 쓴다. 스토어가 열리면 아래 FULL_URL만 바꾼다
+import { t } from '../i18n.js';
 export const FULL_URL = 'https://kangraemin.github.io/forge-survivor-play/';   // TODO(출시): 토스·스토어 주소로 교체
-export const FULL_LABEL = '토스·스토어에서 전체판 하기';
+export const FULL_LABEL = t('platform.fullLabel');
 
 export function install() {
   window.forgePlatform = {

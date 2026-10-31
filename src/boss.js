@@ -7,6 +7,7 @@ import { BOSS_PATTERNS } from './envfx.js';
 import { MID_PATTERNS } from './midPat.js';
 import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has } from './fx2.js';
 import { t, tt } from './i18n.js';
+import { weakOf, GuardMixin, showHint } from './bossWeak.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 const PAT_NAME = { jump: t('boss.107f3a'), charge: t('boss.420d2b'), slam: t('boss.029568'), ring: t('boss.6d24cb'), aimed: t('boss.36fc49'), summon: t('boss.d66332'), sweep: t('boss.40236d'), pools: t('boss.ec0b01'), wave: t('boss.997e54'), tsunami: t('boss.814117'), spore: t('boss.5c693c'), bloom: t('boss.0768ac'), prism: t('boss.3e97bd'), shatter: t('boss.56758f'), gale: t('boss.071b3a'), cyclone: t('boss.3dbf66'), void: t('boss.a11889'), eclipse: t('boss.895396'), burrow: t('boss.15b7f0'), sink: t('boss.4af90f'), vent: t('boss.418165'), overheat: t('boss.5bbfb4'), bolt: t('boss.7e82c9'), tempest: t('boss.d7dac6'), mirror: t('boss.e70e4d'), reflect: t('boss.2c22c2'), hammer: t('boss.ecef39'), meteor: t('boss.8d6129'), icelance: t('boss.93e20a'), frostquake: t('boss.e480b8'), blizzard: t('boss.87a560'), volley: t('boss.15e4f0'), skydive: t('boss.81537e'), broadside: t('boss.054902'), squall: t('boss.071b3a'), chime: t('boss.3e801a'), rewindpat: t('boss.099f7b'), gearsaw: t('boss.1497d7'), stoptime: t('boss.cb1b40'),
@@ -36,9 +37,11 @@ export class BossAI {
     // 50차: 체력은 최근 8초 실제 DPS x 목표 시간. 강화·장비가 올라도, 다시 하는 판·하드에서도 순삭되지 않는다(식 값의 절반이 바닥)
     if (!formula) {
       const dps = s.realDps?.() || 0;
-      if (dps > 0) m.maxHp = m.hp = Math.max(m.maxHp * 0.5, dps * (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last) * this.fk);
+      // 66차: DPS 연동에 상한·바닥. 약한 빌드는 체력의 80% 이상을 깎아야 하고(예전엔 50%까지 내려가 약해도 쉬웠다), 센 빌드는 160%를 넘지 않는다
+      if (dps > 0) m.maxHp = m.hp = Math.max(m.maxHp * 1.0, Math.min(m.maxHp * 1.2, dps * (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last) * this.fk));
       s.log?.('boss_hp', { boss: key, mid, dps: Math.round(dps), hp: Math.round(m.maxHp) });
     }
+    this.fitBase = m.maxHp; this.wk = weakOf(s, key); if (this.wk) showHint(this);
     this.spawnBt = s.bt; this.spawnDps = Math.round(s.realDps?.() || 0);   // 53차: 보스 스폰~처치 초와 그때 DPS를 남긴다(tools/boss_table.mjs)
     this.T = formula ? 0 : (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last) * 1000 * this.fk;   // 최소 버티는 시간(ms)
     // 1장 보스는 첫 보스라 20% 덜 아프게: 권장을 넘고도 체력 26% 남기고 졌다
@@ -99,7 +102,9 @@ export class BossAI {
     if (!(rate > 0) || !isFinite(rate)) return;
     const left = Math.max(6, D.BOSS_FIT[this.mid ? 'mid' : 'last'] * this.fk - live), need = rate * left;
     if (m.hp <= need) return;
-    const f = Math.max(0.6, need / m.hp);
+    // 66차: 맞춤으로 줄어드는 체력은 처음의 80%까지만. 약점을 못 찌르는 빌드까지 시간 안에 끝내 주지 않는다
+    const f = Math.max(0.75, need / m.hp, (this.fitBase * 0.97) / m.maxHp);
+    if (f >= 1) return;
     m.maxHp *= f; m.hp *= f;
   }
 
@@ -113,6 +118,7 @@ export class BossAI {
     // 50차: 시간 곡선 — 체력 비율이 (1 - 경과/목표시간)보다 빨리 닳으면 그 선까지 되채운다(보스가 숨을 고른다). 싸우는 중 레벨업·카드로 DPS가 늘어도, 고강화로 다시 해도 목표 시간 안엔 안 죽는다
     this.holdFloor();
     this.fit(dt);
+    this.guardTick(dt);
     if (this.bar && !this.tired && this.age > (this.mid ? D.BOSS_TIRED.midMs : D.BOSS_TIRED.ms)) {
       this.tired = true; m.weak = D.BOSS_TIRED.mul; this.bar[3].setText(t('boss.6683a5', { name: this.b.name, round: Math.round((D.BOSS_TIRED.mul - 1) * 100) })).setColor('#ff9a5a');
       s.banner(t('boss.4fceda'), t('boss.94d38c', { round: Math.round((D.BOSS_TIRED.mul - 1) * 100) }));
@@ -152,7 +158,8 @@ export class BossAI {
     if (m.slow > 0) m.slow -= dt;
     if (this.busy > 0) { this.busy -= dt; return; }
     const ang = Phaser.Math.Angle.Between(m.x, m.y, h.x, h.y);
-    m.setVelocity(Math.cos(ang) * this.b.spd * sl, Math.sin(ang) * this.b.spd * sl);
+    const sw = this.wk?.kind === 'swift' && !(m.slow > 0) ? 1.3 : 1;   // 66차: 빠른 보스는 둔화시키지 않으면 더 빠르다
+    m.setVelocity(Math.cos(ang) * this.b.spd * sl * sw, Math.sin(ang) * this.b.spd * sl * sw);
     this.t -= dt * (sl < 1 ? 0.7 : 1);
     if (this.t <= 0) {
       let list = enraged && this.b.rage ? [...this.b.pattern, this.b.rage] : this.b.pattern;
@@ -433,7 +440,7 @@ export class BossAI {
     const s = this.s, m = this.m;
     const rec = { boss: this.key, mid: this.mid, c: s.c, s: s.s, sec: Math.round((s.bt - this.spawnBt) / 100) / 10, hp: Math.round(m.maxHp), dps_spawn: this.spawnDps, dps_kill: Math.round(s.realDps?.() || 0), power: D.powerOf(s.sv), speed: s.time?.timeScale };
     (s.bossTimes ||= []).push(rec); s.log?.('boss_time', rec);   // 봇·헤드리스는 s.bossTimes로 읽는다
-    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy(); this.markTxt?.destroy(); this.wborder?.destroy(); this.aura?.destroy(); this.shGfx?.destroy(); this.shBar?.forEach(o => o.destroy());
+    this.tele.destroy(); this.shadow.destroy(); this.mark?.destroy(); this.markTxt?.destroy(); this.wborder?.destroy(); this.aura?.destroy(); this.shGfx?.destroy(); this.gdGfx?.destroy(); this.shBar?.forEach(o => o.destroy());
     this.bar?.forEach(o => o.destroy());
     s.hitstop = 260;
     // 48차: 막타는 0.4초 슬로모션(실제 시간 기준)
@@ -469,4 +476,4 @@ export class BossAI {
 }
 
 // 6장부터의 보스 패턴(envfx.js)
-Object.assign(BossAI.prototype, BOSS_PATTERNS, MID_PATTERNS);
+Object.assign(BossAI.prototype, BOSS_PATTERNS, MID_PATTERNS, GuardMixin);
