@@ -20,6 +20,7 @@ import { ModeRun } from './modes.js';   // 모드(지키기·점령·돌파·사
 import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 import { dressHero, CosmeticActor, weaponKey, placeHeld } from './cosmeticView.js';
 import { t, tt } from './i18n.js';
+import { line } from './lines.js';
 const { W, H } = D;
 const WORLD = 1600;
 const HERO_D = 33;   // 47차: 주인공은 몹·불꽃·베기 효과(28~32)보다 위 층, 피해 숫자(40)·어둠(50)보다 아래
@@ -1277,7 +1278,7 @@ export class Battle extends Phaser.Scene {
       if (this.wave >= this.waveCount) {
         if (this.isBoss) { this.shopShown = true; this.ui.shop(() => this.startBoss()); }
         else this.ui.result(true);
-      } else if (this.endless) this.ui.shop(() => this.banner(t('battle.bb3f12', { v: this.wave + 1 }), this.wave % 3 === 2 ? t('battle.67af2f') : t('battle.e6d721')));
+      } else if (this.endless) this.ui.shop(() => this.banner(t('battle.bb3f12', { v: this.wave + 1 }), (this.wave % 3 === 2 ? t('battle.67af2f') : t('battle.e6d721')) + (q => q ? '\n' + q : '')(line('tower', 't' + (this.wave < 5 ? 1 : this.wave < 10 ? 2 : this.wave < 20 ? 3 : this.wave < 40 ? 4 : 5)))));
       else {
         const next = () => this.banner(t('battle.d3ec9b', { v: this.wave + 1, waveCount: this.waveCount }), this.wave === this.waveCount - 1 ? t('battle.0986a8') : t('battle.39fc0b'));
         // 맨 처음 판은 상인을 건너뛴다: 80초 판 한가운데 4칸 상점이 흐름을 끊었다(41차)
@@ -1293,7 +1294,7 @@ export class Battle extends Phaser.Scene {
     sfx('bossIn');
     this.cameras.main.shake(800, 0.006);
     const b = D.BOSSES[this.ch.boss];
-    this.banner(b.name, t('battle.b5263b'));
+    this.banner(b.name, t('battle.b5263b') + (q => q ? '\n' + q : '')(line('boss', this.ch.boss)));
     if (!this.bot) playBgm('boss', this.c);
     this.boss = new BossAI(this, this.ch.boss, this.mobHpMul);
   }
@@ -1378,7 +1379,7 @@ export class Battle extends Phaser.Scene {
         const midKey = !this.endless && this.ch.mid && D.BOSSES[this.ch.mid] ? this.ch.mid : 'general';   // 장마다 다른 중간보스(무한의 탑은 해골 장군)
         this.midDone = true; this.midWave = this.wave; this.midBoss = new BossAI(this, midKey, this.mobHpMul * (this.endless ? Math.pow(D.ENDLESS.hpGrow, this.wave) : 1) * (easyBoss ? 0.4 : 1), true);
         if (easyBoss) this.midBoss.m.dmg *= 0.7;   // 52차: 1-1 중간보스도 실제 DPS 기준 체력(예전엔 체력 0.4배 식이라 3초에 죽었다). 대신 덜 아프게
-        this.banner(D.BOSSES[midKey].name, t('battle.a76043')); sfx('bossIn');
+        this.banner(D.BOSSES[midKey].name, t('battle.a76043') + (q => q ? '\n' + q : '')(line('boss', midKey))); sfx('bossIn');
         if (!this.bot && !this.mode) playBgm('boss', this.c);   // 중간보스 곡. 잡으면 boss.js die()가 전투 곡으로 되돌린다
       }
     } else {

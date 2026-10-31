@@ -20,6 +20,7 @@ import { ModeScreen } from './modeScreen.js';
 import { dexRefresh, titleName } from './codex.js';
 import { itemName, PETS, gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, hasW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
 import { t, tt } from './i18n.js';
+import { line, bubble } from './lines.js';
 import { petCard } from './petRoles.js';
 import { openRank, rankVisible } from './rankPanel.js';
 import { loadTop, noteGear, seedFromSave } from './rank.js';
@@ -411,6 +412,7 @@ export class Lobby extends Phaser.Scene {
   }
 
   show(id) {
+    const fromOther = id === 'forge' && this.lastTab && this.lastTab !== 'forge';
     if (id !== this.lastTab) { track('tab_view', { tab: id, page: id === 'shop' ? this.shopPage : undefined }); this.lastTab = id; }
     if (id === 'train') { this.gearPage = 'train'; id = 'gear'; }
     if (id !== 'forge') this.clearBrag();
@@ -422,7 +424,7 @@ export class Lobby extends Phaser.Scene {
     this.body.removeAll(true); this.bg.removeAll(true);
     this.banner(id);
     if (id === 'battle') { this.battleTab(); this.trialLink(); }
-    if (id === 'forge') this.forgeTab();
+    if (id === 'forge') { this.forgeTab(); if (fromOther && this.sv.enh < D.ENH_MAX && this.sv.cleared >= 1 && this.sv.gold < D.enhGold(this.sv.tier, this.sv.enh)) bubble(this, line('forge', 'broke'), { y: 118, depth: 61, delay: 300 }); }
     if (id === 'gear') this.gearTab();
     if (id === 'shop') this.shopTab();
     this.body.setAlpha(0); this.tweens.add({ targets: this.body, alpha: 1, duration: 150 });
@@ -972,6 +974,7 @@ export class Lobby extends Phaser.Scene {
       const an = D.AWAKENINGS.find(x => x[0] === from + 1);
       this.flashText(awake ? tt('lobby.2e1006', { v: from + 1, v2: an ? ` ${an[1]}` : '' }) : tt('lobby.7bbb23', { v: from + 1 }), '#ffd75e');
       if (from + 1 >= 10) this.bragEnh(from + 1);   // +10 이상 성공: 자랑하기
+      bubble(this, line('forge', [10, 15, 20].includes(from + 1) ? 'm' + (from + 1) : 'ok'), { y: 118, depth: 61, delay: 600 });   // 62차: 대장장이 한마디(미리 만든 대사)
       // +8부터와 각성(+5 단위)은 화면을 번쩍이고 오른 공격력을 크게 띄운다
       if (from + 1 >= 8 || awake) {
         const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));
@@ -986,6 +989,7 @@ export class Lobby extends Phaser.Scene {
       sw.setTint?.(0x6a6a7a); this.time.delayedCall(400, () => sw.clearTint?.());
       this.tweens.add({ targets: sw, x: W / 2 + 4, duration: 45, yoyo: true, repeat: 4 });
       this.flashText(from >= D.DESTROY_FROM ? tt('lobby.0eefb0') : tt('lobby.1951f5'), '#a8a0c0');
+      bubble(this, line('forge', from >= D.DESTROY_FROM ? 'guard' : 'fail'), { y: 150, depth: 61, delay: 650 });
     } else {
       sfx('shatter');
       this.cameras.main.shake(350, 0.02);
@@ -997,6 +1001,7 @@ export class Lobby extends Phaser.Scene {
       }
       sw.setVisible(false);
       this.flashText(tt('lobby.c92607', { from, shatterTo: D.shatterTo(from) }), '#ff5050');
+      bubble(this, line('forge', 'shatter'), { y: 150, depth: 61, delay: 350, hold: 1000 });
     }
     // 낮은 단계 성공은 짧게 끊어 연타가 답답하지 않게
     const wait = outcome === 'shatter' ? 1500 : this.quick ? 380 : outcome === 'success' && from + 1 < 8 ? 450 : 900;
