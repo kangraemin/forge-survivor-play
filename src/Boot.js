@@ -185,7 +185,7 @@ export class Boot extends Phaser.Scene {
     // 54차: 아이폰은 드래그로 끝난 터치로는 소리를 못 켠다(움직이지 않은 탭만). 첫 판이 곧바로 드래그 전투라 시작 탭을 한 번 받는다
     this.registry.set('tapGate', true);   // 포털 어댑터가 이걸 보고 loadingStop을 보낸다
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.6).setDepth(900);
-    const tip = this.add.text(W / 2, H / 2 + 40, tt(PC ? 'boot.pcStart' : 'boot.7b30bf'), font(14, '#ffffff')).setOrigin(0.5).setDepth(901);
+    const tip = this.add.text(W / 2, H / 2 + 40, (PC ? tt('boot.pcStart') : tt('boot.7b30bf')), font(14, '#ffffff')).setOrigin(0.5).setDepth(901);
     this.tweens.add({ targets: tip, alpha: 0.35, duration: 700, yoyo: true, repeat: -1 });
     const up = p => {
       if (Math.hypot(p.upX - p.downX, p.upY - p.downY) > 12) return;   // 끌었다 뗀 건 탭이 아니다

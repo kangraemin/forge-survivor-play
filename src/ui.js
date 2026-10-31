@@ -1,6 +1,6 @@
 // 공통 UI: 글자 스타일, 패널, 누르는 버튼, 아이콘
 import { sfx } from './sfx.js';
-import { TIERS, SKILLS, H as GH, GW, OFF, WIDE } from './data.js';
+import { TIERS, SKILLS, H as GH, GW, OFF, WIDE, PC } from './data.js';
 import { t, lang } from './i18n.js';
 import { wrapTo } from './textfit.js';
 
@@ -87,7 +87,7 @@ export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size
     const f0 = BTN_FILL[col] ?? col, f = hov && !down && c.enabled && !ghost ? lit(f0) : f0, oy = down ? 1 : 0;
     const gh = ghost && f === 0xffb85c;
     g.fillStyle(gh ? 0x111923 : f, 1).fillRect(-w / 2, -h / 2 + oy, w, h);
-    g.lineStyle(gh ? 2 : 1, gh ? 0xffb85c : f === 0xffb85c ? 0x111923 : 0x475c66, 1).strokeRect(-w / 2 + (gh ? 1 : 0.5), -h / 2 + (gh ? 1 : 0.5) + oy, w - (gh ? 2 : 1), h - (gh ? 2 : 1));
+    g.lineStyle(gh ? 2 : PC && f0 === 0xffb85c ? 2 : 1, gh ? 0xffb85c : PC && f0 === 0xffb85c ? 0xffffff : f === 0xffb85c ? 0x111923 : 0x475c66, 1).strokeRect(-w / 2 + (gh ? 1 : 0.5), -h / 2 + (gh ? 1 : 0.5) + oy, w - (gh ? 2 : 1), h - (gh ? 2 : 1));
   };
   const primary = color === 0x2f6b3a && textColor === '#ffffff' && !ghost;
   const t = scene.add.text(0, 0, label, font(size, primary ? '#111923' : ghost && textColor === '#ffffff' ? '#ffd9a0' : textColor, primary ? 0 : 3)).setOrigin(0.5);

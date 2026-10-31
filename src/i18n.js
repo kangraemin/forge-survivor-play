@@ -34,7 +34,12 @@ async function loadJson(name) {
 }
 const KO = await loadJson('ko');
 let DICT = KO;
-if (lang !== 'ko') { try { DICT = { ...KO, ...(await loadJson(lang)) }; } catch { DICT = KO; } }   // 사전을 못 읽으면 한국어로
+// 65차: 번역이 빠진 키는 한국어가 아니라 영어로 폴백한다(영어 사전 → 그 언어 사전 순으로 덮는다). 사전을 못 읽으면 영어, 그것도 안 되면 한국어
+let EN = null;
+if (lang !== 'ko') {
+  try { EN = await loadJson('en'); } catch { EN = null; }
+  try { DICT = lang === 'en' && EN ? { ...KO, ...EN } : { ...KO, ...(EN || {}), ...(await loadJson(lang)) }; } catch { DICT = EN ? { ...KO, ...EN } : KO; }
+}
 
 // 글꼴: 기본 Galmuri(한글·라틴)에 없는 글자는 무료(OFL) 글꼴을 이 언어일 때만 받아서 같은 이름(G11·G9)으로 덮는다
 async function loadFonts() {

@@ -24,7 +24,7 @@ export class BossAI {
     const p = { x: Phaser.Math.Clamp(hx + R(-70, 70), 40, 1600 - 40), y: Phaser.Math.Clamp(Math.max(vr.y + vr.height * 0.22, 60), 60, 1600 - 40) };
     const m = this.m = s.mobs.create(p.x, p.y, null).play(key);
     const fb = s.registry.get('fallback')[key];
-    m.setScale(fb ? 3.0 : this.b.mid ? 1.12 : 1.3).setDepth(12);
+    m.setScale(fb ? 3.0 : this.b.mid ? 1.12 * Math.min(1, 104 / m.width) : 1.3).setDepth(12);   // 65차: 중간보스 새 그림은 프레임 폭이 제각각(68~120)이라 표시 폭이 ~116을 넘지 않게 맞춘다
     m.preFX?.addGlow(0x000000, 2.5, 0, false, 0.1, 8);   // 49차: 짙은 외곽선으로 바닥·효과 속에서도 읽힌다
     if (fb) m.setTint(this.b.color);
     m.isBoss = true; m.bossAI = this; m.kind = key; m.kbRes = 0; m.color = this.b.color; m.hitBy = {}; m.baseTint = m.tintTopLeft;

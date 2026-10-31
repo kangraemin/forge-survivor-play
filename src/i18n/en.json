@@ -2115,5 +2115,12 @@
  "desk.btnGear": "Gear",
  "battle.pcMove": "Move with WASD, arrows or mouse - attacks are automatic",
  "boot.pcStart": "Click or press Enter to start",
- "desk.fullscreen": "Fullscreen"
+ "desk.fullscreen": "Fullscreen",
+ "pc.ultReady": "Ultimate ready! Press Space ▶",
+ "pc.ultGo": "Space to cast!",
+ "pc.enh": "▼ Enhance (Enter)",
+ "pc.pickCard": "▼ Press 1, 2 or 3, or click a card",
+ "pc.pauseKeys": "Esc to resume · Enter to confirm",
+ "pc.resultKeys": "Enter for the main button",
+ "desk.nav": "Q·E or ←→ switch tab · Enter confirm · Esc close"
 }

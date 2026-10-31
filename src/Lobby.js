@@ -41,7 +41,7 @@ export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
   // 씬 인스턴스는 재사용되니 전투에서 돌아올 때 잠금·체크 상태를 비운다
-  init(data) { if (data?.modeSel) { this.modeScr = true; this.modeId = data.modeSel; this.modeN = data.modeN ?? 0; } else this.modeScr = false; this.tab = data?.tab || this.tab || 'battle'; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
+  init(data) { if (data?.modeSel) { this.modeScr = true; this.modeId = data.modeSel; this.modeN = data.modeN ?? 0; } else this.modeScr = false; this.tab = data?.tab || this.tab || 'battle'; this.autoStart = data?.autoStart || null; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
   // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
   get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
   get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
@@ -78,6 +78,7 @@ export class Lobby extends Phaser.Scene {
     logUser({ cleared: sv.cleared, tier: sv.tier, enh: sv.enh, payer: !!sv.paidTotal, paid_total: sv.paidTotal || 0, no_ads: !!sv.noAds, pass: sv.passLeft > 0 });
     track('lobby_enter', { tab: this.tab, cleared: sv.cleared, tier: sv.tier, enh: sv.enh, power: D.powerOf(sv), gold: sv.gold, stone: sv.stone, gem: sv.gem, runs: sv.stats.runs, guard: sv.guard, sweep: sv.sweep });
     this.show(this.tab);
+    if (this.autoStart) { const a = this.autoStart; this.autoStart = null; this.time.delayedCall(300, () => this.startBattle(a.c, a.s)); }
     this.cameras.main.fadeIn(200);
     // 55차: 16장 알림을 켜 둔 사람은 16장이 열린 뒤 처음 로비에서 한 번 알려 준다
     if (sv.tut?.ch16Notify && !sv.tut.ch16Told && D.openN() > D.MAIN_CHAPTERS) { sv.tut.ch16Told = 1; save(); this.time.delayedCall(900, () => toast(this, t('lobby.ch16Open'), '#9ae0ff', 112)); }
@@ -570,7 +571,7 @@ export class Lobby extends Phaser.Scene {
     // 64차: 로비에서 바로 여는 랭킹 입구(주간 랭킹 + 토스면 친구 랭킹). 포털판·서버 없음은 안 보인다
     if (sv.stats.runs > 0 && (rankVisible() || tossBoard())) {
       tossSubmitRecord(sv);
-      pv.add(button(this, 36, AY + 66, 54, 22, t('rank.short'), () => { if (this.busy) return; sfx('click'); track('rank_lobby_open'); if (rankVisible()) openRank(this); else tossBoard()?.open(); }, { size: 11, color: 0x1d6f80 }));
+      pv.add(button(this, 36, AY + 66, 54, 22, tt('rank.short'), () => { if (this.busy) return; sfx('click'); track('rank_lobby_open'); if (rankVisible()) openRank(this); else tossBoard()?.open(); }, { size: 11, color: 0x1d6f80 }));
     }
     if (sv.title) pv.add(this.add.text(10, AY + 4, `「${titleName(sv.title)}」`, font9(10, '#ffb050', 3)));
     // 돌아올 이유: 자리를 비워도 견습생이 번다(조용한 한 줄)
@@ -886,7 +887,7 @@ export class Lobby extends Phaser.Scene {
       // 처음 하는 사람: 강화 버튼을 가리킨다
       this.forgeArrow = sv.cleared >= 1 && !sv.tut.forge && ok;
       if (this.forgeArrow) {
-        const ar = this.add.text(eb.x, 376, tt('lobby.60cf6b'), font(11, '#ffffff')).setOrigin(0.5); b.add(ar);
+        const ar = this.add.text(eb.x, 376, (D.PC ? tt('pc.enh') : tt('lobby.60cf6b')), font(11, '#ffffff')).setOrigin(0.5); b.add(ar);
         this.tweens.add({ targets: ar, y: 382, duration: 350, yoyo: true, repeat: -1 });
       }
       // +10부터는 칼이 붉게 달아오른다

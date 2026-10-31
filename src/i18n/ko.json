@@ -2115,5 +2115,12 @@
  "desk.btnGear": "장비",
  "battle.pcMove": "WASD·방향키·마우스로 이동 · 공격은 자동",
  "boot.pcStart": "클릭하거나 Enter 키로 시작",
- "desk.fullscreen": "전체 화면"
+ "desk.fullscreen": "전체 화면",
+ "pc.ultReady": "궁극기가 찼다! Space 키 ▶",
+ "pc.ultGo": "Space로 발동!",
+ "pc.enh": "▼ 강화 (Enter)",
+ "pc.pickCard": "▼ 1·2·3 키나 클릭으로 고르세요",
+ "pc.pauseKeys": "Esc 계속하기 · Enter 확인",
+ "pc.resultKeys": "Enter 주 버튼",
+ "desk.nav": "Q·E 또는 ←→ 탭 이동 · Enter 확인 · Esc 닫기"
 }

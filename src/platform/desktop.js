@@ -30,7 +30,7 @@ export function installDesktop() {
   document.body.insertBefore(bg, document.body.firstChild);
   const hint = document.createElement('div'); hint.id = 'deskhint';
   const b = document.createElement('b'); b.textContent = t('desk.title');
-  hint.append(b, ...[t('desk.move'), t('desk.ult')].map(s => { const d = document.createElement('div'); d.textContent = '- ' + s; return d; }));
+  hint.append(b, ...[t('desk.move'), t('desk.ult'), t('desk.nav')].map(s => { const d = document.createElement('div'); d.textContent = '- ' + s; return d; }));
   document.body.appendChild(hint);
   // 64차: '이번 판' 패널은 게임 위 HUD(처치·은화·레벨)와 겹쳐서 치웠다. 대신 양옆에 눌러서 쓰는 바로가기를 둔다(로비일 때만 켜진다. 게임 좌표·밸런스는 그대로)
   const lobby = () => { try { const sc = window.game?.scene?.getScene?.('Lobby'); return sc && sc.sys?.isActive?.() && !sc.busy ? sc : null; } catch { return null; } };

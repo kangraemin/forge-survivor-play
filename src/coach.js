@@ -1,7 +1,7 @@
 // 코치마크: 화면을 어둡게 덮고 가리킬 곳만 구멍 뚫듯 밝히며, 깜빡이는 화살표와 말풍선으로 설명한다. 탭하면 다음 단계
 // 공용 함수 coachRun(여러 장)·coachOne(한 장). 새 탭·기능이 처음 열릴 때 같은 모양으로 한 장만 띄울 수 있다
 // 본 기록은 sv.tut.coach[id]에 남는다(저장 형식은 그대로: tut은 자유 칸)
-import { W, H } from './data.js';
+import { W, H, PC } from './data.js';
 import { font, font9, button, fixedContainer } from './ui.js';
 import { insetsGame, inTossShell } from './safeArea.js';
 import { sfx } from './sfx.js';
@@ -31,9 +31,16 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
     if (!(x >= card[0] && x <= card[0] + card[2] && y >= card[1] && y <= card[1] + card[3])) end(false, true);
   };
   cv.addEventListener('pointerdown', onDown, true);
+  // 65차: 키보드만으로도 닫는다. Enter·Space = 다음(마지막 장이면 확인), Esc = 건너뛰기(한 장짜리는 닫기)
+  const onKey = e => {
+    if (done || e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { if (steps.length === 1) end(false, true); else next(); } }   // 한 장짜리는 화면을 옮기지 않고 닫는다(바로 Enter로 강화)
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); end(steps.length > 1, steps.length === 1); }
+  };
+  document.addEventListener('keydown', onKey, true);
   track('coach_start', { id, n: steps.length });
   const end = (skipped, stay) => {
-    if (done) return; done = true; cv.removeEventListener('pointerdown', onDown, true);
+    if (done) return; done = true; cv.removeEventListener('pointerdown', onDown, true); document.removeEventListener('keydown', onKey, true);
     c.list.forEach(o => scene.tweens.killTweensOf(o)); c.destroy(); scene._coach = null; scene.busy = false;
     if (id) coachMark(load(), id);
     track(skipped ? 'coach_skip' : 'coach_done', { id, at: i + 1 });
@@ -92,7 +99,7 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
     const by2 = by + hh - 20;
     if (skip) c.add(button(scene, bx + 44, by2, 76, 24, t('coach.88130a'), () => end(true), { size: 10, color: 0x3a3846 }));
     if (steps.length > 1) c.add(scene.add.text(bx + BW / 2, by2, `${n + 1}/${steps.length}`, font9(9, '#a1b2b6')).setOrigin(0.5));
-    c.add(button(scene, bx + BW - 44, by2, 76, 24, n + 1 >= steps.length ? t('lobby.468266') : t('coach.854c76'), next, { size: 11, color: 0x1d6f80 }));
+    c.add(button(scene, bx + BW - 44, by2, 76, 24, (n + 1 >= steps.length ? t('lobby.468266') : t('coach.854c76')) + (PC ? ' [Enter]' : ''), next, { size: 11, color: 0x1d6f80 }));
   }
   draw(0);
   return c;

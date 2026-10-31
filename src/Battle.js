@@ -475,7 +475,7 @@ export class Battle extends Phaser.Scene {
 
   // 처음 두 판: 이동 방법을 3초 보여 준다
   dragHint() {
-    const t = this.add.text(W / 2, H - 120, tt(D.PC ? 'battle.pcMove' : 'battle.04bd37'), font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
+    const t = this.add.text(W / 2, H - 120, (D.PC ? tt('battle.pcMove') : tt('battle.04bd37')), font(12, '#ffffff', 3)).setOrigin(0.5).setScrollFactor(0).setDepth(120).setBackgroundColor('#0d0a14cc').setPadding(8, 4, 8, 4);   // 65차: 밝은 풀밭 위에서도 읽히게 외곽선·어두운 띠
     const hand = this.add.circle(W / 2 - 30, H - 90, 9, 0xffffff, 0.5).setStrokeStyle(2, 0xffffff).setScrollFactor(0).setDepth(120);
     this.tweens.add({ targets: hand, x: W / 2 + 30, duration: 700, yoyo: true, repeat: 2, ease: 'Sine.InOut' });
     this.hint = [t, hand];
@@ -1674,14 +1674,14 @@ export class Battle extends Phaser.Scene {
     this.ultIcon.setAlpha(full ? 1 : 0.45).setScale((full ? 1 + Math.sin(time / 120) * 0.08 : 1) * (this.ultIcon.baseScale ||= this.ultIcon.scaleX));
     // 궁극기를 한 번도 안 써 봤으면 처음 찼을 때 말풍선으로 짚어 준다
     if (full && !this.sv.tut.ult && !this.ultTip) {
-      this.ultTip = this.add.text(this.ultPos.x - 28, this.ultPos.y, tt('battle.4f5189'), font(10, '#ffd75e')).setOrigin(1, 0.5).setBackgroundColor('#2a1e3a').setPadding(4, 2, 4, 2).setScrollFactor(0).setDepth(101);
+      this.ultTip = this.add.text(this.ultPos.x - 28, this.ultPos.y, (D.PC ? tt('pc.ultReady') : tt('battle.4f5189')), font(10, '#ffd75e')).setOrigin(1, 0.5).setBackgroundColor('#2a1e3a').setPadding(4, 2, 4, 2).setScrollFactor(0).setDepth(101);
       this.tweens.add({ targets: this.ultTip, x: '-=4', duration: 400, yoyo: true, repeat: -1 });
       // 말풍선만으론 안 눌렀다(38차): 버튼 둘레로 금빛 고리가 계속 퍼진다
       const ur = this.add.circle(this.ultPos.x, this.ultPos.y, 24).setStrokeStyle(3, 0xffd75e).setScrollFactor(0).setDepth(101);
       this.tweens.add({ targets: ur, scale: 1.8, alpha: 0, duration: 700, repeat: -1 });
       this.ultTip.ring = ur;
     }
-    this.ultTxt.setText(full ? tt('battle.621771') : tt('battle.612a31', { floor: Math.floor(mf * 100) })).setColor(full ? '#ffd75e' : '#a1b2b6');
+    this.ultTxt.setText(full ? (D.PC ? tt('pc.ultGo') : tt('battle.621771')) : tt('battle.612a31', { floor: Math.floor(mf * 100) })).setColor(full ? '#ffd75e' : '#a1b2b6');
     // 조명
     this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);
     const L = this.env?.lightK < 1 || this.env?.blackT > 0 ? this.env.light.setScale(this.env.blackT > 0 ? 0.4 : this.env.lightK) : null;   // 심연·일식은 밝히는 범위가 좁다

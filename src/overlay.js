@@ -178,7 +178,7 @@ export class Overlay {
     const firstLv = s.sv.stats.runs <= 1 && s.run.lv === 2;
     // 추천 딱지는 처음 3번의 레벨업까지 남긴다(첫 장만 보고 나머지는 못 고른다는 평가)(42차)
     const recLv = s.sv.stats.runs <= 1 && s.run.lv <= 4;
-    c.add(s.add.text(W / 2, 122, firstLv ? t('overlay.245621') : t('overlay.a38227'), font9(11, firstLv ? '#ffffff' : '#a1b2b6')).setOrigin(0.5));
+    c.add(s.add.text(W / 2, 122, firstLv ? (D.PC ? t('pc.pickCard') : t('overlay.245621')) : t('overlay.a38227'), font9(11, firstLv ? '#ffffff' : '#a1b2b6')).setOrigin(0.5));
     const cards = s.add.container(0, 0); c.add(cards);
     this.cardsC = cards;   // 키보드 1·2·3으로 고르려고 pcInput.js가 쓴다
     // 다시 뽑기와 헷갈렸다: 카드의 '빼기'는 그 카드만 바꾼다고 짧게 적는다(긴 설명은 화면 밖으로 넘쳤다)
@@ -530,6 +530,7 @@ export class Overlay {
     const c = this.begin('pause');
     s.log('pause_open');
     c.add(panel(s, 45, 150, 180, 170));
+    if (D.PC) c.add(s.add.text(W / 2, 330, t('pc.pauseKeys'), font9(9, '#a1b2b6')).setOrigin(0.5, 0));
     c.add(s.add.text(W / 2, 172, t('overlay.3b6992'), font(14)).setOrigin(0.5));
     const sk = Object.entries(s.run.skills).map(([k, lv]) => `${D.SKILLS[k].name} ${lv}`).join('\n');
     c.add(s.add.text(W / 2, 192, sk, { ...font9(10), align: 'center' }).setOrigin(0.5, 0).setLineSpacing(1));
@@ -675,6 +676,7 @@ export class Overlay {
     const c = this.begin('result');
     cosmeticResultCard(s, c, win);
     c.add(panel(s, 20, 84, W - 40, 368, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
+    if (D.PC) c.add(s.add.text(W / 2, 459, t('pc.resultKeys'), font9(9, '#a1b2b6')).setOrigin(0.5, 0));
     const dunFull = dun && dunF >= 1;
     const title = s.add.text(W / 2, 118, s.endless ? (floors > best ? t('overlay.747619') : t('overlay.0a1382')) : dun ? (dunFull ? t('overlay.be4ff0') : t('overlay.87a62f')) : win ? (s.isBoss ? t('overlay.d2fe64') : t('overlay.aaa1a2')) : t('overlay.099a98'), font(18, win || dunFull || (s.endless && floors > best) ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
@@ -865,7 +867,8 @@ export class Overlay {
       // 64차: 강화 재료가 남아 있으면 대장간이 큰 주 버튼(대장간을 안 만진 사람이 1-3에서 4번 졌다)
       const forgeMain = powerAct(sv).act === 'enh';
       const goForge = () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); };
-      const goNext = () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, hard, bot: s.bot }); };
+      const goNext = () => { s.log('result_action', { act: 'next', win }); const nc = Math.floor(nextIdx / D.STAGES_PER_CHAPTER), ns = nextIdx % D.STAGES_PER_CHAPTER; if (forgeMain && !hard && nc === 0 && D.isBossS(ns)) { s.scene.start('Lobby', { tab: 'battle', autoStart: { c: nc, s: ns } }); return; }   // 65차: 보스 벽 도전도 로비의 '강화하면 쉬워져요' 확인(enhGate)을 거친다
+      s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, hard, bot: s.bot }); };
       if (forgeMain) {
         c.add(s.add.text(W / 2, 400, t('overlay.weakHint', { n: sv.stone | 0 }), font9(10, '#7fe6ee')).setOrigin(0.5));
         c.add(button(s, 63, 430, 76, 26, t('overlay.weakGo', { nextName }), goNext, { color: 0x3a3846, size: 9 }));

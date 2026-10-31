@@ -7,7 +7,8 @@ export const W = 270;
 export const H = (() => { try { const r = innerHeight / innerWidth; return r > 0 && isFinite(r) ? Math.max(480, Math.min(585, Math.round(W * r))) : 480; } catch { return 480; } })();
 
 // 64차: 가로가 넓은 화면(PC·태블릿 가로·큰 세로)은 높이 480은 그대로 두고 폭만 비율에 맞게 늘린다(270~854). 폰·토스(세로)는 그대로 270
-export const GW = (() => { try { const r = innerHeight / innerWidth; return r > 0 && isFinite(r) && r < 1.7 ? Math.max(W, Math.min(854, Math.round(480 / r))) : W; } catch { return W; } })();
+export const calcGW = () => { try { const r = innerHeight / innerWidth; return r > 0 && isFinite(r) && r < 1.7 ? Math.max(W, Math.min(854, Math.round(480 / r))) : W; } catch { return W; } };   // 65차: 창 크기가 바뀌면 pcInput.js가 다시 계산해 달라지면 다시 연다
+export const GW = calcGW();
 export const OFF = (GW - W) / 2;   // 넓은 화면에서 기본 판(270)이 가운데 놓이는 왼쪽 여백
 export const WIDE = GW > W;
 // 64차: 마우스(정밀 포인터)가 주 입력인 기기(PC). 터치 문구 대신 키보드·마우스 문구를 쓰는 데만 쓴다. 폰·토스는 false
