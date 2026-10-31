@@ -2,12 +2,12 @@
 //  왼쪽 위 TEST 버튼 또는 PC 키보드 ` (백틱)로 연다. 열려 있는 동안 지금 장면은 멈춘다
 import * as D from './data.js';
 import { load, save } from './save.js';
-import { PETS } from './gear.js';
+import { PETS, WTYPES, HERO_SKINS } from './gear.js';
 import { tutorialSteps } from './tutorial.js';
 import { coachRun } from './coach.js';
 import { isTest, isKo, askDisableTest, copyRealToTest, clearTestSave } from './testMode.js';
 import { tst, setSpeed, levelUpNow, skipWave, summonBoss, instantResult } from './testBattle.js';
-import { PRESETS, applyPreset, addCurrency, setSword, unlockAll } from './testPresets.js';
+import { PRESETS, applyPreset, addCurrency, setSword, unlockAll, setWeapon, setCash } from './testPresets.js';
 
 const KO = {
   badge: 'TEST', title: '테스트 패널', close: '닫기', // i18n-ignore
@@ -15,6 +15,7 @@ const KO = {
   chapter: '장', hard: '어려움', stage: n => n + "판", mid: '중간보스만', boss: '장 보스만', tower: '무한의 탑', floor: '층', dungeon: '오늘의 던전', prologue: '프롤로그', // i18n-ignore
   presets: '진행도 프리셋', presetNote: ['테스트 저장만 바뀝니다.', '적용하면 화면을 다시 엽니다.'], // i18n-ignore
   p: { new: '새 유저', c1: '1장 클리어', c5: '5장 클리어', c10: '10장 클리어', c15: '15장 끝', all: '전부 해금' }, // i18n-ignore
+  wp: '무기', wpNote: ['무기 종류를 고르면 장착하고 주 스탯을 맞춥니다.', '칼 등급·캐시 무기·칼빛·영웅 스킨을 바로 끼워 봅니다.'], tier: '칼 등급', cash: '캐시 무기', cashOff: '캐시 무기 끄기', light: '칼빛', hskin: '영웅 스킨', none: '없음', // i18n-ignore
   vals: '값 넣기', valsNote: ['누를 때마다 더해집니다.'], gold: '금화', stone: '강화석', gem: '보석', guard: '보호권', big: '큰 수', enh: '칼 강화', unlock: '무기·펫·꾸미기 전부 해금', // i18n-ignore
   battle: '전투 중', battleNote: ['전투 장면에서만 동작합니다.'], god: '무적', speed: '배속', lvup: '레벨업 카드', skip: '웨이브 넘기기', summon: '보스 소환', win: '즉시 승리', lose: '즉시 패배', // i18n-ignore
   screens: '화면 바로 열기', rWin: '승리 결과창', rLose: '패배 결과창', newPet: '새 펫 창', shop: '상점', attend: '출석', tut: n => "안내 " + n, tutNote: ['안내 단계를 하나씩 다시 봅니다.'], // i18n-ignore
@@ -27,6 +28,7 @@ const EN = { // i18n-ignore
   chapter: 'Chapter', hard: 'Hard', stage: n => `Stage ${n}`, mid: 'Mid-boss only', boss: 'Chapter boss only', tower: 'Endless tower', floor: 'Floor', dungeon: 'Daily dungeon', prologue: 'Prologue',
   presets: 'Progress presets', presetNote: ['Only the test save changes.', 'The screen reopens after applying.'],
   p: { new: 'New user', c1: 'Ch 1 clear', c5: 'Ch 5 clear', c10: 'Ch 10 clear', c15: 'Ch 15 end', all: 'Everything' },
+  wp: 'Weapon', wpNote: ['Pick a weapon type to equip it and match the main stat.', 'Try sword tier, cash weapon, blade light and hero skin right away.'], tier: 'Sword tier', cash: 'Cash weapon', cashOff: 'Cash weapon off', light: 'Blade light', hskin: 'Hero skin', none: 'None',
   vals: 'Set values', valsNote: ['Each press adds to the amount.'], gold: 'Gold', stone: 'Stones', gem: 'Gems', guard: 'Guards', big: 'Big', enh: 'Sword +', unlock: 'Unlock all weapons, pets, looks',
   battle: 'In battle', battleNote: ['Works only inside a battle.'], god: 'Invincible', speed: 'Speed', lvup: 'Level-up cards', skip: 'Skip wave', summon: 'Summon boss', win: 'Instant win', lose: 'Instant lose',
   screens: 'Open screens', rWin: 'Win result', rLose: 'Lose result', newPet: 'New pet window', shop: 'Shop', attend: 'Attendance', tut: n => `Tutorial ${n}`, tutNote: ['Replay each tutorial step.'],
@@ -119,6 +121,23 @@ function build() {
   // 프리셋
   const p = section(m.presets, m.presetNote); root.append(p.d);
   for (const pr of PRESETS) p.row.append(btn(m.p[pr.id], () => act(() => { const s = load(); applyPreset(s, pr.id); save(); reloadSoon(); })));
+
+  // 무기
+  const wsec = section(m.wp, m.wpNote); root.append(wsec.d);
+  const applyW = fn => act(() => { const s = load(); fn(s); save(); reloadSoon(); });
+  for (const w of WTYPES) wsec.row.append(btn(w.name + (sv.wtype === w.id || (!sv.wtype && w.id === 'sword') ? ' *' : ''), () => applyW(s => setWeapon(s, w.id)), (sv.wtype || 'sword') === w.id));
+  const tr = el('div', 'display:flex;flex-wrap:wrap;width:100%;align-items:center;margin-top:6px');
+  tr.append(el('span', 'font-size:14px;margin:3px', m.tier));
+  D.TIERS.forEach((_, i) => tr.append(btn(String(i + 1), () => applyW(s => setSword(s, { tier: i })), sv.tier === i)));
+  wsec.row.append(tr);
+  const cr = el('div', 'display:flex;flex-wrap:wrap;width:100%;align-items:center;margin-top:6px');
+  cr.append(btn(m.cash, () => applyW(s => setCash(s, true))), btn(m.cashOff, () => applyW(s => setCash(s, false))));
+  cr.append(el('span', 'font-size:14px;margin:3px 3px 3px 10px', m.light));
+  for (const k of D.SKINS) cr.append(btn(k.id ? k.name : m.none, () => applyW(s => { (s.skins ||= {})[k.id] = true; s.skin = k.id; }), (sv.skin || '') === k.id));
+  const hr = el('div', 'display:flex;flex-wrap:wrap;width:100%;align-items:center;margin-top:6px');
+  hr.append(el('span', 'font-size:14px;margin:3px', m.hskin));
+  for (const k of HERO_SKINS) hr.append(btn(k.id ? k.name : m.none, () => applyW(s => { (s.hskins ||= {})[k.id] = true; s.hskin = k.id; }), (sv.hskin || '') === k.id));
+  wsec.row.append(cr, hr);
 
   // 값
   const v = section(m.vals, m.valsNote); root.append(v.d);

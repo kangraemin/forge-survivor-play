@@ -13,6 +13,8 @@ export const PRESETS = [
   { id: 'c15', cleared: 45 },
   { id: 'all', cleared: 0 },   // 아래에서 열린 장 전부로 정한다
 ];
+// 진행도 프리셋마다 드는 무기(검이 아닌 것). 주 스탯도 이 무기 것에 맞춘다
+const PRESET_WEAPON = { c1: 'spear', c5: 'bow', c10: 'staff', c15: 'axe', all: 'knuckle' };
 const KEEP = ['lang', 'sound', 'musicOff', 'musicLvl', 'vibOff', 'fxLite', 'bagAuto', 'seenAt'];
 
 // 모든 것 해금: 무기·펫·꾸미기·칼빛·영웅 스킨·캐시 무기·비급·숨겨진 템
@@ -58,14 +60,16 @@ export function applyPreset(sv, id) {
   sv.hardCleared = id === 'c15' ? N : id === 'all' ? N : 0;
   sv.endBest = Math.min(30, Math.floor(N / 2));
   // 무기
-  sv.wOwn = { sword: true }; WTYPES.slice(1, 1 +Math.min(WTYPES.length - 1, Math.floor(N / 4))).forEach(w => { sv.wOwn[w.id] = true; });
+  const wid = PRESET_WEAPON[id] || 'spear';
+  sv.wOwn = { sword: true }; WTYPES.slice(1, 1 + Math.min(WTYPES.length - 1, Math.floor(N / 4))).forEach(w => { sv.wOwn[w.id] = true; });
+  sv.wOwn[wid] = true; sv.wtype = wid;   // 시점마다 다른 무기를 들어 여러 무기를 보게 한다
   // 펫
   sv.pets = {}; const open = PETS.filter(p => N >= p.unlock);
   for (const p of open) sv.pets[p.id] = Math.min(PET_MAX, 3 + Math.floor(N / 3));
   sv.pet = open.length ? open[open.length - 1].id : '';
   // 훈련·스탯
   sv.train = {}; for (const t of D.TRAINING) sv.train[t.id] = Math.min(t.max, Math.round(t.max * Math.min(1, N / 45)));
-  const tot = spTotal(N), main = 'str';
+  const tot = spTotal(N), main = WTYPES.find(w => w.id === wid).stat;
   sv.sp = { str: 0, dex: 0, int: 0, vit: 0 }; sv.sp[main] = Math.ceil(tot * 0.6); sv.sp.vit = tot - sv.sp[main];
   void SP;
   // 장비
@@ -74,7 +78,10 @@ export function applyPreset(sv, id) {
   sv.tier = 0; D.TIER_AT.forEach((at, t) => { if (N >= at && t < D.TIERS.length) sv.tier = t; });
   const nextIdx = Math.min(N, D.openTotal() - 1), rec = D.recOf(Math.floor(nextIdx / D.STAGES_PER_CHAPTER), nextIdx % D.STAGES_PER_CHAPTER, false);
   sv.enh = 0; while (sv.enh < D.ENH_MAX && D.powerOf(sv) < rec * 1.1) sv.enh++;
-  if (id === 'all') unlockAll(sv);
+  if (id === 'all') {
+    unlockAll(sv); sv.tier = D.TIERS.length - 1; sv.enh = Math.max(sv.enh, Math.min(D.ENH_MAX, 18));
+    sv.skin = 'flame'; sv.hskin = 'demon';   // 화려한 상태: 높은 등급·+15 이상·칼빛·영웅 스킨·캐시 무기
+  }
   dexRefresh(sv);
   return true;
 }
@@ -87,3 +94,13 @@ export function setSword(sv, { enh, tier }) {
   if (tier !== undefined) sv.tier = Math.max(0, Math.min(D.TIERS.length - 1, tier | 0));
   if (enh !== undefined) sv.enh = Math.max(0, Math.min(D.ENH_MAX, enh | 0));
 }
+
+// 장착 무기를 바꾸고 주 스탯을 그 무기 것으로 옮긴다(쓴 포인트 총량은 그대로, 주 스탯에 60%)
+export function setWeapon(sv, wid) {
+  const w = WTYPES.find(x => x.id === wid); if (!w) return false;
+  (sv.wOwn ||= {})[w.id] = true; sv.wtype = w.id;
+  const tot = Math.max(spTotal(sv.cleared), SP.reduce((a, x) => a + (sv.sp?.[x.id] || 0), 0));
+  sv.sp = { str: 0, dex: 0, int: 0, vit: 0 }; sv.sp[w.stat] = Math.ceil(tot * 0.6); sv.sp.vit = tot - sv.sp[w.stat];
+  return true;
+}
+export function setCash(sv, on) { const id = sv.wtype || 'sword'; (sv.cw ||= {})[id] = !!on; }
