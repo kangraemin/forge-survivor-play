@@ -18,7 +18,7 @@ import { runMidEvent } from './midPat.js';
 import { ModeRun } from './modes.js';   // 모드(지키기·점령·돌파·사냥) 규칙. 여기선 연결만
 
 import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
-import { dressHero, CosmeticActor, weaponKey, placeHeld } from './cosmeticView.js';
+import { dressHero, CosmeticActor, weaponKey, placeHeld, heldSpec, sizeHeld, placeWeapon } from './cosmeticView.js';
 import { t, tt } from './i18n.js';
 import { line } from './lines.js';
 import { setupWide } from './wide.js';
@@ -341,12 +341,9 @@ export class Battle extends Phaser.Scene {
     this.heroSword = this.wtype.id === 'sword' || !!this.cosLook.weapon;
     if (this.heroWeapon) {
       // 검은 등급마다 다른 그림(w_sword0~9)을 손잡이 끝으로 쥔다. +5·+10·+15를 넘으면 검이 커지고 강화 색으로 빛난다
-      const eb = sv.enh >= 15 ? 3 : sv.enh >= 10 ? 2 : sv.enh >= 5 ? 1 : 0, sz = (this.heroSword ? 17 + 1.6 * sv.tier + 2 * eb : 16) * 1.45;   // 46차: 손에 든 무기·무기 스킨을 한 번 더 키운다(주인공 1.3배보다 더)   // 45차: 검 단계가 오를수록 손에 든 검이 눈에 띄게 커진다(0단계 17 → 9단계 31+)
-      this.heroWeapon.setScale(sz / Math.max(this.heroWeapon.width, this.heroWeapon.height));   // 6단계 이후 그림은 16칸보다 크다
-      if (this.heroSword) {
-        this.heroWeapon.setOrigin(0.2, 0.8);
-        if (eb) this.heroWeapon.preFX?.addGlow(rc, eb, 0, false, 0.1, 6);
-      }
+      const spec = heldSpec(this.cosLook, this.wtype.id, sv.tier, sv.enh);
+      sizeHeld(this.heroWeapon, spec);
+      if (spec.sword && spec.eb) this.heroWeapon.preFX?.addGlow(rc, spec.eb, 0, false, 0.1, 6);
     }
     this.cosActor = new CosmeticActor(this, this.hero, this.cosLook);
     this.cosActor.effect ||= ({ crimson: 'ember', shadow: 'star', jade: 'leaf', paladin: 'gold', demon: 'ember' })[sv.hskin];
@@ -1486,15 +1483,7 @@ export class Battle extends Phaser.Scene {
     this.heroShadow.setPosition(h.x, h.y + h.displayHeight / 2 - 2).setScale(1.6 * 1.3 * (1 - bob * 2), 1.4 * 1.3).setDepth(HERO_D - 0.5);
     this.heroDisc.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
     if (this.heroWeapon) {
-      const k = h.anims.currentAnim?.key, f = h.flipX ? -1 : 1;
-      if (this.heroSword) {
-        placeHeld(h, this.heroWeapon, bob);
-      } else {
-        // 손 자리: 앞모습은 왼쪽 아래, 뒷모습은 오른쪽(몸 뒤), 옆모습·서 있기는 바라보는 쪽, 휘두를 땐 앞으로 뻗는다
-        const [ox, oy, ang] = k === 'walkFront' ? [-9, 6, -20] : k === 'walkUp' ? [9, 5, 20] : k === 'slash' ? [13 * f, 0, 40 * f] : [6 * f, 7, 10 * f];
-        this.heroWeapon.setPosition(h.x + ox, h.y + oy - bob * h.displayHeight).setFlipX(f < 0).setAngle(ang + h.angle)
-          .setDepth(h.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(h.alpha);
-      }
+      placeWeapon(h, this.heroWeapon, this.heroSword, bob);
     }
     this.cosActor?.update(dt, moving);
     this.moveV = v;

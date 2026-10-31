@@ -1,4 +1,5 @@
 import { COS_ANCHORS as ANCH1, BASE_HEAD } from './cosmeticAnchors.js';
+import { HOLD } from './cosmeticHold.js';
 import { COS_ANCHORS2 } from './cosmeticAnchors2.js';
 const COS_ANCHORS = { ...ANCH1, ...COS_ANCHORS2 };
 import { BODY_LOOKS, COS_ROWS, cosmetic, EFFECT_FRAMES, AURAS, effectTex } from './cosmetics.js';
@@ -36,21 +37,47 @@ export function anchorPoint(hero, x, y, width = hero.width) {
   const a = hero.rotation, sx = dx * hero.scaleX, sy = dy * hero.scaleY;
   return { x: hero.x + sx * Math.cos(a) - sy * Math.sin(a), y: hero.y + sx * Math.sin(a) + sy * Math.cos(a) };
 }
+// 그림의 손 자리(걷기·베기 프레임마다 다름): [gx, gy, 방향, 프레임폭, 줄, 프레임]
+export function handOf(hero) {
+  const k = hero.anims.currentAnim?.key;
+  const hands = hero.cosBody ? COS_HAND : HAND;
+  const T = hands[k] || hands.pose, fi = Number(hero.anims.currentFrame?.textureFrame ?? 2);
+  let [gx, gy, th] = T.f[Math.min(fi, 3)];
+  const row = ({ walkFront: 0, walkUp: 1, walkSide: 2, slash: 3 })[k] ?? 4;
+  const anchor = COS_ANCHORS[hero.cosBody]?.[row]?.[fi];
+  if (anchor) { [gx, gy] = anchor; th = anchor[4] ?? th; }
+  return [gx, gy, th, T.w, row, Math.min(fi, 3)];
+}
+// 손에 든 무기를 놓는다. 손 자리에서 cosmeticHold.js 표만큼 몸 바깥으로 옮기고, 몸통을 가로지르지 않는 방향으로 든다
+// (tools/weapon_check.mjs가 무기 7종·검 등급·무기 스킨·모든 몸·모든 프레임에서 몸통 겹침을 잰다)
 export function placeHeld(hero, weapon) {
   if (!weapon) return;
   const k = hero.anims.currentAnim?.key, f = hero.flipX ? -1 : 1;
-  const hands = hero.cosBody ? COS_HAND : HAND;
-  const T = hands[k] || hands.pose, fi = hero.anims.currentFrame?.textureFrame ?? 2;
-  let [gx, gy, th] = T.f[Math.min(Number(fi), 3)];
-  const row = ({ walkFront: 0, walkUp: 1, walkSide: 2, slash: 3 })[k] ?? 4;
-  const anchor = COS_ANCHORS[hero.cosBody]?.[row]?.[Number(fi)];
-  if (anchor) { [gx, gy] = anchor; th = anchor[4] ?? th; }
+  const [gx, gy, th0, w, row, fi] = handOf(hero);
+  const hold = HOLD[hero.cosBody || 'base']?.[row]?.[fi];
+  const [dx, dy, th] = hold || [0, 0, th0];
   const te = f > 0 ? th : 180 - th;
-  const at = anchorPoint(hero, gx, gy, T.w);
-  weapon.setPosition(at.x, at.y)
+  const at = anchorPoint(hero, gx, gy, w), a = hero.rotation, ox = f * dx * hero.scaleX / 1.3, oy = dy * hero.scaleY / 1.3;
+  // 뒤집힌 그림은 칸 안에서 거울상이라 기준점도 반대편(0.8)으로 둬야 손잡이가 손에 남는다
+  weapon.setOrigin(f > 0 ? 0.2 : 0.8, 0.8);
+  weapon.setPosition(at.x + ox * Math.cos(a) - oy * Math.sin(a), at.y + ox * Math.sin(a) + oy * Math.cos(a))
     .setFlipX(f < 0).setAngle(te + (f > 0 ? 45 : 135) + hero.angle)
     .setDepth(hero.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(hero.alpha);
 }
+
+// 전투 주인공이 손에 드는 무기 그림: 크기·기준점을 한 곳에서 정한다(전투·자동 검사가 같은 함수를 쓴다)
+export function heldSpec(look, wid, tier, enh) {
+  const sword = wid === 'sword' || !!look.weapon;
+  const eb = enh >= 15 ? 3 : enh >= 10 ? 2 : enh >= 5 ? 1 : 0;
+  const sz = (sword ? 17 + 1.6 * tier + 2 * eb : 16) * 1.45;
+  return { sword, eb, sz };
+}
+export function sizeHeld(img, spec) {
+  img.setScale(spec.sz / Math.max(img.width, img.height));
+  img.setOrigin(0.2, 0.8);   // 그림은 모두 왼쪽 아래가 손잡이인 대각선
+  return img;
+}
+export const placeWeapon = (hero, img, sword, bob = 0) => placeHeld(hero, img);
 
 // Battle.fxFree와 같은 free-list 재사용. 파티클/잔상 총 24개, 새 tween·타이머 없음.
 // 전투·미리보기 모두 같은 풀을 사용하며, 걷기/베기/처치에 별도 발산 패턴을 쓴다.
