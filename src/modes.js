@@ -518,6 +518,7 @@ export class ModeRun {
     const lim = this.limit, left = Math.max(0, Math.ceil((lim - s.waveT) / 1000));
     const mmss = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
     if (id === 'breach') { s.timeTxt.setText(''); }
+    else if (s.bossPhase || s.boss || s.midBoss) { s.timeTxt.setText(t('battle.792e7e')).setColor('#ff9a5a'); }   // 70차: 모드 판에 보스가 있으면 남은 시간 대신 '보스'
     else { s.timeTxt.setText(t('modes.8a295c', { mmss })).setColor(left <= 10 ? '#ffd75e' : '#ffffff'); }
     const bx = 8, bw = W - 16;
     if (id === 'guard') {

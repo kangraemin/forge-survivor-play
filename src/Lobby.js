@@ -1,6 +1,6 @@
 import { cosmeticPage } from './cosmeticShop.js';
 import { openSettings } from './settingsPanel.js';
-import { tutorialDue, runTutorial, modeDue, runModeCoach, tabCoach } from './tutorial.js';
+import { tutorialDue, runTutorial, modeDue, runModeCoach, tabCoach, runIntro } from './tutorial.js';
 import { nextGoal, salesOpen, powerAct } from './nextGoal.js';
 import { cashHidden, shareHidden, adWord, trialInfo, openFull } from './platform/flags.js';   // 포털판(CrazyGames·itch): 현금 상품·공유 숨김
 import { shareBrag, braggable, bragGem, lobbyShareTick, openShare, myCode } from './share.js';
@@ -41,7 +41,7 @@ export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
   // 씬 인스턴스는 재사용되니 전투에서 돌아올 때 잠금·체크 상태를 비운다
-  init(data) { if (data?.modeSel) { this.modeScr = true; this.modeId = data.modeSel; this.modeN = data.modeN ?? 0; } else this.modeScr = false; this.tab = data?.tab || this.tab || 'battle'; this.autoStart = data?.autoStart || null; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
+  init(data) { this.introCoach = !!data?.intro; if (data?.modeSel) { this.modeScr = true; this.modeId = data.modeSel; this.modeN = data.modeN ?? 0; } else this.modeScr = false; this.tab = data?.tab || this.tab || 'battle'; this.autoStart = data?.autoStart || null; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
   // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
   get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
   get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
@@ -83,8 +83,10 @@ export class Lobby extends Phaser.Scene {
     // 55차: 16장 알림을 켜 둔 사람은 16장이 열린 뒤 처음 로비에서 한 번 알려 준다
     if (sv.tut?.ch16Notify && !sv.tut.ch16Told && D.openN() > D.MAIN_CHAPTERS) { sv.tut.ch16Told = 1; save(); this.time.delayedCall(900, () => toast(this, t('lobby.ch16Open'), '#9ae0ff', 112)); }
     // 자리를 비웠다 돌아오면 견습생이 번 것을 먼저 준다(다른 창보다 앞)
-    const idle = this.idleReward();
-    if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
+    const idle = this.introCoach ? null : this.idleReward();
+    // 10/31: 프롤로그가 끝나면 대장간에서 시작해 게임 설명부터(tutorial.js runIntro). 다른 창보다 앞
+    if (this.introCoach) { this.introCoach = false; this.time.delayedCall(450, () => !this.busy && runIntro(this)); }
+    else if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
     // 1-1을 처음 깨고 오면(또는 이 안내를 아직 못 본 기존 유저) 코치마크 안내(tutorial.js). 다른 창보다 앞
     else if (this.shopPage !== 'skin' && tutorialDue(sv)) this.time.delayedCall(350, () => !this.busy && runTutorial(this));
     else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, t('lobby.2ee336'), '#ffd75e', 112));
@@ -638,6 +640,12 @@ export class Lobby extends Phaser.Scene {
       const t = this.add.text(rx + 10, 352, v, font(10, '#ffffff')); b.add(t);
       rx += 10 + t.width + 14;
     });
+    // 희귀 보상 알림: 확정 보상 줄 아래에 보라색으로 따로(누르면 무슨 효과인지)
+    if (boss && !hard && c === D.MAIN_CHAPTERS - 1 && !sv.proRelic) {
+      const rr = this.add.text(24, 366, tt('lobby.relicRare', { p: Math.round(D.RELIC_DROP * 100) }), font9(10, '#c890ff')).setInteractive({ useHandCursor: true });
+      rr.on('pointerup', () => { sfx('click'); toast(this, tt('prologue.rwRelic'), '#c890ff'); });
+      b.add(rr);
+    }
     const go = button(this, 95, 398, 150, 32, boss ? tt('lobby.4549db') : tt('lobby.e630cd'), () => this.startBattle(c, s, false, hard), { size: 14, color: boss || hard ? 0x8a2a3a : 0x2f6b3a });
     const sw = button(this, 214, 398, 76, 32, tt('lobby.1157aa', { sweep: sv.sweep }), () => this.sweep(c, s), { size: 11, color: 0x3a3846 });
     sw.setEnabled(done && sv.sweep > 0);

@@ -1,9 +1,9 @@
 // 첫 실행 프롤로그(처음 하는 사람에게만, 직접 하는 약 1분 30초). 보는 영상이 아니라 진짜 전투다(Battle.js 프롤로그 모드, proBattle.js).
 //  1) 'play': 최강 상태(+20 도끼·최강 펫·최강 장비·스킬 여러 개 MAX 직전)로 직접 움직이며 몬스터를 쓸고 레벨업 카드를 고른다 — 저장은 메모리 모래판에서만(save.js sandboxBegin)
-//  2) 마지막에 15장 마지막 보스(PROLOGUE_BOSS)가 나와 절대 못 잡고 쓰러진다 → 'after': 무기가 부서진다(+20 → +0)
+//  2) 마지막에 15장 마지막 보스(PROLOGUE_BOSS)가 나온다. 거의 다 여기서 쓰러진다(신컨 1% 미만만 잡는다 → 잡으면 성이 무너져 깔린다, 대신 보상) → 'after': 무기가 부서진다(+20 → +0)
 //  3) 쓰러진 주인공을 사제가 부활시킨다(대사·탭으로 넘김·건너뛰기) — 사제는 30장 보스라는 복선을 눈빛·한 줄 대사로만 깐다(docs/prologue.md)
-//  4) 낡은 검 +0·펫·장비 없음으로 새 목표를 받고 1-1로 이어진다. 음악은 15장 마지막 보스 곡(boss.mp3), 1-1이 열리면 전투 곡으로 돌아간다
-//  진짜 저장에 남는 건 '봤음' 표시 하나뿐이다(끝의 showGoal).
+//  4) 낡은 검 +0·펫·장비 없음으로 새 목표를 받고 대장간(로비)에서 게임 설명부터 듣는다. 음악은 15장 마지막 보스 곡(boss.mp3), 1-1이 열리면 전투 곡으로 돌아간다
+//  진짜 저장에 남는 건 '봤음' 표시 하나뿐이다(끝의 showGoal). 보스를 잡았으면 금화 보너스·마왕의 목걸이(proRelic)도 남는다
 import { W, H, BOSSES, PROLOGUE_BOSS } from './data.js';
 import { RARITY } from './gear.js';
 import { font, font9, panel, button, hiCam } from './ui.js';
@@ -19,8 +19,10 @@ import { insetsGame, inTossShell } from './safeArea.js';
 
 const RND = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 const MAXC = RARITY[4].color;                                  // 최강 장비 색
+let WON = false;   // 보스를 진짜로 잡고 무너진 성에 깔렸다(첫 줄 대사·보상이 달라진다)
+export const PRO_BONUS_GOLD = 600;   // 보스를 잡은 사람 보너스(1-1 첫 클리어의 몇 배: 대장간에서 바로 몇 번 두드려 본다)
 const LINES = [   // [누가, 키]
-  ['hero', () => t('prologue.l0')], ['hero', () => t('prologue.l1')], ['priest', () => t('prologue.l2')], ['priest', () => t('prologue.l3')],
+  ['hero', () => (WON ? t('prologue.l0w') : t('prologue.l0'))], ['hero', () => t('prologue.l1')], ['priest', () => t('prologue.l2')], ['priest', () => t('prologue.l3')],
   ['priest', () => t('prologue.l4')], ['priest', () => t('prologue.l5')], ['hero', () => t('prologue.l6')],
 ];
 // 프롤로그 전용 그림(game/assets/pro_*.png, docs/prologue.md): 사제 5프레임·거대 보스 3프레임·쓰러진 주인공 2프레임·부활 빛 기둥 4프레임
@@ -30,7 +32,7 @@ export class Prologue extends Phaser.Scene {
   constructor() { super('Prologue'); }
 
   // phase: 'play'(전투로 보낸다) | 'after'(보스에게 쓰러진 뒤: 무기 파괴 → 컷신) | 'skip'(건너뛰기: 새 목표 화면으로)
-  init(data) { this.replay = !!data?.replay; this.stage = data?.phase || 'play'; this.data0 = data || {}; }
+  init(data) { WON = this.won = !!data?.won; this.replay = !!data?.replay; this.stage = data?.phase || 'play'; this.data0 = data || {}; }
 
   // 15장 몹·15장 마지막 보스·바닥·최강 펫 그림은 첫 실행에서 아직 안 받았다: 시작 직전에 받는다(전투도 이 그림들을 쓴다)
   preload() {
@@ -53,7 +55,7 @@ export class Prologue extends Phaser.Scene {
     this.add.ellipse(this.HX, this.HY - 2, 40, 12, 0x000000, 0.4).setDepth(7);
     this.events.once('shutdown', () => { this.tweens.killAll(); this.time.removeAllEvents(); });
     if (this.skipped) return this.skipToGoal();
-    this.skipBtn = button(this, W - 38, this.topY + 11, 62, 20, t('coach.88130a'), () => this.skip(), { size: 10 }).setDepth(300);
+    this.skipBtn = this.data0?.replay ? button(this, W - 38, this.topY + 11, 62, 20, t('coach.88130a'), () => this.skip(), { size: 10 }).setDepth(300) : { setDepth() {}, destroy() {} };   // 처음엔 건너뛰기 없음, 다시 보기에서만(사용자 10/31)
     // 보스에게 쓰러진 모습으로 시작해 무기가 부서진다
     this.hero.setOrigin(0.5, 1).setTexture('pro_hero_down', 0).setScale(1.15).setTint(0xffaaaa).setPosition(this.HX - 40, this.HY + 36);
     this.wk = this.data0.wk && this.textures.exists(this.data0.wk) ? this.data0.wk : (this.textures.exists('w_axe9') ? 'w_axe9' : 'w_sword9');
@@ -243,10 +245,13 @@ export class Prologue extends Phaser.Scene {
     this.cards?.destroy?.();
     if (!this.skipped) this.tweens.add({ targets: this.dim, alpha: 0.7, duration: 400 });
     // 진행 기록은 이 한 가지뿐: 프롤로그를 봤다(칼 +0·재화·장비는 그대로 새 저장)
+    // 보스를 진짜로 잡았으면(신컨) 금화 보너스와 마왕의 목걸이(쓰러뜨린 몹이 가끔 우리 편이 됨, 밸런스는 거의 그대로). 다시 보기에선 안 준다
+    const reward = this.won && !this.replay && !this.sv.proRelic;
+    if (reward) { this.sv.gold += PRO_BONUS_GOLD; this.sv.proRelic = 1; track('prologue_reward', { gold: PRO_BONUS_GOLD }); }
     if (!this.replay) { this.sv.prologue = 1; save(); }
     track(this.skipped ? 'prologue_skip' : 'prologue_done', this.skipped ? { at: Math.round(this.data0.at || this.T), part: this.data0.part || 'after', lv: this.data0.lv } : { at: Math.round(this.T) });
     const x = W / 2, y = Math.round(H * 0.42), c = this.add.container(0, 0).setDepth(250);
-    const ph = 168; c.add(panel(this, 18, y - ph / 2, W - 36, ph, { fill: 0x111923, line: 0xffb85c, alpha: 0.97 }));
+    const ph = reward ? 252 : 168; c.add(panel(this, 18, y - ph / 2, W - 36, ph, { fill: 0x111923, line: 0xffb85c, alpha: 0.97 }));
     const title = this.add.text(x, y - ph / 2 + 22, t('prologue.goalTitle'), font(15, '#ffd75e', 4)).setOrigin(0.5); title.isBtnLabel = true; c.add(title);
     const lines = [t('prologue.goal1', { name: BOSSES[PROLOGUE_BOSS].name }), t('prologue.goal2')];
     lines.forEach((s, i) => {
@@ -254,6 +259,15 @@ export class Prologue extends Phaser.Scene {
       for (let sz = 11; sz >= 7; sz -= 0.5) { o.setFontSize(sz); o.setText(wrapTo(o, '- ' + s, W - 36 - 24)); if (o.height <= 32) break; }
       c.add(o);
     });
+    if (reward) {   // 받은 것: 짧은 제목 아래 '- 문장'
+      const ry = y - ph / 2 + 124;
+      const rt = this.add.text(30, ry, t('prologue.rwT'), font(12, '#ffd75e', 3)); rt.isBtnLabel = true; c.add(rt);
+      [t('prologue.rwGold', { n: PRO_BONUS_GOLD }), t('prologue.rwRelic')].forEach((s, i) => {
+        const o = this.add.text(30, ry + 20 + i * 26, '', font9(11, '#ffffff')).setLineSpacing(3); o.isBtnLabel = true;
+        for (let sz = 11; sz >= 7; sz -= 0.5) { o.setFontSize(sz); o.setText(wrapTo(o, '- ' + s, W - 36 - 24)); if (o.height <= 24) break; }
+        c.add(o);
+      });
+    }
     const b = button(this, x, y + ph / 2 - 24, W - 72, 30, t('prologue.go'), () => this.finish(), { color: 0x2f6b3a, size: 12 });
     c.add(b);
     c.setAlpha(0); this.tweens.add({ targets: c, alpha: 1, duration: 400 });
@@ -262,7 +276,7 @@ export class Prologue extends Phaser.Scene {
   finish() {
     if (this.done) return; this.done = true;
     if (this.replay) return this.scene.start('Lobby');
-    this.scene.start('Battle', { chapter: 0, stage: 0 });   // 낡은 검 +0으로 1-1(이동·자동 공격 안내는 전투가 한다)
+    this.scene.start('Lobby', { tab: 'forge', intro: true });   // 10/31: 1-1로 바로 가지 않고 대장간에서 게임 설명부터(tutorial.js runIntro)
   }
   skip() {
     if (this.skipped || this.phase === 'goal') return;

@@ -166,7 +166,7 @@ export const RAGE_WHAT = {
 export const BOSSES = {
   kingslime: { name: t('data.052600'), sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'charge', 'summon', 'slam', 'ring'], rage: 'pools' },
   lich: { name: t('data.8938a1'), sheet: 'boss1', row: 1, hp: 1500, dmg: 12, spd: 22, color: 0x9dff7a, pattern: ['ring', 'summon', 'aimed', 'ring'], rage: 'sweep' },
-  lavagolem: { name: t('data.7464f1'), sheet: 'boss1', row: 2, hp: 1650, dmg: 14, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
+  lavagolem: { name: t('data.7464f1'), sheet: 'boss1', row: 2, hp: 1650, dmg: 8, spd: 18, color: 0xff7a2a, pattern: ['slam', 'ring', 'charge', 'slam'], rage: 'pools' },
   wyrm: { name: t('data.05e151'), sheet: 'boss2', row: 0, hp: 1450, dmg: 14, spd: 30, color: 0x9ae8ff, pattern: ['aimed', 'charge', 'ring', 'aimed'], rage: 'sweep' },
   demonlord: { name: t('data.93df8f'), sheet: 'boss2', row: 1, hp: 3000, dmg: 15, spd: 28, color: 0xff3a50, pattern: ['charge', 'ring', 'slam', 'summon', 'aimed'], rage: 'sweep' },
   // 6장~ 보스: 새 패턴(envfx.js BOSS_PATTERNS)이 섞인다. rage는 체력 절반 아래에서 끼어드는 새 공격
@@ -299,6 +299,7 @@ export const clearGold = (c, s) => Math.round(75 * chCost(c) * (1 + 0.2 * oldS(s
 export const FIRST_CLEAR_MUL = 2.5;
 // 새 장 도입 보상: 6장부터 장 첫 판(x-1)에 처음 들어가면 금화 꾸러미와 소탕권을 준다(6장부터 금화 쓸 곳이 갑자기 늘어 막히던 구간 완충). 기존 보상은 그대로
 // 마지막 장(15장) 보스를 처음 잡을 때 따로 받는 완주 보상(업적·무기·펫과 별개). 장비는 한 등급 위로 2개
+export const RELIC_DROP = 0.05;   // 15장 마지막 보스 희귀 보상(마왕의 목걸이) 확률
 export const FINALE = { gem: 150, sweep: 3, guard: 2, stone: 40, items: 2 };
 // 16~18장 보스를 처음 잡을 때 받는 새 보상(장마다 하나씩). 18장은 마지막이라 크다. 세트 장비(palace·skyway·clock)는 gear.js
 export const LATE_FIRST = { 15: { gem: 100, stone: 30, guard: 2, items: 1, title: t('codex.93326b') }, 16: { gem: 120, stone: 36, guard: 2, items: 1, sweep: 2 }, 17: { gem: 200, stone: 50, guard: 3, items: 2, sweep: 3 } };
@@ -572,7 +573,7 @@ export const GEM_SHOP = [
 export const ADS = {
   // 하루 60: 월정액(하루 80)보다 적게 두되 볼 맛은 나게(39차: +10은 볼 이유가 없다). early: 처음 7일은 하루 5번(40차)
   gem: { name: t('data.502e9d'), daily: 3, early: 5, give: { gem: 20 } },
-  sweep: { name: t('data.f37835'), daily: 2, give: { sweep: 2 } },
+  sweep: { name: t('data.f37835'), daily: 1, give: { sweep: 1 } },   // 소탕권은 캐시 상품이라 광고로는 하루 1장만(사용자 10/31)
   double: { daily: 10 },   // 클리어 보상 2배
 };
 export const REVIVE_GEM = 30; // 쓰러졌을 때 보석 부활(판당 1번, 광고 부활과 같은 기회)

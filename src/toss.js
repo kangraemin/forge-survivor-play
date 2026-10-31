@@ -16,7 +16,8 @@
 const AD_TEST = 'ait-ad-test-rewarded-id';
 export const TOSS_AD_GROUPS = {
   default: 'ait.v2.live.b75ad9f6d7b74cda',   // 콘솔 'forge_rewarded' 보상형 그룹(앱 94606). 개발 중 테스트는 AD_TEST
-  // gem: 'TODO', sweep: 'TODO', double: 'TODO', revive: 'TODO',
+  // 상품마다 광고 묶음을 따로(사용자 10/31): 콘솔 forge_gem·forge_sweep·forge_double·forge_revive
+  gem: 'ait.v2.live.f55c4d6d81db4289', sweep: 'ait.v2.live.c2eee4dd96ad4022', double: 'ait.v2.live.41ab731dc9664289', revive: 'ait.v2.live.f4e0014c745f47db',
 };
 // 결제 상품 SKU = 게임 상품 id 그대로(data.js IAP/BIG_PACKS 의 id, 특가 deal_<꾸러미>_<할인율>, 성장 grow<장>). 콘솔에 이 이름으로 만든다
 // 꾸미기 묶음도 동일한 지급/미결 주문 복구 경로를 사용한다. 콘솔 등록 후 실제 SKU로 매핑한다.

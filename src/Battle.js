@@ -27,7 +27,8 @@ import { onHit as synHit } from './synergy.js';
 import { weakMul } from './bossWeak.js';
 import { tst, testBattleStart } from './testBattle.js';   // 테스트 모드(바로 가기·무적·배속)
 import { sandboxEnd } from './save.js';
-import * as PRO from './proBattle.js';   // 첫 실행 프롤로그(직접 하는 1분 30초). 모든 갈래는 this.pro 가드
+import * as PRO from './proBattle.js';
+import { relicTick, relicKill } from './relic.js';   // 마왕의 목걸이: 쓰러뜨린 몹이 가끔 우리 편이 된다   // 첫 실행 프롤로그(직접 하는 1분 30초). 모든 갈래는 this.pro 가드
 const { W, H } = D;
 const WORLD = 1600;
 const HERO_D = 33;   // 47차: 주인공은 몹·불꽃·베기 효과(28~32)보다 위 층, 피해 숫자(40)·어둠(50)보다 아래
@@ -877,6 +878,7 @@ export class Battle extends Phaser.Scene {
     sfx('kill', 50);
     if (m.isBoss) { m.bossAI.die(); return; }
     this.env?.mobKill(m);
+    relicKill(this, m);
     // 연속 처치: 1.2초 안에 이어 잡으면 콤보가 쌓인다
     this.combo = this.bt - (this.lastKillT || -1e9) < 1200 ? (this.combo || 0) + 1 : 1; this.lastKillT = this.bt;
     if (this.combo >= 10) { this.comboTxt.setText(t('battle.76126e', { combo: this.combo })).setAlpha(1).setScale(1.35); this.tweens.add({ targets: this.comboTxt, scale: 1, duration: 120 }); }
@@ -1180,7 +1182,7 @@ export class Battle extends Phaser.Scene {
     const st1 = this.stage1 && !this.practice ? 0.85 : 1;   // 53차: 1-1 한정 피해 -15%
     const zerk = st1 * (this.wtype.id === 'axe' && this.gear.fx.has('axe4') && this.hp < this.maxHp / 2 ? 0.8 : 1);
     let d = Math.max(1, Math.round(dmg * zerk * (this.pet.fit > 1 && this.pet.def.tank ? 1 - PET_GOOD_DEF : 1)));
-    if (this.pro) d = PRO.proHurt(this, d);   // 일반 구간엔 죽지 않게 체력 바닥
+    if (this.pro && (d = PRO.proHurt(this, d)) <= 0) return;   // 일반 구간엔 죽지 않게 체력 바닥, 보스 구간은 맞은 뒤 잠깐 안 맞음
     const by = this.run.dmgBy; by[src] = (by[src] || 0) + d;
     this.hp -= d;
     this.iframe = this.bt + D.PLAYER.iframe;
@@ -1432,6 +1434,7 @@ export class Battle extends Phaser.Scene {
     this.weapons.update(dt);
     this.pet.update(dt);
     this.env?.update(dt);
+    relicTick(this, dt);
     this.updateMobs(dt);
     this.updatePickups(dt);
     this.updateHud(time);
@@ -1661,14 +1664,14 @@ export class Battle extends Phaser.Scene {
     this.hpBar.width = 76 * f;
     this.hpLag.width += (76 * f - this.hpLag.width) * 0.06;
     this.hpTxt.setText(`${Math.min(Math.ceil(Math.max(0, this.hp)), Math.round(this.maxHp))}/${Math.round(this.maxHp)}`);
-    if (this.pro) { this.timeTxt.setText(''); this.waveTxt.setText(''); }
-    else if (this.bossPhase) { this.timeTxt.setText(tt('battle.792e7e')); this.waveTxt.setText(''); }
-    else if (this.midBoss?.m?.active && !this.midBoss.m.dead) { this.timeTxt.setText(tt('battle.792e7e')).setColor('#ff9a5a'); this.waveTxt.setText(tt('battle.7e0431', { v: this.hard ? tt('battle.79b7f1') : '', min: Math.min(this.wave + 1, this.waveCount), waveCount: this.waveCount })); }   // 55차: 중간보스가 사는 동안은 웨이브 시간이 0:01에 묶여 '남은 0:01'로 오래 보였다 → 보스가 살아 있으면 '보스'로 표시
+    if (this.pro?.phase === 'boss') { this.timeTxt.setText(tt('battle.792e7e')).setColor('#ff6a5a'); this.waveTxt.setText(''); }   // 프롤로그: 일반 구간은 아래 '남은 시간', 마지막 보스부턴 '보스'
+    else if (!this.pro && (this.bossPhase || this.boss)) { this.timeTxt.setText(tt('battle.792e7e')).setColor('#ff9a5a'); this.waveTxt.setText(''); }   // 70차: 보스전엔 색도 보스 색으로(웨이브 시간 색이 남아 노랗게 '0:00'처럼 읽히던 것 방지)
+    else if (!this.pro && this.midBoss && (this.midBoss.m?.active || !this.midBoss.m?.dead)) { this.timeTxt.setText(tt('battle.792e7e')).setColor('#ff9a5a'); this.waveTxt.setText(tt('battle.7e0431', { v: this.hard ? tt('battle.79b7f1') : '', min: Math.min(this.wave + 1, this.waveCount), waveCount: this.waveCount })); }   // 55차: 중간보스가 사는 동안은 웨이브 시간이 0:01에 묶여 '남은 0:01'로 오래 보였다 → 보스가 살아 있으면 '보스'로 표시
     else {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));
       this.timeTxt.setText(tt('battle.ee07c6', { floor: Math.floor(left / 60), padStart: String(left % 60).padStart(2, '0') }));   // 경과 시간으로 읽혔다
       this.timeTxt.setColor(left <= 5 ? '#ffd75e' : '#ffffff');
-      this.waveTxt.setText(this.endless ? tt('battle.bb3f12', { v: this.wave + 1 }) : this.dungeon ? tt('battle.3e5a0b', { kills: r.kills, killNeed: D.DUNGEON.killNeed }) : tt('battle.7e0431', { v: this.hard ? tt('battle.79b7f1') : '', min: Math.min(this.wave + 1, this.waveCount), waveCount: this.waveCount }));
+      this.waveTxt.setText(this.pro ? '' : this.endless ? tt('battle.bb3f12', { v: this.wave + 1 }) : this.dungeon ? tt('battle.3e5a0b', { kills: r.kills, killNeed: D.DUNGEON.killNeed }) : tt('battle.7e0431', { v: this.hard ? tt('battle.79b7f1') : '', min: Math.min(this.wave + 1, this.waveCount), waveCount: this.waveCount }));
       if (this.dungeon) this.waveTxt.setColor(r.kills >= D.DUNGEON.killNeed ? '#5fdc6a' : '#a1b2b6');
     }
     this.mode?.hud();   // 모드 진행 표시(화면 위쪽)

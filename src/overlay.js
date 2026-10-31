@@ -663,6 +663,11 @@ export class Overlay {
     const loot = r.loot.slice();
     // 마지막 장 보스를 처음 잡으면 완주 보상
     const finale = first && !hard && s.isBoss && s.c === D.MAIN_CHAPTERS - 1;
+    // 희귀 보상: 15장 마지막 보스는 낮은 확률로 마왕의 목걸이(프롤로그에서 못 잡은 사람도 얻을 길). 확정 보상과 따로 보라색으로 알린다
+    if (win && !hard && !s.endless && !dun && s.isBoss && s.c === D.MAIN_CHAPTERS - 1 && !sv.proRelic && !s.bot && Math.random() < D.RELIC_DROP) {
+      sv.proRelic = 1; s.log('relic_drop', { c: s.c });
+      s.time.delayedCall(900, () => { sfx('success'); toast(s, t('overlay.relicDrop'), '#c890ff'); });
+    }
     if (finale) { gem += D.FINALE.gem; sweep += D.FINALE.sweep; guard += D.FINALE.guard; stone += D.FINALE.stone; for (let i = 0; i < D.FINALE.items; i++) loot.push(makeItem(s.c, { boost: 2 })); }
     // 처음 깬 판은 한 등급 위로(판마다 받는 게 손에 잡히게)
     // 어려움은 5장 수치 장비가 한 등급 위로 나온다

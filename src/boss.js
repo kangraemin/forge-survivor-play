@@ -462,6 +462,7 @@ export class BossAI {
     s.goo.setParticleTint(this.b.color); s.goo.explode(60, m.x, m.y);
     const x = m.x, y = m.y;
     m.destroy();
+    if (this.mid && s.pro) { s.addGem(x, y, 10); return; }   // 프롤로그 보스 떼: 보상 없이 구슬만(저장은 모래판)
     if (this.mid) {
       for (let i = 0; i < 8; i++) s.addItem(x + R(-16, 16), y + R(-16, 16), 'silver', 5);
       s.addItem(x, y, 'chest'); s.run.stones += 3;

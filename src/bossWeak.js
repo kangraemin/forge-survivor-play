@@ -31,7 +31,7 @@ export const ANS = {
   armor: ['dagger', 'ice', 'javelin', 'volley', 'missile'],
   swift: ['ice', 'palm', 'holy'],
 };
-export const WARD = { frac: 0.17, block: 0.2, open: 9000, tc: 6000, th: 0.55, rs: 4, midx: 2, midRs: 1.5 };
+export const WARD = { frac: 0.13, block: 0.2, open: 9000, tc: 6000, th: 0.55, rs: 4, midx: 2, midRs: 1.5 };
 // hint: 등장 때 말풍선(답 스킬 이름이 {list}로 들어간다), tag: 막혔을 때 뜨는 짧은 글
 export const KINDS = {
   thorn: { hint: list => t('bw.hint.thorn', { list }), tag: t('bw.tag.thorn') },
@@ -45,11 +45,11 @@ export const KINDS = {
 export const answersFor = (kind, wid) => (ANS[kind] || []).filter(k => !D.SKILLS[k].own || D.SKILLS[k].own === wid);
 
 // [최대 체력 비율, 간격 ms, 보스 공격력 비율 바닥]
-const RETORT = { thorn: [0.05, 1000, 0.7], ward: [0.04, 1000, 0.35], mirror: [0.04, 1000, 0.35], armor: [0.04, 1000, 0.3], swift: [0.03, 1000, 0.3] };
+const RETORT = { thorn: [0.05, 1000, 0.7], ward: [0.04, 1000, 0.35], mirror: [0.055, 1000, 0.35], armor: [0.055, 1000, 0.3], swift: [0.03, 1000, 0.3] };
 
 // 약점이 적용되는 판: 일반 진행(무한의 탑·던전·연습·모드는 제외)
 export function weakOf(s, key) {
-  if (s.endless || s.dungeon || s.practice || s.mode) return null;
+  if (s.endless || s.dungeon || s.practice || s.mode || s.pro) return null;
   const k = WEAK[key];
   if (!k) return null;
   const w = { kind: k, ...KINDS[k] };

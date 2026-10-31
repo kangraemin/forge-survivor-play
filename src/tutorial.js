@@ -71,3 +71,18 @@ export function tabCoach(scene, tab) {
 export function tutorialDue(sv) { return sv.cleared >= 1 && !coachSeen(sv, 'main'); }
 export function modeDue(sv) { return sv.cleared >= 6 && coachSeen(sv, 'main') && !coachSeen(sv, 'mode'); }
 export function runModeCoach(scene) { return coachOne(scene, 'mode', modeStep()); }
+
+// 10/31: 프롤로그가 끝나면 대장간에서 시작해 게임 설명부터 한다(이 게임이 뭔지 → 강화 → 파괴 위험 → 재화 → 출정). 끝나면 1-1 뒤 강화 한 장은 건너뛴다
+const introStep = () => ({ prep: s => s.show('forge'), rect: [8, 36, 254, 48], title: t('tutorial.introT'), lines: [t('tutorial.intro1'), t('tutorial.intro2'), t('tutorial.intro3')] });
+export function runIntro(scene) {
+  const sv = scene.sv;
+  return !!coachRun(scene, [introStep(), S.enh(), S.risk(), S.cur(), S.go()], {
+    id: 'intro',
+    onEnd: (skipped, stay) => {
+      sv.tut.coach.main = 2;   // 강화 안내는 방금 봤다(1-1 뒤 한 장 생략). 장비·펫·교역은 탭을 처음 열 때 한 장씩
+      save();
+      if (!stay) scene.show('battle');
+      scene.refreshTop?.();
+    },
+  });
+}

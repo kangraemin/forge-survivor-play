@@ -54,6 +54,7 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   lang: '',                // 고른 언어(빈 값 = 기기 언어로 자동). 7부터
   bagAuto: 'salvage',      // 가방이 꽉 찼을 때 자동 정리: 'salvage'(분해) | 'sell'(판매)
   prologue: 0,             // 첫 실행 프롤로그를 봤나(9부터). 진행 기록이 있는 옛 저장은 변환에서 1로 채운다
+  proRelic: 0,             // 프롤로그 보스를 진짜로 잡았나(마왕의 목걸이: 쓰러뜨린 몹이 가끔 우리 편이 됨). 없는 옛 저장은 기본값 0이라 변환 불필요
 });
 
 // STEPS[i]: schemaVersion i -> i+1. 각 단계는 값을 지우지 않고 없는 것만 채우거나 옮긴다. 이미 한 변환은 플래그로 다시 하지 않는다
