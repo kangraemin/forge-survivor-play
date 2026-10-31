@@ -2,9 +2,12 @@
 // 근접 무기라도 원거리·마법·관통·광역·둔화 보조 스킬을 섞으면 풀린다(무기를 바꿀 필요는 없다). 플레이어 스탯은 건드리지 않고 보스 쪽 규칙만 더한다.
 import { t } from './i18n.js';
 import { font } from './ui.js';
+import * as D from './data.js';
+import { insetsGame } from './safeArea.js';
 
 // 보스 key → 약점 종류
 export const WEAK = {
+  lavagolem: 'armor',
   wyrm: 'swift', glacierbear: 'armor',
   demonlord: 'guard', executioner: 'thorn',
   tidewyrm: 'ward', coralcrab: 'armor',
@@ -19,42 +22,83 @@ export const WEAK = {
   forgegod: 'armor', anviltortoise: 'thorn',
 };
 
-// hint: 등장 때 말풍선, tag: 깎였을 때 뜨는 짧은 글. f: 맞은 방식에 따른 배수(o = { tag, pierce, skill })
-export const KINDS = {
-  thorn: { hint: t('bw.hint.thorn'), tag: t('bw.tag.thorn'), f: o => (o.tag === 'melee' ? 0.3 : 1) },
-  ward: { hint: t('bw.hint.ward'), tag: t('bw.tag.ward'), f: o => (o.tag === 'ranged' && !o.pierce ? 0.2 : 1) },
-  mirror: { hint: t('bw.hint.mirror'), tag: t('bw.tag.mirror'), f: o => (o.tag === 'magic' ? 0.25 : 1) },
-  armor: { hint: t('bw.hint.armor'), tag: t('bw.tag.armor'), f: o => (o.pierce ? 1 : 0.25) },
-  swift: { hint: t('bw.hint.swift'), tag: t('bw.tag.swift'), f: (o, m) => (m.slow > 0 || m.freeze > 0 ? 1 : 0.5) },
-  guard: { hint: t('bw.hint.guard'), tag: t('bw.tag.guard'), f: (o, m, ai) => (ai.guards() > 0 ? 0.15 : 1) },
+// 66·67차: 약점 갈래마다 '답 스킬' 2~5개(범용 2 + 무기 전용 몇 개). 무기 기본 공격은 답이 아니다 — 스킬을 골라 키워야 풀린다.
+// 막힌 딱지가 붙은 스킬은 피해가 WARD.block 배만 들어가고, 답 스킬이 보스 방벽(WARD.frac x 체력)을 깨면 WARD.open ms 동안 약점이 드러나 전부 들어간다. 방벽은 다시 차오른다.
+export const ANS = {
+  thorn: ['dagger', 'bolt', 'volley', 'grenade', 'missile'],
+  ward: ['spin', 'dagger', 'quake', 'palm'],
+  mirror: ['spin', 'dagger', 'wave', 'quake', 'palm', 'missile'],
+  armor: ['dagger', 'ice', 'javelin', 'volley', 'missile'],
+  swift: ['ice', 'palm', 'holy'],
 };
+export const WARD = { frac: 0.17, block: 0.2, open: 9000, tc: 6000, th: 0.55, rs: 4, midx: 2, midRs: 1.5 };
+// hint: 등장 때 말풍선(답 스킬 이름이 {list}로 들어간다), tag: 막혔을 때 뜨는 짧은 글
+export const KINDS = {
+  thorn: { hint: list => t('bw.hint.thorn', { list }), tag: t('bw.tag.thorn') },
+  ward: { hint: list => t('bw.hint.ward', { list }), tag: t('bw.tag.ward') },
+  mirror: { hint: list => t('bw.hint.mirror', { list }), tag: t('bw.tag.mirror') },
+  armor: { hint: list => t('bw.hint.armor', { list }), tag: t('bw.tag.armor') },
+  swift: { hint: list => t('bw.hint.swift', { list }), tag: t('bw.tag.swift') },
+  guard: { hint: () => t('bw.hint.guard'), tag: t('bw.tag.guard'), f: (o, m, ai) => (ai.guards() > 0 ? 0.15 : 1) },
+};
+// 이 판 무기로 얻을 수 있는 답 스킬 이름들(힌트 글에 쓴다)
+export const answersFor = (kind, wid) => (ANS[kind] || []).filter(k => !D.SKILLS[k].own || D.SKILLS[k].own === wid);
 
 // [최대 체력 비율, 간격 ms, 보스 공격력 비율 바닥]
-const RETORT = { thorn: [0.1, 600, 0.7], ward: [0.07, 900, 0.35], mirror: [0.07, 900, 0.35], armor: [0.06, 1000, 0.3], swift: [0.05, 1000, 0.3] };
+const RETORT = { thorn: [0.05, 1000, 0.7], ward: [0.04, 1000, 0.35], mirror: [0.04, 1000, 0.35], armor: [0.04, 1000, 0.3], swift: [0.03, 1000, 0.3] };
 
 // 약점이 적용되는 판: 일반 진행(무한의 탑·던전·연습·모드는 제외)
 export function weakOf(s, key) {
   if (s.endless || s.dungeon || s.practice || s.mode) return null;
   const k = WEAK[key];
-  return k ? { kind: k, ...KINDS[k] } : null;
+  if (!k) return null;
+  const w = { kind: k, ...KINDS[k] };
+  w.hint = w.hint(answersFor(k, s.wtype?.id).map(x => D.SKILLS[x].name).join(' · '));
+  return w;
 }
 
-// hitMob에서: 맞은 방식에 따라 보스가 받는 피해 배수. 가시는 근접으로 칠 때 되받아친다
+// hitMob에서: 보스가 받는 피해 배수. 못 푼 갈래로 칠수록 보스가 되갚는다
 export function weakMul(s, m, o) {
   const ai = m.bossAI, w = ai?.wk; if (!w) return 1;
-  const mul = w.f(o, m, ai);
+  let mul;
+  if (w.f) mul = w.f(o, m, ai);
+  else {
+    const wmax = (ai.fitBase || m.maxHp) * WARD.frac * (ai.mid ? WARD.midx : 1);
+    if (ai.ward === undefined) ai.ward = wmax;
+    if (ai.openUntil > s.bt) mul = 1;
+    else {
+      if (ai.openUntil) { ai.openUntil = 0; ai.ward = wmax; }
+      if (o.skill && ANS[w.kind].includes(o.skill)) {
+        mul = 1; ai.ward -= (o.raw || 0) * Math.min(1, (s.run?.skills?.[o.skill] || 1) / 5) ** 2;   // 답 스킬은 5레벨이 돼야 방벽을 제대로 깬다
+        if (ai.ward <= 0) {
+          ai.openUntil = s.bt + WARD.open;
+          const tx = s.add.text(m.x, m.y - m.displayHeight * 0.5, t('battle.6fbdb2'), font(12, '#ffe060', 3)).setOrigin(0.5).setDepth(40);
+          s.tweens.add({ targets: tx, y: tx.y - 20, alpha: 0, duration: 900, onComplete: () => tx.destroy() });
+        }
+      } else mul = WARD.block;
+    }
+    ai.wardFrac = ai.openUntil > s.bt ? 0 : Math.max(0, ai.ward / wmax);
+    wardBar(s, ai);
+  }
+  if (typeof window !== 'undefined' && window.__wkStat) { const st = window.__wkStat, r = o.raw || 0, k = o.skill || o.tag || 'x'; st.raw += r; st.dealt += r * mul; (st.by[k] ||= [0, 0])[0] += r; st.by[k][1] += r * mul; }   // 시뮬 계측(브라우저에서는 꺼져 있다)
   if (mul < 1 && s.bt - (ai.wkTxt || -1e9) > 1200) {
     ai.wkTxt = s.bt;
     const tx = s.add.text(m.x + Phaser.Math.Between(-16, 16), m.y - m.displayHeight * 0.45, w.tag, font(9, '#ff9a5a', 3)).setOrigin(0.5).setDepth(40);
     s.tweens.add({ targets: tx, y: tx.y - 16, alpha: 0, duration: 700, onComplete: () => tx.destroy() });
   }
-  // 되받아치기: 못 푼 갈래로 칠수록 보스가 되갚는다(가시=근접 반사, 방패=막힌 원거리, 거울=마법 반사, 장갑=관통 못 한 타격의 충격, 질주=둔화 없이 건드린 반격). 풀면(mul=1) 아무 일도 없다
-  // 되갚는 양은 내 최대 체력에 비례해 일정하다 — 체력 투자·강화로 버티는 게 아니라 '풀어야' 끝난다
-  // 최근 타격 중 막힌 비율(share)이 클수록 되갚음이 세다. 풀이 스킬이 딜의 상당 부분을 맡으면(막힌 비율 25% 아래) 되갚음이 없다
-  ai.tw = (ai.tw || 0) * 0.985 + 1; ai.pw = (ai.pw || 0) * 0.985 + (mul < 1 ? 1 : 0);
-  const R = w.kind === 'guard' ? null : RETORT[w.kind], share = ai.pw / ai.tw, k = Math.max(0, (share - 0.25) / 0.75);
-  if (mul < 1 && R && k > 0 && s.bt - (ai.thornAt || -1e9) > R[1]) { ai.thornAt = s.bt; s.hurt(Math.max(m.dmg * R[2], s.maxHp * R[0]) * k, w.kind); }
+  // 되받아치기: 막힌 타격 비율(최근 피해 가중)이 클수록 세다. 되갚는 양은 내 최대 체력에 비례해 일정하다 — 체력 투자·강화로 버티는 게 아니라 '풀어야' 끝난다
+  const dt = s.bt - (ai.sT ?? s.bt), dec = Math.exp(-dt / WARD.tc); ai.sT = s.bt;
+  const r = o.raw || 1; ai.tw = (ai.tw || 0) * dec + r; ai.pw = (ai.pw || 0) * dec + (mul < 1 ? r : 0);
+  const R = w.kind === 'guard' ? null : RETORT[w.kind], share = ai.pw / ai.tw, k = Math.max(0, (share - WARD.th) / (1 - WARD.th));
+  if (mul < 1 && R && k > 0 && s.bt - (ai.thornAt || -1e9) > R[1]) { ai.thornAt = s.bt; s.hurt(Math.max(m.dmg * R[2], s.maxHp * R[0] * WARD.rs * (ai.mid ? WARD.midRs : 1)) * k, w.kind); }
   return mul;
+}
+
+// 방벽 막대: 체력 막대 바로 아래 가는 줄(차 있을수록 막혀 있다, 비면 약점 노출)
+function wardBar(s, ai) {
+  const b0 = ai.bar?.[0]; if (!b0) return;
+  if (!ai.wb) { ai.wb = s.add.rectangle(35, b0.y + 7, 200, 3, 0x7fd8ff).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100); ai.bar.push(ai.wb); }
+  ai.wb.setScale(Math.max(0.001, ai.wardFrac), 1).setFillStyle(ai.openUntil > s.bt ? 0xffe060 : 0x7fd8ff);
 }
 
 // 소환형(guard): 졸개가 살아 있는 동안 보스가 거의 안 다친다. 광역으로 졸개를 쓸어야 한다
@@ -82,8 +126,19 @@ export const GuardMixin = {
   },
 };
 
-// 등장 힌트: 체력 막대가 뜰 때(1.7초) 말풍선 한 줄
+// 등장 힌트: 배너(장 이름·각성·변종)가 사라진 뒤 체력 막대 아래 고정 한 줄로 4초. 보스 머리 말풍선(패턴 외침)에 묻혀 안 읽혔다
 export function showHint(ai) {
   const w = ai.wk; if (!w) return;
-  ai.s.time.delayedCall(1900, () => { if (ai.m.active && !ai.m.dead) ai.bubble(w.hint, 3600); });
+  const s = ai.s;
+  let waited = 0;
+  const tryShow = () => {
+    if (!ai.m.active || ai.m.dead || s.over) return;
+    if ((s.bannerObjs || waited < 1800) && waited < 9000) { waited += 300; s.time.delayedCall(300, tryShow); return; }
+    const y = 92 + insetsGame(s.game).top + 22;
+    const tx = s.add.text(D.W / 2, y, w.hint, { ...font(11, '#ffe9a0', 4), wordWrap: { width: D.W - 24 }, align: 'center' }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(112).setAlpha(0);
+    const bg = s.add.rectangle(D.W / 2, y + tx.height / 2, Math.min(D.W - 8, tx.width + 20), tx.height + 8, 0x000000, 0.65).setScrollFactor(0).setDepth(111).setAlpha(0);
+    s.tweens.add({ targets: [tx, bg], alpha: 1, duration: 200 });
+    s.tweens.add({ targets: [tx, bg], alpha: 0, delay: 4000, duration: 300, onComplete: () => { tx.destroy(); bg.destroy(); } });
+  };
+  tryShow();
 }

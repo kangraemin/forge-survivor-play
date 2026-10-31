@@ -683,7 +683,7 @@ export class Battle extends Phaser.Scene {
     if (open && this.bt - (this.weakAt || -1e9) > 260) { this.weakAt = this.bt; sfx('weak', 120); playOnce(this, 'weakpoint_break', m.x, m.y - m.displayHeight * 0.1, { sx: Math.max(1.4, m.displayWidth * 0.45 / 48), depth: 43 }); }
     let dealt = dmg * (m.weak || 1) * (m.curse > this.bt ? 1.2 : 1) * (m.marked > this.bt ? 1.4 : 1) * (open ? D.WEAK_MUL : 1);
     if (skill && this.synFx) dealt *= synHit(this, m, skill);   // 66차: 스킬 짝 효과(빙결 파쇄·화상 폭발 등)
-    if (m.isBoss && m.bossAI?.wk) dealt *= weakMul(this, m, { tag, pierce, skill });   // 66차: 보스 약점·해법
+    if (m.isBoss && m.bossAI?.wk) dealt *= weakMul(this, m, { tag, pierce, skill, raw: dealt });   // 66차: 보스 약점·해법
     if (m.isBoss && m.shield > 0) dealt = m.bossAI.absorb(dealt, open);   // 49차: 쉴드 구간엔 약점이 열렸을 때 맞혀야 깎인다
     if (m.isBoss && m.invuln > this.bt) dealt = 0;   // 50차: 페이즈 전환 연출 동안 무적(1초 이내)
     this.trackDps(Math.min(dealt, Math.max(0, m.hp)));   // 과잉 피해는 뺀다

@@ -560,7 +560,7 @@ export class Weapons {
       const a = this.orbA + i * Math.PI * 2 / n;
       o.setPosition(s.hero.x + Math.cos(a) * rad, s.hero.y - 4 + Math.sin(a) * rad * 0.8);
       s.mobsNear(o.x, o.y, 40).forEach(m => {
-        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, o.x, o.y) < (evo ? 18 : 12) + (m.isBoss ? 18 : 0)) s.hitMob(m, mult, { src: 'orb' + i, cd: 400, kb: 90, from: o, tag: 'magic' });
+        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, o.x, o.y) < (evo ? 18 : 12) + (m.isBoss ? 18 : 0)) s.hitMob(m, mult, { src: 'orb' + i, cd: 400, kb: 90, from: o, tag: 'magic', skill: 'orb' });
       });
     });
   }

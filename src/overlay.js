@@ -234,6 +234,11 @@ export class Overlay {
     const ownTxt = () => t('overlay.37d916', { silver: r.silver, gem: s.sv.gem });
     const own = s.add.text(W / 2, 422, ownTxt(), font9(11, '#e8eef8')).setOrigin(0.5); c.add(own);
     this.lvOwn = () => own.active && own.setText(ownTxt());
+    // 시뮬/봇 C: 약점 답 카드가 안 보이면 무료·은화 다시 뽑기를 쓴다(힌트를 읽는 사람이 하는 행동)
+    if (s.bot && window.__botWants) for (let i = 0; i < 6 && !cards.list.some(o => window.__botWants(o.key)); i++) {
+      if (r.freeReroll > 0) r.freeReroll--; else if (r.silver >= this.lvReroll()) { r.silver -= this.lvReroll(); r.lvRerolls = (r.lvRerolls || 0) + 1; } else break;
+      draw();
+    }
     if (s.bot) s.time.delayedCall(150, () => this.pick((window.__botPick && window.__botPick(cards.list.map(o => o.key))) ?? cards.list[0]?.key));   // 66차: ?bot 측정에서 카드 규칙(A/B/C)을 끼운다(window.__botPick이 없으면 첫 장)
   }
   lvReroll() { return 8 + 6 * (this.s.run.lvRerolls || 0); }
@@ -379,7 +384,11 @@ export class Overlay {
     // 왼쪽: 지금 낀 것, 오른쪽: 주운 것
     const side = (x, it, head, col) => {
       c.add(s.add.text(x, 172, head, font9(10, col)).setOrigin(0.5));
-      if (!it) { c.add(s.add.text(x, 204, t('overlay.ed3cbe'), font9(10, '#6a6080')).setOrigin(0.5)); return; }
+      if (!it) {   // 빈 칸: 글자 대신 어두운 칸 그림자(슬롯 모양)
+        c.add(s.add.rectangle(x, 200, 32, 32, 0x14101e).setStrokeStyle(2, 0x3a3450));
+        c.add(s.add.image(x, 200, 'gs_' + item.s).setScale(1.5).setTint(0x2a2438).setAlpha(0.9));
+        return;
+      }
       c.add(itemBox(s, x, 200, it, 32));
       c.add(s.add.text(x, 224, itemName(it), font9(10, RARITY[it.r].css)).setOrigin(0.5));
       // 주운 것은 지금 것보다 오른 능력치를 초록 ▲, 내린 것을 빨강 ▼로(계산 안 해도 보이게)

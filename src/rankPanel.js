@@ -1,5 +1,5 @@
 // 주간 랭킹 창(로비 무한의 탑 화면에서 연다). 데이터는 rank.js, 서버는 routes/rank.js
-import { W, TIERS } from './data.js';
+import { W, TIERS, ENDLESS, STAGES_PER_CHAPTER, openTotal } from './data.js';
 import { font, font9, panel, button } from './ui.js';
 import { loadTop, rankEnabled, rankDecode, myWeek, tossBoard } from './rank.js';
 import { track } from './log.js';
@@ -46,9 +46,18 @@ export async function openRank(scene) {
     dyn.add(scene.add.text(72, 122, t('rank.colName'), font9(9, '#7d8f94')));
     dyn.add(scene.add.text(W - 26, 122, t('rank.colScore'), font9(9, '#7d8f94')).setOrigin(1, 0));
     if (!rows.length) {   // 빈 판: 짧은 제목 + '- 문장'
-      dyn.add(scene.add.text(W / 2, 196, t('rank.emptyTitle'), font(13, '#ffd75e')).setOrigin(0.5));
-      let ey = 222;
+      dyn.add(scene.add.image(W / 2, 172, 'chest').setScale(4).setAlpha(0.85));   // 기존 픽셀 상자 그림
+      dyn.add(scene.add.text(W / 2, 214, t('rank.emptyTitle'), font(13, '#ffd75e')).setOrigin(0.5));
+      let ey = 238;
       [t('rank.emptyL1'), t('rank.emptyL2')].forEach(s2 => { const o = fixed(scene.add.text(44, ey, '- ' + s2, { ...font9(10, '#e8f4f8'), wordWrap: { width: W - 88 } }).setLineSpacing(2)); dyn.add(o); ey += o.height + 6; });
+      // 버튼은 하나: 탑이 열려 있으면 바로 오르고, 아니면 전투 화면으로 보낸다
+      const open = scene.sv.cleared >= ENDLESS.unlock;
+      dyn.add(button(scene, W / 2, Math.max(ey + 22, 330), 180, 28, open ? t('rank.emptyGo') : t('rank.emptyGoBattle'), () => {
+        track('rank_empty_go'); c.close();
+        if (!open) { scene.tower = false; scene.show('battle'); return; }
+        const ch = Math.floor(Math.min(scene.sv.cleared, openTotal() - 1) / STAGES_PER_CHAPTER);
+        if (scene.tower) scene.startBattle(ch, 0, true); else { scene.tower = true; scene.show('battle'); }
+      }, { size: 11, color: 0x2f6b3a }));
     }
     rows.slice(page * PER, page * PER + PER).forEach((r, i) => {
       const y = 140 + i * 20;

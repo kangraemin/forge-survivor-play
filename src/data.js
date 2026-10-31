@@ -368,8 +368,8 @@ export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 46 };
 // 49차: 첫 카드는 8~12초(2초에 뜨던 것을 늦춤). 2레벨 필요량을 늘렸다
 const XP_EARLY = [0, 26, 10, 18, 28, 40];
 // 63차: 1장(early)은 6레벨부터 필요량 ×1.3 — 카드 창은 그대로이고 뜨는 횟수만 줄인다
-// 66차: 6레벨부터 필요량을 줄여 한 판 레벨업을 늘린다(빌드가 한 판 안에 자라게. 보상은 그대로)
-export const xpNeed = (lv, early = false) => lv <= 5 ? XP_EARLY[lv] : Math.round(Math.max(42, Math.round((8 + (lv - 1) * 11) * 0.45)) * (early ? 1.2 : 1));
+// 66차에 줄였던 6레벨부터의 필요량을 67차에 되돌렸다: 한 판 레벨업 25~28회라 무작위 카드도 스킬 4~6개를 전부 만렙으로 채웠다(빌드를 '골라서' 채우게. 보상은 그대로)
+export const xpNeed = (lv, early = false) => lv <= 5 ? XP_EARLY[lv] : Math.round(Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6)) * (early ? 1.3 : 1));
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 

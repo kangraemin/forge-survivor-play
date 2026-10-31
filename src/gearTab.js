@@ -82,6 +82,7 @@ export const GearTab = {
         box.setInteractive({ useHandCursor: true }).on('pointerup', () => !this.busy && this.itemWin(it));
       } else {
         b.add(this.add.rectangle(x, y, 38, 38, 0x0b111a).setStrokeStyle(1, 0x293845));
+        b.add(this.add.image(x, y, 'gs_' + sl.id).setScale(1.5).setTint(0x2a3a4a).setAlpha(0.8));   // 빈 칸: 어두운 부위 그림자
       }
       b.add(this.add.text(x, y + 25, sl.name, font9(10, '#a1b2b6')).setOrigin(0.5));
     });
@@ -99,10 +100,13 @@ export const GearTab = {
     const toStat = () => { if (this.busy) return; sfx('click'); track('sp_hint_go'); this.gearPage = 'stat'; this.show('gear'); };
     if (!inv.length) {
       // 언제 얻는지 막연했다(40차): 판을 깨면 1개 확정이라는 걸 숫자로 말한다
-      b.add(this.add.text(W / 2, 258, sv.cleared ? tt('gearTab.ccb737') : tt('gearTab.4661ed'), { ...font9(11, '#a1b2b6'), align: 'center', lineSpacing: 4 }).setOrigin(0.5));
-      // 탭의 빨간 점 = 찍을 스탯 포인트. 비었을 땐 가운데 버튼으로 바로 보낸다
-      if (spFree(sv) > 0) b.add(button(this, W / 2, 300, 190, 26, tt('gearTab.6de2b3', { spFree: spFree(sv) }), toStat, { size: 11, color: 0x3a3846 }));
-      b.add(button(this, W / 2, spFree(sv) > 0 ? 334 : 310, 170, 26, tt('gearTab.5d9a22'), () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
+      b.add(this.add.image(W / 2, 252, 'chest').setScale(3).setAlpha(0.85));   // 기존 픽셀 상자 그림
+      b.add(this.add.text(W / 2, 288, tt('gearTab.emptyTitle'), font(12, '#ffd75e')).setOrigin(0.5));
+      let ey = 308;
+      (sv.cleared ? tt('gearTab.ccb737') : tt('gearTab.4661ed')).split('\n').forEach(s2 => { const o = this.add.text(36, ey, '- ' + s2, { ...font9(10, '#e8f4f8'), wordWrap: { width: W - 72 } }); b.add(o); ey += o.height + 4; });
+      // 탭의 빨간 점 = 찍을 스탯 포인트. 버튼은 하나만 두고 포인트는 글자 링크로 보낸다
+      if (spFree(sv) > 0) { const sp = this.add.text(W / 2, ey + 4, tt('gearTab.6de2b3', { spFree: spFree(sv) }), font9(10, '#ff8080')).setOrigin(0.5, 0); sp.setInteractive({ useHandCursor: true }).on('pointerup', toStat); b.add(sp); ey += 20; }
+      b.add(button(this, W / 2, ey + 22, 190, 28, tt('gearTab.5d9a22'), () => { if (this.busy) return; track('gear_empty_go'); this.show('battle'); }, { size: 11, color: 0x2f6b3a }));
     } else if (spFree(sv) > 0) {
       const t = this.add.text(104, 207, tt('gearTab.4f3013', { spFree: spFree(sv) }), font9(10, '#ff8080')).setOrigin(0, 0);
       t.setInteractive({ useHandCursor: true }).on('pointerup', toStat); b.add(t);
