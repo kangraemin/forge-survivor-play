@@ -100,7 +100,13 @@ function build() {
   const fl = el('input', 'width:64px;min-height:44px;font:inherit;font-size:14px;margin:3px;background:#0d0a14;color:#fff;border:1px solid #475c66;padding:0 6px'); fl.type = 'number'; fl.value = '10'; fl.min = '1';
   g.row.append(sel, hardL);
   const c = () => +sel.value;
-  const go = (s, extra = {}) => act(sc => startBattle(sc, { chapter: c(), stage: s, endless: false, hard: hard.checked, dungeon: null, ...extra }));
+  // 바로 가기는 테스트 저장의 진행도도 '그 판이 다음 도전 판'이 되게 맞춘다(낮추는 것도 허용). 이긴 뒤 로비·다음 판이 그 판 기준으로 이어진다
+  const go = (s, extra = {}) => act(sc => {
+    const sv = load(), idx = c() * D.STAGES_PER_CHAPTER + s;
+    if (hard.checked) sv.hardCleared = idx; else sv.cleared = idx;
+    save();
+    return startBattle(sc, { chapter: c(), stage: s, endless: false, hard: hard.checked, dungeon: null, ...extra });
+  });
   for (let s = 0; s < D.STAGES_PER_CHAPTER; s++) g.row.append(btn(m.stage(s + 1), () => go(s)));
   g.row.append(
     btn(m.mid, () => go(0, { testGo: { mid: true } })),
