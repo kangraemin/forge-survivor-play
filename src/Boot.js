@@ -14,6 +14,7 @@ import { track } from './log.js';
 import { isFirstRun } from './coach.js';
 import { HAVE } from './assetList.js';   // assets/ 맨 위 PNG 목록(tools/gen_asset_list.mjs). 없는 선택 그림은 요청하지 않아 404·'Missing resource'가 없다
 import { registerAssets, criticalKeys, startBg, quietDupes } from './lazy.js';
+import { isTest } from './testMode.js';
 import { setSound, setMusic, setMusicLevel, setVib, unlock, primeAudio } from './sfx.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
@@ -172,7 +173,7 @@ export class Boot extends Phaser.Scene {
     const sv = load(), q = new URLSearchParams(location.search), force = q.has('prologue');
     startBg(this.game, buildAnims, sv);   // 남은 그림은 첫 화면이 뜬 뒤 뒤에서 받는다
     const first = isFirstRun(sv);
-    if (!force && (!first || q.has('lobby'))) return this.scene.start('Lobby');
+    if (!force && (!first || q.has('lobby') || isTest())) return this.scene.start('Lobby');   // 테스트 모드는 첫 실행이어도 로비로(프롤로그·1-1은 테스트 패널에서)
     const pro = force || (!sv.prologue && !q.has('bot') && !q.has('noprologue'));
     setSound(sv.sound); setMusicLevel(sv.musicLvl); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);   // 로비가 하던 소리 설정을 대신
     this.game.canvas.addEventListener('pointerdown', () => unlock(), { once: true });

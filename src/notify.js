@@ -14,6 +14,7 @@ import { font, font9, panel, button, toast } from './ui.js';
 import { load } from './save.js';
 import { track } from './log.js';
 import { t } from './i18n.js';
+import { isTest } from './testMode.js';
 
 const KEY = 'forge-notify-v1';          // { asked, on } 기기 저장소(저장 파일 형식은 건드리지 않는다)
 const HOUR = 3600000, AWAY_H = 72;
@@ -22,7 +23,7 @@ const ls = {
   get: k => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* 막힘 */ } },
 };
-const plat = () => globalThis.window?.forgePlatform?.notify || null;
+const plat = () => (isTest() ? null : globalThis.window?.forgePlatform?.notify || null);   // 테스트 모드: 기기 알림 예약 없음
 export const notifyAvailable = () => !!plat();
 export const notifyState = () => { try { return { asked: false, on: false, ...JSON.parse(ls.get(KEY) || '{}') }; } catch { return { asked: false, on: false }; } };
 const setState = p => ls.set(KEY, JSON.stringify({ ...notifyState(), ...p }));

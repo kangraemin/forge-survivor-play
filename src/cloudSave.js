@@ -16,6 +16,7 @@
 import { exportCode, importCode } from './saveCore.js';
 import { progressOf, compareProgress, mergeLedger } from './progress.js';
 import { deviceId } from './deviceKey.js';
+import { isTest } from './testMode.js';
 
 export const REMOTE_URL = 'https://forge-invite.remin1994.workers.dev';   // 저장·초대 서버(Cloudflare Worker, 무료 등급)
 const mirrorKey = 'forge-survivor-v1.mirror';
@@ -31,6 +32,7 @@ const ls = {
 
 // 서버 저장을 쓰는 채널: 앱인토스 · 스토어 앱(Capacitor). 웹 체험판은 쓰지 않는다(?cloud=1 이면 시험용으로 켠다)
 export const cloudEnabled = () => {
+  if (isTest()) return false;   // 테스트 모드: 서버 저장·동기화 없음(실제 서버 저장을 테스트 저장으로 덮지 않는다)
   if (!remoteUrl() || window.forgePlatform?.noAnalytics) return false;   // 포털판은 외부 서버로 보내지 않는다
   try { if (new URLSearchParams(globalThis.location?.search).has('cloud')) return true; } catch { /* 주소 없음 */ }
   return !!(sdk() || window.Capacitor || window.forgeNativeSave);
@@ -170,5 +172,6 @@ export async function cloudPull() { const a = adapter(); if (!a.available()) ret
 //  1) 구매 기록(saveCore.restorePurchases)은 load()가 알아서 한다
 //  2) 플랫폼 영수증 복원: shop.js recoverPurchases(미지급 주문) + forgePlatform.restore(이미 결제된 주문). 자세한 내용은 purchaseRestore.js
 export async function restorePlatformPurchases() {
+  if (isTest()) return 0;   // 테스트 모드: 스토어 구매 내역을 테스트 저장에 옮기지 않는다
   try { return (await (await import('./purchaseRestore.js')).restoreFromPlatform()) | 0; } catch { return 0; }
 }

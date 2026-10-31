@@ -1,5 +1,6 @@
 import { gearStats, wMul, wtypeOf, spReq, SP_RESET_GEM } from './gear.js';
 import { t } from './i18n.js';
+import { isTest } from './testMode.js';
 // 게임 데이터와 밸런스 수치. 숫자는 전부 여기서만 바꾼다. 근거는 docs/DESIGN.md
 // 세로는 폰 화면 비율에 맞춰 늘린다(48차): 480(16:9) ~ 585(19.5:9). 위아래 빈 띠 대신 HUD·조이스틱 영역으로 쓴다
 export const W = 270;
@@ -39,11 +40,13 @@ export const CHAPTERS = [
 export const MAIN_CHAPTERS = 15;
 const OPEN_KEY = 'forge-content-ch';
 let OPEN = MAIN_CHAPTERS;
-try { const v = Number(localStorage.getItem(OPEN_KEY)); if (Number.isInteger(v) && v >= MAIN_CHAPTERS && v <= CHAPTERS.length) OPEN = v; } catch { /* 저장소 없음 */ }
+if (isTest()) OPEN = CHAPTERS.length;   // 테스트 모드: 모든 장을 연다(기기의 열림 값은 읽지도 쓰지도 않는다)
+else try { const v = Number(localStorage.getItem(OPEN_KEY)); if (Number.isInteger(v) && v >= MAIN_CHAPTERS && v <= CHAPTERS.length) OPEN = v; } catch { /* 저장소 없음 */ }
 export const openN = () => OPEN;                                   // 지금 열린 장 수(15~18)
 export const openTotal = () => OPEN * 3;                           // 열린 판 수
 export const setOpenN = n => {
   const v = Math.max(MAIN_CHAPTERS, Math.min(CHAPTERS.length, Math.floor(Number(n)) || MAIN_CHAPTERS));
+  if (isTest()) return OPEN;
   OPEN = v; try { localStorage.setItem(OPEN_KEY, String(v)); } catch { /* 저장소 없음 */ }
   return v;
 };

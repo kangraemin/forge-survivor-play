@@ -4,6 +4,7 @@ import { track } from './log.js';
 import { readSave, writeSave, fresh, KEY, exportCode, importCode, restorePurchases, syncLedger } from './saveCore.js';
 import { dexRefresh } from './codex.js';
 import { cloudQueue } from './cloudSave.js';
+import { isTest, wrapTestStorage } from './testMode.js';
 
 const dayNo = d => Math.floor((d - d.getTimezoneOffset() * 60000) / 86400000); // 기기 시간대 기준 날짜 번호
 
@@ -11,7 +12,9 @@ let mem = null, loadInfo = { source: 'new', lostRaw: false };
 // localStorage가 막힌 브라우저에서는 메모리 저장소로 대체
 const memStore = (() => { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; } }; })();
 let st0 = null;
-export function store() { if (st0) return st0; if (window.forgePlatform?.storage) return st0 = window.forgePlatform.storage;   // 포털판 저장소(platform/crazygames.js)
+export function store() { if (st0) return st0;
+   if (isTest()) { let b; try { localStorage.getItem(KEY); b = localStorage; } catch { b = memStore; } return st0 = wrapTestStorage(b); }   // 테스트 모드: forge-survivor-test* 칸만 쓴다(실제 저장은 건드리지 않는다)
+   if (window.forgePlatform?.storage) return st0 = window.forgePlatform.storage;   // 포털판 저장소(platform/crazygames.js)
    try { localStorage.getItem(KEY); st0 = localStorage; } catch { st0 = memStore; } return st0; }
 export const loadStatus = () => loadInfo;
 export function load() {

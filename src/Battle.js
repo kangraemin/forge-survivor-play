@@ -22,6 +22,8 @@ import { dressHero, CosmeticActor, weaponKey, placeHeld } from './cosmeticView.j
 import { t, tt } from './i18n.js';
 import { line } from './lines.js';
 import { setupWide } from './wide.js';
+import { isTest } from './testMode.js';
+import { tst, testBattleStart } from './testBattle.js';   // 테스트 모드(바로 가기·무적·배속)
 const { W, H } = D;
 const WORLD = 1600;
 const HERO_D = 33;   // 47차: 주인공은 몹·불꽃·베기 효과(28~32)보다 위 층, 피해 숫자(40)·어둠(50)보다 아래
@@ -45,6 +47,8 @@ export class Battle extends Phaser.Scene {
     const q = new URLSearchParams(location.search);
     this.bot = !!data.bot || q.has('bot');
     this.speed = +(q.get('speed') || 1);   // 자동 검증용 배속
+    this.testGo = isTest() ? data.testGo || null : null;   // 테스트 모드: 판 시작 직후 할 일(중간보스만·장 보스만·탑 N층·결과창)
+    if (isTest() && tst.speed > 1) this.speed = tst.speed;
   }
 
   // 행동 로그(자동 검증 봇은 남기지 않는다)
@@ -218,6 +222,7 @@ export class Battle extends Phaser.Scene {
       if (ix === 2) trackOnce('funnel_enter_1_3', { power: D.powerOf(sv) });
       if (this.c === 1 && this.s === 0) trackOnce('funnel_enter_ch2', { power: D.powerOf(sv) });
     }
+    if (this.testGo) testBattleStart(this);
     this.log('battle_start', { power: D.powerOf(sv), rec: this.endless || this.dungeon ? undefined : D.recOf(this.c, this.s, this.hard), hard: this.hard, dungeon: this.dungeon || 'none', tier: sv.tier, enh: sv.enh, mod: this.mod?.id || 'none', easy: this.easy, runs: sv.stats.runs, replay: !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s < sv.cleared, boss_stage: this.isBoss });
   }
 
@@ -1160,7 +1165,7 @@ export class Battle extends Phaser.Scene {
 
   // ── 피격 ──
   hurt(dmg, src = 'boss') {
-    if (this.over || this.paused || this.bt < this.iframe) return;
+    if (this.over || this.paused || this.bt < this.iframe || tst.god) return;   // tst.god: 테스트 모드 무적
     // 해골 장군 펫의 방패가 한 대를 막는다
     if (this.petShield) { this.iframe = this.bt + D.PLAYER.iframe; this.pet.block(); return; }
     // 광전사 4세트: 체력이 절반 아래면 덜 아프다(공격만 올라 위험하기만 했다)

@@ -11,6 +11,7 @@ import { openInvite } from './share.js';
 import { LANGS, LANG_NAME, lang, setLang, t, tt } from './i18n.js';
 import { shareHidden, cashHidden, trialInfo, openFull } from './platform/flags.js';   // 포털판 분기
 import { runTutorial } from './tutorial.js';
+import { isTest, testAllowed, makeTapCounter, askEnableTest, askDisableTest } from './testMode.js';
 import { notifyAvailable, notifyState, notifyEnable, notifyDisable } from './notify.js';
 import { setSound, setMusic, setMusicLevel, setVib, sfx, buzz, playBgm } from './sfx.js';
 
@@ -62,7 +63,13 @@ export function openSettings(scene) {
   // 안내 다시 보기(코치마크). 1-1을 깨기 전에는 가리킬 화면이 없다
   c.add(button(scene, 62, 78, 84, 22, t('settingsPanel.930aa2'), () => { if (sv.cleared < 1) { toast(scene, t('settingsPanel.2a3ad0'), '#ffd75e'); return; } track('coach_replay'); c.close(); runTutorial(scene); }, { size: 10, color: 0x3a3846 }));
   const info = [tt('settingsPanel.94d834', { v: SRC[st.source] || tt('settingsPanel.f6846c'), v2: st.lostRaw ? tt('settingsPanel.e90d14') : '' }), tt('settingsPanel.154a72', { BUILD, channel: channel(), schemaVersion: sv.schemaVersion })];
-  c.add(scene.add.text(26, 98, info.join('\n'), font9(10, '#a1b2b6')).setLineSpacing(3));
+  const infoTxt = scene.add.text(26, 98, info.join('\n'), font9(10, '#a1b2b6')).setLineSpacing(3);
+  c.add(infoTxt);
+  // 테스트 모드 진입(주인용): 버전 글자를 7번 연속 탭 → 코드 입력 창. 포털판은 아무 반응이 없다
+  if (testAllowed()) {
+    const tap = makeTapCounter(() => { if (isTest()) askDisableTest(); else askEnableTest(); });
+    infoTxt.setInteractive({ useHandCursor: false }).on('pointerup', tap);
+  }
   const row = (y, label, fn, color) => { const b = button(scene, W / 2, y, W - 60, 28, label, fn, { size: 11, color }); c.add(b); return b; };
   row(176, t('settingsPanel.14669c', { v: LANG_NAME[lang] }), () => langPicker(scene));
   // 재방문 알림(스토어 앱만): 친구 초대 칸을 반으로 나눠 나란히 둔다

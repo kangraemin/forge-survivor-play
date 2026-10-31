@@ -12,6 +12,7 @@ import { COS_PACKS, cosmetic, wardrobe } from './cosmetics.js';
 import { installToss } from './toss.js';
 import { restoreCompleted } from './purchaseRestore.js';
 import { cashHidden } from './platform/flags.js';
+import { isTest } from './testMode.js';
 import { t, tt, lang } from './i18n.js';
 
 // 토스 미니앱 안이면 window.forgePlatform을 채운다(웹에서는 아무 일도 안 한다)
@@ -126,7 +127,7 @@ function modal(scene) {
 // 보상형 광고. 끝까지 보면 true. 광고 제거를 샀으면 바로 true
 function showAdRaw(scene, sv, kind) {
   return new Promise(res => {
-    if (sv.noAds) return res(true);
+    if (sv.noAds || isTest()) return res(true);   // 테스트 모드: 광고 없이 바로 보상(광고 SDK·서버 기록 없음)
     if (window.forgePlatform?.showAd) return window.forgePlatform.showAd(kind).then(res, () => res(false));
     // 웹 체험판: 3초 카운트다운
     const c = modal(scene);
@@ -160,7 +161,7 @@ export function applyPurchase(sv, item) {
 
 // 결제. 성공하면 상품을 지급하고 true
 function buyRaw(scene, sv, item) {
-  if (item.stop || cashHidden()) return Promise.resolve({ ok: false, granted: false });   // 판매 중지 상품(49차) · 포털판은 현금 결제 없음
+  if (item.stop || (cashHidden() && !isTest())) return Promise.resolve({ ok: false, granted: false });   // 판매 중지 상품(49차) · 포털판은 현금 결제 없음
   return new Promise(res => {
     let applied = false, granted = false;
     const apply = orderId => {
@@ -177,6 +178,7 @@ function buyRaw(scene, sv, item) {
       if (ok) { apply(); sfx('win'); }
       res({ ok, granted });
     };
+    if (isTest()) { done(true); return; }   // 테스트 모드: 결제 없이 바로 지급(스토어·토스 결제 호출 없음)
     // 앱: 지급을 SDK 지급 콜백 안에서 끝낸다(지급 뒤 true를 돌려줘야 주문이 완료로 닫힌다)
     if (window.forgePlatform?.buy) return window.forgePlatform.buy(item.id, orderId => { apply(orderId); return true; }).then(done, () => done(false));
     const c = modal(scene);
@@ -248,7 +250,7 @@ export async function recoverPurchases() {
   } catch (e) { track('iap_recover_fail', { msg: String(e?.message || e).slice(0, 80) }); }
   return n;
 }
-if (window.forgePlatform?.pending) setTimeout(recoverPurchases, 4000);
+if (window.forgePlatform?.pending && !isTest()) setTimeout(recoverPurchases, 4000);
 // 이미 결제가 끝난 주문 내역(forgePlatform.restore가 준다)에서 영구 상품만 되살린다. 규칙은 purchaseRestore.js
 export function restoreCompletedOrders(orders) {
   const sv = load();

@@ -1,6 +1,7 @@
 // 유저 행동 로그: GA4 /g/collect로 직접 보낸다(gtag는 github.io에서 쿠키 오류를 남긴다)
 // track('이벤트', { 값 }) 한 줄로 어디서든 부른다. 문자는 ep., 숫자는 epn.으로 간다
 // 토스로 옮기면 window.forgePlatform.log가 같은 이벤트를 받는다
+import { isTest } from './testMode.js';
 export const GA_ID = 'G-F1FFKK1T17';
 const KEY = 'forge-log-v1';
 
@@ -16,7 +17,7 @@ st.last = now; ls(KEY, JSON.stringify(st));
 // 테스트 봇·헤드리스 브라우저·로컬 개발은 보내지 않는다(통계가 더러워진다)
 const host = location.hostname;
 // 포털 깃발(forgePlatform)은 이 파일이 불린 뒤에 걸릴 수 있어, 켜짐 여부는 보낼 때마다 본다
-const isOff = () => navigator.webdriver || /Headless/.test(navigator.userAgent) || host === 'localhost' || host === '127.0.0.1' || location.protocol === 'file:' || /[?&]nolog/.test(location.search) || (!!window.forgePlatform?.noAnalytics && !window.forgePlatform?.logOk) || window.__FORGE_PORTAL === 'crazygames'   // 포털판은 외부 로그를 보내지 않는다
+const isOff = () => isTest() || navigator.webdriver || /Headless/.test(navigator.userAgent) || host === 'localhost' || host === '127.0.0.1' || location.protocol === 'file:' || /[?&]nolog/.test(location.search) || (!!window.forgePlatform?.noAnalytics && !window.forgePlatform?.logOk) || window.__FORGE_PORTAL === 'crazygames'   // 포털판은 외부 로그를 보내지 않는다
   || !!window.forgePlatform?.track;   // 스토어 앱은 웹 GA4 대신 Firebase로 보낸다(forgePlatform.track, store/src/forge-platform.js)
 let seq = 0, lastT = now, first = true;
 const recent = [];
@@ -48,6 +49,7 @@ export function dlOf(href, store = true) {
 export function track(name, params = {}) {
   const p = { ...ctx, ...params };
   recent.push([Date.now(), name, p]); if (recent.length > 200) recent.shift();
+  if (isTest()) return;   // 테스트 모드: GA·Firebase·토스 로그로 아무것도 보내지 않는다
   try { window.forgePlatform?.log?.(name, p); } catch {}
   try { window.forgePlatform?.track?.(name, p); } catch {}   // 스토어 앱: Firebase Analytics
   if (isOff() || GA_ID.includes('X') || navigator.onLine === false) return;

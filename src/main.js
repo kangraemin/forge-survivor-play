@@ -15,6 +15,7 @@ import { load } from './save.js';
 import { captureRef, deviceId } from './share.js';
 import { initSafeArea } from './safeArea.js';
 import { earlyBgm, setMusicLevel } from './sfx.js';
+import { isTest, testRequested, askEnableTest } from './testMode.js';
 
 // 로딩 화면부터 로비 곡을 튼다(음악을 꺼 둔 저장값이면 틀지 않는다). 로비가 같은 요소를 이어 쓴다
 try { const s0 = load(); setMusicLevel(s0.musicLvl); earlyBgm(!s0.musicOff && s0.sound !== false); } catch { /* 저장소 문제는 게임을 막지 않는다 */ }
@@ -40,6 +41,9 @@ const start = () => {
     input: { activePointers: 2 },
     scene: [Boot, Lobby, Battle, Prologue],
   });
+  // 테스트 모드(주인용): 켜진 기기에서만 패널을 만든다. ?test로 열었는데 아직 꺼져 있으면 코드 입력 창만 띄운다
+  if (isTest()) import('./testPanel.js').then(m => m.installTestPanel(window.game)).catch(() => {});
+  else if (testRequested()) askEnableTest();
   installPcInput(window.game);   // PC 키보드·마우스 보조(폰·토스에서는 아무것도 안 한다)
   installTextFit(window.game);   // 긴 번역 글자를 상자 안에 맞춘다(한국어는 아무 일도 안 한다)
   // 판이 화면보다 조금 크면 줄일 때 픽셀이 빠져 글자가 깨진다: 줄일 때는 매끄럽게

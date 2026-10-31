@@ -17,6 +17,7 @@ import { sfx } from './sfx.js';
 import { inviteCodeOf, CODE_RE } from './inviteCode.js';
 import { deviceId, peekDeviceId } from './deviceKey.js';
 import { t } from './i18n.js';
+import { isTest } from './testMode.js';
 export { inviteCodeOf, CODE_RE };
 
 // ── 설정 한 곳 ──
@@ -56,6 +57,7 @@ export function captureRef(sv = load()) {
 
 // ── 서버 ──
 async function api(path, body) {
+  if (isTest()) return null;   // 테스트 모드: 초대 서버 요청 없음
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
   try {
     const r = await fetch(INVITE_URL + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal } : { signal: ctl.signal });
@@ -104,7 +106,7 @@ export const bragGem = () => (load().shared ? SHARE_GEM : SHARE_GEM_FIRST);
 // ── 초대 보상: 로비에 들어올 때 부른다 ──
 let lastTick = 0, busyTick = false;
 export async function lobbyShareTick(scene, force = false) {
-  if (window.forgePlatform?.noShare) return;   // 포털판은 초대 서버를 부르지 않는다
+  if (window.forgePlatform?.noShare || isTest()) return;   // 포털판·테스트 모드는 초대 서버를 부르지 않는다
   const sv = load();
   if (busyTick || Date.now() < downUntil || (!force && Date.now() - lastTick < TICK_GAP_MS)) return;
   busyTick = true; lastTick = Date.now();

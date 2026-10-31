@@ -4,6 +4,7 @@
 import { REMOTE_URL } from './cloudSave.js';
 import { deviceId } from './deviceKey.js';
 import { track } from './log.js';
+import { isTest } from './testMode.js';
 
 const KEY = 'forge-rank-v1';
 const DAY = 86400000;
@@ -18,7 +19,7 @@ let deadUntil = 0, fails = 0;                      // 서버가 없거나 닿지
 let topCache = null;
 
 // 랭킹을 쓰는 판인가(포털판은 외부 요청 금지)
-export const rankEnabled = () => Date.now() >= deadUntil && !!remote() && !globalThis.window?.forgePlatform?.noAnalytics;
+export const rankEnabled = () => !isTest() && Date.now() >= deadUntil && !!remote() && !globalThis.window?.forgePlatform?.noAnalytics;
 export const rankScore = (tier, enh) => tier * ENH_STEP + enh;
 export const rankDecode = score => ({ tier: Math.floor(score / ENH_STEP), enh: score % ENH_STEP });
 
@@ -54,18 +55,21 @@ async function flush(force = false) {
 }
 export const MAX_TOWER = 300;   // 서버 검증 범위(routes/rank.js)와 같다
 export function noteTower(floors) {
+  if (isTest()) return;   // 테스트 모드: 이번 주 기록에 남기지 않는다
   floors = Math.min(floors | 0, MAX_TOWER);
   if (floors < 1) return;
   const r = rec();
   if (floors > r.tower) { r.tower = floors; put(r); flush(); }
 }
 export function noteGear(sv) {
+  if (isTest()) return;
   const s = rankScore(sv.tier | 0, sv.enh | 0), r = rec();
   if (s > r.enh) { r.enh = s; put(r); flush(); }
   tossSubmitRecord(sv);   // 64차: 토스 리더보드에도 강화 기록을 함께 낸다(변하지 않았으면 안 보낸다)
 }
 // 저장에 이미 있는 무한탑 최고층·최고 강화를 처음 한 번 올린다(없는 기록은 올리지 않는다). 랭킹 화면·탑 화면에 들어올 때 부른다
 export function seedFromSave(sv) {
+  if (isTest()) return;
   const r = rec();
   if (r.seeded) return;
   r.seeded = 1; put(r);
@@ -95,7 +99,7 @@ export async function loadTop(force = false) {
 // 공식 문서(2026-10-31): submitGameCenterLeaderBoardScore({score})는 앱당 리더보드 하나에 점수 하나만 받는다(종류별 보드·보조 필드 없음).
 // 그래서 무한의 탑 최고 층과 대장간 최고 강화를 한 점수로 묶어 낸다: 점수 = 층 x 1000 + 강화 점수(등급 x 21 + 강화, 최대 209). 층이 같으면 강화가 높은 쪽이 위.
 // 콘솔 리더보드 정책: 점수 단위 '점', 높을수록 위. 정책이 없으면 'LeaderBoard not found'로 실패한다 -> 조용히 넘어가고 track으로만 남긴다
-export const tossBoard = () => globalThis.window?.forgePlatform?.leaderboard || null;
+export const tossBoard = () => (isTest() ? null : globalThis.window?.forgePlatform?.leaderboard || null);   // 테스트 모드: 리더보드 제출 없음
 export const TOSS_FLOOR_MUL = 1000;
 export const tossScore = (floors, tier, enh) => Math.min(floors | 0, MAX_TOWER) * TOSS_FLOOR_MUL + rankScore(tier | 0, enh | 0);
 const LB_KEY = 'forge-toss-lb-v1';
