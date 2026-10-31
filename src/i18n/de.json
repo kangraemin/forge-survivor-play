@@ -2097,5 +2097,9 @@
  "rank.meNone": "Kein Rekord diese Woche",
  "rank.emptyTitle": "Setze den ersten Rekord der Woche",
  "rank.emptyL1": "Versuche den Endlosen Turm einmal, dann erscheint dein Rekord.",
- "rank.emptyL2": "Platz 1 ist noch frei."
+ "rank.emptyL2": "Platz 1 ist noch frei.",
+ "rank.toss": "Toss-Freunde-Rangliste",
+ "desk.liveTitle": "Diese Runde",
+ "desk.live1": "{stage} · Lv {lv}",
+ "desk.live2": "Besiegt {k} · HP {hp}%"
 }

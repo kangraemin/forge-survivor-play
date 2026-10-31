@@ -2097,5 +2097,9 @@
  "rank.meNone": "Sem recorde esta semana",
  "rank.emptyTitle": "Deixe o primeiro recorde da semana",
  "rank.emptyL1": "Tente a Torre Infinita uma vez e seu recorde aparece.",
- "rank.emptyL2": "O 1º lugar ainda está livre."
+ "rank.emptyL2": "O 1º lugar ainda está livre.",
+ "rank.toss": "Ranking de amigos Toss",
+ "desk.liveTitle": "Rodada atual",
+ "desk.live1": "{stage} · Nív {lv}",
+ "desk.live2": "Abates {k} · Vida {hp}%"
 }

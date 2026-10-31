@@ -2097,5 +2097,9 @@
  "rank.meNone": "Bu hafta rekor yok",
  "rank.emptyTitle": "Bu haftanın ilk rekorunu kır",
  "rank.emptyL1": "Sonsuz Kule'yi bir kez dene, rekorun listeye girer.",
- "rank.emptyL2": "1. sıra hâlâ boş."
+ "rank.emptyL2": "1. sıra hâlâ boş.",
+ "rank.toss": "Toss Arkadaş Sıralaması",
+ "desk.liveTitle": "Bu Tur",
+ "desk.live1": "{stage} · Lv {lv}",
+ "desk.live2": "Öldürme {k} · Can {hp}%"
 }

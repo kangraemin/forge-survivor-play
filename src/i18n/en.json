@@ -2097,5 +2097,9 @@
  "rank.meNone": "No record this week",
  "rank.emptyTitle": "Set the First Record This Week",
  "rank.emptyL1": "Try the Endless Tower once and your record goes up.",
- "rank.emptyL2": "The No. 1 spot is still open."
+ "rank.emptyL2": "The No. 1 spot is still open.",
+ "rank.toss": "Toss Friends Ranking",
+ "desk.liveTitle": "This Round",
+ "desk.live1": "{stage} · Lv {lv}",
+ "desk.live2": "Kills {k} · HP {hp}%"
 }

@@ -88,3 +88,13 @@ export async function loadTop(force = false) {
   topCache = { at: Date.now(), data: res };
   return res;
 }
+
+// 토스 게임 리더보드(친구 랭킹): 토스판에서만(forgePlatform.leaderboard). 무한의 탑 최고 층을 올라갔을 때만 제출한다(기기 저장소에 낸 값을 기억)
+export const tossBoard = () => globalThis.window?.forgePlatform?.leaderboard || null;
+export async function tossSubmitTower(best) {
+  const lb = tossBoard(); best = Math.min(best | 0, MAX_TOWER);
+  if (!lb || best < 1) return;
+  let sent = 0; try { sent = +ls.get('forge-toss-lb-v1') || 0; } catch {}
+  if (best <= sent) return;
+  if (await lb.submit(best)) ls.set('forge-toss-lb-v1', String(best));
+}

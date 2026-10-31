@@ -38,6 +38,7 @@ export class Battle extends Phaser.Scene {
     this.hard = !!data.hard && !this.endless;           // 어려움: 같은 판을 센 몹으로
     this.dungeon = data.dungeon || null;                // 일일 던전 종류(gold·stone·gear·gem)
     this.isBoss = !this.practice && !this.endless && !this.dungeon && this.s === D.STAGES_PER_CHAPTER - 1;
+    this.early = this.c === 0 && !this.endless && !this.dungeon && !this.mode && !this.hard && !this.practice;   // 63차: 1장 본편(경험치 곡선 완만)
     this.sv = load();
     const outfit = consumeTrial(this.sv); this.cosLook = outfit.look; this.cosTrial = outfit.trial; save();
     const q = new URLSearchParams(location.search);
@@ -98,6 +99,13 @@ export class Battle extends Phaser.Scene {
       this.waveCount = 2; this.waveLen *= rc('first_run_len_mul'); }   // 처음 판은 웨이브 둘에 짧게(150초 → 80초): 첫 클리어까지 오래 걸리면 떠났다
     // 쉬운 판이 끝나도 1장은 한 번에 ×1로 뛰지 않게 3·4판째는 0.6·0.8(39차: 3판째 절벽)
     else if (this.c === 0 && !this.endless && !this.hard && !this.dungeon && this.sv.stats.runs < 4) this.mobDmgMul *= this.sv.stats.runs < 3 ? 0.6 : 0.8;
+    // 63차: 1장 첫 통과(1-2·1-3)는 앞 웨이브를 줄인다. 평가 61차 실측 1-1 2분8초·1-2 3분14초·1-3 3분40초가 세로 한 손 게임으로 길었다
+    // 보스 싸움(중간보스 약 1분·장 보스 1.5~2분)과 보상은 그대로 두고 앞 웨이브 수·길이만 줄인다
+    if (!this.easy && this.c === 0 && this.sv.cleared < 3 && !this.endless && !this.hard && !this.dungeon && !this.mode && !this.practice) {
+      // 줄어든 웨이브만큼 경험치를 더 준다(레벨·카드는 예전만큼 쌓여 보스전이 더 어려워지지 않는다. 필요량이 1.3배라 정지 횟수는 줄어든다)
+      if (this.s === 1) { this.waveLen *= rc('first_mid_wave_mul'); this.xpMul = 1.3; }   // 1-2: 웨이브 길이만 줄인다(웨이브 수를 줄이면 레벨이 모자라 중간보스가 버거웠다)
+      else if (this.isBoss) { this.waveLen *= rc('first_boss_wave_mul'); this.xpMul = 1.3; }
+    }
     this.mobHpMul = D.chapterHp(this.c) * D.stageMul(this.s) * (this.endless ? 1 : D.easeHp(this.c, this.s)) * spReq(this.endless ? sv.cleared : this.c * D.STAGES_PER_CHAPTER + this.s);
     if (this.hard) this.mobHpMul = D.hardHp(this.c, this.s);
     if (this.mode) { this.mobHpMul *= D.MODE_HP; this.mobDmgMul *= D.MODE_DMG; }   // 54차: 도전은 본편 같은 장 x-2보다 조금 어렵게 고정(진행도 스케일링 없음)
@@ -880,7 +888,7 @@ export class Battle extends Phaser.Scene {
     sm.once('animationcomplete', () => this.fxFree_(sm));
     if (m.goblin) this.goblinDown(m);
     this.drop(m);
-    if (m.orb) this.addGem(m.x, m.y, Math.max(10, Math.ceil(D.xpNeed(this.run.lv) * 0.35)));   // 50차: 중간보스 소환 졸개는 레벨업 구슬
+    if (m.orb) this.addGem(m.x, m.y, Math.max(10, Math.ceil(D.xpNeed(this.run.lv, this.early) * 0.35)));   // 50차: 중간보스 소환 졸개는 레벨업 구슬
     this.tweens.killTweensOf(m);   // 폭탄 변종의 반복 맥박이 지운 몹을 붙잡지 않게
     m.destroy();
   }
@@ -1127,10 +1135,10 @@ export class Battle extends Phaser.Scene {
 
   gainXp(v) {
     const r = this.run;
-    r.xp += v;
+    r.xp += v * (this.xpMul || 1);
     sfx('gem', 35);
-    if (r.xp >= D.xpNeed(r.lv)) {
-      r.xp -= D.xpNeed(r.lv); r.lv++;
+    if (r.xp >= D.xpNeed(r.lv, this.early)) {
+      r.xp -= D.xpNeed(r.lv, this.early); r.lv++;
       this.log('level_up', { wave: this.wave });
       this.lvTxt.setText('Lv ' + r.lv);
       // 3~5레벨과 7레벨부터 홀수 레벨(7·9·11…)을 카드 없이 자동 소강화로 넘긴다: 한 판 카드 창을 4~5번으로(49차, 80초에 7번 떴다). 2레벨 카드로 첫 스킬을 먼저 고른다. 성장 레벨 수는 같다. 진화가 열렸으면 창을 연다
@@ -1634,7 +1642,7 @@ export class Battle extends Phaser.Scene {
   updateHud(time) {
     if (this.comboTxt.alpha > 0 && this.bt - (this.lastKillT || 0) > 1200) this.comboTxt.setAlpha(Math.max(0, this.comboTxt.alpha - 0.05));
     const r = this.run, cam = this.cameras.main;
-    this.xpBar.width = W * Math.min(1, r.xp / D.xpNeed(r.lv));
+    this.xpBar.width = W * Math.min(1, r.xp / D.xpNeed(r.lv, this.early));
     const f = Math.max(0, this.hp / this.maxHp);
     this.hpBar.width = 76 * f;
     this.hpLag.width += (76 * f - this.hpLag.width) * 0.06;

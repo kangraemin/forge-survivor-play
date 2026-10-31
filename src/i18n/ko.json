@@ -2097,5 +2097,9 @@
  "rank.meNone": "이번 주 기록이 없어요",
  "rank.emptyTitle": "이번 주 첫 기록을 남겨 보세요",
  "rank.emptyL1": "무한의 탑을 한 번 도전하면 기록이 올라가요.",
- "rank.emptyL2": "1위 자리가 아직 비어 있어요."
+ "rank.emptyL2": "1위 자리가 아직 비어 있어요.",
+ "rank.toss": "토스 친구 랭킹",
+ "desk.liveTitle": "이번 판",
+ "desk.live1": "{stage} · Lv {lv}",
+ "desk.live2": "처치 {k} · 체력 {hp}%"
 }

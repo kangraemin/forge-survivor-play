@@ -2097,5 +2097,9 @@
  "rank.meNone": "Belum ada rekor minggu ini",
  "rank.emptyTitle": "Catat rekor pertama minggu ini",
  "rank.emptyL1": "Coba Menara Tanpa Akhir sekali, rekormu akan muncul.",
- "rank.emptyL2": "Peringkat 1 masih kosong."
+ "rank.emptyL2": "Peringkat 1 masih kosong.",
+ "rank.toss": "Peringkat Teman Toss",
+ "desk.liveTitle": "Ronde Ini",
+ "desk.live1": "{stage} · Lv {lv}",
+ "desk.live2": "Kalahkan {k} · HP {hp}%"
 }

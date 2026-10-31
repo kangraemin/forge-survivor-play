@@ -8,15 +8,18 @@ export function installDesktop() {
   if (typeof document === 'undefined') return;
   const css = document.createElement('style');
   css.textContent = `
-#sidebg{position:fixed;inset:-24px;z-index:0;display:none;background:#0b0b10 url(assets/loading_bg.jpg) center/cover no-repeat;filter:blur(12px) brightness(.42) saturate(.9);pointer-events:none}
+#sidebg{position:fixed;inset:-24px;z-index:0;display:none;background:#0b0b10 url(assets/loading_bg.jpg) center/cover no-repeat;filter:blur(7px) brightness(.55) saturate(.95);pointer-events:none}
 #game{z-index:1}
 #deskhint{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);color:#cfd8dc;font:15px/1.65 G9,G11,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
+#deskhint,#deskinfo{box-sizing:border-box;padding:16px 18px;background:rgba(12,10,20,.78);border:1px solid #475c66;border-radius:8px}
 #deskhint,#deskinfo{font:15px/1.65 G9,G11,sans-serif}
 #deskinfo{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);width:260px;color:#e6edf0;text-shadow:0 1px 2px #000;pointer-events:none}
 #deskinfo b{display:block;margin:14px 0 5px;color:#ffd75e;font:18px G11,G9,sans-serif}
 #deskinfo .ic{display:inline-block;width:1.5em;text-align:center}
 #deskinfo b:first-child{margin-top:0}
 #deskinfo .ok{color:#5fdc6a}
+#deskhint .live{margin-top:14px;padding-top:6px;border-top:1px solid #475c66}
+#deskhint .live .big{font:22px G11,G9,sans-serif;color:#fff}
 #deskhint b{display:block;margin-bottom:5px;color:#ffd75e;font:18px G11,G9,sans-serif}
 @media (min-aspect-ratio:115/100){#sidebg{display:block}}`;
   document.head.appendChild(css);
@@ -26,6 +29,19 @@ export function installDesktop() {
   const b = document.createElement('b'); b.textContent = t('desk.title');
   hint.append(b, ...[t('desk.move'), t('desk.ult')].map(s => { const d = document.createElement('div'); d.textContent = '- ' + s; return d; }));
   document.body.appendChild(hint);
+  // 63차: 전투 중이면 왼쪽 카드 아래에 이번 판 정보(읽기만 한다)를 크게 보여 준다. 게임 좌표·밸런스는 그대로
+  const live = document.createElement('div'); live.className = 'live'; live.style.display = 'none'; hint.appendChild(live);
+  const tickLive = () => {
+    try {
+      const bs = window.game?.scene?.getScene?.('Battle'), r = bs?.run;
+      if (!bs || !r || !bs.sys?.isActive?.() || bs.over) { live.style.display = 'none'; return; }
+      const b = document.createElement('b'); b.textContent = t('desk.liveTitle');
+      const l1 = document.createElement('div'); l1.className = 'big'; l1.textContent = t('desk.live1', { stage: bs.endless ? '\u221E' : `${bs.c + 1}-${bs.s + 1}`, lv: r.lv });
+      const l2 = document.createElement('div'); l2.textContent = '- ' + t('desk.live2', { k: r.kills | 0, hp: Math.max(0, Math.round(bs.hp / bs.maxHp * 100)) });
+      live.replaceChildren(b, l1, l2); live.style.display = 'block';
+    } catch { live.style.display = 'none'; }
+  };
+  setInterval(tickLive, 500);
   // 58차: 오른쪽 빈 자리에 오늘의 대장간 의뢰·내 칼(읽기만 한다. 게임 좌표·밸런스는 그대로). 저장·데이터 모듈은 깃발이 선 뒤에 늦게 불러온다
   const info = document.createElement('div'); info.id = 'deskinfo'; document.body.appendChild(info);
   let mods = null;
@@ -55,8 +71,8 @@ export function installDesktop() {
     hint.style.display = on ? 'block' : 'none';
     const right = cv ? cv.getBoundingClientRect().right : w - side;
     info.style.display = on ? 'block' : 'none';
-    if (on) { info.style.width = Math.min(300, w - right - 28) + 'px'; info.style.left = Math.round(right + 16) + 'px'; fill(); }
-    if (on) { hint.style.left = Math.round(side - 216) + 'px'; hint.style.width = '200px'; hint.style.textAlign = 'right'; }
+    if (on) { info.style.width = Math.min(310, w - right - 28) + 'px'; info.style.left = Math.round(right + 16) + 'px'; fill(); }
+    if (on) { hint.style.left = Math.round(side - 252) + 'px'; hint.style.width = '236px'; hint.style.textAlign = 'left'; }
   };
   addEventListener('resize', place); place(); setInterval(place, 1500);   // 캔버스가 뜨고 크기가 잡힌 뒤에도 맞춘다
 }

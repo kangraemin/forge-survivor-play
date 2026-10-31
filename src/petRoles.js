@@ -98,7 +98,7 @@ const ROLE_FX = {
   mark: () => t('petRoles.fb23df'),
   guard: () => t('gear.e0457f'),
 };
-export function petCard(s, c, p, sv, y0 = 100) {
+export function petCard(s, c, p, sv, y0 = 100, compact = false) {   // compact(63차): 합류 창은 3줄(효과·잘 듣는 곳·지금 펫과 비교)만
   const role = roleOf(p.id), cur = PETS.find(x => x.id === sv.pet), curRole = cur && roleOf(cur.id), id = PET_ROLE[p.id];
   const chN = i => t('lobby.022fbd', { v: i + 1 });
   c.add(s.add.image(W / 2, y0 + 20, 'disc').setScale(0.9).setTint(p.color).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD));
@@ -111,16 +111,16 @@ export function petCard(s, c, p, sv, y0 = 100) {
     if (s.textures.exists(role.icon)) c.add(s.add.image(34, y + 7, role.icon).setScale(0.62));
     c.add(s.add.text(50, y, t('petRoles.77fe00', { name: role.name }), font(12, role.color))); y += 18;
     line(`- ${ROLE_FX[id]()}`, font9(10, '#f2e4bc'));
-    line(id === 'guard' ? t('petRoles.455a20') : t('petRoles.1c3d00'), font9(10, '#f2e4bc'));
+    if (!compact) line(id === 'guard' ? t('petRoles.455a20') : t('petRoles.1c3d00'), font9(10, '#f2e4bc'));
   }
   line(t('lobby.7e168d', { v: (p.good || []).map(chN).join(' · ') || '-' }), font9(10, '#5fdc6a'));
   y += 3;
-  c.add(s.add.text(24, y, t('petRoles.66ac2a'), font(12, '#ffd75e'))); y += 18;
+  if (!compact) { c.add(s.add.text(24, y, t('petRoles.66ac2a'), font(12, '#ffd75e'))); y += 18; }
   if (!cur) line(t('petRoles.78fc89'), font9(10, '#f2e4bc'));
   else if (cur.id === p.id) line(t('petRoles.e960b5'), font9(10, '#f2e4bc'));
   else {
     line(t('petRoles.7d68c8', { name: cur.name, v: curRole?.name || '-', name2: p.name, v2: role?.name || '-' }), font9(10, '#f2e4bc'));
-    line(curRole && role && curRole === role ? t('petRoles.95dbce') : t('petRoles.433048', { v: curRole?.name || '-', v2: role?.name || '-' }), font9(10, '#a1b2b6'));
+    if (!compact) line(curRole && role && curRole === role ? t('petRoles.95dbce') : t('petRoles.433048', { v: curRole?.name || '-', v2: role?.name || '-' }), font9(10, '#a1b2b6'));
   }
   return y;
 }

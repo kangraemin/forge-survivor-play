@@ -342,7 +342,8 @@ export const recPower = (c, s) => Math.round(REC_BASE(c) * stageMul(s) * easeHp(
 const GEAR_SLOPE2 = 0.95;
 export const GEAR_HP = c => c < 5 ? 1 + 0.36 * c : 1 + 0.36 * 4 + GEAR_SLOPE2 * (c - 4);
 // 전투력 색: 권장을 넘어도 보스 판은 20% 여유가 있어야 초록(20차 봇: 1-6 권장 114%에서 졌다)
-export const powerCol = (pw, rp, s) => pw >= rp * (isBossS(s) ? 1.2 : 1) ? '#5fdc6a' : pw >= rp ? '#ffd75e' : '#ff8070';
+// 63차: 붉은색은 권장의 절반 미만일 때만(평가 61차: 권장 28/내 14에서도 1-3 보스를 깼다). 절반~권장은 '조금 어려움' 노랑
+export const powerCol = (pw, rp, s) => pw >= rp * (isBossS(s) ? 1.2 : 1) ? '#5fdc6a' : pw >= rp * 0.5 ? '#ffd75e' : '#ff8070';
 export const trainCost = (t, lv) => Math.round(t.base * Math.pow(1.23, lv) / 5) * 5;
 
 // ── 판 안 성장 ──
@@ -351,7 +352,8 @@ export const PLAYER = { hp: 100, spd: 84, iframe: 600, pickup: 46 };
 // 2레벨은 바로, 3~5레벨은 고르게(17차 150초에 Lv5, 18차 20초에 카드 4연타, 19차 20초에 3장 뒤 30초 공백)
 // 49차: 첫 카드는 8~12초(2초에 뜨던 것을 늦춤). 2레벨 필요량을 늘렸다
 const XP_EARLY = [0, 26, 10, 18, 28, 40];
-export const xpNeed = lv => lv <= 5 ? XP_EARLY[lv] : Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6));
+// 63차: 1장(early)은 6레벨부터 필요량 ×1.3 — 카드 창은 그대로이고 뜨는 횟수만 줄인다
+export const xpNeed = (lv, early = false) => lv <= 5 ? XP_EARLY[lv] : Math.round(Math.max(53, Math.round((8 + (lv - 1) * 11) * 0.6)) * (early ? 1.3 : 1));
 export const PASSIVE_LV3 = 3;                                         // 이 레벨에 닿으면 한 번 더 붙는 보너스
 export const ACTIVE_SLOTS = 4, PASSIVE_SLOTS = 4, SKILL_MAX = 5;
 

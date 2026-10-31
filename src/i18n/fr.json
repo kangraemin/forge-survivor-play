@@ -2097,5 +2097,9 @@
  "rank.meNone": "Aucun record cette semaine",
  "rank.emptyTitle": "Posez le premier record de la semaine",
  "rank.emptyL1": "Tentez la Tour infinie une fois et votre record apparaît.",
- "rank.emptyL2": "La 1re place est encore libre."
+ "rank.emptyL2": "La 1re place est encore libre.",
+ "rank.toss": "Classement amis Toss",
+ "desk.liveTitle": "Cette manche",
+ "desk.live1": "{stage} · Niv {lv}",
+ "desk.live2": "Éliminations {k} · PV {hp}%"
 }

@@ -126,6 +126,18 @@ const restore = async () => {
   return out;
 };
 
+// ── 게임 리더보드(토스 친구 랭킹) ──
+// 공식: https://developers-apps-in-toss.toss.im/documentation/common/growth/game-center (2026-10-31 확인)
+//  submitGameCenterLeaderBoardScore({score: "123"}) 점수는 문자열 숫자. 게임이 끝난 뒤에 부른다. 5.221.0 미만이면 undefined
+//  openGameCenterLeaderboard() 리더보드 WebView(친구 추가·점수 공유). 열면 미니앱은 백그라운드로 간다. 5.221.0 미만이면 undefined
+//  isMinVersionSupported({android, ios}) 로 버전을 먼저 확인. 콘솔에서 리더보드 정책(점수 단위·정렬)을 먼저 설정해야 한다(없으면 'LeaderBoard not found')
+const LB_MIN = { android: '5.221.0', ios: '5.221.0' };
+const lbOk = s => { try { return !!s.submitGameCenterLeaderBoardScore && !!s.openGameCenterLeaderboard && !!s.isMinVersionSupported && s.isMinVersionSupported(LB_MIN) === true; } catch { return false; } };
+const lbSubmit = async score => {
+  try { const r = await sdk().submitGameCenterLeaderBoardScore({ score: String(score | 0) }); return r?.statusCode === 'SUCCESS'; } catch { return false; }
+};
+const lbOpen = async () => { try { await sdk().openGameCenterLeaderboard(); return true; } catch { return false; } };
+
 // 토스 안일 때만 window.forgePlatform을 채운다(다른 앱판이 먼저 넣어 뒀으면 건드리지 않는다)
 export function installToss() {
   const s = sdk();
@@ -135,6 +147,7 @@ export function installToss() {
   const iapOk = safe(() => !!s.IAP?.createOneTimePurchaseOrder && s.IAP.createOneTimePurchaseOrder.isSupported?.() !== false);
   window.forgePlatform = {
     toss: true,
+    ...(lbOk(s) ? { leaderboard: { submit: lbSubmit, open: lbOpen } } : {}),   // 버전 미달·웹·포털에서는 없다 → 버튼도 숨는다
     ...(adOk ? { showAd } : {}),   // 미지원이면 showAd가 없어 shop.js의 웹 체험판으로 떨어진다
     ...(iapOk ? { buy, pending, complete, ...(s.IAP.getCompletedOrRefundedOrders ? { restore } : {}) } : {}),
   };

@@ -1,7 +1,7 @@
 // 주간 랭킹 창(로비 무한의 탑 화면에서 연다). 데이터는 rank.js, 서버는 routes/rank.js
 import { W, TIERS } from './data.js';
 import { font, font9, panel, button } from './ui.js';
-import { loadTop, rankEnabled, rankDecode, myWeek } from './rank.js';
+import { loadTop, rankEnabled, rankDecode, myWeek, tossBoard } from './rank.js';
 import { track } from './log.js';
 import { t } from './i18n.js';
 
@@ -19,9 +19,12 @@ const fixed = o => { o.isBtnLabel = true; return o; };   // 글자 맞춤(textfi
 export async function openRank(scene) {
   if (!rankEnabled()) return;
   const c = scene.modal();
-  c.add(panel(scene, 12, 44, W - 24, 396, { fill: 0x1a1426, line: 0x8a6ac8 }));
+  c.add(panel(scene, 12, 44, W - 24, 426, { fill: 0x1a1426, line: 0x8a6ac8, alpha: 1 }));   // 63차: 불투명(뒤 탑 화면 글자가 비쳐 겹쳤다)
   c.add(scene.add.text(W / 2, 62, t('rank.title'), font(14, '#ffd75e')).setOrigin(0.5));
   c.add(button(scene, W - 34, 62, 26, 22, 'X', () => c.close(), { size: 11 }));
+  // 63차: 토스 친구 랭킹(토스 게임 리더보드). 토스판·지원 버전에서만 보인다(웹·포털·버전 미달은 숨김)
+  const lb = tossBoard();
+  if (lb) c.add(button(scene, W / 2, 452, 170, 24, t('rank.toss'), async () => { track('rank_toss_open'); await lb.open(); }, { size: 10, color: 0x1d6f80 }));
   const status = scene.add.text(W / 2, 200, t('rank.loading'), font9(11, '#a1b2b6')).setOrigin(0.5);
   c.add(status);
   track('rank_open');
@@ -60,9 +63,10 @@ export async function openRank(scene) {
       dyn.add(button(scene, W - 70, 354, 44, 20, '▶', () => { page = (page + 1) % pages; draw(); }, { size: 11 }));
     }
     // 내 순위(50위 밖이어도 보인다). 서버 응답 전에 쌓은 이번 주 기록이 있으면 그 값
-    dyn.add(panel(scene, 22, 372, W - 44, 56, { fill: 0x12202a, line: 0x475c66 }));
-    dyn.add(scene.add.text(32, 380, t('rank.me'), font(11, '#9ae0ff')));
     const mine = bd.mine, mw = myWeek()[board];
+    if (!rows.length && !mine && !mw) return;   // 63차: 빈 판 안내와 '내 순위: 기록이 없어요' 박스가 겹쳐 안내만 남긴다
+    dyn.add(panel(scene, 22, 372, W - 44, 56, { fill: 0x12202a, line: 0x475c66, alpha: 1 }));
+    dyn.add(scene.add.text(32, 380, t('rank.me'), font(11, '#9ae0ff')));
     if (mine) {
       dyn.add(scene.add.text(W - 32, 380, t('rank.n', { n: mine.rank }), font(12, '#ffd75e')).setOrigin(1, 0));
       dyn.add(fixed(scene.add.text(32, 402, '#' + data.me, font9(10, '#a1b2b6'))));

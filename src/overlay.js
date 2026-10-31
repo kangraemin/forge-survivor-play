@@ -15,7 +15,7 @@ import { t } from './i18n.js';
 import { petCard } from './petRoles.js';
 import { nextGoal } from './nextGoal.js';
 import { trackOnce } from './log.js';
-import { noteTower } from './rank.js';
+import { noteTower, tossSubmitTower } from './rank.js';
 const R = Phaser.Math.Between;
 
 const { W, H } = D;
@@ -511,7 +511,7 @@ export class Overlay {
       case 'whet': r.bDmg += 0.08; break;
       case 'boots': r.bSpd += 0.06; break;
       case 'heart': s.maxHp += 15; s.hp += 15; break;
-      case 'tome': r.xp = D.xpNeed(r.lv); s.gainXp(0); break;
+      case 'tome': r.xp = D.xpNeed(r.lv, s.early); s.gainXp(0); break;
       case 'chest': this.queue.push(() => this.chest()); break;
       case 'mana': r.mana = D.MANA_MAX; break;
       case 'magnet': r.bPick += 0.25; break;
@@ -592,7 +592,7 @@ export class Overlay {
       gold = D.clearGold(s.c, D.STAGES_PER_CHAPTER - 1) * D.ENDLESS.goldPerFloor * floors;
       stone += D.ENDLESS.stonePerFloor * floors;
       gem = Math.max(0, floors - best) * D.ENDLESS.gemPerNewFloor;
-      sv.endBest = Math.max(best, floors); noteTower(floors);
+      sv.endBest = Math.max(best, floors); noteTower(floors); tossSubmitTower(sv.endBest);
       if (floors >= 3) mission('clear');
     } else if (dun) {
       // 일일 던전: 잡은 만큼(최소 20%) 요일 보상
@@ -656,7 +656,7 @@ export class Overlay {
     // 도감: 이번 판 처치·획득으로 새로 찬 칸
     const dexNew = dexRefresh(sv);
     save();
-    if (dexNew > 0 && !s.bot) s.time.delayedCall(1200, () => toast(s, t('overlay.b6f158', { dexNew, v: Math.round(dexNew * DEX_HP * 1000) / 10 }), '#9ae0ff', s.cosCard ? 8 : 60));
+    if (dexNew > 0 && !s.bot) s.time.delayedCall(1200, () => toast(s, t('overlay.b6f158', { dexNew, v: Math.round(dexNew * DEX_HP * 1000) / 10 }), '#9ae0ff', s.cosCard ? 8 : 454));   // 63차: 결과 창(y 84~452) 제목·무기 줄을 가리던 위쪽 띠를 창 아래로
     if (win && first && !hard && !s.endless && !dun && !s.bot && !s.mode) {   // 깔때기: 1-1·1-3 첫 클리어(한 기기에 한 번)
       if (idx === 0) trackOnce('funnel_clear_1_1', { t: Math.round(s.bt / 1000), power: D.powerOf(sv) });
       if (idx === 2) trackOnce('funnel_clear_1_3', { t: Math.round(s.bt / 1000), power: D.powerOf(sv) });

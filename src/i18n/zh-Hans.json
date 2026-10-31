@@ -2097,5 +2097,9 @@
  "rank.meNone": "本周暂无记录",
  "rank.emptyTitle": "留下本周的第一条记录",
  "rank.emptyL1": "挑战一次无尽之塔，记录就会上榜。",
- "rank.emptyL2": "第1名的位置还空着。"
+ "rank.emptyL2": "第1名的位置还空着。",
+ "rank.toss": "Toss好友排行",
+ "desk.liveTitle": "本局",
+ "desk.live1": "{stage} · Lv {lv}",
+ "desk.live2": "击杀 {k} · 生命 {hp}%"
 }

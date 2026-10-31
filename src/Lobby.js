@@ -23,7 +23,7 @@ import { t, tt } from './i18n.js';
 import { line, bubble } from './lines.js';
 import { petCard } from './petRoles.js';
 import { openRank, rankVisible } from './rankPanel.js';
-import { loadTop, noteGear, seedFromSave } from './rank.js';
+import { loadTop, noteGear, seedFromSave, tossSubmitTower } from './rank.js';
 import { notifyAskDue, openNotifyAsk, notifySync, notifyInstall } from './notify.js';
 
 const { W, H } = D;
@@ -251,7 +251,7 @@ export class Lobby extends Phaser.Scene {
     const c = this.modal();
     c.add(panel(this, 14, 60, W - 28, 372, { fill: 0x1a1426, line: p.color }));
     c.add(this.add.text(W / 2, 80, t('lobby.87c061'), font(15, '#ffd75e')).setOrigin(0.5));
-    petCard(this, c, p, sv, 94);
+    petCard(this, c, p, sv, 94, true);
     c.add(button(this, W / 2 + 46, 404, 84, 28, t('lobby.818a75'), () => { sv.pet = p.id; save(); sfx('buy'); track('pet_join_take', { pet: p.id }); c.close(); }, { size: 11, color: 0x2f6b3a }));
     c.add(button(this, W / 2 - 50, 404, 76, 28, sv.pet === p.id ? t('lobby.468266') : t('lobby.0fcd14'), () => { track('pet_join_later', { pet: p.id }); c.close(); }, { size: 10, color: 0x3a3846 }));
   }
@@ -655,6 +655,7 @@ export class Lobby extends Phaser.Scene {
     b.add(back);
     // 주간 랭킹: 서버에 랭킹이 있을 때만 버튼이 나온다(포털판·서버 없음은 아무것도 안 보인다, 요청도 없다)
     const tok = this._rkTok = {};
+    tossSubmitTower(sv.endBest | 0);   // 63차: 토스판이면 저장에 있던 최고 층도 한 번 올린다
     if (rankVisible()) seedFromSave(sv), noteGear(sv), loadTop().then(d => {
       if (!d || tok !== this._rkTok || !b.scene || !this.tower || this.tab !== 'battle') return;
       b.add(button(this, W - 46, 56, 70, 20, t('rank.open'), () => { if (!this.busy) { sfx('click'); openRank(this); } }, { size: 10, color: 0x1d6f80 }));
@@ -888,10 +889,12 @@ export class Lobby extends Phaser.Scene {
   }
 
   // +10 이상 강화 성공 순간의 자랑하기(테두리 버튼). 다음 강화·탭 이동·8초 뒤에 사라진다
-  clearBrag() { this.bragB?.destroy(); this.bragB = null; this.bragT?.remove(); }
-  bragEnh(lv) {
+  clearBrag() { this.bragB?.destroy(); this.bragB = null; this.bragT?.remove(); this.bragW?.remove(); this.bragW = null; }
+  // 63차: 자랑하기 버튼은 '공격력 a→b' 떠오르는 글자(y 222)가 사라진 뒤(wait ms)에 띄운다. 겹쳐 보였다
+  bragEnh(lv, wait = 0) {
     this.clearBrag();
     if (shareHidden()) return;   // 포털판은 링크 공유를 하지 않는다
+    if (wait > 0) { this.bragW = this.time.delayedCall(wait, () => { this.bragW = null; this.bragEnh(lv); }); return; }
     const sv = this.sv;
     const b = this.bragB = button(this, W / 2, 224, 132, 22, braggable() ? t('lobby.df7096', { bragGem: bragGem() }) : t('overlay.c5cca3'), async () => {
       b.setEnabled(false);
@@ -973,10 +976,12 @@ export class Lobby extends Phaser.Scene {
       const awake = (from + 1) % D.ENH_MILESTONE === 0;
       const an = D.AWAKENINGS.find(x => x[0] === from + 1);
       this.flashText(awake ? tt('lobby.2e1006', { v: from + 1, v2: an ? ` ${an[1]}` : '' }) : tt('lobby.7bbb23', { v: from + 1 }), '#ffd75e');
-      if (from + 1 >= 10) this.bragEnh(from + 1);   // +10 이상 성공: 자랑하기
-      bubble(this, line('forge', [10, 15, 20].includes(from + 1) ? 'm' + (from + 1) : 'ok'), { y: 118, depth: 61, delay: 600 });   // 62차: 대장장이 한마디(미리 만든 대사)
+      const big = from + 1 >= 8 || awake;   // 공격력 a→b 큰 글자가 뜨는 구간
+      if (from + 1 >= 10) this.bragEnh(from + 1, big ? 1650 : 0);   // +10 이상 성공: 자랑하기
+      // 63차: 대사는 떠오르는 글자(칼이 각성했다… y 120)가 사라진 뒤 같은 자리(y 118)에 띄운다. 600ms에 뜨면 서로 겹쳤다
+      bubble(this, line('forge', [10, 15, 20].includes(from + 1) ? 'm' + (from + 1) : 'ok'), { y: 118, depth: 61, delay: 1250 });   // 62차: 대장장이 한마디(미리 만든 대사)
       // +8부터와 각성(+5 단위)은 화면을 번쩍이고 오른 공격력을 크게 띄운다
-      if (from + 1 >= 8 || awake) {
+      if (big) {
         const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));
         this.cameras.main.flash(220, 255, 220, 120);
         this.sparks(W / 2, 168, 30, 0xffffff);
