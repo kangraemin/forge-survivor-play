@@ -4,6 +4,10 @@
 //  · 권한 묻기: 첫 판을 깬 뒤 로비에서 한 번(설명 창). 거절해도 설정에서 다시 켤 수 있다
 //  · 재예약: 로비가 열릴 때, 앱이 앞/뒤로 바뀔 때마다 전부 취소하고 다시 건다(비운 시간은 마지막 저장 시각부터 센다)
 //  · 시간대: 밤 10시~아침 9시에 걸리면 그날(또는 다음 날) 오전 10시로 옮긴다
+// 토스(앱인토스) 푸시는 여기서 예약하지 않는다. 공식 문서(2026-10-31, guide/marketing/smart-message · api/push):
+//  · 미니앱 SDK에는 기기 예약 알림이 없다. 스마트 발송은 콘솔 캠페인(문구 검수 2~3영업일)이나 서버 API(mTLS 인증서 + x-anon-key)로만 나간다.
+//  · 특정 시점에 알림을 받겠다고 동의를 받는 기능성 메시지는 콘솔의 알림 동의문 + 기능성 캠페인 템플릿이 먼저 있어야 requestNotificationAgreement를 쓸 수 있다.
+//  콘솔 쪽 템플릿·서버가 준비되면 toss.js의 forgePlatform에 requestNotificationAgreement를 붙이고, 서버에서 방치 보상 가득 참 알림을 보낸다. 그 전까지 토스판은 이 파일이 아무 일도 안 한다.
 import * as D from './data.js';
 import { W } from './data.js';
 import { font, font9, panel, button, toast } from './ui.js';

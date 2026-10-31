@@ -2101,5 +2101,19 @@
  "rank.toss": "Toss Friends Ranking",
  "desk.liveTitle": "This Round",
  "desk.live1": "{stage} · Lv {lv}",
- "desk.live2": "Kills {k} · HP {hp}%"
+ "desk.live2": "Kills {k} · HP {hp}%",
+ "lobby.gateTitle": "Enhancing makes it easier",
+ "lobby.gateStone": "You still have {n} enhance stones",
+ "lobby.gatePower": "Power {pw}, recommended {rec}",
+ "lobby.gateGo": "Fight anyway",
+ "overlay.weakHint": "Spend {n} stones at the Forge to make the next fight easier",
+ "overlay.weakGo": "Fight {nextName}",
+ "rank.short": "Ranking",
+ "desk.goalTitle": "Next Goal",
+ "desk.goalGo": "Go now",
+ "desk.btnForge": "Forge",
+ "desk.btnGear": "Gear",
+ "battle.pcMove": "Move with WASD, arrows or mouse - attacks are automatic",
+ "boot.pcStart": "Click or press Enter to start",
+ "desk.fullscreen": "Fullscreen"
 }

@@ -1,13 +1,13 @@
 // 공통 UI: 글자 스타일, 패널, 누르는 버튼, 아이콘
 import { sfx } from './sfx.js';
-import { TIERS, SKILLS, H as GH } from './data.js';
+import { TIERS, SKILLS, H as GH, GW, OFF, WIDE } from './data.js';
 import { t, lang } from './i18n.js';
 import { wrapTo } from './textfit.js';
 
 // 그리는 배율. 카메라를 왼쪽 위 기준으로 PX배 당겨 게임 좌표(270x480)를 그대로 쓴다
 // 기기 실제 픽셀에 맞춘다(1080 폭 폰이면 4배): 화면에 맞추며 정수배가 아니게 늘리거나 줄이면 글자 획이 들쭉날쭉해진다
 const dpr = window.devicePixelRatio || 1;
-export const PX = Math.max(2, Math.min(4, Math.ceil(Math.min(innerWidth * dpr / 270, innerHeight * dpr / GH) - 0.05)));
+export const PX = Math.max(2, Math.min(4, Math.ceil(Math.min(innerWidth * dpr / GW, innerHeight * dpr / GH) - 0.05)));
 
 // 글자는 그리는 판 해상도로 만든다(1배로 만들어 PX배로 늘리면 뭉개진다)
 export const font = (size, color = '#ffffff', stroke = 3) =>
@@ -16,7 +16,12 @@ export const font9 = (size, color = '#f2e4bc') => ({ fontFamily: 'G9', fontSize:
 
 export const COLOR = { panel: 0x1c2935, panel2: 0x293845, line: 0x475c66, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
 
-export const hiCam = scene => scene.cameras.main.setOrigin(0).setZoom(PX);
+// 넓은 화면: 전투가 아닌 화면은 기본 판(270)을 가운데 열에 그린다(카메라 뷰포트를 옮김). 전투는 전폭 월드 + HUD 열(wide.js)
+export const hiCam = scene => {
+  const c = scene.cameras.main.setOrigin(0).setZoom(PX);
+  if (WIDE && scene.sys.settings.key !== 'Battle') c.setViewport(OFF * PX, 0, 270 * PX, GH * PX);
+  return c;
+};
 // 카메라 기준점을 왼쪽 위로 옮겨 Phaser의 worldView(가운데 기준 계산)가 어긋난다 → 보이는 영역은 이걸로 구한다
 export const viewRect = scene => { const c = scene.cameras.main; return new Phaser.Geom.Rectangle(c.scrollX, c.scrollY, c.width / c.zoom, c.height / c.zoom); };
 
@@ -75,9 +80,11 @@ const BTN_FILL = { 0x2f6b3a: 0xffb85c, 0x3a3846: 0x293845 };
 export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size = 12, textColor = '#ffffff', onDeny, ghost = false } = {}) {
   const c = scene.add.container(x, y);
   const g = scene.add.graphics();
+  const lit = f => { const r = Math.min(255, ((f >> 16) & 255) + 28), gg = Math.min(255, ((f >> 8) & 255) + 28), bb = Math.min(255, (f & 255) + 28); return (r << 16) | (gg << 8) | bb; };   // 마우스를 올리면 살짝 밝게
+  let hov = false;
   const draw = (col, down) => {
     g.clear();
-    const f = BTN_FILL[col] ?? col, oy = down ? 1 : 0;
+    const f0 = BTN_FILL[col] ?? col, f = hov && !down && c.enabled && !ghost ? lit(f0) : f0, oy = down ? 1 : 0;
     const gh = ghost && f === 0xffb85c;
     g.fillStyle(gh ? 0x111923 : f, 1).fillRect(-w / 2, -h / 2 + oy, w, h);
     g.lineStyle(gh ? 2 : 1, gh ? 0xffb85c : f === 0xffb85c ? 0x111923 : 0x475c66, 1).strokeRect(-w / 2 + (gh ? 1 : 0.5), -h / 2 + (gh ? 1 : 0.5) + oy, w - (gh ? 2 : 1), h - (gh ? 2 : 1));
@@ -94,7 +101,8 @@ export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size
   c.setColor = col => { c.col = col; ink(col); draw(col, false); return c; };
   draw(color, false);
   c.on('pointerdown', (p, lx, ly, ev) => { ev?.stopPropagation?.(); c.armed = true; draw(c.enabled ? c.col : 0x3a3a44, true); t.y = 2; });
-  c.on('pointerout', () => { c.armed = false; draw(c.enabled ? c.col : 0x3a3a44, false); t.y = 0; });
+  c.on('pointerover', () => { hov = true; draw(c.enabled ? c.col : 0x3a3a44, false); });
+  c.on('pointerout', () => { hov = false; c.armed = false; draw(c.enabled ? c.col : 0x3a3a44, false); t.y = 0; });
   c.on('pointerup', (p, lx, ly, ev) => {
     ev?.stopPropagation?.();
     // 이동하느라 누르고 있던 손가락을 떼는 것은 누른 게 아니다: 이 버튼 위에서 눌렀을 때만 받는다

@@ -5,6 +5,13 @@ import { t } from './i18n.js';
 export const W = 270;
 export const H = (() => { try { const r = innerHeight / innerWidth; return r > 0 && isFinite(r) ? Math.max(480, Math.min(585, Math.round(W * r))) : 480; } catch { return 480; } })();
 
+// 64차: 가로가 넓은 화면(PC·태블릿 가로·큰 세로)은 높이 480은 그대로 두고 폭만 비율에 맞게 늘린다(270~854). 폰·토스(세로)는 그대로 270
+export const GW = (() => { try { const r = innerHeight / innerWidth; return r > 0 && isFinite(r) && r < 1.7 ? Math.max(W, Math.min(854, Math.round(480 / r))) : W; } catch { return W; } })();
+export const OFF = (GW - W) / 2;   // 넓은 화면에서 기본 판(270)이 가운데 놓이는 왼쪽 여백
+export const WIDE = GW > W;
+// 64차: 마우스(정밀 포인터)가 주 입력인 기기(PC). 터치 문구 대신 키보드·마우스 문구를 쓰는 데만 쓴다. 폰·토스는 false
+export const PC = (() => { try { return matchMedia('(pointer:fine)').matches && !matchMedia('(pointer:coarse)').matches; } catch { return false; } })();
+
 // 챕터: 몬스터 3종 + 보스. dur은 일반 스테이지 길이(초)
 export const CHAPTERS = [
   { name: t('data.46c389'), tiles: 'tiles', mobs: ['slime', 'skel', 'bat'], boss: 'kingslime', mid: 'chief', dur: 150, dark: 0.45, light: 0xff9a3c },
@@ -305,6 +312,8 @@ export const BOSS_TUNE = c => c < 1 ? { hp: 1, sh: [0, 0] } : { hp: +(1 + 0.27 *
 // 50차: 보스 체력 = 최근 8초 실제 DPS x 목표 시간(초). 강화·장비가 올라도 순삭되지 않는다. K는 측정으로 맞춘 보정(단일 대상·약점·후반 성장)
 export const BOSS_SEC = { mid: 78, last: 105 };   // 보스가 최소한 버티는 시간(초). 시작 체력은 DPS x 이 시간, 싸우는 동안 이보다 빨리 닳으면 체력 틀을 키워 시간 곡선을 지킨다
 export const BOSS_FIT = { mid: 72, last: 108 };   // 53차: 보스에 실제 들어간 피해율에 체력을 맞춰 끝나게 할 목표 시간(초). 55차: 중간보스 목표 85→72(4-2·12-2·15-2가 90~93초로 90을 넘었다. 바닥은 BOSS_SEC.mid 78초가 지킨다). 중간보스 75~90, 장 보스 90~120 안
+// 64차: 1-1 첫 통과 중간보스는 78초 버티기가 길었다(평가 64차 1-1 116초). 목표 시간을 0.7배로(약 55초). 다른 판은 그대로
+export const FIRST_MID_K = 0.7;
 export const BOSS_TIRED = { ms: 75000, midMs: 84000, mul: 1.5 };   // 55차: 중간보스도 84초가 지나면 지친다(75초 이상 버틴 뒤라 최소 시간은 그대로, 90초를 넘기는 판만 줄인다)
 export const FAIL_GOLD_RATE = 0.5;                         // 실패해도 버틴 시간 비율 × 클리어 금화의 50%를 준다
 // 은화는 판이 끝나면 사라진다(아껴 두지 말고 상점에서 바로 쓰게)
@@ -336,7 +345,9 @@ export const powerOf = sv => {
 // 장 첫 판(2장부터)은 적응 판: 보스 바로 뒤라 강화를 덜 했어도 깰 수 있게 낮춘다
 export const easeHp = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
 export const easeDmg = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
-export const recPower = (c, s) => Math.round(REC_BASE(c) * stageMul(s) * easeHp(c, s) * (isBossS(s) && c > 0 ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
+// 64차: 1-3(1장 보스) 권장 28은 실제 통과선(전투력 약 17, 강화 +4~5)보다 높아 '권장 28 / 내 14'로 겁만 줬다. 통과선 기준으로 19(보스 초록은 1.2배)
+export const CH1_BOSS_REC = 19;
+export const recPower = (c, s) => c === 0 && s === 2 ? CH1_BOSS_REC : Math.round(REC_BASE(c) * stageMul(s) * easeHp(c, s) * (isBossS(s) && c > 0 ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
 // 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯(1점 +2%, 5점 보너스)까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
 // 6장부터는 장비·스탯으로 늘어나는 힘이 더 가파르다고 보고 장당 0.82씩(5장까지는 0.36)
 const GEAR_SLOPE2 = 0.95;

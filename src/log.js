@@ -15,14 +15,15 @@ st.last = now; ls(KEY, JSON.stringify(st));
 
 // 테스트 봇·헤드리스 브라우저·로컬 개발은 보내지 않는다(통계가 더러워진다)
 const host = location.hostname;
-const off = navigator.webdriver || /Headless/.test(navigator.userAgent) || host === 'localhost' || host === '127.0.0.1' || location.protocol === 'file:' || /[?&]nolog/.test(location.search) || !!window.forgePlatform?.noAnalytics   // 포털판은 외부 로그를 보내지 않는다
+// 포털 깃발(forgePlatform)은 이 파일이 불린 뒤에 걸릴 수 있어, 켜짐 여부는 보낼 때마다 본다
+const isOff = () => navigator.webdriver || /Headless/.test(navigator.userAgent) || host === 'localhost' || host === '127.0.0.1' || location.protocol === 'file:' || /[?&]nolog/.test(location.search) || (!!window.forgePlatform?.noAnalytics && !window.forgePlatform?.logOk) || window.__FORGE_PORTAL === 'crazygames'   // 포털판은 외부 로그를 보내지 않는다
   || !!window.forgePlatform?.track;   // 스토어 앱은 웹 GA4 대신 Firebase로 보낸다(forgePlatform.track, store/src/forge-platform.js)
 let seq = 0, lastT = now, first = true;
 const recent = [];
 export const logRecent = () => recent.slice();
 // 콘솔에서 forgeLog()로 최근 이벤트를 본다
 window.forgeLog = () => recent.slice();
-export const logEnabled = () => !off;
+export const logEnabled = () => !isOff();
 // 같은 판 안의 공통 값(챕터·스테이지 등)을 붙인다
 let ctx = {};
 export const logCtx = o => { ctx = o ? { ...ctx, ...o } : {}; };
@@ -49,7 +50,7 @@ export function track(name, params = {}) {
   recent.push([Date.now(), name, p]); if (recent.length > 200) recent.shift();
   try { window.forgePlatform?.log?.(name, p); } catch {}
   try { window.forgePlatform?.track?.(name, p); } catch {}   // 스토어 앱: Firebase Analytics
-  if (off || GA_ID.includes('X') || navigator.onLine === false) return;
+  if (isOff() || GA_ID.includes('X') || navigator.onLine === false) return;
   const t = Date.now();
   const q = new URLSearchParams({ v: '2', tid: GA_ID, cid: st.cid, sid: String(st.sid), sct: String(st.sct), seg: '1', _s: String(++seq), en: name, dl: dlOf(location.href), dt: document.title, ul: navigator.language || 'ko', sr: `${screen.width}x${screen.height}`, npa: '1' });
   if (first) { if (st.newSession) { q.set('_ss', '1'); q.set('_nsi', '1'); } if (firstVisit) q.set('_fv', '1'); first = false; }
@@ -60,6 +61,8 @@ export function track(name, params = {}) {
     q.set((typeof v === 'string' ? 'up.' : 'upn.') + k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v).slice(0, 36));
   }
   // 플레이어별 흐름 리포트용: 무작위 id(개인정보 아님, 기기 localStorage에만 있음)와 시각. GA 관리에서 맞춤 측정기준 pid·ts를 등록해야 API로 읽힌다
+  const portal = window.forgePlatform?.portal || window.__FORGE_PORTAL;   // app_open은 깃발이 걸리기 전에 나갈 수 있어 빌드가 넣은 값도 본다
+  if (portal) q.set('ep.platform', portal);
   q.set('ep.pid', st.cid.split('.')[0]); q.set('ep.ts', String(t));
   // 결제 매출은 GA 매출 칸(cu+value)으로 간다
   if (p.currency) q.set('cu', p.currency);

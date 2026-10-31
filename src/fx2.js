@@ -1,6 +1,6 @@
 // FX2 전투 효과 그림(game/assets/fx2, docs/fx2.md): 보스 예고 바닥·착탄·약점·페이즈 테두리·말풍선·분노 오라·습격 깃발·강화 궤적
 // 시트 이름은 'x_<파일명>'. 그림이 없으면(로드 실패) 호출하는 쪽이 예전 그래픽으로 돌아간다
-import { W, H } from './data.js';
+import { W, H, GW } from './data.js';
 
 // [프레임 너비, 높이, 프레임 수, 초당 프레임]
 export const SHEETS = {
@@ -66,14 +66,14 @@ export function playOnce(s, key, x, y, { sx = 1, sy = sx, rot = 0, depth = 30, a
 // ── 페이즈 전환 화면 테두리(9슬라이스 12px, 중앙은 비어 있다) ──
 export function phaseBorder(s, ms = 900, tint = 0xffd060) {
   if (!has(s, 'phase_border')) return null;
-  const b = s.add.nineslice(0, 0, 'x_phase_border', undefined, W, H, 12, 12, 12, 12).setOrigin(0).setScrollFactor(0).setDepth(62).setTint(tint).setAlpha(0);
+  const b = s.add.nineslice(0, 0, 'x_phase_border', undefined, GW, H, 12, 12, 12, 12).setOrigin(0).setScrollFactor(0).setDepth(62).setTint(tint).setAlpha(0); b.wideFx = true;
   s.tweens.add({ targets: b, alpha: 0.95, duration: 120, yoyo: true, hold: ms * 0.5, onComplete: () => b.destroy() });
   return b;
 }
 // 약점 구간 동안 켜 두는 옅은 테두리. 반환한 것을 destroy하면 꺼진다
 export function weakBorder(s) {
   if (!has(s, 'phase_border')) return null;
-  const b = s.add.nineslice(0, 0, 'x_phase_border', undefined, W, H, 12, 12, 12, 12).setOrigin(0).setScrollFactor(0).setDepth(62).setTint(0xffc040).setAlpha(0.2);
+  const b = s.add.nineslice(0, 0, 'x_phase_border', undefined, GW, H, 12, 12, 12, 12).setOrigin(0).setScrollFactor(0).setDepth(62).setTint(0xffc040).setAlpha(0.2); b.wideFx = true;
   s.tweens.add({ targets: b, alpha: 0.65, duration: 260, yoyo: true, repeat: -1 });
   return b;
 }
@@ -96,8 +96,8 @@ export function rageAura(s, m) {
 // 습격 깃발: 화면 가장자리(원점 기준 방향 ex, ey)에 꽂혀 깜빡인다
 export function raidFlag(s, ex, ey, ms = 2600) {
   if (!has(s, 'raid_flag')) return null;
-  const x = ex > 0.5 ? W - 22 : ex < -0.5 ? 22 : W / 2, y = ey > 0.5 ? H - 40 : ey < -0.5 ? 100 : H / 2;
-  const f = s.add.image(x, y, 'x_raid_flag').setScrollFactor(0).setDepth(61).setScale(1.5);
+  const x = ex > 0.5 ? GW - 22 : ex < -0.5 ? 22 : GW / 2, y = ey > 0.5 ? H - 40 : ey < -0.5 ? 100 : H / 2;
+  const f = s.add.image(x, y, 'x_raid_flag').setScrollFactor(0).setDepth(61).setScale(1.5); f.wideFx = true;
   s.tweens.add({ targets: f, y: y - 4, scale: 1.75, duration: 200, yoyo: true, repeat: Math.floor(ms / 400), onComplete: () => s.tweens.add({ targets: f, alpha: 0, duration: 300, onComplete: () => f.destroy() }) });
   return f;
 }

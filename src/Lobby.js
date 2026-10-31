@@ -1,7 +1,7 @@
 import { cosmeticPage } from './cosmeticShop.js';
 import { openSettings } from './settingsPanel.js';
 import { tutorialDue, runTutorial, modeDue, runModeCoach, tabCoach } from './tutorial.js';
-import { nextGoal, salesOpen } from './nextGoal.js';
+import { nextGoal, salesOpen, powerAct } from './nextGoal.js';
 import { cashHidden, shareHidden, adWord, trialInfo, openFull } from './platform/flags.js';   // 포털판(CrazyGames·itch): 현금 상품·공유 숨김
 import { shareBrag, braggable, bragGem, lobbyShareTick, openShare, myCode } from './share.js';
 import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmetics.js';
@@ -23,7 +23,7 @@ import { t, tt } from './i18n.js';
 import { line, bubble } from './lines.js';
 import { petCard } from './petRoles.js';
 import { openRank, rankVisible } from './rankPanel.js';
-import { loadTop, noteGear, seedFromSave, tossSubmitTower } from './rank.js';
+import { loadTop, noteGear, seedFromSave, tossSubmitRecord, tossBoard } from './rank.js';
 import { notifyAskDue, openNotifyAsk, notifySync, notifyInstall } from './notify.js';
 
 const { W, H } = D;
@@ -120,7 +120,7 @@ export class Lobby extends Phaser.Scene {
   modal() {
     const c = fixedContainer(this).setDepth(2000);
     c.add(this.add.rectangle(0, 0, W, H, 0x000000, 0.75).setOrigin(0).setInteractive());
-    this.busy = true;
+    this.busy = true; this.modalC = c;   // Esc로 닫으려고(pcInput.js) 가장 위 창을 기억
     c.close = () => { c.destroy(); this.busy = false; this.refreshTop(); this.show(this.tab); if (modeDue(this.sv) && this.tab === 'battle' && !this.modeScr) this.time.delayedCall(250, () => !this.busy && runModeCoach(this)); };   // 앞 창을 닫고 나서 도전 안내(2장 보스 직후 펫·꾸러미 창이 먼저 뜬다)
     return c;
   }
@@ -567,6 +567,11 @@ export class Lobby extends Phaser.Scene {
     const bossLeft = c * D.STAGES_PER_CHAPTER + D.STAGES_PER_CHAPTER - 1 - prog;
     pv.add(this.add.text(W - 34, AY + 52, bossLeft > 0 ? tt('lobby.6019de', { bossLeft }) : bossLeft === 0 ? tt('lobby.e0436f') : tt('lobby.b78093'), font(9, bossLeft < 0 ? '#a8a0c0' : '#ff9090', 3)).setOrigin(0.5, 0));
     this.modeEntry(pv, AY);   // 모드 선택으로 가는 버튼(modeScreen.js)
+    // 64차: 로비에서 바로 여는 랭킹 입구(주간 랭킹 + 토스면 친구 랭킹). 포털판·서버 없음은 안 보인다
+    if (sv.stats.runs > 0 && (rankVisible() || tossBoard())) {
+      tossSubmitRecord(sv);
+      pv.add(button(this, 36, AY + 66, 54, 22, t('rank.short'), () => { if (this.busy) return; sfx('click'); track('rank_lobby_open'); if (rankVisible()) openRank(this); else tossBoard()?.open(); }, { size: 11, color: 0x1d6f80 }));
+    }
     if (sv.title) pv.add(this.add.text(10, AY + 4, `「${titleName(sv.title)}」`, font9(10, '#ffb050', 3)));
     // 돌아올 이유: 자리를 비워도 견습생이 번다(조용한 한 줄)
     if (sv.cleared >= 1) pv.add(this.add.text(sv.title ? 90 : 10, AY + 4, tt('lobby.dc2acf', { fmt: fmt(Math.round(D.dunBase(sv).gold * D.IDLE.perH)) }), font9(9, '#d8d0e8', 3)));
@@ -655,7 +660,7 @@ export class Lobby extends Phaser.Scene {
     b.add(back);
     // 주간 랭킹: 서버에 랭킹이 있을 때만 버튼이 나온다(포털판·서버 없음은 아무것도 안 보인다, 요청도 없다)
     const tok = this._rkTok = {};
-    tossSubmitTower(sv.endBest | 0);   // 63차: 토스판이면 저장에 있던 최고 층도 한 번 올린다
+    tossSubmitRecord(sv);   // 63차: 토스판이면 저장에 있던 최고 층도 한 번 올린다(64차: 강화 기록과 한 점수로)
     if (rankVisible()) seedFromSave(sv), noteGear(sv), loadTop().then(d => {
       if (!d || tok !== this._rkTok || !b.scene || !this.tower || this.tab !== 'battle') return;
       b.add(button(this, W - 46, 56, 70, 20, t('rank.open'), () => { if (!this.busy) { sfx('click'); openRank(this); } }, { size: 10, color: 0x1d6f80 }));
@@ -677,8 +682,29 @@ export class Lobby extends Phaser.Scene {
 
   tv(id) { const t = D.TRAINING.find(x => x.id === id); return D.trainVal(t, this.sv.train[id] || 0); }
 
+  // 64차: 강화할 재료가 남은 채 권장 전투력에 못 미치는 첫 도전이면(1-3 보스 벽) 대장간으로 바로 가는 버튼을 먼저 보여 준다. 판마다 한 번만
+  enhGate(c, s, endless, hard, dungeon) {
+    const sv = this.sv, idx = c * D.STAGES_PER_CHAPTER + s;
+    if (endless || dungeon || hard || idx < sv.cleared || c > 0 || !D.isBossS(s)) return false;
+    const pw = D.powerOf(sv), rec = D.recOf(c, s, false);
+    if (pw >= rec * 0.9 || powerAct(sv).act !== 'enh') return false;
+    this.gateSeen ||= {}; if (this.gateSeen[idx]) return false;
+    this.gateSeen[idx] = 1;
+    const cm = this.modal(), stoneN = sv.stone | 0;
+    cm.add(panel(this, 20, 250, W - 40, 150, { fill: 0x1a1426, line: 0x7fe6ee }));
+    cm.add(this.add.text(W / 2, 266, t('lobby.gateTitle'), font(14, '#ffd75e')).setOrigin(0.5, 0));
+    cm.add(this.add.text(34, 294, '- ' + t('lobby.gateStone', { n: stoneN }), { ...font9(11, '#ffffff'), wordWrap: { width: W - 68 } }));
+    cm.add(this.add.text(34, 314, '- ' + t('lobby.gatePower', { pw, rec }), { ...font9(11, '#ffffff'), wordWrap: { width: W - 68 } }));
+    cm.add(button(this, W / 2 + 56, 372, 136, 32, t('nextGoal.enh'), () => { track('enh_gate', { act: 'forge', pw, rec }); cm.destroy(); this.busy = false; this.show('forge'); }, { size: 12, color: 0x2f6b3a }));
+    cm.add(button(this, W / 2 - 70, 372, 86, 28, t('lobby.gateGo'), () => { track('enh_gate', { act: 'go', pw, rec }); cm.destroy(); this.busy = false; this.startBattle(c, s, endless, hard, dungeon); }, { size: 10, color: 0x3a3846 }));
+    track('enh_gate_show', { pw, rec, stone: stoneN });
+    return true;
+  }
+
   startBattle(c, s, endless = false, hard = false, dungeon = null) {
-    if (this.busy) return; this.busy = true;
+    if (this.busy) return;
+    if (this.enhGate(c, s, endless, hard, dungeon)) return;
+    this.busy = true;
     const sv = this.sv, rec = D.recOf(c, s, hard), pw = D.powerOf(sv);
     // 새 장 첫 판에 처음 들어가면 도입 보상(금화 꾸러미 + 소탕권). 한 번만
     const intro = !endless && !dungeon && !hard && s === 0 && D.introOf(c);

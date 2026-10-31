@@ -21,6 +21,7 @@ import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosm
 import { dressHero, CosmeticActor, weaponKey, placeHeld } from './cosmeticView.js';
 import { t, tt } from './i18n.js';
 import { line } from './lines.js';
+import { setupWide } from './wide.js';
 const { W, H } = D;
 const WORLD = 1600;
 const HERO_D = 33;   // 47차: 주인공은 몹·불꽃·베기 효과(28~32)보다 위 층, 피해 숫자(40)·어둠(50)보다 아래
@@ -134,7 +135,9 @@ export class Battle extends Phaser.Scene {
     // Phaser는 줌 카메라의 경계를 (화면폭 - 보이는폭)/2 = W*(PX-1)/2 만큼 안쪽으로 잡는다. 예전엔 W/2만 더해 오른쪽·아래 끝에서 주인공이 화면 밖으로 나가고 위·왼쪽은 검은 빈 곳이 보였다(42차)
     // 위·아래 끝에서는 HUD(위 64px)·궁극기 버튼(아래 56px)에 주인공이 가리지 않게, 좌우는 40px 바깥 바닥(어둡게 덮인 곳)까지 보이게 경계를 넓힌다
     const MX = 40, MT = 64, MB = 56;
-    hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(W / 2, H / 2).setBounds(W * (PX - 1) / 2 - MX, H * (PX - 1) / 2 - MT, WORLD + 2 * MX, WORLD + MT + MB).setRoundPixels(true);
+    this.kx = Math.max(1, (D.GW / 2 + 25) / 200);   // 넓은 화면: 화면 밖에서 나오게 가로 스폰 거리를 늘린다(몹 수·세기·스폰 빈도는 그대로)
+    this.wide = setupWide(this);
+    hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(D.GW / 2, H / 2).setBounds(D.GW * (PX - 1) / 2 - MX, H * (PX - 1) / 2 - MT, WORLD + 2 * MX, WORLD + MT + MB).setRoundPixels(true);
     // 화면 흔들림: 공격·피격마다 흔들려 머리가 아팠다. 작은 흔들림은 없애고 큰 것(보스·엘리트)만 약하고 짧게
     const cam = this.cameras.main, shake = Phaser.Cameras.Scene2D.Camera.prototype.shake;
     cam.shake = (d, i = 0.005, ...r) => i <= 0.005 ? cam : shake.call(cam, Math.min(d, 250), i * 0.4, ...r);
@@ -287,7 +290,7 @@ export class Battle extends Phaser.Scene {
       this.torches.push({ x, y: y - 40 });
     }
     // 어두운 화면 + 빛
-    this.dark = this.add.renderTexture(0, 0, W, H).setOrigin(0).setScrollFactor(0).setDepth(50);
+    this.dark = this.add.renderTexture(0, 0, D.GW, H).setOrigin(0).setScrollFactor(0).setDepth(50); this.dark.wideFx = true;
     this.darkKey = [];   // 어둠 그림에 쓴 값(주인공·횃불 위치, 빛 크기, 어둠 농도): 같으면 다시 안 그린다
     // x-2는 조금 더 어둡다. 0.2를 더하면 2장·5장이 0.8이 돼 몹이 안 보였다
     this.darkA = Math.min(0.62, this.ch.dark + (this.s === 1 && !this.endless && !this.mode ? 0.1 : 0));
@@ -357,8 +360,8 @@ export class Battle extends Phaser.Scene {
     this.goo = this.add.particles(0, 0, 'px', {
       speed: { min: 30, max: 110 }, lifespan: 450, scale: { start: 2, end: 0.5 }, gravityY: 200, emitting: false,
     }).setDepth(9);
-    this.hurtFx = this.add.rectangle(0, 0, W, H, 0xff2020, 0).setOrigin(0).setScrollFactor(0).setDepth(60);
-    this.flashFx = this.add.rectangle(0, 0, W, H, 0xffffff, 0).setOrigin(0).setScrollFactor(0).setDepth(61);
+    this.hurtFx = this.add.rectangle(0, 0, D.GW, H, 0xff2020, 0).setOrigin(0).setScrollFactor(0).setDepth(60); this.hurtFx.wideFx = true;
+    this.flashFx = this.add.rectangle(0, 0, D.GW, H, 0xffffff, 0).setOrigin(0).setScrollFactor(0).setDepth(61); this.flashFx.wideFx = true;
     this.popups = [];
   }
 
@@ -431,6 +434,7 @@ export class Battle extends Phaser.Scene {
       base: this.add.circle(0, 0, 28, 0xffffff, 0.07).setStrokeStyle(1, 0xffffff, 0.3).setScrollFactor(0).setDepth(99).setVisible(false),
       knob: this.add.circle(0, 0, 11, 0xffffff, 0.3).setScrollFactor(0).setDepth(99).setVisible(false), v: new Phaser.Math.Vector2(),
     };
+    this.joy.base.wideFx = this.joy.knob.wideFx = true;   // 조이스틱은 화면 좌표(창 전체)라 전폭 카메라가 그린다
     this.input.on('pointerdown', (p, over) => {
       if (over.length || this.paused) return;
       // p.x는 그리는 판(PX배) 좌표라 게임 좌표로 나눈다
@@ -466,7 +470,7 @@ export class Battle extends Phaser.Scene {
 
   // 처음 두 판: 이동 방법을 3초 보여 준다
   dragHint() {
-    const t = this.add.text(W / 2, H - 120, tt('battle.04bd37'), font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
+    const t = this.add.text(W / 2, H - 120, tt(D.PC ? 'battle.pcMove' : 'battle.04bd37'), font(12, '#ffffff')).setOrigin(0.5).setScrollFactor(0).setDepth(120);
     const hand = this.add.circle(W / 2 - 30, H - 90, 9, 0xffffff, 0.5).setStrokeStyle(2, 0xffffff).setScrollFactor(0).setDepth(120);
     this.tweens.add({ targets: hand, x: W / 2 + 30, duration: 700, yoyo: true, repeat: 2, ease: 'Sine.InOut' });
     this.hint = [t, hand];
@@ -478,7 +482,7 @@ export class Battle extends Phaser.Scene {
     const mp = this.mode?.spawnPoint(min, max); if (mp) return mp;
     for (let i = 0; i < 8; i++) {
       const a = RF(0, Math.PI * 2), d = RF(min, max);
-      const x = this.hero.x + Math.cos(a) * d, y = this.hero.y + Math.sin(a) * d;
+      const x = this.hero.x + Math.cos(a) * d * (min >= 200 ? this.kx : 1), y = this.hero.y + Math.sin(a) * d;
       if (x > 20 && y > 20 && x < WORLD - 20 && y < WORLD - 20) return { x, y };
     }
     return { x: Phaser.Math.Clamp(this.hero.x + R(-200, 200), 20, WORLD - 20), y: Phaser.Math.Clamp(this.hero.y + 220, 20, WORLD - 20) };
@@ -608,7 +612,7 @@ export class Battle extends Phaser.Scene {
     this.banner(t('battle.ca7fa0'), t('battle.d501f9', { v: [t('battle.16f66a'), t('battle.0ab5e2'), t('battle.2df94c'), t('battle.5eb553')][a / (Math.PI / 2)] }));
     sfx('warn', 300);
     const ex = Math.cos(a), ey = Math.sin(a), horiz = Math.abs(ex) > Math.abs(ey);
-    const bar = this.add.rectangle(horiz ? (ex > 0 ? W - 4 : 4) : W / 2, horiz ? H / 2 : (ey > 0 ? H - 4 : 4), horiz ? 8 : W, horiz ? H : 8, 0xff3030, 0.75).setScrollFactor(0).setDepth(60);
+    const bar = this.add.rectangle(horiz ? (ex > 0 ? D.GW - 4 : 4) : D.GW / 2, horiz ? H / 2 : (ey > 0 ? H - 4 : 4), horiz ? 8 : D.GW, horiz ? H : 8, 0xff3030, 0.75).setScrollFactor(0).setDepth(60); bar.wideFx = true;
     this.tweens.add({ targets: bar, alpha: 0.15, duration: 180, yoyo: true, repeat: 6, onComplete: () => bar.destroy() });
     raidFlag(this, ex, ey, 2600);
     for (let k = 0; k < 8; k++) this.time.delayedCall(2500 + k * 1250, () => { if (!this.over && !this.bossPhase) this.formation(a + RF(-0.25, 0.25)); });
@@ -617,7 +621,7 @@ export class Battle extends Phaser.Scene {
 
   formation(ang) {
     const a = ang ?? (R(0, 3) * Math.PI / 2 + RF(-0.3, 0.3)), p = a + Math.PI / 2, type = R(0, 2);
-    const cx = this.hero.x + Math.cos(a) * 200, cy = this.hero.y + Math.sin(a) * 200;
+    const cx = this.hero.x + Math.cos(a) * 200 * this.kx, cy = this.hero.y + Math.sin(a) * 200;
     const at = (u, v) => ({ x: Phaser.Math.Clamp(cx + Math.cos(p) * u + Math.cos(a) * v, 10, WORLD - 10), y: Phaser.Math.Clamp(cy + Math.sin(p) * u + Math.sin(a) * v, 10, WORLD - 10) });
     const kind = Phaser.Utils.Array.GetRandom(this.ch.mobs), pts = [];
     if (type === 0) for (let i = 0; i < 11; i++) pts.push(at((i - 5) * 15, 0));
@@ -627,7 +631,7 @@ export class Battle extends Phaser.Scene {
     this.spawnAcc = (this.spawnAcc || 0) - pts.length * 0.7;
     // 경고: 그쪽 화면 가장자리
     const ex = Math.cos(a), ey = Math.sin(a), horiz = Math.abs(ex) > Math.abs(ey);
-    const bar = this.add.rectangle(horiz ? (ex > 0 ? W - 3 : 3) : W / 2, horiz ? H / 2 : (ey > 0 ? H - 3 : 3), horiz ? 6 : W, horiz ? H : 6, 0xff3030, 0.7).setScrollFactor(0).setDepth(60);
+    const bar = this.add.rectangle(horiz ? (ex > 0 ? D.GW - 3 : 3) : D.GW / 2, horiz ? H / 2 : (ey > 0 ? H - 3 : 3), horiz ? 6 : D.GW, horiz ? H : 6, 0xff3030, 0.7).setScrollFactor(0).setDepth(60); bar.wideFx = true;
     this.tweens.add({ targets: bar, alpha: 0, duration: 200, yoyo: true, repeat: 2, onComplete: () => bar.destroy() });
     sfx('warn', 300);
   }
@@ -636,7 +640,7 @@ export class Battle extends Phaser.Scene {
     const kind = this.ch.mobs[2], n = 18;
     for (let i = 0; i < n; i++) {
       const a = i / n * Math.PI * 2;
-      this.spawn(false, kind, { force: true, at: { x: Phaser.Math.Clamp(this.hero.x + Math.cos(a) * 190, 10, WORLD - 10), y: Phaser.Math.Clamp(this.hero.y + Math.sin(a) * 190, 10, WORLD - 10) } });
+      this.spawn(false, kind, { force: true, at: { x: Phaser.Math.Clamp(this.hero.x + Math.cos(a) * 190 * this.kx, 10, WORLD - 10), y: Phaser.Math.Clamp(this.hero.y + Math.sin(a) * 190, 10, WORLD - 10) } });
     }
   }
 
@@ -1685,7 +1689,7 @@ export class Battle extends Phaser.Scene {
     n = 4;
     for (const t of this.torches) {
       const sx = Math.round(t.x - cam.scrollX), sy = Math.round(t.y - cam.scrollY);
-      if (sx > -150 && sy > -150 && sx < W + 150 && sy < H + 150) {
+      if (sx > -150 && sy > -150 && sx < D.GW + 150 && sy < H + 150) {
         if (key[n] !== sx || key[n + 1] !== sy) { same = false; key[n] = sx; key[n + 1] = sy; }
         n += 2;
       }
@@ -1696,7 +1700,7 @@ export class Battle extends Phaser.Scene {
     if (L) this.dark.erase(L, this.hero.x - cam.scrollX, this.hero.y - cam.scrollY); else this.dark.erase('light', this.hero.x - cam.scrollX - 150, this.hero.y - cam.scrollY - 150);
     for (const t of this.torches) {
       const sx = t.x - cam.scrollX, sy = t.y - cam.scrollY;
-      if (sx > -150 && sy > -150 && sx < W + 150 && sy < H + 150) this.dark.erase('light', sx - 150, sy - 150);
+      if (sx > -150 && sy > -150 && sx < D.GW + 150 && sy < H + 150) this.dark.erase('light', sx - 150, sy - 150);
     }
   }
 

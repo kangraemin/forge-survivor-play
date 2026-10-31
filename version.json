@@ -6,6 +6,11 @@
   "dataVersion": 1,
   "contentChapters": 15,
   "data": [],
-  "store": { "android": "https://play.google.com/store/apps/details?id=com.kangraemin.forgesurvivor", "ios": "", "toss": "", "web": "" },
+  "store": {
+    "android": "https://play.google.com/store/apps/details?id=com.kangraemin.forgesurvivor",
+    "ios": "https://apps.apple.com/app/id6829073185",
+    "toss": "",
+    "web": ""
+  },
   "notes": ""
 }

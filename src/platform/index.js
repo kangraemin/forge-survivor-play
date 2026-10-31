@@ -7,7 +7,8 @@ import { installDesktop } from './desktop.js';
 const which = typeof window !== 'undefined' ? window.__FORGE_PORTAL : '';
 if (which === 'crazygames') installCrazy();
 else if (which === 'itch') installItch();
-if (which === 'crazygames' || which === 'itch') { const go = () => installDesktop(); document.body ? go() : addEventListener('DOMContentLoaded', go); }   // 55차: 가로로 넓은 창의 좌우 배경·키보드 안내(모바일·토스판은 이 길을 안 탄다)
+const fineWide = () => { try { return innerHeight / innerWidth < 1.15 && matchMedia('(pointer:fine)').matches; } catch { return false; } };   // 64차: 웹(GitHub Pages)도 PC 가로 창이면 같은 배경·안내를 쓴다
+if (which === 'crazygames' || which === 'itch' || fineWide()) { const go = () => installDesktop(); document.body ? go() : addEventListener('DOMContentLoaded', go); }   // 55차: 가로로 넓은 창의 좌우 배경·키보드 안내(모바일·토스판은 이 길을 안 탄다)
 
 // Phaser를 띄우기 전에 기다릴 일(SDK 초기화 + 저장소 연결). 포털이 아니면 바로 끝난다
 export const portalReady = () => (which === 'crazygames' ? initCrazy() : Promise.resolve());

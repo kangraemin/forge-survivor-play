@@ -16,7 +16,9 @@ const PHASE_LINE = [t('boss.d58fa8'), t('boss.6bf13b')];
 
 export class BossAI {
   constructor(s, key, hpMul, mid = false, formula = false) {
-    this.s = s; this.key = key; this.b = D.BOSSES[key]; this.mid = mid; this.PH = mid ? [0.66, 0.33] : [0.7, 0.4];
+    this.s = s; this.key = key; this.b = D.BOSSES[key]; this.mid = mid;
+    this.fk = mid && s.stage1 && !s.practice && (s.sv?.cleared | 0) < 1 ? D.FIRST_MID_K : 1;   // 64차: 1-1 첫 통과 중간보스는 버티는 시간 목표만 줄인다(체력=실제 DPS x 시간. 보스 피해·보상은 그대로)
+    this.PH = mid ? [0.66, 0.33] : [0.7, 0.4];
     // 49차: 화면 안 위쪽 1/3에 나타난다(150~170px 밖에서 나와 화면 밖이라 안 보였다)
     const vr = viewRect(s), hx = s.hero.x, hy = s.hero.y;
     const p = { x: Phaser.Math.Clamp(hx + R(-70, 70), 40, 1600 - 40), y: Phaser.Math.Clamp(Math.max(vr.y + vr.height * 0.22, 60), 60, 1600 - 40) };
@@ -34,11 +36,11 @@ export class BossAI {
     // 50차: 체력은 최근 8초 실제 DPS x 목표 시간. 강화·장비가 올라도, 다시 하는 판·하드에서도 순삭되지 않는다(식 값의 절반이 바닥)
     if (!formula) {
       const dps = s.realDps?.() || 0;
-      if (dps > 0) m.maxHp = m.hp = Math.max(m.maxHp * 0.5, dps * (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last));
+      if (dps > 0) m.maxHp = m.hp = Math.max(m.maxHp * 0.5, dps * (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last) * this.fk);
       s.log?.('boss_hp', { boss: key, mid, dps: Math.round(dps), hp: Math.round(m.maxHp) });
     }
     this.spawnBt = s.bt; this.spawnDps = Math.round(s.realDps?.() || 0);   // 53차: 보스 스폰~처치 초와 그때 DPS를 남긴다(tools/boss_table.mjs)
-    this.T = formula ? 0 : (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last) * 1000;   // 최소 버티는 시간(ms)
+    this.T = formula ? 0 : (mid ? D.BOSS_SEC.mid : D.BOSS_SEC.last) * 1000 * this.fk;   // 최소 버티는 시간(ms)
     // 1장 보스는 첫 보스라 20% 덜 아프게: 권장을 넘고도 체력 26% 남기고 졌다
     m.dmg = this.b.dmg * s.mobDmgMul * (!mid && s.c === 0 && !s.endless ? 0.8 : 1);
     m.body.setSize(m.width * 0.6, m.height * 0.55).setOffset(m.width * 0.2, m.height * 0.4);
@@ -55,9 +57,9 @@ export class BossAI {
   // 49차: 등장 연출 — 400ms에 걸쳐 보스 쪽으로 40% 끌고, 700ms 머물고, 400ms에 돌아온다
   camPull() {
     const s = this.s, t = s.bt - this.pull0, cam = s.cameras.main;
-    if (t >= 1500) { cam.setFollowOffset(D.W / 2, D.H / 2); this.pull0 = null; return; }
+    if (t >= 1500) { cam.setFollowOffset(D.GW / 2, D.H / 2); this.pull0 = null; return; }
     const f = 0.4 * (t < 400 ? t / 400 : t < 1100 ? 1 : (1500 - t) / 400), m = this.m;
-    cam.setFollowOffset(D.W / 2 - (m.x - s.hero.x) * f, D.H / 2 - (m.y - s.hero.y) * f);
+    cam.setFollowOffset(D.GW / 2 - (m.x - s.hero.x) * f, D.H / 2 - (m.y - s.hero.y) * f);
   }
 
   makeBar() {
@@ -95,7 +97,7 @@ export class BossAI {
     const recent = this.fitHist.length >= 4 ? (dl - this.fitHist[0]) / 9 : Infinity;
     const rate = Math.min(dl / Math.max(1, live), recent > 0 ? recent : Infinity);
     if (!(rate > 0) || !isFinite(rate)) return;
-    const left = Math.max(6, D.BOSS_FIT[this.mid ? 'mid' : 'last'] - live), need = rate * left;
+    const left = Math.max(6, D.BOSS_FIT[this.mid ? 'mid' : 'last'] * this.fk - live), need = rate * left;
     if (m.hp <= need) return;
     const f = Math.max(0.6, need / m.hp);
     m.maxHp *= f; m.hp *= f;

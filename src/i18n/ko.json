@@ -2101,5 +2101,19 @@
  "rank.toss": "토스 친구 랭킹",
  "desk.liveTitle": "이번 판",
  "desk.live1": "{stage} · Lv {lv}",
- "desk.live2": "처치 {k} · 체력 {hp}%"
+ "desk.live2": "처치 {k} · 체력 {hp}%",
+ "lobby.gateTitle": "강화하면 쉬워져요",
+ "lobby.gateStone": "강화석이 {n}개 남아 있어요",
+ "lobby.gatePower": "지금 전투력 {pw}, 권장 {rec}",
+ "lobby.gateGo": "그냥 도전",
+ "overlay.weakHint": "강화석 {n}개로 강화하면 다음 판이 쉬워져요",
+ "overlay.weakGo": "{nextName} 도전",
+ "rank.short": "랭킹",
+ "desk.goalTitle": "다음 목표",
+ "desk.goalGo": "바로 가기",
+ "desk.btnForge": "대장간",
+ "desk.btnGear": "장비",
+ "battle.pcMove": "WASD·방향키·마우스로 이동 · 공격은 자동",
+ "boot.pcStart": "클릭하거나 Enter 키로 시작",
+ "desk.fullscreen": "전체 화면"
 }

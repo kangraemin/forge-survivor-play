@@ -12,10 +12,11 @@ import { itemName, SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemSc
 import { itemBox } from './gearTab.js';
 import { dexRefresh, dexState, DEX_HP, titleName } from './codex.js';
 import { t } from './i18n.js';
+import { sideDim } from './wide.js';
 import { petCard } from './petRoles.js';
-import { nextGoal } from './nextGoal.js';
+import { nextGoal, powerAct } from './nextGoal.js';
 import { trackOnce } from './log.js';
-import { noteTower, tossSubmitTower } from './rank.js';
+import { noteTower, tossSubmitRecord } from './rank.js';
 const R = Phaser.Math.Between;
 
 const { W, H } = D;
@@ -94,6 +95,8 @@ export class Overlay {
     const dim = s.add.rectangle(0, -dy, W, H, 0x05030a, 0.72).setOrigin(0).setInteractive();
     c.add(dim); c.setAlpha(0);
     s.tweens.add({ targets: c, alpha: 1, duration: 140 });
+    const sd = sideDim(s, 0x05030a, 0.72, DEPTH - 1);   // 넓은 화면: 양옆도 같이 어둡게
+    if (sd.length) { sd.forEach(r => r.setAlpha(0)); s.tweens.add({ targets: sd, alpha: 0.72, duration: 140 }); c.once('destroy', () => sd.forEach(r => r.destroy())); }
     this.c = c;
     return c;
   }
@@ -177,6 +180,7 @@ export class Overlay {
     const recLv = s.sv.stats.runs <= 1 && s.run.lv <= 4;
     c.add(s.add.text(W / 2, 122, firstLv ? t('overlay.245621') : t('overlay.a38227'), font9(11, firstLv ? '#ffffff' : '#a1b2b6')).setOrigin(0.5));
     const cards = s.add.container(0, 0); c.add(cards);
+    this.cardsC = cards;   // 키보드 1·2·3으로 고르려고 pcInput.js가 쓴다
     // 다시 뽑기와 헷갈렸다: 카드의 '빼기'는 그 카드만 바꾼다고 짧게 적는다(긴 설명은 화면 밖으로 넘쳤다)
     const banInfo = () => banTxt.setText(r.banLeft > 0 ? t('overlay.ac8276', { banLeft: r.banLeft }) : t('overlay.35d4d7', { BAN_GEM: D.BAN_GEM }));
     const draw = () => {
@@ -197,6 +201,7 @@ export class Overlay {
     const banTxt = s.add.text(W / 2, 438, '', font9(10, '#a1b2b6')).setOrigin(0.5); c.add(banTxt);
     this.redraw = draw;
     draw();
+    if (D.PC) for (let i = 0; i < 3; i++) c.add(s.add.text(W / 2 - 124, 172 + i * 78, String(i + 1), font(11, '#8fb0b8', 2)).setOrigin(0.5));   // PC: 카드 왼쪽 옆에 고르는 키 번호
     // 처음 하는 사람: 첫 레벨업 카드를 반짝여 고르는 곳을 알려 준다
     if (firstLv) {
       banTxt.setText('');
@@ -592,7 +597,7 @@ export class Overlay {
       gold = D.clearGold(s.c, D.STAGES_PER_CHAPTER - 1) * D.ENDLESS.goldPerFloor * floors;
       stone += D.ENDLESS.stonePerFloor * floors;
       gem = Math.max(0, floors - best) * D.ENDLESS.gemPerNewFloor;
-      sv.endBest = Math.max(best, floors); noteTower(floors); tossSubmitTower(sv.endBest);
+      sv.endBest = Math.max(best, floors); noteTower(floors); tossSubmitRecord(sv);
       if (floors >= 3) mission('clear');
     } else if (dun) {
       // 일일 던전: 잡은 만큼(최소 20%) 요일 보상
@@ -857,8 +862,18 @@ export class Overlay {
     // 다음 판 전투력이 권장의 80%도 안 되면 대장간이 주인공(그대로 보스에 들어가 25초 만에 쓰러졌다)
     const weak = win && !s.endless && D.powerOf(sv) < D.recOf(Math.floor(nextIdx / D.STAGES_PER_CHAPTER), nextIdx % D.STAGES_PER_CHAPTER, hard) * (nextIdx < D.STAGES_PER_CHAPTER ? 0.65 : 0.8);   // 1장은 강화 한두 번이면 넘는다
     if (weak) {
-      c.add(button(s, 63, 424, 66, 26, t('lobby.348786'), () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); }, { color: 0x3a3846, size: 10 }));
-      c.add(button(s, 174, 424, 140, 40, t('overlay.37f495', { nextName }), () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, hard, bot: s.bot }); }, { color: 0x2f6b3a, size: 14 }));
+      // 64차: 강화 재료가 남아 있으면 대장간이 큰 주 버튼(대장간을 안 만진 사람이 1-3에서 4번 졌다)
+      const forgeMain = powerAct(sv).act === 'enh';
+      const goForge = () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge' }); };
+      const goNext = () => { s.log('result_action', { act: 'next', win }); s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, hard, bot: s.bot }); };
+      if (forgeMain) {
+        c.add(s.add.text(W / 2, 400, t('overlay.weakHint', { n: sv.stone | 0 }), font9(10, '#7fe6ee')).setOrigin(0.5));
+        c.add(button(s, 63, 430, 76, 26, t('overlay.weakGo', { nextName }), goNext, { color: 0x3a3846, size: 9 }));
+        c.add(button(s, 180, 430, 150, 36, t('nextGoal.enh'), goForge, { color: 0x2f6b3a, size: 13 }));
+      } else {
+        c.add(button(s, 63, 424, 66, 26, t('lobby.348786'), goForge, { color: 0x3a3846, size: 10 }));
+        c.add(button(s, 174, 424, 140, 40, t('overlay.37f495', { nextName }), goNext, { color: 0x2f6b3a, size: 14 }));
+      }
       s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
       return;
     }

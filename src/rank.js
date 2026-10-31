@@ -3,6 +3,7 @@
 //  · 포털판(noAnalytics)은 요청을 하지 않고 창도 숨긴다. 서버가 없거나 닿지 않으면 조용히 숨기되, 백오프가 지나면 다음 화면 진입 때 다시 묻는다
 import { REMOTE_URL } from './cloudSave.js';
 import { deviceId } from './deviceKey.js';
+import { track } from './log.js';
 
 const KEY = 'forge-rank-v1';
 const DAY = 86400000;
@@ -61,6 +62,7 @@ export function noteTower(floors) {
 export function noteGear(sv) {
   const s = rankScore(sv.tier | 0, sv.enh | 0), r = rec();
   if (s > r.enh) { r.enh = s; put(r); flush(); }
+  tossSubmitRecord(sv);   // 64차: 토스 리더보드에도 강화 기록을 함께 낸다(변하지 않았으면 안 보낸다)
 }
 // 저장에 이미 있는 무한탑 최고층·최고 강화를 처음 한 번 올린다(없는 기록은 올리지 않는다). 랭킹 화면·탑 화면에 들어올 때 부른다
 export function seedFromSave(sv) {
@@ -89,12 +91,28 @@ export async function loadTop(force = false) {
   return res;
 }
 
-// 토스 게임 리더보드(친구 랭킹): 토스판에서만(forgePlatform.leaderboard). 무한의 탑 최고 층을 올라갔을 때만 제출한다(기기 저장소에 낸 값을 기억)
+// 토스 게임 리더보드(친구 랭킹): 토스판에서만(forgePlatform.leaderboard).
+// 공식 문서(2026-10-31): submitGameCenterLeaderBoardScore({score})는 앱당 리더보드 하나에 점수 하나만 받는다(종류별 보드·보조 필드 없음).
+// 그래서 무한의 탑 최고 층과 대장간 최고 강화를 한 점수로 묶어 낸다: 점수 = 층 x 1000 + 강화 점수(등급 x 21 + 강화, 최대 209). 층이 같으면 강화가 높은 쪽이 위.
+// 콘솔 리더보드 정책: 점수 단위 '점', 높을수록 위. 정책이 없으면 'LeaderBoard not found'로 실패한다 -> 조용히 넘어가고 track으로만 남긴다
 export const tossBoard = () => globalThis.window?.forgePlatform?.leaderboard || null;
-export async function tossSubmitTower(best) {
-  const lb = tossBoard(); best = Math.min(best | 0, MAX_TOWER);
-  if (!lb || best < 1) return;
-  let sent = 0; try { sent = +ls.get('forge-toss-lb-v1') || 0; } catch {}
-  if (best <= sent) return;
-  if (await lb.submit(best)) ls.set('forge-toss-lb-v1', String(best));
+export const TOSS_FLOOR_MUL = 1000;
+export const tossScore = (floors, tier, enh) => Math.min(floors | 0, MAX_TOWER) * TOSS_FLOOR_MUL + rankScore(tier | 0, enh | 0);
+const LB_KEY = 'forge-toss-lb-v1';
+let lbBusy = false;
+export async function tossSubmitRecord(sv) {
+  const lb = tossBoard();
+  if (!lb || lbBusy) return;
+  const score = tossScore(sv.endBest | 0, sv.tier, sv.enh);
+  if (score < 1) return;
+  let sent = 0; try { sent = +ls.get(LB_KEY) || 0; } catch {}
+  if (score <= sent) return;   // 낮아졌거나(승급 직후 강화 0 등) 같으면 다시 내지 않는다
+  lbBusy = true;
+  try {
+    if (await lb.submit(score)) ls.set(LB_KEY, String(score));
+    else track('toss_lb_fail', { score });   // 정책 없음·버전 미달·네트워크: 게임엔 영향 없이 로그만
+  } catch (e) { track('toss_lb_fail', { score, err: String(e?.message || e).slice(0, 60) }); }
+  finally { lbBusy = false; }
 }
+// 예전 이름(무한의 탑 층만 내던 때): 같은 일을 한다
+export const tossSubmitTower = tossSubmitRecord;
