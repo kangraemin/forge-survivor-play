@@ -15,7 +15,8 @@ import { t } from './i18n.js';
 import { sideDim } from './wide.js';
 import { petCard } from './petRoles.js';
 import { nextGoal, powerAct } from './nextGoal.js';
-import { trackOnce } from './log.js';
+import { trackOnce, track } from './log.js';
+import * as PRO from './proBattle.js';
 import { noteTower, tossSubmitRecord } from './rank.js';
 const R = Phaser.Math.Between;
 
@@ -160,6 +161,11 @@ export class Overlay {
       while ((r -= pool[i].w) > 0) i++;
       out.push(pool.splice(i, 1)[0].k);
     }
+    // 프롤로그: 한 번만 더 고르면 MAX인 스킬(Lv4)을 늘 한 장 이상 보여 준다
+    if (this.s.pro && !out.some(k => sk[k] === D.SKILL_MAX - 1)) {
+      const near = Object.keys(sk).filter(k => D.SKILLS[k] && sk[k] === D.SKILL_MAX - 1 && !skip?.has(k) && !out.includes(k));
+      if (near.length) out[out.length - 1] = Phaser.Utils.Array.GetRandom(near);
+    }
     if (!out.length) out.push('_heal', '_silver');
     return out;
   }
@@ -230,10 +236,12 @@ export class Overlay {
     }, { size: 10, color: 0x3a3846 });
     rb.setEnabled(can());
     c.add(rb);
+    if (s.pro) { rb.setVisible(false); rb.setEnabled(false); }   // 프롤로그: 다시 뽑기·빼기 없음
     // '은화 0'만 있으면 무슨 숫자인지 몰랐다: 가진 은화·보석을 같이 보여 준다
     const ownTxt = () => t('overlay.37d916', { silver: r.silver, gem: s.sv.gem });
     const own = s.add.text(W / 2, 422, ownTxt(), font9(11, '#e8eef8')).setOrigin(0.5); c.add(own);
     this.lvOwn = () => own.active && own.setText(ownTxt());
+    if (s.pro) { own.setVisible(false); banTxt.setVisible(false); }
     // 시뮬/봇 C: 약점 답 카드가 안 보이면 무료·은화 다시 뽑기를 쓴다(힌트를 읽는 사람이 하는 행동)
     if (s.bot && window.__botWants) for (let i = 0; i < 6 && !cards.list.some(o => window.__botWants(o.key)); i++) {
       if (r.freeReroll > 0) r.freeReroll--; else if (r.silver >= this.lvReroll()) { r.silver -= this.lvReroll(); r.lvRerolls = (r.lvRerolls || 0) + 1; } else break;
@@ -278,7 +286,7 @@ export class Overlay {
     const def = special ? null : D.SKILLS[k], lv = sk[k] || 0;
     const isAct = def?.type === 'active';
     const firstRun = s.sv.stats.runs <= 1;
-    const banGem = s.run.banLeft <= 0, canBan = !special && (!banGem || s.sv.gem >= D.BAN_GEM) && !(firstRun && s.run.lv === 2);
+    const banGem = s.run.banLeft <= 0, canBan = !s.pro && !special && (!banGem || s.sv.gem >= D.BAN_GEM) && !(firstRun && s.run.lv === 2);
     // 카드는 한 가지 틀: 공격/보조 구분은 이름 옆 작은 글로만 한다(테두리 색이 두 가지라 어지러웠다)
     c.add(panel(s, -115, -35, 230, 70, { fill: 0x1c2935, line: 0x475c66 }));
     c.add(s.add.rectangle(-88, 0, 40, 40, 0x000000, 0.4));
@@ -297,7 +305,15 @@ export class Overlay {
     // 시너지: 이 스킬을 고르면 이미 가진 짝 스킬과 시너지가 생긴다(진화 안내보다 먼저 보여 준다)
     const syn = special || lv ? [] : D.synOf(k, sk);
     if (syn.length) c.add(s.add.text(108, 26, t('overlay.9230ff', { name: syn[0].name }), font9(10, '#ffb050')).setOrigin(1, 0.5));
-    else if (evoOf && !firstRun && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? t('overlay.f0f907', { evoOf }) : t('overlay.440133', { evoOf }), font9(10, '#a1b2b6')).setOrigin(1, 0.5));
+    else if (evoOf && !firstRun && !s.pro && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? t('overlay.f0f907', { evoOf }) : t('overlay.440133', { evoOf }), font9(10, '#a1b2b6')).setOrigin(1, 0.5));
+    // 프롤로그: 한 번만 더 고르면 MAX → 금테와 안내
+    if (s.pro && !special && lv === D.SKILL_MAX - 1) {
+      c.nearMax = true;
+      c.add(s.add.rectangle(0, 0, 230, 70).setStrokeStyle(2, 0xffd75e));
+      const glow = s.add.rectangle(0, 0, 230, 70, 0xffd75e, 0.14); c.add(glow);
+      s.tweens.add({ targets: glow, alpha: 0.02, duration: 480, yoyo: true, repeat: -1 });
+      c.add(s.add.text(108, 26, t('prologue.nearMax'), font(10, '#ffd75e', 2)).setOrigin(1, 0.5));
+    }
     c.setSize(230, 70).setInteractive({ useHandCursor: true });
     onTap(c, () => this.pick(k, c));
     // 추방: 이번 판에서 다시 안 나온다(첫 레벨업에는 숨김)
@@ -353,6 +369,7 @@ export class Overlay {
       r.evo[base] = true; s.refreshSkillRow();
       s.cameras.main.flash(300, 255, 220, 120);
       s.banner(D.EVOS[base].name, t('overlay.916e5b'));
+      if (s.pro) { PRO.proEvoFx(s, base); track('prologue_levelup', { lv: r.lv, skill: base, evo: true }); }
     } else if (k === '_heal') s.heal(s.maxHp * 0.3);
     else if (k === '_silver') r.silver += 25;
     else {
@@ -362,6 +379,11 @@ export class Overlay {
       if (k === 'vigor') { s.maxHp += 20; s.hp += 20; }
       s.mode?.onCard?.(k, r.skills[k]);
       s.refreshSkillRow();
+      if (s.pro) {
+        const mx = r.skills[k] >= D.SKILL_MAX;
+        track('prologue_levelup', { lv: r.lv, skill: k, skill_lv: r.skills[k], max: mx });
+        if (mx) s.time.delayedCall(220, () => PRO.proMaxFx(s, k));
+      }
     }
     sfx('buy');
     const oc = this.c, after = () => { this.picking = false; this.end(oc); };
@@ -534,6 +556,7 @@ export class Overlay {
 
   // ── 일시정지 ──
   pauseMenu() {
+    if (this.s.pro) return;   // 프롤로그엔 일시정지 없음
     if (this.open || this.s.over) return;
     const s = this.s;
     const c = this.begin('pause');

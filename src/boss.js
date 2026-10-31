@@ -354,6 +354,7 @@ export class BossAI {
     s.tweens.add({ targets: m, x: m.x - cx * 8, y: m.y - cy * 8, duration: fast ? 500 : 700 });
     s.time.delayedCall(fast ? 550 : 750, () => {
       g.active && g.destroy();
+      if (!m.active || !m.body) return;   // 68차: 예고 중에 보스가 죽어 몸이 사라졌으면 돌진하지 않는다(몸이 없는 채로 속도를 주다 예외가 나 그 프레임 전체가 날아갔다)
       // 돌진이 시작되면 지나간 자리에 먼지 자국
       playOnce(s, 'impact_charge', sx0, sy0, { sx: 1.6, sy: Math.max(0.8, w / 40), rot: a, depth: 8, origin: [0, 0.5], alpha: 0.9 });
       m.setVelocity(cx * 520, cy * 520);

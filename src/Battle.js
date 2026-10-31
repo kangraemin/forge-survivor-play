@@ -26,6 +26,8 @@ import { isTest } from './testMode.js';
 import { onHit as synHit } from './synergy.js';
 import { weakMul } from './bossWeak.js';
 import { tst, testBattleStart } from './testBattle.js';   // 테스트 모드(바로 가기·무적·배속)
+import { sandboxEnd } from './save.js';
+import * as PRO from './proBattle.js';   // 첫 실행 프롤로그(직접 하는 1분 30초). 모든 갈래는 this.pro 가드
 const { W, H } = D;
 const WORLD = 1600;
 const HERO_D = 33;   // 47차: 주인공은 몹·불꽃·베기 효과(28~32)보다 위 층, 피해 숫자(40)·어둠(50)보다 아래
@@ -35,8 +37,9 @@ export class Battle extends Phaser.Scene {
   constructor() { super('Battle'); }
 
   init(data) {
+    this.pro = data.prologue ? PRO.proState(data) : null;   // 프롤로그 판: 장은 15장(최강 상태로 시작), 저장은 메모리 모래판에서만
     this.mode = data.mode ? new ModeRun(this, data.mode.id, data.mode.n) : null;   // 모드 판: 장 번호는 모드 설정에서, 난이도는 그 장 2판(x-2) 기준
-    this.c = this.mode ? this.mode.cfg.c : data.chapter; this.s = this.mode ? 1 : data.stage;
+    this.c = this.mode ? this.mode.cfg.c : this.pro ? 14 : data.chapter; this.s = this.mode ? 1 : this.pro ? 0 : data.stage;
     this.ch = D.CHAPTERS[this.c];
     this.endless = !!data.endless;
     this.practice = !!data.practice;                    // 47차: 꾸미기 체험 30초 연습장(몹 약함·보상 없음)
@@ -54,7 +57,7 @@ export class Battle extends Phaser.Scene {
   }
 
   // 행동 로그(자동 검증 봇은 남기지 않는다)
-  log(name, p = {}) { if (!this.bot) track(name, { t: Math.round(this.bt / 1000), lv: this.run?.lv, hp_pct: this.maxHp ? Math.round(this.hp / this.maxHp * 100) : undefined, ...p }); }
+  log(name, p = {}) { if (!this.bot && !this.pro) track(name, { t: Math.round(this.bt / 1000), lv: this.run?.lv, hp_pct: this.maxHp ? Math.round(this.hp / this.maxHp * 100) : undefined, ...p }); }
   // 가장 많이 때린 것(죽은 원인)
   topHit() { const e = Object.entries(this.run.dmgBy || {}).sort((a, b) => b[1] - a[1])[0]; return e ? e[0] : 'none'; }
 
@@ -124,6 +127,7 @@ export class Battle extends Phaser.Scene {
     this.makeMap();
     this.makeHero();
     this.makeFx();
+    if (this.pro) PRO.proSetup(this);   // 체력 배율·시작 스킬·시간 (maxHp는 makeHero 뒤에 안다)
 
     this.mobs = this.physics.add.group();
     this.gems = this.physics.add.group();
@@ -152,7 +156,7 @@ export class Battle extends Phaser.Scene {
     this.ui = new Overlay(this);
     this.petShield = false;
     this.pet = new Pet(this);
-    this.env = makeEnv(this);   // 6장부터의 장 기믹(envfx.js)
+    this.env = this.pro ? null : makeEnv(this);   // 6장부터의 장 기믹(envfx.js). 프롤로그는 기믹 없음
     this.makeHud();
     this.makeJoystick();
     this.mode?.setup();   // 물건·거점·벽·사냥감을 놓고 주인공 위치를 잡는다(시작 몹을 깔기 전에)
@@ -171,15 +175,15 @@ export class Battle extends Phaser.Scene {
     const firstTry = !this.endless && this.c * D.STAGES_PER_CHAPTER + this.s >= (this.hard ? sv.hardCleared : sv.cleared);
     // 어려움은 늘 판 규칙이 붙는다(같은 맵에 바닥만 붉어 새 판으로 안 느껴졌다)
     // 1-1 두 번째 판은 떼를 붙인다: 처음 두 판에 판 규칙이 안 보여 매번 같은 게임 같았다(40차). 질풍은 바로 다음 1-2 몫(41차)
-    this.mod = this.practice || this.mode ? null : this.easy && sv.stats.runs === 1 ? D.RUN_MODS.find(m => m.id === 'horde') : this.easy || this.isBoss || this.endless || this.dungeon ? null : this.s === 1 && firstTry ? D.stageMod(this.c)
+    this.mod = this.practice || this.mode || this.pro ? null : this.easy && sv.stats.runs === 1 ? D.RUN_MODS.find(m => m.id === 'horde') : this.easy || this.isBoss || this.endless || this.dungeon ? null : this.s === 1 && firstTry ? D.stageMod(this.c)
       : this.hard ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s)))
       : sv.stats.runs >= 2 && Math.random() < D.RUN_MOD_CHANCE ? Phaser.Utils.Array.GetRandom(D.RUN_MODS.filter(m => m.id !== 'mutant' || D.stageVariant(this.c, this.s))) : null;   // 변종이 없는 판엔 '변종 소굴'은 빼고 뽑는다
     this.hordeKind = this.mod?.id === 'horde' ? this.ch.mobs[R(0, 2)] : null;
     // 깜짝 이벤트: 보스·무한의 탑·처음 판·던전이 아니면 판 중간에 하나(보물 고블린·황금 박쥐 떼·축복의 제단)
-    this.eventAt = !this.practice && !this.mode && !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
+    this.eventAt = !this.practice && !this.mode && !this.pro && !this.easy && !this.isBoss && !this.endless && !this.dungeon && (this.c * D.STAGES_PER_CHAPTER + this.s >= sv.cleared || Math.random() < D.EVENTS.chance) ? RF(0.3, 0.7) : null;   // 처음 도전하는 판은 꼭 한 번 본다
     this.eventKind = Phaser.Utils.Array.GetRandom(D.EVENTS.kinds);
-    this.goldOk = !this.practice && !this.mode && !this.easy && !this.endless && !this.dungeon && !this.hard && !this.stage1 && this.c * D.STAGES_PER_CHAPTER + this.s >= 1;   // 58차: 1-2 이후 장 안 금화 콘텐츠(보상표는 그대로, 판 안에서 더 줍는다)
-    this.chestOk = !this.practice && !this.mode && !this.easy && !this.isBoss && !this.endless && !this.stage1; this.chest = null;
+    this.goldOk = !this.practice && !this.pro && !this.mode && !this.easy && !this.endless && !this.dungeon && !this.hard && !this.stage1 && this.c * D.STAGES_PER_CHAPTER + this.s >= 1;   // 58차: 1-2 이후 장 안 금화 콘텐츠(보상표는 그대로, 판 안에서 더 줍는다)
+    this.chestOk = !this.practice && !this.pro && !this.mode && !this.easy && !this.isBoss && !this.endless && !this.stage1; this.chest = null;
     // 시작부터 화면이 차 있어야 첫 10초가 심심하지 않다
     // 44차: 6장부터는 시작 몹 28마리가 곧바로 에워싸 무기 1개인 첫 30초에 쓰러졌다 → 일부만 두고 나머지는 화면 밖에서 차례로 들어온다
     const total = this.easy ? 24 : 28, first = this.endless || this.dungeon ? total : this.c === 0 ? (this.easy ? 10 : 16) : this.c >= 5 ? 8 : 16;   // 45차: 1-1도 시작 24마리가 이미 화면에 있었다 → 10(처음 판)·16마리만 두고 나머지는 7초에 걸쳐 들어온다(첫 레벨업 2.4초는 가까운 몹으로 유지)
@@ -187,38 +191,39 @@ export class Battle extends Phaser.Scene {
     // 46차: 9장부터는 시작 10초 동안 처치가 없어 조용했다 — 약한 몹(체력 12%, 보상은 그대로)을 가까이 먼저 보내 첫 베기에 바로 쓰러지게 한다
     if (this.c >= 8 && !this.endless && !this.dungeon && !this.isBoss) for (let i = 0; i < 5; i++) this.spawn(true, this.ch.mobs[0], { weak: 0.12, force: true, at: this.spawnPoint(55 + i * 8, 95 + i * 8) });
     for (let i = 0; i < total - first; i++) this.time.delayedCall(700 + i * (7000 / (total - first)), () => !this.over && this.spawn(false, null, { at: this.spawnPoint(250, 300) }));
-    if (!this.bot) playBgm(this.mode ? 'mode' : 'battle', this.c);   // 모드 판은 파일 음악 없이 절차 BGM
-    this.events.once('shutdown', leaveBgm);
+    if (!this.bot) this.pro ? playBgm('boss', 0) : playBgm(this.mode ? 'mode' : 'battle', this.c);   // 모드 판은 파일 음악 없이 절차 BGM. 프롤로그는 15장 마지막 보스 곡을 끝까지(곡은 다음 장면이 이어받는다)
+    this.events.once('shutdown', this.pro ? sandboxEnd : leaveBgm);
     // 앱을 내리거나 화면이 꺼지면 일시정지 창을 띄워 둔다(돌아왔을 때 이미 맞고 있지 않게)
-    const onHide = () => { if (!this.over && !this.paused && !this.bot) this.ui.pauseMenu(); };
+    const onHide = () => { if (!this.over && !this.paused && !this.bot && !this.pro) this.ui.pauseMenu(); };
     this.game.events.on('hidden', onHide); this.events.once('shutdown', () => this.game.events.off('hidden', onHide));
     // 54차: 앱을 갔다 왔는데 소리 컨텍스트가 안 깨어 있으면(아이폰은 움직이지 않은 탭에서만 깨운다) 일시정지 창을 띄워 그 안의 탭으로 깨운다
-    const onShow = () => setTimeout(() => { if (!this.over && !this.paused && !this.bot && !audioRunning()) this.ui.pauseMenu(); }, 700);
+    const onShow = () => setTimeout(() => { if (!this.over && !this.paused && !this.bot && !this.pro && !audioRunning()) this.ui.pauseMenu(); }, 700);
     this.game.events.on('visible', onShow); this.events.once('shutdown', () => this.game.events.off('visible', onShow));
-    if (sv.stats.runs < 2 && !this.bot && !this.practice) this.dragHint();
+    if ((sv.stats.runs < 2 || this.pro) && !this.bot && !this.practice) this.dragHint();
     if (this.practice) this.practiceStart();
-    if (this.practice) { /* 연습장 안내는 practiceStart */ }
+    if (this.pro) PRO.proIntro(this);
+    else if (this.practice) { /* 연습장 안내는 practiceStart */ }
     else if (this.mode) this.mode.intro();
     else if (this.endless) this.banner(t('battle.6304cf'), t('battle.c78e78', { endBest: sv.endBest }));
     else if (this.dungeon) this.banner(t('battle.023b82', { name: D.DUN_TYPES[this.dungeon].name }), t('battle.f18dc3', { sec: D.DUNGEON.sec, killNeed: D.DUNGEON.killNeed }));
     else if (this.hard) this.banner(t('battle.2188f1', { v: this.c + 1, v2: this.s + 1, name: this.ch.name }), this.isBoss ? t('battle.aae927') : t('battle.d46739', { waveCount: this.waveCount }));
     else this.banner(`${this.c + 1}-${this.s + 1}  ${this.ch.name}`, this.isBoss ? t('battle.aae927') : t('battle.0e4516', { waveCount: this.waveCount, v: this.s === 1 ? t('battle.6c34bd') : t('battle.a75122') }));
     // 펫 상성: 잘 듣는 펫이면 알려 주고, 없으면 이 장에 맞는 펫을 알려 준다(가진 것만)
-    if (!this.endless && !this.dungeon) {
+    if (!this.endless && !this.dungeon && !this.pro) {
       const pf = this.pet.def && this.pet.fit, rs = recPets(this.sv, this.c).filter(p => this.sv.cleared >= p.unlock).map(p => p.name).join(' / ');
       const msg = pf > 1 ? [t('battle.dbd648', { v: this.pet.def.tank ? t('battle.6935f3') : '' }), '#5fdc6a'] : pf < 1 ? [t('battle.009d79', { name: this.pet.def.name, v: rs ? t('battle.2d4406', { rs }) : '' }), '#ff9070'] : rs ? [t('battle.c7a9ca', { rs }), '#ffd75e'] : null;
       if (msg) this.time.delayedCall(2600, () => !this.over && toast(this, msg[0], msg[1], 96));
     }
-    if (this.mod) this.time.delayedCall(4200, () => !this.over && this.banner(t('battle.da7b97', { v: this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : '', name: this.mod.name }), this.mod.desc));
+    if (this.mod && !this.pro) this.time.delayedCall(4200, () => !this.over && this.banner(t('battle.da7b97', { v: this.mod.id === 'horde' ? D.MOB_NAMES[this.hordeKind] + ' ' : '', name: this.mod.name }), this.mod.desc));
     // 이번 스테이지에 처음 나오는 변종을 알려 준다
-    const nv = !this.mode && !this.endless && !this.isBoss && !this.dungeon && !this.hard && D.stageVariant(this.c, this.s);
+    const nv = !this.pro && !this.mode && !this.endless && !this.isBoss && !this.dungeon && !this.hard && D.stageVariant(this.c, this.s);
     // 각성한 무기는 판 시작 때 무엇이 달라졌는지 알려 준다
     const aw = D.awakenText(sv.enh);
-    if (aw && !this.dungeon) this.time.delayedCall(this.mod ? 7600 : 3400, () => !this.over && this.banner(aw[0], aw[1]));
+    if (aw && !this.dungeon && !this.pro) this.time.delayedCall(this.mod ? 7600 : 3400, () => !this.over && this.banner(aw[0], aw[1]));
     if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(t('battle.27535b', { pre: D.VARIANTS[nv[1]].pre, v: D.MOB_NAMES[this.ch.mobs[nv[0]]] }), D.VARIANTS[nv[1]].desc));
     if (!this.practice) { sv.stats.runs++; save(); }
     logCtx({ stage: this.mode ? `mode_${this.mode.id}_${this.mode.n + 1}` : this.endless ? 'tower' : this.dungeon ? 'dungeon' : `${this.hard ? 'H' : ''}${this.c + 1}-${this.s + 1}`, idx: this.endless || this.dungeon ? -1 : this.c * D.STAGES_PER_CHAPTER + this.s });
-    if (!this.bot && !this.practice && !this.mode && !this.endless && !this.dungeon && !this.hard) {   // 깔때기: 첫 판 시작·1-3 진입·2장 진입(한 기기에 한 번)
+    if (!this.bot && !this.pro && !this.practice && !this.mode && !this.endless && !this.dungeon && !this.hard) {   // 깔때기: 첫 판 시작·1-3 진입·2장 진입(한 기기에 한 번)
       const ix = this.c * D.STAGES_PER_CHAPTER + this.s;
       trackOnce('funnel_first_battle', { stage: `${this.c + 1}-${this.s + 1}` });
       if (ix === 2) trackOnce('funnel_enter_1_3', { power: D.powerOf(sv) });
@@ -407,6 +412,7 @@ export class Battle extends Phaser.Scene {
     // 일시정지
     const pb = button(this, W - 13, 21, 18, 22, 'II', () => this.ui.pauseMenu(), { size: 9, color: 0x3a3846 });
     pb.setScrollFactor(0).setDepth(d);
+    if (this.pro) pb.setVisible(false);   // 프롤로그엔 일시정지 없음(건너뛰기 버튼이 그 자리)
     // 보유 스킬 아이콘 줄
     this.skillRow = this.add.container(8, 46).setScrollFactor(0).setDepth(d);
     // 궁극기 버튼(마나)
@@ -918,6 +924,7 @@ export class Battle extends Phaser.Scene {
 
   // ── 드롭 ──
   drop(m) {
+    if (this.pro) return PRO.proDrop(this, m);
     const r = this.run, P = D.DROP;
     this.addGem(m.x, m.y, m.elite ? 10 : m.variant === 'giant' ? 5 : m.ai === 'tank' || m.variant === 'armor' ? 2 : 1);
     if (m.elite) {
@@ -1152,7 +1159,7 @@ export class Battle extends Phaser.Scene {
       this.log('level_up', { wave: this.wave });
       this.lvTxt.setText('Lv ' + r.lv);
       // 3~5레벨과 7레벨부터 홀수 레벨(7·9·11…)을 카드 없이 자동 소강화로 넘긴다: 한 판 카드 창을 4~5번으로(49차, 80초에 7번 떴다). 2레벨 카드로 첫 스킬을 먼저 고른다. 성장 레벨 수는 같다. 진화가 열렸으면 창을 연다
-      if ((r.lv === 3 || r.lv === 5 || (r.lv >= 9 && r.lv % 2 === 1)) && !this.ui.evoReady()) this.ui.autoLevel();
+      if (!this.pro && (r.lv === 3 || r.lv === 5 || (r.lv >= 9 && r.lv % 2 === 1)) && !this.ui.evoReady()) this.ui.autoLevel();
       else if (this.bossLive()) this.bossLvQ = (this.bossLvQ || 0) + 1;   // 52차: 보스전 중엔 카드 창을 모아 두었다 페이즈 사이·처치 후에 연다
       else this.ui.levelUp();
     }
@@ -1172,7 +1179,8 @@ export class Battle extends Phaser.Scene {
     // 광전사 4세트: 체력이 절반 아래면 덜 아프다(공격만 올라 위험하기만 했다)
     const st1 = this.stage1 && !this.practice ? 0.85 : 1;   // 53차: 1-1 한정 피해 -15%
     const zerk = st1 * (this.wtype.id === 'axe' && this.gear.fx.has('axe4') && this.hp < this.maxHp / 2 ? 0.8 : 1);
-    const d = Math.max(1, Math.round(dmg * zerk * (this.pet.fit > 1 && this.pet.def.tank ? 1 - PET_GOOD_DEF : 1)));
+    let d = Math.max(1, Math.round(dmg * zerk * (this.pet.fit > 1 && this.pet.def.tank ? 1 - PET_GOOD_DEF : 1)));
+    if (this.pro) d = PRO.proHurt(this, d);   // 일반 구간엔 죽지 않게 체력 바닥
     const by = this.run.dmgBy; by[src] = (by[src] || 0) + d;
     this.hp -= d;
     this.iframe = this.bt + D.PLAYER.iframe;
@@ -1201,6 +1209,7 @@ export class Battle extends Phaser.Scene {
   }
 
   die(final = false) {
+    if (this.pro) return PRO.proDie(this);
     if (this.practice) return this.practiceEnd(false);
     if (!final && this.run.revive > 0) {
       this.run.revive--;
@@ -1340,7 +1349,8 @@ export class Battle extends Phaser.Scene {
     if (r.lv < 2 && !this.endless && !this.dungeon && this.bt > 4000) { this.trickXp = (this.trickXp || 0) + dt * 3 / 8000; if (this.trickXp >= 0.3) { const tx = this.trickXp; this.trickXp = 0; this.gainXp(tx); } }
 
     // 웨이브 시간(모드 판은 modes.js가 스폰·승패를 맡는다)
-    if (this.mode) this.mode.update(dt);
+    if (this.pro) PRO.proTick(this, dt);
+    else if (this.mode) this.mode.update(dt);
     else if (!this.bossPhase) {
       this.waveT += dt;
       // 50차: 중간 보스가 아직 살아 있으면 웨이브를 끝내지 않고 기다린다(보스가 약 1분 버티는데 웨이브 시간이 먼저 끝났다). 최대 100초까지
@@ -1651,7 +1661,8 @@ export class Battle extends Phaser.Scene {
     this.hpBar.width = 76 * f;
     this.hpLag.width += (76 * f - this.hpLag.width) * 0.06;
     this.hpTxt.setText(`${Math.min(Math.ceil(Math.max(0, this.hp)), Math.round(this.maxHp))}/${Math.round(this.maxHp)}`);
-    if (this.bossPhase) { this.timeTxt.setText(tt('battle.792e7e')); this.waveTxt.setText(''); }
+    if (this.pro) { this.timeTxt.setText(''); this.waveTxt.setText(''); }
+    else if (this.bossPhase) { this.timeTxt.setText(tt('battle.792e7e')); this.waveTxt.setText(''); }
     else if (this.midBoss?.m?.active && !this.midBoss.m.dead) { this.timeTxt.setText(tt('battle.792e7e')).setColor('#ff9a5a'); this.waveTxt.setText(tt('battle.7e0431', { v: this.hard ? tt('battle.79b7f1') : '', min: Math.min(this.wave + 1, this.waveCount), waveCount: this.waveCount })); }   // 55차: 중간보스가 사는 동안은 웨이브 시간이 0:01에 묶여 '남은 0:01'로 오래 보였다 → 보스가 살아 있으면 '보스'로 표시
     else {
       const left = Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000));

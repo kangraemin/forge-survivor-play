@@ -48,7 +48,13 @@ export function load() {
   save();
   return mem;
 }
+// 프롤로그 모래판: 풀템 프롤로그 상태를 메모리에서만 쓴다. 들어가 있는 동안 load()는 이 객체를 돌려주고 save()는 아무것도 쓰지 않는다(실제 저장 칸·백업·구매 장부·서버 저장 모두 그대로)
+let realMem = null;
+export function sandboxBegin(sv) { if (realMem) return; load(); realMem = mem; mem = sv; }
+export function sandboxEnd() { if (!realMem) return; mem = realMem; realMem = null; }
+export const inSandbox = () => !!realMem;
 export function save() {
+  if (realMem) return false;
   if (mem) mem.seenAt = Date.now();
   if (!mem) return false;
   syncLedger(store(), mem);   // 산 것을 저장과 분리된 칸에도 적는다
