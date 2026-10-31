@@ -2090,10 +2090,12 @@
  "rank.colRank": "Puesto",
  "rank.colName": "Herrero",
  "rank.colScore": "Récord",
- "rank.empty": "Aún no hay récords",
  "rank.n": "Nº {n}",
  "rank.floor": "Piso {v}",
  "rank.gear": "{name} +{v}",
  "rank.me": "Mi puesto",
- "rank.meNone": "Sin récord esta semana"
+ "rank.meNone": "Sin récord esta semana",
+ "rank.emptyTitle": "Deja el primer récord de la semana",
+ "rank.emptyL1": "Prueba la Torre Infinita una vez y tu récord aparecerá.",
+ "rank.emptyL2": "El puesto n.º 1 sigue libre."
 }

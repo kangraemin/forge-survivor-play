@@ -674,15 +674,31 @@ export class Overlay {
     const title = s.add.text(W / 2, 118, s.endless ? (floors > best ? t('overlay.747619') : t('overlay.0a1382')) : dun ? (dunFull ? t('overlay.be4ff0') : t('overlay.87a62f')) : win ? (s.isBoss ? t('overlay.d2fe64') : t('overlay.aaa1a2')) : t('overlay.099a98'), font(18, win || dunFull || (s.endless && floors > best) ? '#ffd75e' : '#ff7070')).setOrigin(0.5).setScale(2);
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
     c.add(s.add.text(W / 2, 142, s.endless ? t('overlay.9f9bf4', { endBest: sv.endBest }) : dun ? t('battle.023b82', { name: D.DUN_TYPES[dun].name }) : `${hard ? t('lobby.52de23') : ''}${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? t('overlay.d13fa1', { FIRST_CLEAR_MUL: D.FIRST_CLEAR_MUL }) : ''}`, font9(10, hard ? '#ff9090' : '#a1b2b6')).setOrigin(0.5));
+    // 61차: 보스 첫 클리어(새 펫·새 무기)는 핵심을 위로 올리고, 판 기록은 한 줄·보상은 아이콘 칩으로 묶는다(10줄 넘게 쌓여 새 무기가 묻혔다. 보상 수치는 그대로)
+    const keyW = win && !s.endless && !dun && r.newW, keyMode = !!(keyW || (win && !s.endless && !dun && newPet));
+    let rewY0 = 214, rewH = 22, cy = 0;
+    if (keyMode) {
+      const ln = [];
+      if (keyW && newPet) ln.push([t('overlay.7b8cb9', { name: newPet.name }), font9(10, '#ffb050')]);
+      if (keyW) ln.push([t('overlay.5e1ee0', { name: keyW.name }), font(11, '#ffd75e')], [t('overlay.41dd1f', { name: keyW.name, st: { str: t('gear.ef089e'), dex: t('gear.64b53c'), int: t('gear.448d3a') }[keyW.stat] }), font9(10, '#f2e4bc')]);
+      else ln.push([t('overlay.7b8cb9', { name: newPet.name }), font(11, '#ffd75e')]);
+      const ph = 8 + ln.length * 14;
+      c.add(panel(s, 36, 154, W - 72, ph, { fill: 0x2a2010, line: 0xffb050 }));
+      ln.forEach(([tx0, f], i) => { const o = s.add.text(W / 2, 154 + 13 + i * 14, tx0, f).setOrigin(0.5); o.isBtnLabel = true; o.setScale(Math.min(1, (W - 84) / o.width)); c.add(o); });
+      cy = 154 + ph + 11;
+      const ct = s.add.text(W / 2, cy, `${t('battle.5e9c0f')} ${fmt(r.kills)}  ·  ${t('overlay.453d0d')} ${r.lv}`, font9(10, '#a1b2b6')).setOrigin(0.5); ct.setScale(Math.min(1, (W - 40) / ct.width)); c.add(ct);
+      c.add(s.add.rectangle(W / 2, cy + 10, W - 80, 1, 0x293845));
+      rewY0 = cy + 24; rewH = 20;
+    }
     // 판 기록은 한 줄 칸으로(이름·값 세 줄이 보상 목록과 섞여 빽빽했다)
     const lines = [[t('battle.5e9c0f'), fmt(r.kills)], [t('overlay.453d0d'), String(r.lv)]];
     if (s.endless) lines.push([t('overlay.163795'), t('overlay.756235', { floors })]); else if (dun) lines.push([t('lobby.0c955c'), Math.round(Math.max(D.DUNGEON.minPay, Math.min(1, dunF)) * 100) + '%']); else if (!win) lines.push([t('overlay.2dde29'), Math.round(s.runProgress() * 100) + '%']);
-    lines.forEach(([a, b], i) => {
+    if (!keyMode) lines.forEach(([a, b], i) => {
       const x = W / 2 + (i - (lines.length - 1) / 2) * 70;
       c.add(s.add.text(x, 164, a, font9(10, '#a1b2b6')).setOrigin(0.5));
       c.add(s.add.text(x, 180, b, font(13)).setOrigin(0.5));
     });
-    c.add(s.add.rectangle(W / 2, 198, W - 80, 1, 0x293845));
+    if (!keyMode) c.add(s.add.rectangle(W / 2, 198, W - 80, 1, 0x293845));
     const rew = [[12, t('contentTab.a3755a'), gold], [13, t('contentTab.5bf71e'), stone]];
     if (guard) rew.push([11, t('lobby.2e604f'), guard]);
     if (sweep) rew.push([15, t('overlay.27f21d'), sweep]);
@@ -690,7 +706,14 @@ export class Overlay {
     if (gem) rew.push([-1, t('lobby.1fed91'), gem]);
     const tx = [];
     // 보상은 두 칸 격자(한 줄씩 쌓으면 보스 보상 6줄이 겹쳤다)
-    rew.forEach(([ic, name, n], i) => {
+    if (keyMode) rew.forEach(([ic, name, n], i) => {   // 아이콘 칩: 한 줄에 셋
+      const x = 26 + (i % 3) * 74, y = rewY0 + Math.floor(i / 3) * rewH;
+      c.add(ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
+      const nt0 = s.add.text(x + 20, y, '+0', font(12)).setOrigin(0, 0.5); c.add(nt0); tx.push(nt0);
+      const o = { v: 0 };
+      s.tweens.add({ targets: o, v: n, duration: 350, delay: 150 + i * 80, onUpdate: () => nt0.setText('+' + fmt(Math.round(o.v))), onComplete: () => sfx('coin') });
+    });
+    else rew.forEach(([ic, name, n], i) => {
       const x = i % 2 ? 146 : 38, y = 214 + Math.floor(i / 2) * 22;
       c.add(ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
       { const nt = s.add.text(x + 20, y, name, font9(10, '#a1b2b6')).setOrigin(0, 0.5), mw = 66 - (('+' + fmt(n)).length * 7 + 3); if (nt.width > mw) nt.setScale(Math.max(0.6, mw / nt.width)); c.add(nt); }
@@ -700,8 +723,8 @@ export class Overlay {
     });
     // 52차: 이겼을 때 가운데 빈 곳 — 이 장 별(깬 판 수)·다음 목표·도감 진행(보상 줄 아래에 이어 붙인다)
     if (win && !s.endless && !dun && !hard) {
-      const per = D.STAGES_PER_CHAPTER, done = Math.max(0, Math.min(per, sv.cleared - s.c * per)), rows = Math.ceil(rew.length / 2);
-      let y = 214 + (rows - 1) * 22 + 24;
+      const per = D.STAGES_PER_CHAPTER, done = Math.max(0, Math.min(per, sv.cleared - s.c * per)), rows = Math.ceil(rew.length / (keyMode ? 3 : 2));
+      let y = rewY0 + (rows - 1) * rewH + (keyMode ? 18 : 24);
       c.add(s.add.text(W / 2, y, t('overlay.2bf75f', { repeat: '★'.repeat(done), repeat2: '☆'.repeat(per - done), v: s.c + 1, done, per }), font(11, '#ffd75e', 2)).setOrigin(0.5)); y += 15;
       // 아래 보조 버튼 줄(y 294~)과 겹치지 않는 줄만 쓴다(보상이 6칸이면 별 줄만 남는다)
       if (sv.cleared < D.openTotal() && y <= 286) {
@@ -773,30 +796,30 @@ export class Overlay {
     const wNew = s.run.newW;   // 이번 판에 얻은 새 무기(보스 첫 처치는 확정, 그 밖엔 확률)
     const head = autoEq.length && !early && !wNew && !egg && !newPet ? t('overlay.8270d4', { n: autoEq[0].n, v: autoEq.length > 1 ? t('overlay.e31140', { v: autoEq.length - 1 }) : '' }) : wNew ? t('overlay.5e1ee0', { name: wNew.name }) : s.run.dupW ? t('overlay.954b88', { DUP_W_STONE: D.DUP_W_STONE }) : egg ? t('overlay.504024', { n: egg.n }) : newPet ? t('overlay.7b8cb9', { name: newPet.name }) : top >= 3 ? t('overlay.e27679') : loot.length ? t('overlay.33c668', { length: loot.length }) : '';
     // 보스를 처음 잡으면 새 무기와 보스 펫이 같이 온다: 펫은 한 줄 위에 따로
-    if (wNew && newPet) c.add(s.add.text(W / 2, 326, t('overlay.7b8cb9', { name: newPet.name }), font9(10, '#ffb050')).setOrigin(0.5));
+    if (!keyMode && wNew && newPet) c.add(s.add.text(W / 2, 326, t('overlay.7b8cb9', { name: newPet.name }), font9(10, '#ffb050')).setOrigin(0.5));
     if (tidy.n) {   // 가방이 꽉 차서 알아서 정리한 것 한 줄
       const tt = s.add.text(W / 2, wNew && newPet ? 316 : 326, t('overlay.d0829b', { n: tidy.n, v: tidy.gold ? t('overlay.8bee60', { fmt: fmt(tidy.gold) }) : t('overlay.6f3584', { fmt: fmt(tidy.stone) }) }), font9(10, '#9ae0ff')).setOrigin(0.5);
       tt.setScale(Math.min(1, (W - 24) / tt.width)); c.add(tt);
     }
-    if (head) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : autoEq.length ? font(11, '#5fdc6a') : font9(10, '#a1b2b6')).setOrigin(0.5));
+    if (head && !keyMode) c.add(s.add.text(W / 2, 350, head, wNew || egg || newPet || top >= 3 ? font(11, '#ffb050') : autoEq.length ? font(11, '#5fdc6a') : font9(10, '#a1b2b6')).setOrigin(0.5));
     // 보스 펫 합류는 결과 창 위에 따로 크게 띄운다(한 줄 글씨로는 못 보고 지나갔다)
     // 47차: 새 펫 합류 창은 클리어 카드 위에 겹쳐 뜨지 않는다 — 로비에서 팝업 순서대로(펫 → 꾸러미) 하나씩
     if (newPet && !s.bot) { sv.petJoinPending = newPet.id; save(); }
     if (finale && !s.bot) this.finale();
     // 새 무기는 장비 아이콘 대신 무기 이름 칸으로 보여 준다(장비 그림이 나와 무엇을 얻었는지 헷갈렸다)
-    if (wNew) {
+    if (wNew && !keyMode) {
       const st = { str: t('gear.ef089e'), dex: t('gear.64b53c'), int: t('gear.448d3a') }[wNew.stat];
       c.add(panel(s, W / 2 - 90, 362, 180, 30, { fill: 0x2a2010, line: 0xffb050 }));
       c.add(s.add.text(W / 2, 371, t('overlay.41dd1f', { name: wNew.name, st }), font(11, '#ffd75e')).setOrigin(0.5));
       c.add(s.add.text(W / 2, 384, t('overlay.ba83de'), font9(10, '#a1b2b6')).setOrigin(0.5));
     }
-    const n = wNew ? 0 : Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);
+    const n = wNew && !keyMode ? 0 : Math.min(loot.length, 7), x0 = W / 2 - (n - 1) * 15 - (loot.length > n ? 12 : 0);
     loot.slice(0, n).forEach((it, i) => {
       const box = itemBox(s, x0 + i * 30, 376, it, 26);
       c.add(box); box.setScale(0);
       s.tweens.add({ targets: box, scale: 1, duration: 220, delay: 450 + i * 90, ease: 'Back.Out', onStart: () => it.r >= 2 && sfx('level') });
     });
-    if (!wNew && loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#a1b2b6')).setOrigin(0, 0.5));
+    if ((!wNew || keyMode) && loot.length > n) c.add(s.add.text(x0 + n * 30 - 6, 376, `+${loot.length - n}`, font(10, '#a1b2b6')).setOrigin(0, 0.5));
     const nextIdx = Math.min(hard ? sv.hardCleared : sv.cleared, D.openTotal() - 1);
     const nextName = `${Math.floor(nextIdx / D.STAGES_PER_CHAPTER) + 1}-${nextIdx % D.STAGES_PER_CHAPTER + 1}`;   // 다음 판 이름을 버튼에 적어 어디로 가는지 보이게(42차)
     // 던전: 남은 횟수가 있으면 바로 한 번 더

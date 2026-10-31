@@ -12,7 +12,7 @@ export function installDesktop() {
 #game{z-index:1}
 #deskhint{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);color:#cfd8dc;font:15px/1.65 G9,G11,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
 #deskhint,#deskinfo{font:15px/1.65 G9,G11,sans-serif}
-#deskinfo{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);width:200px;color:#e6edf0;text-shadow:0 1px 2px #000;pointer-events:none}
+#deskinfo{position:fixed;z-index:2;display:none;top:50%;transform:translateY(-50%);width:260px;color:#e6edf0;text-shadow:0 1px 2px #000;pointer-events:none}
 #deskinfo b{display:block;margin:14px 0 5px;color:#ffd75e;font:18px G11,G9,sans-serif}
 #deskinfo .ic{display:inline-block;width:1.5em;text-align:center}
 #deskinfo b:first-child{margin-top:0}
@@ -29,7 +29,8 @@ export function installDesktop() {
   // 58차: 오른쪽 빈 자리에 오늘의 대장간 의뢰·내 칼(읽기만 한다. 게임 좌표·밸런스는 그대로). 저장·데이터 모듈은 깃발이 선 뒤에 늦게 불러온다
   const info = document.createElement('div'); info.id = 'deskinfo'; document.body.appendChild(info);
   let mods = null;
-  const line = (txt, cls) => { const d = document.createElement('div'); d.textContent = '- ' + txt; if (cls) d.className = cls; return d; };
+  const line = (txt, cls) => { const d = document.createElement('div'); d.textContent = '- ' + txt.replace(/\s+(\S+)$/, '\u00a0$1');   // 맨 끝 낱말(0/3 같은 수)이 혼자 다음 줄로 떨어지지 않게 앞 낱말에 붙인다
+     if (cls) d.className = cls; return d; };
   const head = (txt, icon) => { const b = document.createElement('b'); const i = document.createElement('span'); i.className = 'ic'; i.textContent = icon; b.append(i, txt); return b; };   // 아이콘은 글자 그림(외부 이미지·링크 없음)
   const fill = async () => {
     try {
@@ -54,7 +55,7 @@ export function installDesktop() {
     hint.style.display = on ? 'block' : 'none';
     const right = cv ? cv.getBoundingClientRect().right : w - side;
     info.style.display = on ? 'block' : 'none';
-    if (on) { info.style.width = Math.min(220, w - right - 28) + 'px'; info.style.left = Math.round(right + 16) + 'px'; fill(); }
+    if (on) { info.style.width = Math.min(300, w - right - 28) + 'px'; info.style.left = Math.round(right + 16) + 'px'; fill(); }
     if (on) { hint.style.left = Math.round(side - 216) + 'px'; hint.style.width = '200px'; hint.style.textAlign = 'right'; }
   };
   addEventListener('resize', place); place(); setInterval(place, 1500);   // 캔버스가 뜨고 크기가 잡힌 뒤에도 맞춘다

@@ -2090,10 +2090,12 @@
  "rank.colRank": "Hạng",
  "rank.colName": "Thợ rèn",
  "rank.colScore": "Kỷ lục",
- "rank.empty": "Chưa có kỷ lục",
  "rank.n": "Hạng {n}",
  "rank.floor": "Tầng {v}",
  "rank.gear": "{name} +{v}",
  "rank.me": "Hạng của tôi",
- "rank.meNone": "Tuần này chưa có kỷ lục"
+ "rank.meNone": "Tuần này chưa có kỷ lục",
+ "rank.emptyTitle": "Hãy lập kỷ lục đầu tiên tuần này",
+ "rank.emptyL1": "Thử Tháp Vô Tận một lần là kỷ lục sẽ lên bảng.",
+ "rank.emptyL2": "Vị trí số 1 vẫn còn trống."
 }

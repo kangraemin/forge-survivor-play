@@ -2090,10 +2090,12 @@
  "rank.colRank": "Sıra",
  "rank.colName": "Demirci",
  "rank.colScore": "Rekor",
- "rank.empty": "Henüz rekor yok",
  "rank.n": "{n}.",
  "rank.floor": "{v}. kat",
  "rank.gear": "{name} +{v}",
  "rank.me": "Sıram",
- "rank.meNone": "Bu hafta rekor yok"
+ "rank.meNone": "Bu hafta rekor yok",
+ "rank.emptyTitle": "Bu haftanın ilk rekorunu kır",
+ "rank.emptyL1": "Sonsuz Kule'yi bir kez dene, rekorun listeye girer.",
+ "rank.emptyL2": "1. sıra hâlâ boş."
 }

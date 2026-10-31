@@ -2090,10 +2090,12 @@
  "rank.colRank": "순위",
  "rank.colName": "대장장이",
  "rank.colScore": "기록",
- "rank.empty": "아직 기록이 없어요",
  "rank.n": "{n}위",
  "rank.floor": "{v}층",
  "rank.gear": "{name} +{v}",
  "rank.me": "내 순위",
- "rank.meNone": "이번 주 기록이 없어요"
+ "rank.meNone": "이번 주 기록이 없어요",
+ "rank.emptyTitle": "이번 주 첫 기록을 남겨 보세요",
+ "rank.emptyL1": "무한의 탑을 한 번 도전하면 기록이 올라가요.",
+ "rank.emptyL2": "1위 자리가 아직 비어 있어요."
 }

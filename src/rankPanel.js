@@ -42,7 +42,11 @@ export async function openRank(scene) {
     dyn.add(scene.add.text(26, 122, t('rank.colRank'), font9(9, '#7d8f94')));
     dyn.add(scene.add.text(72, 122, t('rank.colName'), font9(9, '#7d8f94')));
     dyn.add(scene.add.text(W - 26, 122, t('rank.colScore'), font9(9, '#7d8f94')).setOrigin(1, 0));
-    if (!rows.length) dyn.add(scene.add.text(W / 2, 220, t('rank.empty'), font9(11, '#a1b2b6')).setOrigin(0.5));
+    if (!rows.length) {   // 빈 판: 짧은 제목 + '- 문장'
+      dyn.add(scene.add.text(W / 2, 196, t('rank.emptyTitle'), font(13, '#ffd75e')).setOrigin(0.5));
+      let ey = 222;
+      [t('rank.emptyL1'), t('rank.emptyL2')].forEach(s2 => { const o = fixed(scene.add.text(44, ey, '- ' + s2, { ...font9(10, '#e8f4f8'), wordWrap: { width: W - 88 } }).setLineSpacing(2)); dyn.add(o); ey += o.height + 6; });
+    }
     rows.slice(page * PER, page * PER + PER).forEach((r, i) => {
       const y = 140 + i * 20;
       if (r.mine) dyn.add(scene.add.rectangle(W / 2, y + 8, W - 40, 18, 0x2a4a58, 0.9));

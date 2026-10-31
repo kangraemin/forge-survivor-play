@@ -2090,10 +2090,12 @@
  "rank.colRank": "Peringkat",
  "rank.colName": "Pandai Besi",
  "rank.colScore": "Rekor",
- "rank.empty": "Belum ada rekor",
  "rank.n": "Ke-{n}",
  "rank.floor": "Lantai {v}",
  "rank.gear": "{name} +{v}",
  "rank.me": "Peringkatku",
- "rank.meNone": "Belum ada rekor minggu ini"
+ "rank.meNone": "Belum ada rekor minggu ini",
+ "rank.emptyTitle": "Catat rekor pertama minggu ini",
+ "rank.emptyL1": "Coba Menara Tanpa Akhir sekali, rekormu akan muncul.",
+ "rank.emptyL2": "Peringkat 1 masih kosong."
 }

@@ -2090,10 +2090,12 @@
  "rank.colRank": "Rang",
  "rank.colName": "Forgeron",
  "rank.colScore": "Record",
- "rank.empty": "Aucun record pour l'instant",
  "rank.n": "{n}e",
  "rank.floor": "Étage {v}",
  "rank.gear": "{name} +{v}",
  "rank.me": "Mon rang",
- "rank.meNone": "Aucun record cette semaine"
+ "rank.meNone": "Aucun record cette semaine",
+ "rank.emptyTitle": "Posez le premier record de la semaine",
+ "rank.emptyL1": "Tentez la Tour infinie une fois et votre record apparaît.",
+ "rank.emptyL2": "La 1re place est encore libre."
 }

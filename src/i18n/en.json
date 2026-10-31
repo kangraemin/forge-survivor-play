@@ -2090,10 +2090,12 @@
  "rank.colRank": "Rank",
  "rank.colName": "Smith",
  "rank.colScore": "Record",
- "rank.empty": "No records yet",
  "rank.n": "#{n}",
  "rank.floor": "Floor {v}",
  "rank.gear": "{name} +{v}",
  "rank.me": "My Rank",
- "rank.meNone": "No record this week"
+ "rank.meNone": "No record this week",
+ "rank.emptyTitle": "Set the First Record This Week",
+ "rank.emptyL1": "Try the Endless Tower once and your record goes up.",
+ "rank.emptyL2": "The No. 1 spot is still open."
 }

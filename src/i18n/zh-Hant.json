@@ -2090,10 +2090,12 @@
  "rank.colRank": "排名",
  "rank.colName": "鐵匠",
  "rank.colScore": "紀錄",
- "rank.empty": "尚無紀錄",
  "rank.n": "第{n}名",
  "rank.floor": "{v}層",
  "rank.gear": "{name} +{v}",
  "rank.me": "我的排名",
- "rank.meNone": "本週尚無紀錄"
+ "rank.meNone": "本週尚無紀錄",
+ "rank.emptyTitle": "留下本週的第一筆紀錄",
+ "rank.emptyL1": "挑戰一次無盡之塔，紀錄就會上榜。",
+ "rank.emptyL2": "第1名的位置還空著。"
 }

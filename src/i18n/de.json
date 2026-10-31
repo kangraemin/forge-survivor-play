@@ -2090,10 +2090,12 @@
  "rank.colRank": "Rang",
  "rank.colName": "Schmied",
  "rank.colScore": "Rekord",
- "rank.empty": "Noch keine Rekorde",
  "rank.n": "Platz {n}",
  "rank.floor": "Etage {v}",
  "rank.gear": "{name} +{v}",
  "rank.me": "Mein Rang",
- "rank.meNone": "Kein Rekord diese Woche"
+ "rank.meNone": "Kein Rekord diese Woche",
+ "rank.emptyTitle": "Setze den ersten Rekord der Woche",
+ "rank.emptyL1": "Versuche den Endlosen Turm einmal, dann erscheint dein Rekord.",
+ "rank.emptyL2": "Platz 1 ist noch frei."
 }

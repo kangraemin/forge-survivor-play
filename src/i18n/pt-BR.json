@@ -2090,10 +2090,12 @@
  "rank.colRank": "Posição",
  "rank.colName": "Ferreiro",
  "rank.colScore": "Recorde",
- "rank.empty": "Ainda sem recordes",
  "rank.n": "{n}º",
  "rank.floor": "Andar {v}",
  "rank.gear": "{name} +{v}",
  "rank.me": "Minha posição",
- "rank.meNone": "Sem recorde esta semana"
+ "rank.meNone": "Sem recorde esta semana",
+ "rank.emptyTitle": "Deixe o primeiro recorde da semana",
+ "rank.emptyL1": "Tente a Torre Infinita uma vez e seu recorde aparece.",
+ "rank.emptyL2": "O 1º lugar ainda está livre."
 }

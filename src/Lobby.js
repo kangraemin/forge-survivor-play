@@ -22,7 +22,7 @@ import { itemName, PETS, gearStats, grantEgg, makeItem, addItems, RARITY, spFree
 import { t, tt } from './i18n.js';
 import { petCard } from './petRoles.js';
 import { openRank, rankVisible } from './rankPanel.js';
-import { loadTop, noteGear } from './rank.js';
+import { loadTop, noteGear, seedFromSave } from './rank.js';
 import { notifyAskDue, openNotifyAsk, notifySync, notifyInstall } from './notify.js';
 
 const { W, H } = D;
@@ -265,12 +265,12 @@ export class Lobby extends Phaser.Scene {
     let ty = 194;   // 60차: 문장 높이만큼만 띄운다(고정 40px 간격이 빈 줄처럼 보였다)
     [t('lobby.ch16L1'), t('lobby.ch16L2')].forEach(s2 => { const tx = this.add.text(32, ty, '- ' + s2, { ...font9(10, '#e8f4f8'), wordWrap: { width: W - 64 } }).setLineSpacing(2); c.add(tx); ty += tx.height + 8; });
     const on = !!sv.tut?.ch16Notify;
-    const nb = button(this, shareHidden() ? W / 2 : 82, 316, shareHidden() ? 140 : 108, 28, on ? t('lobby.ch16Done') : t('lobby.ch16On'), () => {
+    const nb = button(this, shareHidden() ? W / 2 : 76, 316, shareHidden() ? 140 : 100, 28, on ? t('lobby.ch16Done') : t('lobby.ch16On'), () => {
       if (sv.tut?.ch16Notify) return;
       sv.tut ||= {}; sv.tut.ch16Notify = 1; save(); track('ch16_notify_on'); sfx('coin'); toast(this, t('lobby.ch16Thx'), '#9ae0ff', 112); c.close();
     }, { size: 11, color: 0x2f6b3a });
     nb.setEnabled(!on); c.add(nb);
-    if (!shareHidden()) c.add(button(this, 196, 316, 108, 28, t('lobby.ch16Share'), async () => { const r = await openShare(this, t('share.6ee53a', { myCode: myCode() })); track('ch16_share', { ok: r }); }, { size: 11, color: 0x1d6f80 }));
+    if (!shareHidden()) c.add(button(this, 194, 316, 100, 28, t('lobby.ch16Share'), async () => { const r = await openShare(this, t('share.6ee53a', { myCode: myCode() })); track('ch16_share', { ok: r }); }, { size: 11, color: 0x1d6f80 }));
     c.add(button(this, W - 40, 172, 24, 20, 'X', () => c.close(), { size: 10 }));
   }
 
@@ -516,7 +516,7 @@ export class Lobby extends Phaser.Scene {
   // itch.io 체험판: 전체판 링크(토스·스토어). 다른 판에서는 아무것도 그리지 않는다
   trialLink() {
     const t = trialInfo(); if (!t) return;
-    const b = button(this, W / 2, H - 62, 170, 16, `${t.label} ▶`, () => { track('full_link', { from: 'lobby' }); openFull('lobby'); }, { size: 9, color: 0x3a3846 });
+    const b = button(this, W / 2, H - 59, 170, 14, `${t.label} ▶`, () => { track('full_link', { from: 'lobby' }); openFull('lobby'); }, { size: 9, color: 0x3a3846 });
     this.body.add(b);
   }
 
@@ -653,7 +653,7 @@ export class Lobby extends Phaser.Scene {
     b.add(back);
     // 주간 랭킹: 서버에 랭킹이 있을 때만 버튼이 나온다(포털판·서버 없음은 아무것도 안 보인다, 요청도 없다)
     const tok = this._rkTok = {};
-    if (rankVisible()) noteGear(sv), loadTop().then(d => {
+    if (rankVisible()) seedFromSave(sv), noteGear(sv), loadTop().then(d => {
       if (!d || tok !== this._rkTok || !b.scene || !this.tower || this.tab !== 'battle') return;
       b.add(button(this, W - 46, 56, 70, 20, t('rank.open'), () => { if (!this.busy) { sfx('click'); openRank(this); } }, { size: 10, color: 0x1d6f80 }));
     });

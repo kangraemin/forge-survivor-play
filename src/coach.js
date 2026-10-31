@@ -22,14 +22,22 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
   if (!steps.length || scene._coach) return null;
   const c = scene._coach = fixedContainer(scene).setDepth(3000);
   scene.busy = true;
-  let i = -1, done = false;
+  let i = -1, done = false, card = null;
+  // 한 장짜리: 카드 밖 아무 데나(가리킨 버튼 포함) 누르면 카드가 닫히고 그 터치가 그대로 동작한다. 버튼이 장면 입력 이벤트를 막으므로(stopPropagation) 캔버스에서 직접 듣는다
+  const cv = scene.game.canvas;
+  const onDown = e => {
+    if (done || !card) return;
+    const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+    if (!(x >= card[0] && x <= card[0] + card[2] && y >= card[1] && y <= card[1] + card[3])) end(false, true);
+  };
+  cv.addEventListener('pointerdown', onDown, true);
   track('coach_start', { id, n: steps.length });
-  const end = skipped => {
-    if (done) return; done = true;
+  const end = (skipped, stay) => {
+    if (done) return; done = true; cv.removeEventListener('pointerdown', onDown, true);
     c.list.forEach(o => scene.tweens.killTweensOf(o)); c.destroy(); scene._coach = null; scene.busy = false;
     if (id) coachMark(load(), id);
     track(skipped ? 'coach_skip' : 'coach_done', { id, at: i + 1 });
-    onEnd?.(skipped);
+    onEnd?.(skipped, stay);
   };
   const next = () => { sfx('click'); i + 1 >= steps.length ? end(false) : draw(i + 1); };
   function draw(n) {
@@ -41,8 +49,10 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
     track('coach_step', { id, n: n + 1 });
     const r0 = typeof st.rect === 'function' ? st.rect(scene) : st.rect;
     const rx = Math.max(0, r0[0]), ry = Math.max(0, r0[1]), rw = Math.min(W - rx, r0[2]), rh = Math.min(H - ry, r0[3]);
-    // 맨 아래 막: 아무 데나 탭하면 다음
-    c.add(scene.add.rectangle(0, 0, W, H, 0x000000, 0.001).setOrigin(0).setInteractive().on('pointerup', next));
+    // 맨 아래 막: 아무 데나 탭하면 다음. 한 장짜리 카드는 막지 않는다 — 카드 밖을 누르면 카드가 닫히고 그 터치가 그대로 동작한다(61차: 뒤 화면이 막힌 줄 알았다)
+    const pass = steps.length === 1;
+    card = null;
+    if (!pass) c.add(scene.add.rectangle(0, 0, W, H, 0x000000, 0.001).setOrigin(0).setInteractive().on('pointerup', next));
     // 구멍 뚫린 어두운 막: 위·아래·왼·오른쪽 네 장
     const dim = (x, y, w, h) => w > 0 && h > 0 && c.add(scene.add.rectangle(x, y, w, h, 0x05030a, DIM).setOrigin(0));
     dim(0, 0, W, ry); dim(0, ry + rh, W, H - ry - rh); dim(0, ry, rx, rh); dim(rx + rw, ry, W - rx - rw, rh);
@@ -67,7 +77,8 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
     let by = below || !above ? ry + rh + 18 : ry - 18 - hh;
     if (!below && !above) by = Math.max(minY, Math.min(H - 6 - hh, (ry + rh / 2 > H / 2) ? ry - 18 - hh : ry + rh + 18));
     by = Math.max(minY, Math.min(H - 6 - hh, by));
-    const bx = 14, up = by >= ry + rh;   // up: 말풍선이 구멍 아래라 화살표는 위를 가리킨다
+    const bx = 14, up = by >= ry + rh;
+    if (pass) card = [bx, by, BW, hh];   // up: 말풍선이 구멍 아래라 화살표는 위를 가리킨다
     const bg = scene.add.graphics();
     bg.fillStyle(0x1a1426, 0.98).fillRect(bx, by, BW, hh); bg.lineStyle(1, 0x7fe6ee, 1).strokeRect(bx + 0.5, by + 0.5, BW - 1, hh - 1);
     c.add(bg);

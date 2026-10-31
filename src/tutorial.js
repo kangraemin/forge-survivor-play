@@ -22,7 +22,7 @@ export const modeStep = () => ({
 const S = {
   gear: () => ({ prep: toGear('gear'), rect: [8, 112, 254, 64], title: t('tutorial.0beb93'), lines: [t('tutorial.9d95af'), t('tutorial.c30dc6'), t('tutorial.623eaf')] }),
   bag: () => ({ prep: toGear('gear'), rect: [8, 200, 254, 196], title: t('tutorial.75b593'), lines: [t('tutorial.8702ba'), t('tutorial.034aa9'), t('tutorial.3c3864')] }),
-  enh: () => ({ prep: s => s.show('forge'), rect: [8, 36, 254, 48], title: t('tutorial.c6e002'), lines: [t('tutorial.788a1e'), t('tutorial.833c7a'), t('tutorial.84819f'), t('tutorial.79c055')] }),
+  enh: short => ({ prep: s => s.show('forge'), rect: [8, 36, 254, 48], title: t('tutorial.c6e002'), lines: short ? [t('tutorial.788a1e'), t('tutorial.79c055')] : [t('tutorial.788a1e'), t('tutorial.833c7a'), t('tutorial.84819f'), t('tutorial.79c055')] }),   // 61차: 첫 판 직후 한 장은 2줄
   risk: () => ({ prep: s => s.show('forge'), rect: [8, 268, 254, 156], title: t('tutorial.4d2e02'), lines: [t('tutorial.7c12b8'), t('tutorial.3f4886'), t('tutorial.ba22b4'), t('tutorial.ab8195')] }),
   pet: () => ({ prep: toGear('pet'), rect: [8, 38, 254, 194], title: t('tutorial.9c10e5'), lines: [t('tutorial.a318b6'), t('tutorial.8341bf'), t('tutorial.877862'), t('tutorial.dd0e26')] }),
   petRole: () => ({ prep: toGear('pet'), rect: sc => (sc.sv.cleared >= 3 ? [150, 84, 56, 150] : [8, 80, 254, 152]), title: t('tutorial.9534e5'), lines: [t('tutorial.3d478e'), t('tutorial.87c0b8'), t('tutorial.c5cc6c'), t('tutorial.5fce56'), t('tutorial.155748')] }),
@@ -35,7 +35,7 @@ const noPrep = f => () => { const { prep, ...r } = f(); return r; };
 export const TAB_COACH = { tab_gear: noPrep(S.gear), tab_pet: noPrep(S.pet), tab_shop: noPrep(S.trade) };
 
 export function tutorialSteps(scene, full = false) {
-  if (!full) return [S.enh()];   // 60차: 첫 판 직후엔 핵심 한 장(강화)만. 나머지는 탭을 처음 열 때·설정 다시 보기
+  if (!full) return [S.enh(true)];   // 60차: 첫 판 직후엔 핵심 한 장(강화)만. 나머지는 탭을 처음 열 때·설정 다시 보기
   const steps = [S.gear(), S.bag(), S.enh(), S.risk(), S.pet(), S.petRole(), S.cur(), S.trade()];
   // 이미 2장 보스를 넘긴 사람은 도전 버튼도 한 번에 보여 준다
   if (scene.sv.cleared >= 6) steps.push(modeStep());
@@ -48,13 +48,13 @@ export function runTutorial(scene, full = false) {
   const sv = scene.sv, prev = sv.tut?.coach?.main;
   return !!coachRun(scene, tutorialSteps(scene, full), {
     id: 'main',
-    onEnd: skipped => {
+    onEnd: (skipped, stay) => {
       if (sv.cleared >= 6 && full) coachMark(sv, 'mode');
       // 새 방식(2)으로 본 사람만 탭 안내 한 장씩을 받는다. 건너뛰었으면 탭 안내도 다 본 걸로 친다. 다시 보기는 기존 표시를 그대로 둔다
       sv.tut.coach.main = full ? (prev || 1) : 2;
       if (!full && skipped) Object.keys(TAB_COACH).forEach(k => { sv.tut.coach[k] = 1; });
       save();
-      scene.show(skipped && !sv.tut.forge ? 'forge' : 'battle');
+      if (!stay) scene.show(skipped && !sv.tut.forge ? 'forge' : 'battle');   // 카드 밖을 눌러 닫았으면 화면을 옮기지 않는다
       scene.refreshTop?.();
     },
   });
