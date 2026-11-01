@@ -20,6 +20,7 @@ import { ModeRun } from './modes.js';   // 모드(지키기·점령·돌파·사
 
 import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 import { dressHero, holdHero, CosmeticActor, weaponKey, placeHeld, heldSpec, sizeHeld, placeWeapon } from './cosmeticView.js';
+import { dieCause, dieAnims } from './heroDeath.js';
 import { t, tt } from './i18n.js';
 import { line } from './lines.js';
 import { setupWide } from './wide.js';
@@ -34,6 +35,9 @@ const { W, H } = D;
 const WORLD = 1600;
 const HERO_D = 33;   // 47차: 주인공은 몹·불꽃·베기 효과(28~32)보다 위 층, 피해 숫자(40)·어둠(50)보다 아래
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
+
+// 쓰러질 때 고리·입자 색(죽은 원인별, heroDeath.js)
+const DIE_COL = { hit: 0xff4030, fire: 0xff8a20, ice: 0x8ae0ff, poison: 0x7ae040, shock: 0xfff060, dark: 0xa060ff };
 
 export class Battle extends Phaser.Scene {
   constructor() { super('Battle'); }
@@ -900,7 +904,7 @@ export class Battle extends Phaser.Scene {
     const ka = Phaser.Math.Angle.Between(this.hero.x, this.hero.y, m.x, m.y), kd = m.elite ? 10 : 18;
     if (this.anims.exists(m.kind + 'Die')) {
       const c = this.fxGet(m.x, m.y, m.texture.key).setFlipX(m.flipX).setDepth(9).setScale(m.scaleX).setTintFill(0xffffff).play(m.kind + 'Die');
-      this.tweens.add({ targets: c, x: m.x + Math.cos(ka) * kd, y: m.y + Math.sin(ka) * kd, angle: Math.cos(ka) > 0 ? 25 : -25, duration: 180, ease: 'Quad.Out' });
+      this.tweens.add({ targets: c, x: m.x + Math.cos(ka) * kd, y: m.y + Math.sin(ka) * kd, angle: D.MOBS[m.kind]?.die === undefined ? 0 : Math.cos(ka) > 0 ? 25 : -25, duration: 180, ease: 'Quad.Out' });   // 2장부터 몹 그림(mobDie)은 바닥에 무너지는 그림이라 기울이지 않는다
       this.time.delayedCall(60, () => c.active && c.clearTint());
       c.once('animationcomplete', () => this.tweens.add({ targets: c, alpha: 0, delay: 250, duration: 400, onComplete: () => this.fxFree_(c) }));
     } else {
@@ -1192,6 +1196,7 @@ export class Battle extends Phaser.Scene {
     let d = Math.max(1, Math.round(dmg * zerk * (this.pet.fit > 1 && this.pet.def.tank ? 1 - PET_GOOD_DEF : 1)));
     if (this.pro && (d = PRO.proHurt(this, d)) <= 0) return;   // 일반 구간엔 죽지 않게 체력 바닥, 보스 구간은 맞은 뒤 잠깐 안 맞음
     const by = this.run.dmgBy; by[src] = (by[src] || 0) + d;
+    this.lastHit = src;
     this.hp -= d;
     this.iframe = this.bt + D.PLAYER.iframe;
     this.run.mana = Math.min(D.MANA_MAX, this.run.mana + D.MANA_HURT);
@@ -1237,25 +1242,39 @@ export class Battle extends Phaser.Scene {
     this.physics.pause();
     this.time.timeScale = 1;
     this.deathFx();
-    this.time.delayedCall(1300, () => this.ui.result(false));
+    this.time.delayedCall(this.bot ? 1300 : 1600, () => this.ui.result(false));   // 쓰러짐 그림(16장면, 약 1.1초)을 다 본 뒤
   }
 
-  // 쓰러짐: 하얗게 번쩍 → 뒤로 튕겨 올랐다 등으로 떨어져 한 번 튀고 눕는다. 무기는 돌며 날아가 떨어진다(11/1: 제자리에서 90도 돌며 흐려지기만 했다)
+  // 쓰러짐: 죽은 원인(불·얼음·독·번개·어둠·맞음)마다 다른 16프레임 그림(heroDeath.js). 무기는 돌며 날아가 떨어진다
+  //  11/1: 처음엔 모든 죽음이 같은 뒤로 넘어지기 트윈이었다 → 원인별 그림. 그림이 없으면 예전 트윈
   deathFx() {
     const h = this.hero, f = this.face || 1, x0 = h.x, y0 = h.y, w = this.heroWeapon;
+    const c = dieCause(this), key = 'hdie_' + c, col = DIE_COL[c];
     this.tweens.killTweensOf(h);
-    h.play('hurtPose').setAlpha(1).setTintFill(0xffffff);
-    this.time.delayedCall(80, () => h.active && h.setTint(0xff9090));
     this.cameras.main.flash(250, 170, 20, 20); this.cameras.main.shake(220, 0.01);
-    const ring = this.add.image(x0, y0, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff4030).setScale(0.3).setDepth(40);
+    const ring = this.add.image(x0, y0, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(col).setScale(0.3).setDepth(40);
     this.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 420, ease: 'Quad.Out', onComplete: () => ring.destroy() });
-    this.goo.setParticleTint?.(0xff4040); this.goo.explode(16, x0, y0);
-    this.tweens.chain({ targets: h, tweens: [
-      { x: x0 - 12 * f, y: y0 - 18, angle: -35 * f, duration: 220, ease: 'Quad.Out' },
-      { x: x0 - 20 * f, y: y0 + 4, angle: -90 * f, duration: 240, ease: 'Quad.In', onComplete: () => { this.dust.explode(8, h.x, y0 + 8); this.cameras.main.shake(120, 0.006); } },
-      { y: y0 - 3, duration: 90, ease: 'Quad.Out' },
-      { y: y0 + 4, duration: 110, ease: 'Quad.In', onComplete: () => h.setTint(0x8a7070) },
-    ] });
+    this.goo.setParticleTint?.(col); this.goo.explode(16, x0, y0);
+    if (!this.bot) dieAnims(this);
+    if (!this.bot && this.anims.exists(key)) {   // 시뮬(봇)은 예전 길: 그림 효과는 봇에서 끈다
+      // 빈손 몸 위에 덮던 손가락·모자·기운은 쓰러짐 그림과 안 맞아 숨긴다
+      h.gripImg?.setVisible(false);
+      [this.cosActor?.head, this.cosActor?.aura].forEach(o => o?.setVisible(false));
+      // 서 있는 그림(63px)은 몸 중심이 칸 중심보다 4.5px 왼쪽, 쓰러짐 그림(80px)은 칸 가운데
+      h.setAngle(0).setAlpha(1).setFlipX(f < 0).setX(x0 - 4.5 * this.HS * f).play(key).setTintFill(0xffffff);
+      this.time.delayedCall(80, () => h.active && h.clearTint());
+      if (c === 'hit') this.tweens.add({ targets: h, x: h.x - 10 * f, duration: 300, ease: 'Quad.Out' });
+      h.once('animationcomplete-' + key, () => this.dust.explode(6, h.x, y0 + 10));
+    } else {
+      h.play('hurtPose').setAlpha(1).setTintFill(0xffffff);
+      this.time.delayedCall(80, () => h.active && h.setTint(0xff9090));
+      this.tweens.chain({ targets: h, tweens: [
+        { x: x0 - 12 * f, y: y0 - 18, angle: -35 * f, duration: 220, ease: 'Quad.Out' },
+        { x: x0 - 20 * f, y: y0 + 4, angle: -90 * f, duration: 240, ease: 'Quad.In', onComplete: () => { this.dust.explode(8, h.x, y0 + 8); this.cameras.main.shake(120, 0.006); } },
+        { y: y0 - 3, duration: 90, ease: 'Quad.Out' },
+        { y: y0 + 4, duration: 110, ease: 'Quad.In', onComplete: () => h.setTint(0x8a7070) },
+      ] });
+    }
     if (w) {
       this.tweens.killTweensOf(w);
       this.tweens.add({ targets: w, x: x0 + 30 * f, y: y0 + 10, angle: 540 * f, duration: 650, ease: 'Quad.Out' });

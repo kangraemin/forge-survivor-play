@@ -1,5 +1,6 @@
 // 에셋 로딩, 애니메이션 등록, 코드로 그리는 작은 텍스처 생성
 import { W, H, MOBS, BOSSES, PC } from './data.js';
+import { DIE_CAUSES, DIE_FW } from './heroDeath.js';
 import { font, hiCam } from './ui.js';
 import { makeWeaponTextures } from './wart.js';
 import { updateGate, startCheck } from './updateGate.js';
@@ -12,7 +13,7 @@ import { t, tt } from './i18n.js';
 import { load } from './save.js';
 import { track } from './log.js';
 import { isFirstRun } from './coach.js';
-import { HAVE } from './assetList.js';   // assets/ 맨 위 PNG 목록(tools/gen_asset_list.mjs). 없는 선택 그림은 요청하지 않아 404·'Missing resource'가 없다
+import { HAVE, MOB_DIE } from './assetList.js';   // assets/ 맨 위 PNG 목록(tools/gen_asset_list.mjs). 없는 선택 그림은 요청하지 않아 404·'Missing resource'가 없다
 import { registerAssets, criticalKeys, startBg, quietDupes } from './lazy.js';
 import { isTest } from './testMode.js';
 import { HELD_W, HELD_SHEETS } from './cosmeticView.js';
@@ -105,7 +106,7 @@ export function buildAnims(s) {
         const d = sheet(s, 'mob2_r' + m.die);
         A(key + 'Hurt', d, 1, 0, [0]);
         A(key + 'Die', d, 14, 0, [0, 1, 2, 3]);
-      }
+      } else A(key + 'Die', sheet(s, `${m.sheet}_r${m.row}_die`, 6), 12, 0);
     }
     for (const [key, b] of Object.entries(BOSSES)) {
       let sh = sheet(s, `${b.sheet}_r${b.row}`, 2);
@@ -147,6 +148,8 @@ export class Boot extends Phaser.Scene {
     for (const k of ['hero2_r0', 'hero2_r1', 'hero_r1', 'hero_r2', 'hero2_r2']) S.load.image('hn_' + k, `assets/hn_${k}.png`);   // 검을 지운 전투용 주인공(검은 Battle이 단계별로 쥔다)
     for (const w of HELD_W) for (const [a, fw] of Object.entries(HELD_SHEETS)) S.load.spritesheet(`hw_${w}_${a}`, `assets/heroW/${w}_${a}.png`, { frameWidth: fw, frameHeight: 52 });   // 무기를 쥔 주인공(cosmeticView.holdHero)
     for (const w of HELD_W) for (const [a, fw] of Object.entries(HELD_SHEETS)) for (const g of ['', 'g']) S.load.spritesheet(`hw2${g}_${w}_${a}`, `assets/heroW2/${w}_${a}${g ? '_grip' : ''}.png`, { frameWidth: fw, frameHeight: 52 });   // 무기 꾸미기용 빈손 몸과 손가락 덮개(docs/heroW2.md)
+    for (const [k, m] of Object.entries(MOBS)) if (m.die === undefined && MOB_DIE.has(k)) S.load.image(`${m.sheet}_r${m.row}_die`, `assets/mobDie/${k}.png`);   // 2~18장 몹 쓰러짐 6장면(art/mobDie). 장 그림과 같이 받는다(lazy chapterTest)
+    for (const c of DIE_CAUSES) S.load.spritesheet('hdie_' + c, `assets/heroDie/${c}.png`, { frameWidth: DIE_FW, frameHeight: 52 });   // 죽은 원인별 쓰러짐(heroDeath.js)
     for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => S.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
     for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) S.load.image(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`);
     for (const it of CASH_PETS) { S.load.spritesheet(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`, { frameWidth: 28, frameHeight: 28 }); if (it.dir) S.load.spritesheet(`cos_${it.id}_slash`, `assets/${it.dir}/${it.id}_slash.png`, { frameWidth: 28, frameHeight: 28 }); }
