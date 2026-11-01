@@ -66,7 +66,7 @@ export class BossAI {
   poseOn() {
     const s = this.s, m = this.m;
     if (s.bot) return;
-    this.ph = R(0, 1000); this.wind = 0; this.poke = 0;
+    this.wind = 0; this.poke = 0;
     const pre = () => {
       if (!this.sq) return;
       if (m.active) { m.setScale(m.scaleX / this.sq[0], m.scaleY / this.sq[1]); m.angle -= this.sq[2]; }
@@ -74,22 +74,15 @@ export class BossAI {
     };
     const post = () => {
       if (!m.active || m.dead || this.sq) return;
-      const dt = s.game.loop.delta, v = m.body?.velocity, sp = v ? Math.hypot(v.x, v.y) : 0, dir = m.flipX ? -1 : 1;
+      const dt = s.game.loop.delta, dir = m.flipX ? -1 : 1;
       let fx = 1, fy = 1, a = 0;
       if (this.wind > 0) {
         // 웅크림(앞 65%) → 튀어나옴
         this.wind -= dt; const k = 1 - this.wind / 420;
         if (k < 0.65) { const e = Math.sin(k / 0.65 * Math.PI / 2); fx = 1 + 0.14 * e; fy = 1 - 0.18 * e; a = -9 * e * dir; }
         else { const e = Math.sin((k - 0.65) / 0.35 * Math.PI); fx = 1 - 0.08 * e; fy = 1 + 0.16 * e; a = 7 * e * dir; }
-      } else if (sp > 4) {
-        this.ph += dt * (0.9 + sp / 40);
-        const w = Math.sin(this.ph * 0.011);
-        fx = 1 - 0.05 * Math.abs(w); fy = 1 + 0.07 * Math.abs(w); a = 6 * w;
-      } else {
-        this.ph += dt;
-        const w = Math.sin(this.ph * 0.004);
-        fx = 1 - 0.025 * w; fy = 1 + 0.035 * w;
       }
+      // 걷기·서 있기는 8장 그림이 팔다리를 움직인다. 몸 전체를 기울이면 뒤뚱거려 보여서 뺐다(사용자 11/1)
       if (this.poke > 0) { this.poke -= dt; const e = this.poke / 120; fx *= 1 + 0.07 * e; fy *= 1 - 0.07 * e; }
       this.sq = [fx, fy, a];
       m.setScale(m.scaleX * fx, m.scaleY * fy); m.angle += a;
