@@ -75,6 +75,7 @@ export class Lobby extends Phaser.Scene {
     this.body = this.add.container(0, 0);
     this.makeTop();
     this.makeTabs();
+    this.installScroll();
     logUser({ cleared: sv.cleared, tier: sv.tier, enh: sv.enh, payer: !!sv.paidTotal, paid_total: sv.paidTotal || 0, no_ads: !!sv.noAds, pass: sv.passLeft > 0 });
     track('lobby_enter', { tab: this.tab, cleared: sv.cleared, tier: sv.tier, enh: sv.enh, power: D.powerOf(sv), gold: sv.gold, stone: sv.stone, gem: sv.gem, runs: sv.stats.runs, guard: sv.guard, sweep: sv.sweep });
     this.show(this.tab);
@@ -345,7 +346,7 @@ export class Lobby extends Phaser.Scene {
   // ── 상단: 재화 ──
   makeTop() {
     const sv = this.sv;
-    this.add.rectangle(0, 0, W, 34, 0x0b111a, 0.96).setOrigin(0).setDepth(50);
+    this.add.rectangle(0, 0, W, 34, 0x0b111a, 1).setOrigin(0).setDepth(50);
     this.add.rectangle(0, 34, W, 1, COLOR.line).setOrigin(0).setDepth(50);
     const items = [[12, () => fmt(sv.gold)], [13, () => fmt(sv.stone)], [11, () => sv.guard], [15, () => `${sv.sweep}`], [-1, () => fmt(sv.gem)]];
     // 상단은 금화·강화석·보석 셋만(디자인 인계): 방지권은 대장간, 소탕권은 전투 탭에서 보인다. 칸 번호(bump)는 그대로 둔다
@@ -440,16 +441,47 @@ export class Lobby extends Phaser.Scene {
   // 49차: 가변 높이 화면(H>480)에서 남는 높이를 채우는 배너. 상점은 위(본문을 아래로 민다), 나머지 탭은 본문 아래 탭바 위
   // 왼쪽 '겨울 꾸미기'(행사 기간만), 오른쪽 '오늘의 특가'. 높이가 모자라면(480) 아예 만들지 않는다
   banner(id) {
+    this.scrollMax = 0; this.setScroll(0);
+    this.banner0(id);
+    // 화면이 짧으면(토스 위 버튼 줄·세이프존을 빼고 나면) 아래 카드가 탭 줄에 가린다: 가려지는 만큼 본문을 위아래로 밀 수 있게 한다
+    if (this.bn && this.bn.y > 100) this.scrollMax = Math.max(0, Math.ceil(this.bn.y + this.bnH + 6 - (H - 50)));
+  }
+  // 로비 본문 스크롤: 손가락으로 위아래로 민다. 끄는 동안에는 버튼이 눌리지 않게 입력을 잠깐 끈다
+  setScroll(v) {
+    this.scrollOff = Math.max(0, Math.min(this.scrollMax || 0, v));
+    const y = -this.scrollOff;
+    this.bg.y = y; if (this.tab !== 'shop') this.body.y = y;
+    if (this.bn) this.bn.y = this.bnY + y;
+  }
+  installScroll() {
+    const cv = this.game.canvas; let d = null;
+    const gy = e => { const r = cv.getBoundingClientRect(); return (e.clientY - r.top) / r.height * H; };
+    const down = e => { d = null; if (!this.scrollMax || this.busy) return; const y = gy(e); if (y > 35 && y < H - 50) d = { y0: y, off0: this.scrollOff, on: false }; };
+    const move = e => {
+      if (!d) return; const dy = gy(e) - d.y0;
+      if (!d.on && Math.abs(dy) < 6) return;
+      if (!d.on) { d.on = true; this.input.enabled = false; }
+      this.setScroll(d.off0 - dy);
+    };
+    // Phaser는 손 뗌을 다음 프레임에 처리한다: 몇 프레임 뒤에 입력을 다시 켜야 끈 자리의 버튼이 눌리지 않는다
+    const up = () => { if (d?.on) setTimeout(() => { if (this.sys.isActive()) this.input.enabled = true; }, 120); d = null; };
+    cv.addEventListener('pointerdown', down); addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    this.events.once('shutdown', () => { cv.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); this.input.enabled = true; });
+  }
+  banner0(id) {
     this.bn?.destroy(); this.bn = null; this.body.y = 0;
     const extra = H - 480, sv = this.sv, top = id === 'shop';
-    const bh = Math.min(top ? extra - 4 : extra - 10, 50);
+    const bh0 = Math.min(top ? extra - 4 : extra - 10, 50);
+    // 짧은 화면: 아래 카드는 글자 두 줄이 들어가는 높이(46)로 두고 스크롤로 보여 준다(그전엔 34까지 줄여 글자가 잘렸다)
+    const bh = !top && sv.cleared >= 1 ? Math.max(bh0, 46) : bh0;
+    this.bnH = bh; this.bnY = top ? 38 : 436;
     // 50차: 모드 선택 화면에서는 겨울·오늘의 특가 배너를 숨긴다(시작 버튼 아래가 광고처럼 보였다)
     if (id === 'battle' && this.modeScr) return;
     if (id === 'forge' && H >= 575 && sv.cleared >= 1) return;   // 55차: 키 큰 폰의 대장간은 아래 빈 자리를 오늘의 의뢰 3개가 쓴다(판매 배너와 겹치지 않게)
     // 50차: 처음 시작한 계정(1판도 못 깸): 비는 자리에 첫 목표 한 줄과 모드 예고 카드를 둔다
-    if (id === 'battle' && sv.cleared < 1 && !this.tower && bh >= 34) {
+    if (id === 'battle' && sv.cleared < 1 && !this.tower && bh0 >= 34) {
       const c = this.bn = this.add.container(0, 436).setDepth(10), w = W - 24;
-      const bh2 = Math.min(bh, Math.floor((H - 50 - 436 - 10) / 2));   // 52차: 두 번째 카드가 아래 탭 줄에 가려지던 것(카드 둘이 들어갈 높이로 줄인다)
+      const bh2 = Math.min(bh0, Math.floor((H - 50 - 436 - 10) / 2));   // 52차: 두 번째 카드가 아래 탭 줄에 가려지던 것(카드 둘이 들어갈 높이로 줄인다)
       const card = (y, line, title, tc, sub) => {
         c.add(panel(this, 12, y, w, bh2, { fill: 0x141b27, line }));
         c.add(this.add.text(24, y + 6, title, font(11, tc)));
