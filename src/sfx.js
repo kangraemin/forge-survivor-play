@@ -296,7 +296,20 @@ export function earlyBgm(enabled) {
   if (!musicOn || bgm || typeof Audio === 'undefined') return;
   const file = bgmFile('lobby', 0); if (!file) return;
   // 54차: 컨텍스트는 첫 제스처 전에는 만들지 않는다(브라우저 경고·아이폰 무음 방지). 파일만 미리 받아 두고 첫 터치 때 playBgm이 튼다
-  if (!ctx) { preloadBgm(file); return; }
+  //  - 토스·스토어 앱 웹뷰처럼 자동재생을 허락하는 곳은 로딩이 끝나기 전부터 나오게: 컨텍스트 없이 요소만 바로 틀어 본다. 막히면 예전처럼 첫 터치 때
+  if (!ctx) {
+    preloadBgm(file);
+    const el = preloaded[file]; if (!el) return;
+    el.muted = held; el.volume = bv();
+    let p; try { p = el.play(); } catch { return; }
+    if (p && p.then) p.then(() => {
+      if (bgm || !musicOn || preloaded[file] !== el) { el.pause(); return; }
+      delete preloaded[file];
+      bgm = { kind: 'lobby', ch: 0, file, el };
+      el.addEventListener('error', () => { if (bgm && bgm.el === el) { badFiles.add(file); bgm = null; stopEl(el); } });
+    }, () => { /* 막힘: 첫 터치 때 playBgm이 튼다 */ });
+    return;
+  }
   const el = new Audio(); attachGain(el); el.loop = true; el.preload = 'auto'; el.volume = bv(); el.muted = held; el.src = file;
   const st = { kind: 'lobby', ch: 0, file, el };
   el.addEventListener('error', () => { if (bgm === st) { badFiles.add(file); bgm = null; stopEl(el); } });
