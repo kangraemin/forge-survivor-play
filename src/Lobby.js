@@ -1,6 +1,7 @@
 import { cosmeticPage } from './cosmeticShop.js';
 import { openSettings } from './settingsPanel.js';
 import { tutorialDue, runTutorial, modeDue, runModeCoach, tabCoach, runIntro } from './tutorial.js';
+import { coachRun } from './coach.js';
 import { nextGoal, salesOpen, powerAct } from './nextGoal.js';
 import { cashHidden, shareHidden, adWord, trialInfo, openFull } from './platform/flags.js';   // 포털판(CrazyGames·itch): 현금 상품·공유 숨김
 import { shareBrag, braggable, bragGem, lobbyShareTick, openShare, myCode } from './share.js';
@@ -42,7 +43,7 @@ export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
   // 씬 인스턴스는 재사용되니 전투에서 돌아올 때 잠금·체크 상태를 비운다
-  init(data) { this.introCoach = !!data?.intro; if (data?.modeSel) { this.modeScr = true; this.modeId = data.modeSel; this.modeN = data.modeN ?? 0; } else this.modeScr = false; this.tab = data?.tab || this.tab || 'battle'; this.autoStart = data?.autoStart || null; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
+  init(data) { this.introCoach = !!data?.intro; if (data?.modeSel) { this.modeScr = true; this.modeId = data.modeSel; this.modeN = data.modeN ?? 0; } else this.modeScr = false; this.tab = data?.tab || this.tab || 'battle'; this.lossTip = !!data?.lossTip; this.autoStart = data?.autoStart || null; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
   // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
   get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
   get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
@@ -91,6 +92,8 @@ export class Lobby extends Phaser.Scene {
     else if (idle) this.time.delayedCall(250, () => this.welcomeWin(idle));
     // 1-1을 처음 깨고 오면(또는 이 안내를 아직 못 본 기존 유저) 코치마크 안내(tutorial.js). 다른 창보다 앞
     else if (this.shopPage !== 'skin' && tutorialDue(sv)) this.time.delayedCall(350, () => !this.busy && runTutorial(this));
+    // 11/1: 져서 대장간으로 오면(초반 3번) 대장장이가 무엇을 누를지 알려 준다
+    else if (this.lossTip && this.tab === 'forge' && (sv.tut.lossTipN | 0) < 3 && sv.enh < D.ENH_MAX) this.time.delayedCall(350, () => !this.busy && this.lossCoach());
     else if (this.tab === 'forge' && sv.tut.forgeShown && !sv.tut.forge) this.time.delayedCall(300, () => toast(this, t('lobby.2ee336'), '#ffd75e', 112));
     // 47차: 팝업은 한 번에 하나, 순서는 새 펫 → 출석 → 꾸러미. 구매 유도(성장·첫 결제 꾸러미)는 하루 한 번, 직전에 다른 팝업이 뜬 뒤 한 판은 더 해야 뜬다
     else if (sv.petJoinPending && this.tab === 'battle') { sv.popRun = sv.stats.runs; this.time.delayedCall(250, () => this.petWin()); }
@@ -840,6 +843,12 @@ export class Lobby extends Phaser.Scene {
     }
   }
 
+  lossCoach() {
+    const sv = this.sv, can = powerAct(sv).act === 'enh';
+    sv.tut.lossTipN = (sv.tut.lossTipN | 0) + 1; save();
+    coachRun(this, [{ rect: this.enhRect || [W / 2 - 94, 385, 188, 38], title: t('lobby.lossTipT'), lines: [t('lobby.lossTip1'), can ? t('lobby.lossTip2') : t('lobby.lossTipBroke')] }], { id: 'lossTip' });
+  }
+
   forgeTab() {
     const sv = this.sv, b = this.body, bg = this.bg;
     if (this.textures.exists('forge_bg')) {
@@ -937,6 +946,7 @@ export class Lobby extends Phaser.Scene {
       const ok = sv.gold >= gold && sv.stone >= stone;
       const eb = button(this, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 82 : W / 2, 404, sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 124 : 180, 30, ok ? tt('lobby.3e1a33') : sv.gold < gold ? tt('lobby.06342c', { fmt: fmt(gold - sv.gold) }) : tt('lobby.a8bce1', { v: stone - sv.stone }), () => this.enhance(), { size: ok ? 15 : 11, color: danger ? 0x8a2f3a : 0x2f6b3a, onDeny: () => this.enhance() });
       eb.setEnabled(ok); b.add(eb);
+      { const bw = sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1 ? 124 : 180; this.enhRect = [b.x + eb.x - bw / 2 - 4, b.y + 404 - 19, bw + 8, 38]; }   // 진 뒤 대장장이 안내가 가리킬 자리
       // 처음 하는 사람: 강화 버튼을 가리킨다
       this.forgeArrow = sv.cleared >= 1 && !sv.tut.forge && ok;
       if (this.forgeArrow) {

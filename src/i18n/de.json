@@ -1244,7 +1244,7 @@
  "overlay.40db76": "Link kopiert · Schick ihn Freunden",
  "overlay.ab7e90": "Edelstein erhalten!",
  "overlay.56ce53": "2x Belohnung",
- "overlay.88b26a": "2x per Werbung ▶",
+ "overlay.88b26a": "Werbung: Belohnung x2 ▶",
  "overlay.e31140": " + {v} weitere",
  "overlay.8270d4": "{n}{v} automatisch angelegt!",
  "overlay.5e1ee0": "Neue Waffe „{name}“ erhalten!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "Daten zurücksetzen",
  "settingsPanel.wipeAsk": "Nochmal tippen, um alles zu löschen",
  "settingsPanel.wipeNote1": "Fortschritt und Währung werden gelöscht",
- "settingsPanel.wipeNote2": "Käufe holst du über Käufe wiederherstellen zurück"
+ "settingsPanel.wipeNote2": "Käufe holst du über Käufe wiederherstellen zurück",
+ "lobby.lossTipT": "Rat des Schmieds",
+ "lobby.lossTip1": "Verloren? Deine Klinge ist noch zu schwach.",
+ "lobby.lossTip2": "Tippe unten auf Verbessern. Schon +1 macht viel aus.",
+ "lobby.lossTipBroke": "Zu wenig Gold. Spiel eine geschaffte Stufe erneut."
 }

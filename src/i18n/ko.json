@@ -1244,7 +1244,7 @@
  "overlay.40db76": "링크를 복사했다 · 친구에게 붙여 넣자",
  "overlay.ab7e90": "보석 받음!",
  "overlay.56ce53": "보상 2배 받기",
- "overlay.88b26a": "광고 2배 받기 ▶",
+ "overlay.88b26a": "광고 보고 보상 2배 ▶",
  "overlay.e31140": " 외 {v}개",
  "overlay.8270d4": "{n}{v} 자동 장착!",
  "overlay.5e1ee0": "새 무기 「{name}」 획득!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "데이터 초기화",
  "settingsPanel.wipeAsk": "한 번 더 누르면 모두 지워요",
  "settingsPanel.wipeNote1": "진행과 재화가 모두 지워지고 처음부터 시작해요",
- "settingsPanel.wipeNote2": "산 상품은 구매 복원으로 되찾아요"
+ "settingsPanel.wipeNote2": "산 상품은 구매 복원으로 되찾아요",
+ "lobby.lossTipT": "대장장이의 한마디",
+ "lobby.lossTip1": "졌구먼. 칼이 아직 약해서 그래.",
+ "lobby.lossTip2": "아래 강화 버튼을 눌러 봐. 한 번만 올려도 확 달라진다.",
+ "lobby.lossTipBroke": "금화가 모자라네. 깼던 판을 다시 돌아 모아 오게."
 }

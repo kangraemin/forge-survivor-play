@@ -1244,7 +1244,7 @@
  "overlay.40db76": "Đã chép link · Gửi cho bạn bè nhé",
  "overlay.ab7e90": "Đã nhận Ngọc!",
  "overlay.56ce53": "Nhận x2 thưởng",
- "overlay.88b26a": "Quảng cáo x2 ▶",
+ "overlay.88b26a": "Xem QC: thưởng x2 ▶",
  "overlay.e31140": " và {v} món nữa",
  "overlay.8270d4": "Tự trang bị {n}{v}!",
  "overlay.5e1ee0": "Nhận vũ khí mới 「{name}」!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "Xóa dữ liệu",
  "settingsPanel.wipeAsk": "Chạm lần nữa để xóa hết",
  "settingsPanel.wipeNote1": "Toàn bộ tiến trình và tiền tệ sẽ bị xóa",
- "settingsPanel.wipeNote2": "Món đã mua có thể lấy lại bằng Khôi phục giao dịch"
+ "settingsPanel.wipeNote2": "Món đã mua có thể lấy lại bằng Khôi phục giao dịch",
+ "lobby.lossTipT": "Lời khuyên thợ rèn",
+ "lobby.lossTip1": "Thua à? Vũ khí còn yếu lắm.",
+ "lobby.lossTip2": "Nhấn nút Cường hóa bên dưới. +1 thôi cũng khác hẳn.",
+ "lobby.lossTipBroke": "Thiếu vàng. Chơi lại màn đã qua để kiếm thêm."
 }

@@ -390,11 +390,13 @@ export class Battle extends Phaser.Scene {
       if (o.scrollFactorX !== 0 || o.y == null || o.y <= 0.5 || o.y >= 70) continue;
       o.y += o.x >= 170 ? ins.xTop : ins.top;
     }
+    // 11/1: 경험치 막대가 y=0이라 폰 상태 표시줄(시계·배터리)에 가려 안 보였다 — 안전 영역 바로 아래로
+    this.xpBg.y = this.xpBar.y = ins.top;
   }
   makeHud0(ins) {
     const d = 100, sf = o => o.setScrollFactor(0).setDepth(d);
-    sf(this.add.rectangle(0, 0, W, 4, 0x000000, 0.7).setOrigin(0));
-    this.xpBar = sf(this.add.rectangle(0, 0, 0, 4, 0x6fd3ff).setOrigin(0));
+    this.xpBg = sf(this.add.rectangle(0, 0, W, 5, 0x000000, 0.7).setOrigin(0));
+    this.xpBar = sf(this.add.rectangle(0, 0, 0, 5, 0x6fd3ff).setOrigin(0));
     sf(panel(this, 4, 7, 104, 20));
     this.add.text(9, 12, 'HP', font(9, '#ff6b6b')).setScrollFactor(0).setDepth(d);
     // 막대를 글자 높이만큼 키워 숫자가 막대 안에 들어가게 한다(8px 막대 위에 10px 글자가 걸쳐 지저분했다)
@@ -1233,12 +1235,33 @@ export class Battle extends Phaser.Scene {
     this.over = true;
     this.hp = 0;
     this.physics.pause();
-    this.hero.play('hurtPose');
     this.time.timeScale = 1;
-    this.tweens.add({ targets: this.hero, angle: 90 * this.face, alpha: 0.4, duration: 500 });
-    if (this.heroWeapon) this.tweens.add({ targets: this.heroWeapon, alpha: 0, duration: 300 });
-    this.cameras.main.flash(300, 120, 0, 0);
-    this.time.delayedCall(900, () => this.ui.result(false));
+    this.deathFx();
+    this.time.delayedCall(1300, () => this.ui.result(false));
+  }
+
+  // 쓰러짐: 하얗게 번쩍 → 뒤로 튕겨 올랐다 등으로 떨어져 한 번 튀고 눕는다. 무기는 돌며 날아가 떨어진다(11/1: 제자리에서 90도 돌며 흐려지기만 했다)
+  deathFx() {
+    const h = this.hero, f = this.face || 1, x0 = h.x, y0 = h.y, w = this.heroWeapon;
+    this.tweens.killTweensOf(h);
+    h.play('hurtPose').setAlpha(1).setTintFill(0xffffff);
+    this.time.delayedCall(80, () => h.active && h.setTint(0xff9090));
+    this.cameras.main.flash(250, 170, 20, 20); this.cameras.main.shake(220, 0.01);
+    const ring = this.add.image(x0, y0, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff4030).setScale(0.3).setDepth(40);
+    this.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 420, ease: 'Quad.Out', onComplete: () => ring.destroy() });
+    this.goo.setParticleTint?.(0xff4040); this.goo.explode(16, x0, y0);
+    this.tweens.chain({ targets: h, tweens: [
+      { x: x0 - 12 * f, y: y0 - 18, angle: -35 * f, duration: 220, ease: 'Quad.Out' },
+      { x: x0 - 20 * f, y: y0 + 4, angle: -90 * f, duration: 240, ease: 'Quad.In', onComplete: () => { this.dust.explode(8, h.x, y0 + 8); this.cameras.main.shake(120, 0.006); } },
+      { y: y0 - 3, duration: 90, ease: 'Quad.Out' },
+      { y: y0 + 4, duration: 110, ease: 'Quad.In', onComplete: () => h.setTint(0x8a7070) },
+    ] });
+    if (w) {
+      this.tweens.killTweensOf(w);
+      this.tweens.add({ targets: w, x: x0 + 30 * f, y: y0 + 10, angle: 540 * f, duration: 650, ease: 'Quad.Out' });
+      this.tweens.add({ targets: w, alpha: 0, delay: 900, duration: 300 });
+    }
+    if (this.heroRing) this.tweens.add({ targets: this.heroRing, alpha: 0, duration: 300 });
   }
 
   reviveNow() {

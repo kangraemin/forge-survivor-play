@@ -1244,7 +1244,7 @@
  "overlay.40db76": "Link kopyalandı · Arkadaşına yapıştır",
  "overlay.ab7e90": "Mücevher alındı!",
  "overlay.56ce53": "2x Ödül Al",
- "overlay.88b26a": "Reklamla 2x Al ▶",
+ "overlay.88b26a": "Reklam izle: ödül x2 ▶",
  "overlay.e31140": " +{v} tane daha",
  "overlay.8270d4": "{n}{v} otomatik donatıldı!",
  "overlay.5e1ee0": "Yeni silah «{name}» kazanıldı!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "Verileri sıfırla",
  "settingsPanel.wipeAsk": "Hepsini silmek için tekrar dokun",
  "settingsPanel.wipeNote1": "Tüm ilerleme ve para silinecek",
- "settingsPanel.wipeNote2": "Satın alımlar Satın Alımları Geri Yükle ile geri gelir"
+ "settingsPanel.wipeNote2": "Satın alımlar Satın Alımları Geri Yükle ile geri gelir",
+ "lobby.lossTipT": "Demircinin Tavsiyesi",
+ "lobby.lossTip1": "Kaybettin mi? Silahın hâlâ zayıf.",
+ "lobby.lossTip2": "Aşağıdaki Güçlendir'e dokun. +1 bile çok fark eder.",
+ "lobby.lossTipBroke": "Altın yetmiyor. Geçtiğin bir bölümü tekrar oyna."
 }

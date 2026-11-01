@@ -1244,7 +1244,7 @@
  "overlay.40db76": "リンクをコピー · 友達に貼ろう",
  "overlay.ab7e90": "ジェム獲得!",
  "overlay.56ce53": "報酬2倍",
- "overlay.88b26a": "広告で2倍 ▶",
+ "overlay.88b26a": "広告を見て報酬2倍 ▶",
  "overlay.e31140": " 他{v}個",
  "overlay.8270d4": "{n}{v} 自動装備!",
  "overlay.5e1ee0": "新武器「{name}」入手!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "データ初期化",
  "settingsPanel.wipeAsk": "もう一度押すとすべて消えます",
  "settingsPanel.wipeNote1": "進行と通貨がすべて消え、最初から始まります",
- "settingsPanel.wipeNote2": "購入した商品は購入の復元で戻せます"
+ "settingsPanel.wipeNote2": "購入した商品は購入の復元で戻せます",
+ "lobby.lossTipT": "鍛冶屋のひとこと",
+ "lobby.lossTip1": "負けたか。剣がまだ弱いんだ。",
+ "lobby.lossTip2": "下の強化ボタンを押してみな。1回でも全然違うぞ。",
+ "lobby.lossTipBroke": "金貨が足りないな。クリアした所をもう一度回って集めてこい。"
 }

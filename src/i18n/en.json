@@ -1244,7 +1244,7 @@
  "overlay.40db76": "Link copied · paste it to a friend",
  "overlay.ab7e90": "Gem received!",
  "overlay.56ce53": "Get 2x Reward",
- "overlay.88b26a": "Ad: 2x Reward ▶",
+ "overlay.88b26a": "Watch Ad: 2x Rewards ▶",
  "overlay.e31140": " +{v} more",
  "overlay.8270d4": "{n}{v} auto-equipped!",
  "overlay.5e1ee0": "New weapon 「{name}」 acquired!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "Reset Data",
  "settingsPanel.wipeAsk": "Tap again to erase everything",
  "settingsPanel.wipeNote1": "All progress and currency will be erased",
- "settingsPanel.wipeNote2": "Purchases can be recovered with Restore Purchases"
+ "settingsPanel.wipeNote2": "Purchases can be recovered with Restore Purchases",
+ "lobby.lossTipT": "Smith's Advice",
+ "lobby.lossTip1": "You lost? Your blade is still too weak.",
+ "lobby.lossTip2": "Tap the Enhance button below. Even +1 makes a big difference.",
+ "lobby.lossTipBroke": "Not enough gold. Replay a cleared stage to earn more."
 }

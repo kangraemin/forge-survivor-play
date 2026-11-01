@@ -957,8 +957,15 @@ export class Overlay {
       s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: 1, t: s.bt });
       return;
     }
+    // 11/1: 전투력이 모자라 졌고 강화할 재료가 있으면 '대장간에서 강화하기'가 주 버튼('다시'만 크게 있어 같은 판에서 또 졌다)
+    if (!win && !s.endless && !dun && !close && D.powerOf(sv) < D.recOf(s.c, s.s, hard) && powerAct(sv).act === 'enh') {
+      c.add(button(s, 63, 424, 66, 26, t('overlay.e671aa'), () => { s.log('result_action', { act: 'retry', win }); s.scene.start('Battle', { chapter: s.c, stage: s.s, hard, bot: s.bot }); }, { color: 0x3a3846 }));
+      c.add(button(s, 174, 424, 140, 40, t('nextGoal.enh'), () => { s.log('result_action', { act: 'forge', win }); s.scene.start('Lobby', { tab: 'forge', lossTip: true }); }, { color: 0x2f6b3a, size: 13 }));
+      s.registry.set('lastResult', { win, gold, stone, idx, kills: r.kills, lv: r.lv, progress: s.runProgress(), t: s.bt });
+      return;
+    }
     const big = fw || close;   // 아깝게 졌으면 '한 번 더'가 주인공
-    c.add(button(s, big ? 63 : 82, 424, big ? 66 : 100, big ? 26 : 30, fw ? t('overlay.90e5f5') : close ? t('lobby.348786') : t('overlay.508b94'), () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge' }); }, { color: 0x3a3846 }));
+    c.add(button(s, big ? 63 : 82, 424, big ? 66 : 100, big ? 26 : 30, fw ? t('overlay.90e5f5') : close ? t('lobby.348786') : t('overlay.508b94'), () => { s.log('result_action', { act: win || s.endless ? 'lobby' : 'forge', win }); s.scene.start('Lobby', { tab: win || s.endless ? 'battle' : 'forge', lossTip: !win && !s.endless }); }, { color: 0x3a3846 }));
     c.add(button(s, big ? 174 : 190, 424, big ? 140 : 100, big ? 40 : 30, win ? (s.endless ? t('overlay.03d1f9') : s.s === 1 && !s.isBoss ? t('overlay.bb3a3e') : t('overlay.37f495', { nextName })) : close ? t('overlay.33b4a9') : t('overlay.e671aa'), () => {
       s.log('result_action', { act: win ? 'next' : 'retry', win });
       if (s.endless) return s.scene.start('Battle', { chapter: s.c, stage: 0, endless: true, bot: s.bot });

@@ -1244,7 +1244,7 @@
  "overlay.40db76": "链接已复制 · 去发给好友吧",
  "overlay.ab7e90": "已领宝石!",
  "overlay.56ce53": "领取双倍奖励",
- "overlay.88b26a": "广告双倍领取 ▶",
+ "overlay.88b26a": "看广告 奖励翻倍 ▶",
  "overlay.e31140": " 等{v}件",
  "overlay.8270d4": "{n}{v} 已自动装备!",
  "overlay.5e1ee0": "获得新武器「{name}」!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "重置数据",
  "settingsPanel.wipeAsk": "再点一次将全部清除",
  "settingsPanel.wipeNote1": "进度和货币将全部清除，从头开始",
- "settingsPanel.wipeNote2": "已购商品可通过恢复购买找回"
+ "settingsPanel.wipeNote2": "已购商品可通过恢复购买找回",
+ "lobby.lossTipT": "铁匠的忠告",
+ "lobby.lossTip1": "输了吧？剑还太弱了。",
+ "lobby.lossTip2": "点下面的强化按钮。强化一次就大不一样。",
+ "lobby.lossTipBroke": "金币不够。去重打已通关的关卡攒一些。"
 }

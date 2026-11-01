@@ -1244,7 +1244,7 @@
  "overlay.40db76": "連結已複製・貼給朋友吧",
  "overlay.ab7e90": "已領寶石!",
  "overlay.56ce53": "領雙倍獎勵",
- "overlay.88b26a": "廣告雙倍 ▶",
+ "overlay.88b26a": "看廣告 獎勵翻倍 ▶",
  "overlay.e31140": " 等{v}件",
  "overlay.8270d4": "{n}{v} 自動裝備!",
  "overlay.5e1ee0": "獲得新武器「{name}」!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "重置資料",
  "settingsPanel.wipeAsk": "再點一次將全部清除",
  "settingsPanel.wipeNote1": "進度和貨幣將全部清除，從頭開始",
- "settingsPanel.wipeNote2": "已購商品可透過恢復購買找回"
+ "settingsPanel.wipeNote2": "已購商品可透過恢復購買找回",
+ "lobby.lossTipT": "鐵匠的忠告",
+ "lobby.lossTip1": "輸了吧？劍還太弱了。",
+ "lobby.lossTip2": "點下面的強化按鈕。強化一次就大不相同。",
+ "lobby.lossTipBroke": "金幣不夠。去重打已通關的關卡攢一些。"
 }

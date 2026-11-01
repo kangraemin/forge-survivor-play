@@ -1244,7 +1244,7 @@
  "overlay.40db76": "Tautan disalin · tempel ke temanmu",
  "overlay.ab7e90": "Permata diterima!",
  "overlay.56ce53": "Hadiah 2x",
- "overlay.88b26a": "Iklan 2x ▶",
+ "overlay.88b26a": "Tonton iklan: hadiah x2 ▶",
  "overlay.e31140": " +{v} lagi",
  "overlay.8270d4": "{n}{v} terpasang otomatis!",
  "overlay.5e1ee0": "Senjata baru 「{name}」 didapat!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "Hapus data",
  "settingsPanel.wipeAsk": "Ketuk lagi untuk menghapus semua",
  "settingsPanel.wipeNote1": "Semua progres dan mata uang akan dihapus",
- "settingsPanel.wipeNote2": "Pembelian bisa dipulihkan lewat Pulihkan Pembelian"
+ "settingsPanel.wipeNote2": "Pembelian bisa dipulihkan lewat Pulihkan Pembelian",
+ "lobby.lossTipT": "Saran Pandai Besi",
+ "lobby.lossTip1": "Kalah? Senjatamu masih lemah.",
+ "lobby.lossTip2": "Tekan tombol Tingkatkan di bawah. +1 saja sudah terasa.",
+ "lobby.lossTipBroke": "Emas kurang. Main ulang tahap yang sudah lewat."
 }

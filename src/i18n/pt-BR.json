@@ -1244,7 +1244,7 @@
  "overlay.40db76": "Link copiado · Cole para um amigo",
  "overlay.ab7e90": "Gema recebida!",
  "overlay.56ce53": "Receber 2x",
- "overlay.88b26a": "Anúncio 2x ▶",
+ "overlay.88b26a": "Ver anúncio: prêmio x2 ▶",
  "overlay.e31140": " +{v}",
  "overlay.8270d4": "{n}{v} equipado!",
  "overlay.5e1ee0": "Nova arma 「{name}」!",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "Apagar dados",
  "settingsPanel.wipeAsk": "Toque de novo para apagar tudo",
  "settingsPanel.wipeNote1": "Todo o progresso e moedas serão apagados",
- "settingsPanel.wipeNote2": "Compras podem ser recuperadas em Restaurar compras"
+ "settingsPanel.wipeNote2": "Compras podem ser recuperadas em Restaurar compras",
+ "lobby.lossTipT": "Dica do ferreiro",
+ "lobby.lossTip1": "Perdeu? Sua arma ainda está fraca.",
+ "lobby.lossTip2": "Toque em Aprimorar abaixo. Até +1 já faz diferença.",
+ "lobby.lossTipBroke": "Falta ouro. Jogue de novo uma fase vencida para juntar mais."
 }

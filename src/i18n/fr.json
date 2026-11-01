@@ -1244,7 +1244,7 @@
  "overlay.40db76": "Lien copié · Colle-le à un ami",
  "overlay.ab7e90": "Gemmes reçues !",
  "overlay.56ce53": "Récompense x2",
- "overlay.88b26a": "Pub x2 ▶",
+ "overlay.88b26a": "Pub : récompense x2 ▶",
  "overlay.e31140": " et {v} autres",
  "overlay.8270d4": "{n}{v} équipé auto !",
  "overlay.5e1ee0": "Nouvelle arme « {name} » !",
@@ -2242,5 +2242,9 @@
  "settingsPanel.wipe": "Réinitialiser",
  "settingsPanel.wipeAsk": "Touchez encore pour tout effacer",
  "settingsPanel.wipeNote1": "Progression et monnaie seront effacées",
- "settingsPanel.wipeNote2": "Les achats se récupèrent via Restaurer les achats"
+ "settingsPanel.wipeNote2": "Les achats se récupèrent via Restaurer les achats",
+ "lobby.lossTipT": "Conseil du forgeron",
+ "lobby.lossTip1": "Perdu ? Ta lame est encore trop faible.",
+ "lobby.lossTip2": "Touche Améliorer en bas. Même +1 change tout.",
+ "lobby.lossTipBroke": "Pas assez d'or. Rejoue un niveau réussi pour en gagner."
 }
