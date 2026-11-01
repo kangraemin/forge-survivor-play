@@ -27,7 +27,7 @@ const MAXC = RARITY[4].color;
 const WEAPON_ICON = 'w_axe9';
 const GEAR_ICONS = ['gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar'];
 
-// 단단함: 체력은 그대로 TOUGH배, 피해는 TOUGH^0.7배(14배면 6.3배)라 체력이 25% 바닥까지 내려간다
+// 단단함: 체력은 그대로 TOUGH배, 피해는 TOUGH^0.7배(14배면 6.3배)라 체력이 5% 바닥까지 내려간다
 function proMul(s) {
   const P = s.pro;
   s.mobHpMul = P.hp0 * P.tough; s.mobDmgMul = P.dmg0 * P.tough ** 0.7;
@@ -111,7 +111,7 @@ export function proSkip(s) {
 // ── 피격·드롭 ──
 export function proHurt(s, d) {
   const P = s.pro;
-  if (P.phase === 'play') return Math.max(1, Math.min(d, Math.floor(s.hp - s.maxHp * 0.25)));   // 일반 구간엔 체력이 25% 밑으로 안 간다
+  if (P.phase === 'play') return Math.max(1, Math.min(d, Math.floor(s.hp - s.maxHp * 0.05)));   // 일반 구간엔 체력이 5% 밑으로 안 간다(깊게 밀리고 고기로 버틴다)
   if (P.killed) return 0;   // 보스를 잡은 뒤엔 무너지는 성만 주인공을 쓰러뜨린다
   // 보스 공격·몸통 박치기는 한 대 맞으면 GRACE 동안 다시 안 맞는다(장판이 무적을 뚫고 몸통 피해와 한 프레임에 겹쳐 두 대씩 맞던 것)
   if (s.bt < (P.graceT || 0)) return 0;
@@ -120,7 +120,8 @@ export function proHurt(s, d) {
 }
 export function proDrop(s, m) {
   s.addGem(m.x, m.y, m.elite ? 10 : 1);
-  if (Math.random() < 0.012) s.addItem(m.x, m.y, 'meat');
+  // 체력이 낮을수록 고기가 잘 나온다(절반 아래면 6%, 아니면 1.5%)
+  if (Math.random() < (s.hp < s.maxHp * 0.5 ? 0.06 : 0.015)) s.addItem(m.x, m.y, 'meat');
   else if (Math.random() < 0.01) s.addItem(m.x, m.y, 'magnetItem');
 }
 
@@ -188,6 +189,7 @@ export function proTick(s, dt) {
 }
 
 // ── 보스 떼: 중간보스·이전 장 보스가 줄줄이 내려오고 몇 초 만에 터진다(타격감) ──
+const SW_LIFE = 5000;   // 떼 보스가 버티는 최소 시간
 const SWARM = [...new Set(D.CHAPTERS.slice(0, 14).flatMap(c => [c.mid, c.boss]).filter(k => k && D.BOSSES[k]))];
 function swarmTick(s, dt) {
   const P = s.pro;
@@ -202,7 +204,10 @@ function swarmTick(s, dt) {
 function swarmBoss(s, key) {
   const b = new BossAI(s, key, 1, true, true);
   b.bar?.forEach(o => o.destroy()); b.bar = null;   // 위쪽 체력 막대는 마지막 보스 몫
-  b.holdFloor = b.fit = () => {};                    // 버티기·체력 맞춤 없이 그냥 맞고 터진다
+  b.fit = () => {};                                  // 체력 맞춤 없이 맞고 터진다
+  // 11/1: 다 풀린 뒤엔 1초도 못 버티고 녹았다. 나온 지 SW_LIFE 전엔 체력이 (1 - 지난 시간/SW_LIFE) 밑으로 안 내려간다
+  b.holdFloor = () => { const f = 1 - (s.bt - b.spawnBt) / SW_LIFE; if (f > 0 && b.m.hp < b.m.maxHp * f) b.m.hp = b.m.maxHp * f; };
+  b.m.once('destroy', () => { if (s.pro?.phase === 'play' && !s.over) s.addItem(b.m.x, b.m.y, 'meat'); });   // 떼 보스를 잡으면 고기를 꼭 떨군다
   const dps = s.realDps?.() || 0;
   b.m.maxHp = b.m.hp = Math.max(s.atk * s.wM * 20, dps * RF(2.5, 4)) * s.pro.tough;   // 다 풀리면 2.5~4초에 터진다. 처음엔 TOUGH배라 쌓이며 밀어붙인다
   b.m.setScale(b.m.scaleX * 0.85);
