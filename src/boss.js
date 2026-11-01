@@ -57,6 +57,46 @@ export class BossAI {
     this.makeBar();
     this.skin = attachSkin(this, D);   // anim2 동작 그림(받는 대로 겹친다. 판정은 m 그대로)
     if (!mid) this.pull0 = s.bt;   // 등장 1.5초 동안 카메라를 보스 쪽으로 살짝 끌었다 돌려놓는다
+    this.poseOn();
+  }
+
+  // 11/1: 보스 몸짓(그림만). 걸을 때 뒤뚱·통통, 서 있을 땐 숨쉬기, 공격 직전 웅크렸다 튀어나오고 맞으면 찌그러진다
+  //  - 크기·기울기는 그리기 직전(postupdate)에만 얹고 다음 프레임 시작(preupdate)에 되돌린다: 판정 상자·트윈은 늘 원래 크기를 본다
+  //  - 봇·시뮬은 켜지 않는다
+  poseOn() {
+    const s = this.s, m = this.m;
+    if (s.bot) return;
+    this.ph = R(0, 1000); this.wind = 0; this.poke = 0;
+    const pre = () => {
+      if (!this.sq) return;
+      if (m.active) { m.setScale(m.scaleX / this.sq[0], m.scaleY / this.sq[1]); m.angle -= this.sq[2]; }
+      this.sq = null;
+    };
+    const post = () => {
+      if (!m.active || m.dead || this.sq) return;
+      const dt = s.game.loop.delta, v = m.body?.velocity, sp = v ? Math.hypot(v.x, v.y) : 0, dir = m.flipX ? -1 : 1;
+      let fx = 1, fy = 1, a = 0;
+      if (this.wind > 0) {
+        // 웅크림(앞 65%) → 튀어나옴
+        this.wind -= dt; const k = 1 - this.wind / 420;
+        if (k < 0.65) { const e = Math.sin(k / 0.65 * Math.PI / 2); fx = 1 + 0.14 * e; fy = 1 - 0.18 * e; a = -9 * e * dir; }
+        else { const e = Math.sin((k - 0.65) / 0.35 * Math.PI); fx = 1 - 0.08 * e; fy = 1 + 0.16 * e; a = 7 * e * dir; }
+      } else if (sp > 4) {
+        this.ph += dt * (0.9 + sp / 40);
+        const w = Math.sin(this.ph * 0.011);
+        fx = 1 - 0.05 * Math.abs(w); fy = 1 + 0.07 * Math.abs(w); a = 6 * w;
+      } else {
+        this.ph += dt;
+        const w = Math.sin(this.ph * 0.004);
+        fx = 1 - 0.025 * w; fy = 1 + 0.035 * w;
+      }
+      if (this.poke > 0) { this.poke -= dt; const e = this.poke / 120; fx *= 1 + 0.07 * e; fy *= 1 - 0.07 * e; }
+      this.sq = [fx, fy, a];
+      m.setScale(m.scaleX * fx, m.scaleY * fy); m.angle += a;
+    };
+    s.events.on('preupdate', pre); s.events.on('postupdate', post);
+    const off = () => { s.events.off('preupdate', pre); s.events.off('postupdate', post); };
+    m.once('destroy', off); s.events.once('shutdown', off);
   }
 
   // 49차: 등장 연출 — 400ms에 걸쳐 보스 쪽으로 40% 끌고, 700ms 머물고, 400ms에 돌아온다
@@ -161,7 +201,8 @@ export class BossAI {
     if (this.busy > 0) { this.busy -= dt; return; }
     const ang = Phaser.Math.Angle.Between(m.x, m.y, h.x, h.y);
     const sw = this.wk?.kind === 'swift' && !(m.slow > 0) ? 1.3 : 1;   // 66차: 빠른 보스는 둔화시키지 않으면 더 빠르다
-    m.setVelocity(Math.cos(ang) * this.b.spd * sl * sw, Math.sin(ang) * this.b.spd * sl * sw);
+    const spd = this.b.spd * sl * sw * (this.spdK || 1);
+    m.setVelocity(Math.cos(ang) * spd, Math.sin(ang) * spd);
     this.t -= dt * (sl < 1 ? 0.7 : 1);
     if (this.t <= 0) {
       let list = enraged && this.b.rage ? [...this.b.pattern, this.b.rage] : this.b.pattern;
@@ -169,7 +210,7 @@ export class BossAI {
       const pat = list[this.pi++ % list.length];
       // 47차: 초반 보스(1~2장)는 공격 간격을 줄여 피할 일이 생기게 한다
       this.t = (enraged ? 2400 : 3200) * (!this.mid && s.c <= 1 && !s.endless ? 0.8 : 1) + R(0, 600);
-      this.callout(pat);
+      this.callout(pat); this.wind = 420;
       if (this.skin?.sp) skinSkill(this.skin, pat, probeHit(this, pat, enraged, () => this[pat](enraged)));
       else this[pat](enraged);
     }

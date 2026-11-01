@@ -717,7 +717,7 @@ export class Battle extends Phaser.Scene {
     // 보스는 몸집이 커서 흰 번쩍임이 화면을 덮는다: 붉게만 물들인다
     // 13장(폭풍 평원)은 번개·붉은 원과 겹쳐 흰 덩어리가 몹을 지웠다: 옅은 푸른빛으로 짧게만 번쩍인다
     const calmFx = this.env?.kind === 'storm';
-    if (m.isBoss) m.setTint(0xff8a8a); else m.setTintFill(calmFx ? 0xc8d4f0 : 0xffffff);
+    if (m.isBoss) { m.setTint(0xff8a8a); if (m.bossAI) m.bossAI.poke = 120; } else m.setTintFill(calmFx ? 0xc8d4f0 : 0xffffff);
     this.time.delayedCall(calmFx ? 40 : 60, () => { if (m.active && !m.dead) { m.clearTint(); if (m.baseTint !== 0xffffff) m.setTint(m.baseTint); } });
     if (!m.isBoss && !m.goblin) {
       const ox = from ? from.x : this.hero.x, oy = from ? from.y : this.hero.y;

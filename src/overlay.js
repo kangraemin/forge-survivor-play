@@ -383,9 +383,9 @@ export class Overlay {
       r.evo[base] = true; s.refreshSkillRow();
       s.cameras.main.flash(300, 255, 220, 120);
       s.banner(D.EVOS[base].name, t('overlay.916e5b'));
-      if (s.pro) { PRO.proEvoFx(s, base); track('prologue_levelup', { lv: r.lv, skill: base, evo: true }); }
-    } else if (k === '_heal') s.heal(s.maxHp * 0.3);
-    else if (k === '_silver') r.silver += 25;
+      if (s.pro) { PRO.proEvoFx(s, base); PRO.proPick(s, true); track('prologue_levelup', { lv: r.lv, skill: base, evo: true }); }
+    } else if (k === '_heal') { s.heal(s.maxHp * 0.3); if (s.pro) PRO.proPick(s, false); }
+    else if (k === '_silver') { r.silver += 25; if (s.pro) PRO.proPick(s, false); }
     else {
       r.skills[k] = (r.skills[k] || 0) + 1;
       const syn = r.skills[k] === 1 ? D.synOf(k, r.skills) : [];
@@ -397,6 +397,7 @@ export class Overlay {
         const mx = r.skills[k] >= D.SKILL_MAX;
         track('prologue_levelup', { lv: r.lv, skill: k, skill_lv: r.skills[k], max: mx });
         if (mx) s.time.delayedCall(220, () => PRO.proMaxFx(s, k));
+        s.time.delayedCall(mx ? 220 : 120, () => PRO.proPick(s, mx));
       }
     }
     sfx('buy');

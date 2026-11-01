@@ -5,7 +5,7 @@
 import * as D from './data.js';
 import { fresh } from './saveCore.js';
 import { applyPreset, setWeapon } from './testPresets.js';
-import { PET_MAX, RARITY } from './gear.js';
+import { PET_MAX, RARITY, SETS } from './gear.js';
 import { sandboxEnd } from './save.js';
 import { sfx } from './sfx.js';
 import { font, button, viewRect } from './ui.js';
@@ -18,11 +18,39 @@ const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 export const PRO_PLAY_MS = 90000;        // 일반 구간 길이(전투 시간, 카드 고르는 시간은 안 센다)
 export const PRO_LV_MS = 11500;          // 레벨업 간격
 export const PRO_FIRST_LV_MS = 6500;     // 첫 레벨업은 빨리(10초 안에 '내가 강해진다'를 보인다)
+export const PRO_TOUGH = 14;             // 시작 때 몹·보스 떼 체력 배수
+export const PRO_EASE = 0.55;            // 카드 한 장마다 곱한다(14 → 7.7 → 4.2 → 2.3 → 1.3 → 1)
 export const PRO_SKILLS = { sword: 4, spin: 4, bolt: 4, fireball: 3, might: 3, haste: 4, area: 3, magnet: 2 };   // 액티브·패시브 슬롯이 꽉 찬 채 시작: 카드는 전부 지금 가진 걸 올린다
+const PRO_SET = 'axe';
 const KEEP = ['lang', 'sound', 'musicOff', 'musicLvl', 'vibOff', 'fxLite', 'bagAuto'];
 const MAXC = RARITY[4].color;
 const WEAPON_ICON = 'w_axe9';
 const GEAR_ICONS = ['gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar'];
+
+// 단단함: 체력은 그대로 TOUGH배, 피해는 TOUGH^0.7배(14배면 6.3배)라 체력이 25% 바닥까지 내려간다
+function proMul(s) {
+  const P = s.pro;
+  s.mobHpMul = P.hp0 * P.tough; s.mobDmgMul = P.dmg0 * P.tough ** 0.7;
+}
+// 카드를 골랐다: 몹·보스 떼가 약해지고, 주인공 둘레로 충격파가 퍼져 몹을 밀어낸다. MAX·진화면 화면의 몹이 전부 터진다
+export function proPick(s, big) {
+  const P = s.pro; if (!P || P.phase !== 'play') return;
+  const k = Math.max(1, P.tough * PRO_EASE) / P.tough;
+  P.tough *= k; proMul(s);
+  const h = s.hero, R2 = big ? 1e9 : 150 * 150;
+  s.mobs.getChildren().slice().forEach(m => {
+    if (!m.active || m.dead) return;
+    m.hp *= k; if (m.isBoss) { m.maxHp *= k; return; }
+    m.dmg *= k ** 0.7;
+    const dx = m.x - h.x, dy = m.y - h.y;
+    if (dx * dx + dy * dy > R2) return;
+    if (big) m.hp = 0;
+    s.hitMob(m, 0.01, { src: 'proPick', kb: 260, fx: 'big' });
+  });
+  const ring = s.add.image(h.x, h.y + 6, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(big ? 0xffd75e : 0x9ad8ff).setScale(0.4).setDepth(60);
+  s.tweens.add({ targets: ring, scale: big ? 9 : 5, alpha: 0, duration: big ? 700 : 450, onComplete: () => ring.destroy() });
+  s.cameras.main.shake(big ? 300 : 140, big ? 0.01 : 0.004);
+}
 
 // 모래판 저장: 진짜 저장은 건드리지 않는 새 객체(설정 몇 개만 복사)
 export function makeProSv(real) {
@@ -35,6 +63,8 @@ export function makeProSv(real) {
   sv.train.revive = 0;                             // 부활로 판이 이어지지 않게
   sv.stats.runs = 9; sv.tut.ult = true; sv.book = null;
   sv.cleared = 45; sv.prologue = 1;
+  // 11/1 "갑옷 세트·장신구 세트가 없어 노잼": 낀 네 부위를 도끼 전용 세트로 맞춰 4세트 효과까지 켠다(이름도 '<세트> 투구'로 바뀐다)
+  for (const it of sv.inv) if (Object.values(sv.eq).includes(it.u) && it.s !== 'collar') it.set = PRO_SET;
   for (const k of KEEP) if (real?.[k] !== undefined) sv[k] = real[k];
   return sv;
 }
@@ -47,9 +77,10 @@ export function proState(data) {
 export function proSetup(s) {
   const P = s.pro, r = s.run;
   s.waveCount = 1; s.waveLen = PRO_PLAY_MS; s.waveT = 0;
-  // 몹은 한두 번에 쓰러지고(쓸어버리는 맛), 닿아도 체력의 2~3%만 깎는다
-  s.mobHpMul = Math.max(1, s.atk * s.wM * 0.45 / 20);
-  s.mobDmgMul = s.maxHp * 0.025 / 7;
+  // 바탕: 몹은 한두 번에 쓰러지고, 닿으면 체력의 2~3%. 11/1 사용자 "처음부터 전부 1초컷이라 1:30을 기다리기만 한다" —
+  // 처음엔 TOUGH배로 단단하고 아프게 시작해 밀리다가, 카드를 고를 때마다 PRO_EASE배로 풀린다(proPick). 4~5번 고르면 바탕으로 돌아와 쓸어버린다
+  P.hp0 = Math.max(1, s.atk * s.wM * 0.45 / 20); P.dmg0 = s.maxHp * 0.025 / 7; P.tough = PRO_TOUGH;
+  proMul(s);
   s.xpMul = 0.08;                                   // 구슬은 막대를 조금만 올린다. 레벨업은 시간으로(proTick)
   r.skills = { ...PRO_SKILLS }; r.evo = {}; r.lv = 6; r.xp = D.xpNeed(6, false) * (1 - PRO_FIRST_LV_MS / PRO_LV_MS); r.revive = 0; r.freeReroll = 0; r.banLeft = 0;
   P.t0 = 0;
@@ -64,6 +95,7 @@ export function proIntro(s) {
   if (s.textures.exists(WEAPON_ICON)) badge.push(F(s.add.image(16, y0 + 8, WEAPON_ICON).setScale(0.5)));
   const enh = F(s.add.text(32, y0 + 8, '+20', font(13, '#ffd75e')).setOrigin(0, 0.5)); badge.push(enh);
   GEAR_ICONS.forEach((k, i) => { if (s.textures.exists(k)) badge.push(F(s.add.image(66 + i * 14, y0 + 8, k).setTint(MAXC).setScale(0.8))); });
+  if (SETS[PRO_SET]) badge.push(F(s.add.text(16, y0 + 22, `${SETS[PRO_SET].name} 4/4`, font(10, SETS[PRO_SET].css)).setOrigin(0, 0.5)));
   s.proBadge = badge;
   // 건너뛰기(왼쪽 아래)는 설정의 '다시 보기'에서만. 처음엔 끝까지 직접 한다(사용자 10/31)
   if (s.pro.replay) { s.proSkipBtn = button(s, 38, D.H - 26 - ins.bottom, 62, 20, t('coach.88130a'), () => proSkip(s), { size: 10 }); s.proSkipBtn.setScrollFactor(0).setDepth(100); }
@@ -172,8 +204,9 @@ function swarmBoss(s, key) {
   b.bar?.forEach(o => o.destroy()); b.bar = null;   // 위쪽 체력 막대는 마지막 보스 몫
   b.holdFloor = b.fit = () => {};                    // 버티기·체력 맞춤 없이 그냥 맞고 터진다
   const dps = s.realDps?.() || 0;
-  b.m.maxHp = b.m.hp = Math.max(s.atk * s.wM * 20, dps * RF(2.5, 4));   // 2.5~4초면 터진다
+  b.m.maxHp = b.m.hp = Math.max(s.atk * s.wM * 20, dps * RF(2.5, 4)) * s.pro.tough;   // 다 풀리면 2.5~4초에 터진다. 처음엔 TOUGH배라 쌓이며 밀어붙인다
   b.m.setScale(b.m.scaleX * 0.85);
+  b.spdK = 2.4;   // 떼 보스는 주인공에게 성큼성큼 다가온다(원래 걸음 18~30은 서 있는 것처럼 보였다)
   s.pro.bosses.push(b);
   sfx('bossIn');
 }
@@ -191,6 +224,7 @@ const GRACE = 700;   // 한 대 맞으면 이만큼은 보스 공격에 다시 �
 function bossIn(s) {
   const P = s.pro, h = s.hero;
   P.phase = 'boss'; P.pt = 0; s.xpMul = 0;
+  P.tough = 1; proMul(s);   // 마지막 보스는 늘 같은 세기(카드를 덜 골랐어도)
   s.hp = s.maxHp;
   sfx('warn'); s.time.delayedCall(450, () => sfx('boom'));
   s.cameras.main.shake(LAND, 0.006);
