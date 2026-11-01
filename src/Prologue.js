@@ -25,6 +25,8 @@ const LINES = [   // [누가, 키]
   ['hero', () => (WON ? t('prologue.l0w') : t('prologue.l0'))], ['hero', () => t('prologue.l1')], ['priest', () => t('prologue.l2')], ['priest', () => t('prologue.l3')],
   ['priest', () => t('prologue.l4')], ['priest', () => t('prologue.l5')], ['hero', () => t('prologue.l6')],
 ];
+// 전투 앞 짧은 대화(첫 화면이 몹 떼 한가운데라 뜬금없었다): 무너지는 성 앞, 몰려오는 마왕군, 최강 대장장이
+const INTRO = [['priest', () => t('prologue.i0')], ['hero', () => t('prologue.i1')], ['hero', () => t('prologue.i2')]];
 // 프롤로그 전용 그림(game/assets/pro_*.png, docs/prologue.md): 사제 5프레임·거대 보스 3프레임·쓰러진 주인공 2프레임·부활 빛 기둥 4프레임
 const PRO_SHEETS = [['pro_priest', 60, 79], ['pro_boss', 165, 202], ['pro_hero_down', 69, 51], ['pro_revive_fx', 41, 78]];
 
@@ -42,7 +44,7 @@ export class Prologue extends Phaser.Scene {
 
   create() {
     hiCam(this); buildAnims(this); this.makeAnims();
-    if (this.stage === 'play') return this.startPlay();
+    if (this.stage === 'play') return this.startIntro();
     this.sv = load();   // 모래판은 이미 닫혔다: 진짜 저장
     this.fg = this.add.group();
     this.sched = []; this.T = 0; this.phase = 'after'; this.skipped = this.stage === 'skip';
@@ -70,6 +72,39 @@ export class Prologue extends Phaser.Scene {
     sandboxBegin(makeProSv(load()));
     track('prologue_start', { replay: this.replay });
     this.scene.start('Battle', { chapter: 14, stage: 0, prologue: true, replay: this.replay });
+  }
+
+  // 전투 앞 대화: 성 앞에 선 대장장이와 사제, 위에서 마왕군이 내려온다. 세 줄을 넘기면 바로 전투
+  startIntro() {
+    this.phase = 'intro';
+    this.HX = W / 2; this.HY = Math.round(H * 0.6);
+    this.makeGround();
+    this.dim.setAlpha(0.3);
+    this.tweens.add({ targets: this.red, alpha: 0.12, duration: 900, yoyo: true, repeat: -1 });   // 불타는 성: 붉은 빛이 일렁인다
+    this.events.once('shutdown', () => { this.tweens.killAll(); this.time.removeAllEvents(); });
+    if (!this.sound.locked) playBgm('boss', 0);
+    const kinds = ['anvilimp', 'flamegiant', 'starskull'];
+    for (let i = 0; i < 12; i++) {
+      const k = kinds[i % 3], tex = this.textures.exists('z15_r' + (i % 3) + 's') ? 'z15_r' + (i % 3) + 's' : null;
+      if (!tex) break;
+      const m = this.add.sprite(RND(20, W - 20), RND(-40, Math.round(H * 0.28)), tex, 0).setDepth(5).setScale(k === 'flamegiant' ? 1.3 : 1.1);
+      if (this.anims.exists(k)) m.play(k);
+      this.tweens.add({ targets: m, y: m.y + RND(50, 90), duration: 7000, ease: 'Linear' });
+    }
+    this.hero = this.add.sprite(this.HX + 16, this.HY, this.idleTex).setOrigin(0.5, 1).setScale(1.7).setDepth(8).play('pro_idle');
+    this.add.ellipse(this.HX + 16, this.HY - 2, 50, 14, 0x000000, 0.4).setDepth(7);
+    if (this.textures.exists('w_axe9')) { const ax = this.add.image(this.HX + 44, this.HY - 32, 'w_axe9').setScale(1.1).setAngle(-30).setDepth(9); ax.preFX?.addGlow(MAXC, 3, 0, false, 0.1, 8); }
+    this.priest = this.add.sprite(this.HX - 50, this.HY + 6, 'pro_priest', 0).setOrigin(0.5, 1).setScale(1.2).setDepth(8).play('pro_priest_idle');
+    this.cameras.main.fadeIn(400, 0, 0, 0);
+    this.lines = INTRO;
+    this.linesDone = () => {
+      this.phase = 'go'; this.dlg.setVisible(false); this.tapZone.destroy();
+      sfx('ult'); this.cameras.main.flash(200, 255, 255, 255);
+      this.tweens.add({ targets: this.hero, y: this.HY - 10, duration: 160, yoyo: true });
+      this.time.delayedCall(350, () => { this.cameras.main.fadeOut(300, 0, 0, 0); this.cameras.main.once('camerafadeoutcomplete', () => this.startPlay()); });
+    };
+    this.dlgIdx = -1; this.makeDialog();
+    this.time.delayedCall(600, () => this.nextLine());
   }
 
   at(sec, fn) { this.sched.push({ t: sec, fn }); }
@@ -166,17 +201,18 @@ export class Prologue extends Phaser.Scene {
     this.dlg.setVisible(false);
   }
   tap() {
-    if (this.phase !== 'cut') return;
+    if (this.phase !== 'cut' && this.phase !== 'intro') return;
     sfx('click');
     if (this.typing) { this.typing.remove(); this.typing = null; this.body.setText(this.full); this.finishLine(); return; }
     this.autoT?.remove(); this.nextLine();
   }
-  finishLine() { this.more.setAlpha(1); this.autoT?.remove(); this.autoT = this.time.delayedCall(4600, () => this.phase === 'cut' && this.nextLine()); }
+  finishLine() { this.more.setAlpha(1); this.autoT?.remove(); this.autoT = this.time.delayedCall(4600, () => (this.phase === 'cut' || this.phase === 'intro') && this.nextLine()); }
   nextLine() {
     this.autoT?.remove(); this.more.setAlpha(0);
     this.dlgIdx++;
-    if (this.dlgIdx >= LINES.length) return this.showGoal();
-    const [who, line] = LINES[this.dlgIdx], i = this.dlgIdx;
+    const L = this.lines || LINES;
+    if (this.dlgIdx >= L.length) return this.linesDone ? this.linesDone() : this.showGoal();
+    const [who, line] = L[this.dlgIdx], i = this.dlgIdx;
     this.dlg.setVisible(true);
     this.who.setText(who === 'hero' ? t('prologue.whoHero') : t('prologue.whoPriest')).setColor(who === 'hero' ? '#7fe6ee' : '#ffe9a0');
     // 글자 크기: 상자에 들어갈 때까지 줄인다(긴 번역)
@@ -186,7 +222,7 @@ export class Prologue extends Phaser.Scene {
     this.body.setText('');
     const chars = [...this.full]; let n = 0;
     this.typing = this.time.addEvent({ delay: 34, repeat: chars.length - 1, callback: () => { this.body.setText(chars.slice(0, ++n).join('')); if (n === chars.length) { this.typing = null; this.finishLine(); } } });
-    this.act(i);
+    if (this.phase === 'cut') this.act(i);
   }
   // 줄마다 곁들이는 연출
   act(i) {
