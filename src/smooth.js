@@ -9,14 +9,16 @@ for (const [k, [src]] of Object.entries(SMOOTH)) SM_SRC['sm_' + k] = src;
 export const withSmooth = pred => k => pred(k) || (!!SM_SRC[k] && pred(SM_SRC[k]));
 
 export function loadSmooth(S) {
-  for (const [k, [, fw, fh]] of Object.entries(SMOOTH)) S.load.spritesheet('sm_' + k, `assets/smooth/${k}.png`, { frameWidth: fw, frameHeight: fh });
+  for (const [k, [, fw, fh, , px = 0, pt = 0]] of Object.entries(SMOOTH)) S.load.spritesheet('sm_' + k, `assets/smooth/${k}.png`, { frameWidth: fw + 2 * px, frameHeight: fh + pt });
 }
 
 // buildAnims 끝에서 부른다. 원래 그림으로 만든 애니메이션만 같은 키의 8장으로 바꾼다
 export function applySmooth(s) {
-  for (const [k, [, , , tex]] of Object.entries(SMOOTH)) {
+  for (const [k, [, fw, fh, tex, px = 0, pt = 0]] of Object.entries(SMOOTH)) {
     const a = s.anims.get(k), sk = 'sm_' + k;
     if (!a || !tex || a.frames[0]?.textureKey !== tex || !s.textures.exists(sk)) continue;
+    // 넓힌 칸: 스프라이트 크기·중심은 원래 칸(fw x fh)으로 두고, 넘친 부분만 바깥에 그린다
+    if (px || pt) for (const f of Object.values(s.textures.get(sk).frames)) if (f.name !== '__BASE') f.setTrim(fw, fh, -px, -pt, fw + 2 * px, fh + pt);
     const n = s.textures.get(sk).frameTotal - 1, rate = a.frameRate * n / a.frames.length, repeat = a.repeat;
     s.anims.remove(k);
     s.anims.create({ key: k, frames: s.anims.generateFrameNumbers(sk, {}), frameRate: rate, repeat }).smSrc = tex;
