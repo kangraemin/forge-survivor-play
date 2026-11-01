@@ -41,6 +41,7 @@ export class Prologue extends Phaser.Scene {
     ensureKeys(this, k => /^(z15_r[012]|boss5_r0|tile15|hl_sword_idle)$/.test(k));
     for (const [k, fw, fh] of PRO_SHEETS) if (!this.textures.exists(k)) this.load.spritesheet(k, `assets/${k}.png`, { frameWidth: fw, frameHeight: fh });
     if (!this.textures.exists('sm_pro_boss')) this.load.spritesheet('sm_pro_boss', 'assets/smooth/pro_boss.png', { frameWidth: 165, frameHeight: 202 });   // 마지막 보스가 서 있을 때 움직이는 8장
+    if (!this.textures.exists('sm_pro_boss_walk')) this.load.spritesheet('sm_pro_boss_walk', 'assets/smooth/pro_boss_walk.png', { frameWidth: 165, frameHeight: 202 });   // 걸어올 때 8장
   }
 
   create() {
@@ -127,6 +128,7 @@ export class Prologue extends Phaser.Scene {
     A('pro_idle', this.idleTex, [2, 3], 2.5, -1);
     A('pro_legend', 'hl_sword_idle', [0, 1, 2, 3], 5, -1);
     A('pro_boss_idle', 'sm_pro_boss', null, 9, -1);
+    A('pro_boss_walk', 'sm_pro_boss_walk', null, 10, -1);
     A('pro_sword', 'hero2_r2s', [2, 3], 2.5, -1); A('pro_pillar', 'pro_revive_fx', null, 9, -1); A('pro_priest_idle', 'pro_priest', [0, 1], 2, -1); A('pro_priest_pray', 'pro_priest', [2, 3], 4, -1);
   }
   makeGround() {

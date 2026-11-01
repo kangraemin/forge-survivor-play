@@ -359,8 +359,9 @@ function attack(s, ph) {
   return 1150;
 }
 
-// 보스 자세: 0은 숨 쉬며 움직이는 8장(assets/smooth/pro_boss.png), 1은 포효 그림 한 장
+// 보스 자세: 0은 숨 쉬며 움직이는 8장(assets/smooth/pro_boss.png, 걸을 땐 pro_boss_walk.png), 1은 포효 그림 한 장
 function bossPose(m, f) {
+  m.roar = f !== 0;
   if (f === 0 && m.scene.anims.exists('pro_boss_idle')) return m.play('pro_boss_idle', true);
   m.anims.stop(); m.setTexture('pro_boss', f);
 }
@@ -414,8 +415,13 @@ function bossTick(s, dt) {
   if (P.done) return;
   // 천천히 다가온다
   const h = s.hero, dx = h.x - m.x, dy = h.y - m.y, L = Math.hypot(dx, dy) || 1;
-  if (!P.capped) m.setVelocity(L > 80 ? dx / L * m.spd : 0, L > 80 ? dy / L * m.spd : 0); else m.setVelocity(0, 0);
-  m.setDepth(11 + m.y / 1600).setFlipX(dx < 0);
+  const go = !P.capped && L > 80;
+  m.setVelocity(go ? dx / L * m.spd : 0, go ? dy / L * m.spd : 0);
+  // 걸을 땐 걷는 8장, 서 있으면 숨쉬기 8장. 그림이 오른쪽을 보니 왼쪽으로 갈 때만 뒤집는다
+  const want = go ? 'pro_boss_walk' : 'pro_boss_idle';
+  if (!m.roar && m.anims.currentAnim?.key !== want && m.scene.anims.exists(want)) m.play(want, true);
+  m.setDepth(11 + m.y / 1600);
+  if (Math.abs(dx) > 8) m.setFlipX(dx < 0);
   // 졸개가 조금 나온다(검이 닿을 곳이 늘 있게)
   s.spawnAcc = (s.spawnAcc || 0) + dt * 0.9 / 1000;
   while (s.spawnAcc >= 1) { s.spawnAcc--; if (s.mobs.countActive() < 12) s.spawn(); }
