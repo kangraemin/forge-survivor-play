@@ -396,7 +396,7 @@ export class Lobby extends Phaser.Scene {
   bump(i) { const t = this.topTxt[i]; this.tweens.add({ targets: t, scale: 1.3, duration: 90, yoyo: true }); }
 
   makeTabs() {
-    this.add.rectangle(0, H - 50, W, 50, 0x0b111a, 0.97).setOrigin(0).setDepth(50);
+    this.add.rectangle(0, H - 50, W, 50, 0x0b111a, 1).setOrigin(0).setDepth(50);
     this.add.rectangle(0, H - 50, W, 1, COLOR.line).setOrigin(0).setDepth(50);
     this.tabBtns = TABS.map(([id, name, ic], i) => {
       const tw = W / TABS.length, x = tw / 2 + i * tw, c = this.add.container(x, H - 25).setDepth(51);
@@ -511,11 +511,12 @@ export class Lobby extends Phaser.Scene {
     const goSkin = (tab, sel) => { sfx('click'); this.shopPage = 'skin'; this.skinTab = tab; if (sel) { this.cosSelected = this.cosSelected || {}; this.cosSelected[ts.kind] = sel; } track('banner_tap', { to: tab }); this.show('shop'); };
     const card = (x, w, line, title, tc, sub, fn) => {
       c.add(panel(this, x, 0, w, bh, { fill: 0x141b27, line }));
-      c.add(this.add.text(x + 8, 6, title, font(11, tc)));
-      const sb = this.add.text(x + 8, 21, sub, { ...font9(10, '#a1b2b6'), wordWrap: { width: w - 16 } }).setLineSpacing(2);
-      if (sb.height > 16 && sb.y + sb.height > bh - 16) { sb.setWordWrapWidth(null); sb.setScale(Math.max(0.6, Math.min(1, (w - 16) / sb.width))); }   // 55차: 두 줄이 되면 오른쪽 아래 '보러 가기'와 겹쳐, 한 줄로 줄인다
-      c.add(sb);
-      c.add(this.add.text(x + w - 8, bh - 6, t('lobby.5d2a5b'), font9(9, '#7d8f94')).setOrigin(1, 1));
+      // 11/1: 오른쪽 아래 '보러 가기' 글자가 둘째 줄과 겹쳤다(사용자 지적) → 오른쪽 가운데 ▶ 하나로 바꾸고, 제목·설명은 ▶ 왼쪽 한 줄 안에 줄여 넣는다
+      const fit = (o, mw) => { if (o.width > mw) o.setScale(Math.max(0.6, mw / o.width)); return o; };
+      const tw = w - 26, ty = Math.max(4, Math.round(bh / 2 - 15));
+      c.add(fit(this.add.text(x + 8, ty, title, font(11, tc)), tw));
+      c.add(fit(this.add.text(x + 8, ty + 16, sub, font9(10, '#a1b2b6')), tw));
+      c.add(this.add.text(x + w - 7, bh / 2, '▶', font9(10, '#7d8f94')).setOrigin(1, 0.5));
       c.add(this.add.rectangle(x, 0, w, bh, 0xffffff, 0.001).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (!this.busy) fn(); }));
     };
     // 15장을 다 깼고 16장이 아직 안 열렸으면 '16장 예고' 배너가 자리를 차지한다(탭하면 안내)
