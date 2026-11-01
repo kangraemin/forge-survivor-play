@@ -139,6 +139,14 @@ const lbSubmit = async score => {
 };
 const lbOpen = async () => { try { await sdk().openGameCenterLeaderboard(); return true; } catch { return false; } };
 
+// 진동: 아이폰 웹뷰엔 navigator.vibrate가 없어 토스 안에서 진동이 안 왔다 → 토스 햅틱으로. 길이(ms)를 세기 종류로 바꾼다
+// (토스 앱 설정 > 진동이 켜져 있어야 울린다)
+const hapticType = ms => ms <= 15 ? 'tickWeak' : ms <= 30 ? 'tap' : ms <= 45 ? 'basicMedium' : ms <= 80 ? 'softMedium' : 'wiggle';
+function hapticOf(s) {
+  const f = s.Device?.triggerHaptic || s.generateHapticFeedback;
+  return f ? ms => { try { f({ type: hapticType(ms) })?.catch?.(() => {}); } catch { /* 미지원 */ } } : null;
+}
+
 // 토스 안일 때만 window.forgePlatform을 채운다(다른 앱판이 먼저 넣어 뒀으면 건드리지 않는다)
 export function installToss() {
   const s = sdk();
@@ -148,6 +156,7 @@ export function installToss() {
   const iapOk = safe(() => !!s.IAP?.createOneTimePurchaseOrder && s.IAP.createOneTimePurchaseOrder.isSupported?.() !== false);
   window.forgePlatform = {
     toss: true,
+    ...(hapticOf(s) ? { haptic: hapticOf(s) } : {}),
     ...(lbOk(s) ? { leaderboard: { submit: lbSubmit, open: lbOpen } } : {}),   // 버전 미달·웹·포털에서는 없다 → 버튼도 숨는다
     ...(adOk ? { showAd } : {}),   // 미지원이면 showAd가 없어 shop.js의 웹 체험판으로 떨어진다
     ...(iapOk ? { buy, pending, complete, ...(s.IAP.getCompletedOrRefundedOrders ? { restore } : {}) } : {}),

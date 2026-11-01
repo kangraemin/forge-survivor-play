@@ -4,10 +4,13 @@ import { isTest } from './testMode.js';
 // 게임 데이터와 밸런스 수치. 숫자는 전부 여기서만 바꾼다. 근거는 docs/DESIGN.md
 // 세로는 폰 화면 비율에 맞춰 늘린다(48차): 480(16:9) ~ 585(19.5:9). 위아래 빈 띠 대신 HUD·조이스틱 영역으로 쓴다
 export const W = 270;
-// 세이프존(상태바·홈 바·토스 버튼 줄)을 뺀 게임 칸(#game)의 세로/가로 비율
+// 게임 칸(#game, 화면 전체)의 세로/가로 비율
 export const boxRatio = () => { const g = document.getElementById('game'); return g?.clientWidth ? g.clientHeight / g.clientWidth : innerHeight / innerWidth; };
 export const calcH = () => { try { const r = boxRatio(); return r > 0 && isFinite(r) ? Math.max(480, Math.min(585, Math.round(W * r))) : 480; } catch { return 480; } };   // 폴드를 접고 펼 때 pcInput.js가 다시 잰다
-export const H = calcH();
+// 11/1: 캔버스는 화면 끝까지 쓴다(FULL_H). H는 지금 화면이 배치에 쓰는 세로: 전투는 FULL_H, 메뉴 화면은 세이프존 안 칸(ui.js hiCam이 setLayoutH로 바꾼다)
+export const FULL_H = calcH();
+export let H = FULL_H;
+export const setLayoutH = v => { H = v; };
 
 // 64차: 가로가 넓은 화면(PC·태블릿 가로·큰 세로)은 높이 480은 그대로 두고 폭만 비율에 맞게 늘린다(270~854). 폰·토스(세로)는 그대로 270
 export const calcGW = () => { try { const r = boxRatio(); return r > 0 && isFinite(r) && r < 1.7 ? Math.max(W, Math.min(854, Math.round(480 / r))) : W; } catch { return W; } };   // 65차: 창 크기가 바뀌면 pcInput.js가 다시 계산해 달라지면 다시 연다

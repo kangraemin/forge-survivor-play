@@ -25,28 +25,76 @@ export function makeFx2Anims(scene) {
 }
 export const has = (s, k) => s.textures.exists('x_' + k);
 
-// ── 예고 바닥: 시간(0~1)에 따라 프레임이 차오른다. 그림이 없으면 null ──
+// ── 예고 바닥: 시간(0~1)에 따라 안쪽이 바깥 테두리까지 차오른다. 다 차는 순간이 맞는 순간이다 ──
+// 큰 게임 장판처럼: 옅은 바탕 + 또렷한 테두리 + 차오르는 안쪽 + 차오르는 끝선. 깜빡이지 않는다(예전 그림 4장 넘김은 싸 보였다)
+// 그래픽 하나를 (x,y)에 두고 그 안에서 그린다 → setPosition·setRotation·destroy·active를 예전 스프라이트처럼 쓴다
+const WC = { red: [0xff1a10, 0xff3b2a, 0xfff0e0], summon: [0x9a4dff, 0xb57aff, 0xf4e8ff] };
+function warnG(s, x, y, kind, draw) {
+  const [base, edge, hot] = WC[kind];
+  const g = s.add.graphics({ x, y }).setDepth(9);
+  g.step = f => {
+    f = Math.max(0, Math.min(1, f));
+    const end = f > 0.88 ? (f - 0.88) / 0.12 : 0;   // 마지막 12%: 테두리가 밝아져 '지금' 신호
+    g.clear();
+    draw(g, 1, 'base', { base, edge, hot, end });
+    if (f > 0.01) draw(g, f, 'fill', { base, edge, hot, end });
+  };
+  g.step(0);
+  return g;
+}
 // 원형(내려찍기)·소환 마법진: 납작한 타원(가로 r, 세로 0.75r)
 export function warnDisc(s, x, y, r, summon = false) {
-  const k = summon ? 'warn_summon' : 'warn_slam';
-  if (!has(s, k)) return null;
-  const sp = s.add.sprite(x, y, 'x_' + k, 0).setDepth(9).setScale(r * 2 / 90, r * 1.5 / 90);
-  sp.step = f => sp.setFrame(Math.min(3, Math.floor(f * 4))).setAlpha(0.7 + 0.3 * Math.abs(Math.sin(f * 12)));
-  return sp;
+  return warnG(s, x, y, summon ? 'summon' : 'red', (g, k, part, c) => {
+    const rx = r * k, ry = r * 0.75 * k;
+    if (part === 'base') {
+      g.fillStyle(c.base, 0.2).fillEllipse(0, 0, rx * 2, ry * 2);
+      g.lineStyle(5, 0x000000, 0.3).strokeEllipse(0, 0, rx * 2 + 2, ry * 2 + 2);   // 어두운 밑선: 밝은 바닥에서도 테두리가 선다
+      g.lineStyle(8, c.edge, 0.18 + 0.3 * c.end).strokeEllipse(0, 0, rx * 2 + 5, ry * 2 + 5);
+      g.lineStyle(2.5, c.end ? c.hot : c.edge, 1).strokeEllipse(0, 0, rx * 2, ry * 2);
+      if (summon) g.lineStyle(1, c.edge, 0.6).strokeEllipse(0, 0, rx * 1.3, ry * 1.3);
+    } else {
+      g.fillStyle(c.base, 0.3 + 0.22 * k).fillEllipse(0, 0, rx * 2, ry * 2);
+      g.lineStyle(2, c.hot, 0.9).strokeEllipse(0, 0, rx * 2, ry * 2);
+    }
+  });
 }
-// 직선 띠(돌진·조준선): (x,y)에서 ang 방향으로 len, 폭 w
+// 직선 띠(돌진·조준선): (x,y)에서 ang 방향으로 len, 폭 w. 안쪽은 시작점에서 끝까지 차오르고, 방향 화살표가 함께 나아간다
 export function warnStrip(s, x, y, ang, len, w) {
-  if (!has(s, 'warn_charge')) return null;
-  const sp = s.add.sprite(x, y, 'x_warn_charge', 0).setOrigin(0, 0.5).setRotation(ang).setScale(len / 122, w / 34).setDepth(9);
-  sp.step = f => sp.setFrame(Math.min(3, Math.floor(f * 4))).setAlpha(0.75 + 0.25 * Math.abs(Math.sin(f * 14)));
-  return sp;
+  const g = warnG(s, x, y, 'red', (g, k, part, c) => {
+    const h = w / 2;
+    if (part === 'base') {
+      g.fillStyle(c.base, 0.2).fillRect(0, -h, len, w);
+      g.lineStyle(5, 0x000000, 0.3).strokeRect(-1, -h - 1, len + 2, w + 2);
+      g.lineStyle(8, c.edge, 0.18 + 0.3 * c.end).strokeRect(-2.5, -h - 2.5, len + 5, w + 5);
+      g.lineStyle(2.5, c.end ? c.hot : c.edge, 1).strokeRect(0, -h, len, w);
+    } else {
+      const L = len * k;
+      g.fillStyle(c.base, 0.3 + 0.22 * k).fillRect(0, -h, L, w);
+      g.lineStyle(2, c.hot, 0.9).lineBetween(L, -h, L, h);
+      // 방향 화살표(>): 차오른 구간 안에서 끝 쪽으로 흐른다
+      const a = Math.min(h * 0.8, 10), step = Math.max(24, a * 3);
+      g.lineStyle(2.5, c.hot, 0.7);
+      for (let d = (k * len * 0.6) % step; d < L - a; d += step) g.lineBetween(d, -a, d + a, 0).lineBetween(d + a, 0, d, a);
+    }
+  });
+  return g.setRotation(ang);
 }
-// 부채꼴(약 ±45도): 꼭짓점이 (x,y), ang 방향으로 반지름 len
+// 부채꼴(약 ±45도): 꼭짓점이 (x,y), ang 방향으로 반지름 len. 안쪽 반지름이 바깥까지 차오른다
 export function warnFan(s, x, y, ang, len) {
-  if (!has(s, 'warn_fan')) return null;
-  const sp = s.add.sprite(x, y, 'x_warn_fan', 0).setOrigin(0.5, 80 / 96).setRotation(ang + Math.PI / 2).setScale(len / 78).setDepth(9);
-  sp.step = f => sp.setFrame(Math.min(2, Math.floor(f * 3))).setAlpha(0.75 + 0.25 * Math.abs(Math.sin(f * 14)));
-  return sp;
+  const A = Math.PI / 4;
+  const g = warnG(s, x, y, 'red', (g, k, part, c) => {
+    const R = len * k;
+    if (part === 'base') {
+      g.fillStyle(c.base, 0.2).slice(0, 0, R, -A, A, false).fillPath();
+      g.lineStyle(5, 0x000000, 0.3).slice(0, 0, R + 1, -A, A, false).strokePath();
+      g.lineStyle(8, c.edge, 0.18 + 0.3 * c.end).beginPath().arc(0, 0, R + 3, -A, A, false).strokePath();
+      g.lineStyle(2.5, c.end ? c.hot : c.edge, 1).slice(0, 0, R, -A, A, false).strokePath();
+    } else {
+      g.fillStyle(c.base, 0.3 + 0.22 * k).slice(0, 0, R, -A, A, false).fillPath();
+      g.lineStyle(2, c.hot, 0.9).beginPath().arc(0, 0, R, -A, A, false).strokePath();
+    }
+  });
+  return g.setRotation(ang);
 }
 // 시간에 맞춰 step을 돌려 주는 트윈. ms 뒤 onDone
 export function runWarn(s, sp, ms, onDone) {
@@ -100,4 +148,19 @@ export function raidFlag(s, ex, ey, ms = 2600) {
   const f = s.add.image(x, y, 'x_raid_flag').setScrollFactor(0).setDepth(61).setScale(1.5); f.wideFx = true;
   s.tweens.add({ targets: f, y: y - 4, scale: 1.75, duration: 200, yoyo: true, repeat: Math.floor(ms / 400), onComplete: () => s.tweens.add({ targets: f, alpha: 0, duration: 300, onComplete: () => f.destroy() }) });
   return f;
+}
+
+// 휩쓸기 칼날: 지나온 자리에 옅어지는 잔상 부채꼴 + 빛나는 칼날(밑은 붉은 번짐, 가운데 흰 심). 판정은 boss.sweep이 따로 한다
+export function sweepBlade(g, ox, oy, len, a0, a, dir) {
+  g.clear();
+  const tail = 0.55, from = dir > 0 ? Math.max(a0, a - tail) : Math.min(a0, a + tail), n = 6;
+  for (let i = 0; i < n; i++) {
+    const t0 = from + (a - from) * i / n, t1 = from + (a - from) * (i + 1) / n;
+    g.fillStyle(0xff3a20, 0.05 + 0.3 * (i + 1) / n).slice(ox, oy, len, Math.min(t0, t1), Math.max(t0, t1), false).fillPath();
+  }
+  const ex = ox + Math.cos(a) * len, ey = oy + Math.sin(a) * len;
+  g.lineStyle(16, 0xff2a10, 0.35).lineBetween(ox, oy, ex, ey);
+  g.lineStyle(8, 0xff8a50, 0.8).lineBetween(ox, oy, ex, ey);
+  g.lineStyle(3, 0xffffff, 1).lineBetween(ox, oy, ex, ey);
+  g.fillStyle(0xffffff, 0.9).fillCircle(ex, ey, 4);
 }

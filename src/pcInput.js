@@ -2,7 +2,7 @@
 //  - 키보드: Esc(일시정지·창 닫기), Enter/Space(주 버튼 = 주황·초록 버튼 확인), 1·2·3(레벨업 카드), F(전체 화면)
 //  - 우클릭 메뉴·글자 선택·그림 끌기를 막고, 창 크기가 바뀌면 다시 맞추고, 전체 화면 버튼을 둔다
 //  - WASD·방향키 이동과 Space 궁극기는 Battle.js에 이미 있다. 버튼 hover·손 모양 커서는 ui.js button이 한다
-import { PC, GW, H, calcGW, calcH } from './data.js';
+import { PC, GW, FULL_H, calcGW, calcH } from './data.js';
 import { t } from './i18n.js';
 
 // 장면 안의 눌러지는 버튼(ui.js button)을 위에 그려진 순서로 모은다. 안 보이거나 비활성인 것은 뺀다
@@ -38,7 +38,7 @@ function watchResize(game) {
   const check = () => {
     if (typing()) return;
     const g = calcGW();
-    if (Math.abs(g - GW) < Math.max(12, GW * 0.03) && Math.abs(calcH() - H) < 12) { pending = false; return; }   // 폭이나 세로(폴드 접기·펴기)가 크게 바뀔 때만
+    if (Math.abs(g - GW) < Math.max(12, GW * 0.03) && Math.abs(calcH() - FULL_H) < 12) { pending = false; return; }   // 폭이나 세로(폴드 접기·펴기)가 크게 바뀔 때만
     pending = true;
   };
   const sceneKey = () => game.scene.getScenes(true).find(s => s.sys.settings.key !== 'BgLoad')?.sys.settings.key;

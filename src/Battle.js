@@ -5,7 +5,8 @@ import { sfx, playBgm, stopBgm, leaveBgm, buzz, audioRunning } from './sfx.js';
 import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx, setBackdrop, clearBackdrop } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
-import { insetsGame } from './safeArea.js';
+import { anim2Warm } from './anim2.js';
+import { insetsGame, setBoxed } from './safeArea.js';
 import { Overlay } from './overlay.js';
 import { itemName, gearStats, wMul, spReq, wtypeOf, dropItem, makeItem, grantEgg, eggsSettled, RARITY, equipped, itemScore, PETS, PET_GOOD_DEF, recPets, heroSkin } from './gear.js';
 import { Pet } from './pets.js';
@@ -69,6 +70,7 @@ export class Battle extends Phaser.Scene {
   }
 
   create() {
+    D.setLayoutH(D.FULL_H); setBoxed(false);   // 전투는 화면 전체(메뉴 화면의 세이프존 칸 높이가 남아 있지 않게)
     const sv = this.sv;
     this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
     this.paused = false; this.hitstop = 0; this.over = false; this.mv = null; this.formT = 0;
@@ -154,6 +156,7 @@ export class Battle extends Phaser.Scene {
     cam.shake = (d, i = 0.005, ...r) => i <= 0.005 ? cam : shake.call(cam, Math.min(d, 250), i * 0.4, ...r);
     this.weapons = new Weapons(this);
     this.boss = null;
+    if (this.ch?.boss) anim2Warm(this, [this.ch.boss, this.ch.mid].filter(Boolean), D);   // 이 판 보스 동작 그림을 미리 뒤에서 받는다
     this.ui = new Overlay(this);
     this.petShield = false;
     this.pet = new Pet(this);

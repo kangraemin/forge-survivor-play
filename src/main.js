@@ -31,7 +31,7 @@ const start = () => {
     type: Phaser.WEBGL,
     parent: 'game',
     width: GW * PX, height: H * PX,
-    backgroundColor: '#0d0a14', transparent: WIDE,   // 넓은 화면은 캔버스가 창 전폭이라 양옆은 비워 두어 배경(#sidebg)이 보이게 한다
+    backgroundColor: '#0d0a14', transparent: true,   // 메뉴 화면은 카메라 칸(세이프존 안·넓은 화면 가운데 열) 밖을 비워 두어 바닥 무늬 배경(setBackdrop)이 보이게 한다
    
     pixelArt: true, roundPixels: true,
     // 아이폰 사파리에서 여러 텍스처를 한 번에 그리면 다른 그림이 섞여 나온다(화덕 빛이 불기둥으로 보임). 한 장씩 그린다

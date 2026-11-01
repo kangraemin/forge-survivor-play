@@ -1,6 +1,7 @@
 // 공통 UI: 글자 스타일, 패널, 누르는 버튼, 아이콘
 import { sfx } from './sfx.js';
-import { TIERS, SKILLS, H as GH, GW, OFF, WIDE, PC } from './data.js';
+import { TIERS, SKILLS, FULL_H as GH, GW, WIDE, PC, setLayoutH } from './data.js';
+import { boxInsets, setBoxed } from './safeArea.js';
 import { t, lang } from './i18n.js';
 import { wrapTo } from './textfit.js';
 
@@ -17,10 +18,23 @@ export const font9 = (size, color = '#f2e4bc') => ({ fontFamily: 'G9', fontSize:
 export const COLOR = { panel: 0x1c2935, panel2: 0x293845, line: 0x475c66, gold: 0xffd75e, red: 0xe8343a, green: 0x5fdc6a, blue: 0x6fd3ff };
 
 // 넓은 화면: 전투가 아닌 화면은 기본 판(270)을 가운데 열에 그린다(카메라 뷰포트를 옮김). 전투는 전폭 월드 + HUD 열(wide.js)
+// 11/1: 폰도 같은 방식으로 메뉴 화면을 세이프존 안 칸에 그린다(캔버스는 화면 끝까지). 칸이 480보다 낮으면 판을 줄여 맞춘다.
+// 전투·프롤로그는 화면 전체를 쓰고 HUD만 insetsGame만큼 안쪽에 둔다
 export const hiCam = scene => {
-  const c = scene.cameras.main.setOrigin(0).setZoom(PX);
-  if (WIDE && scene.sys.settings.key !== 'Battle') c.setViewport(OFF * PX, 0, 270 * PX, GH * PX);
+  const c = scene.cameras.main.setOrigin(0).setZoom(PX), key = scene.sys.settings.key;
+  if (key === 'Battle' || key === 'Prologue') { setBoxed(false); setLayoutH(GH); return c; }
+  setBoxed(false);
+  const b = boxInsets(scene.game);
+  let lh = GH - b.top - b.bottom, z = 1;
+  if (lh < 480) { z = lh / 480; lh = 480; }
+  setLayoutH(lh); setBoxed(true);
+  if (WIDE || b.top || b.bottom) c.setViewport((GW - 270 * z) / 2 * PX, b.top * PX, 270 * z * PX, lh * z * PX).setZoom(PX * z);
   return c;
+};
+// 화면(CSS) 좌표 → 카메라 칸 안의 게임 좌표(메뉴 화면은 칸 위치·배율을 뺀다)
+export const viewPt = (scene, e) => {
+  const r = scene.game.canvas.getBoundingClientRect(), c = scene.cameras.main, gs = scene.game.scale.gameSize;
+  return { x: ((e.clientX - r.left) / r.width * gs.width - c.x) / c.zoom, y: ((e.clientY - r.top) / r.height * gs.height - c.y) / c.zoom };
 };
 // 카메라 기준점을 왼쪽 위로 옮겨 Phaser의 worldView(가운데 기준 계산)가 어긋난다 → 보이는 영역은 이걸로 구한다
 export const viewRect = scene => { const c = scene.cameras.main; return new Phaser.Geom.Rectangle(c.scrollX, c.scrollY, c.width / c.zoom, c.height / c.zoom); };

@@ -1,5 +1,6 @@
 // 66차: 보스 약점·해법. 4~20장 장 보스·중간보스마다 '이 갈래로 치면 덜 들어간다'는 장치 하나를 갖는다.
 // 근접 무기라도 원거리·마법·관통·광역·둔화 보조 스킬을 섞으면 풀린다(무기를 바꿀 필요는 없다). 플레이어 스탯은 건드리지 않고 보스 쪽 규칙만 더한다.
+import { buzz } from './sfx.js';
 import { t } from './i18n.js';
 import { font } from './ui.js';
 import * as D from './data.js';
@@ -69,7 +70,7 @@ export function weakMul(s, m, o) {
       if (o.skill && ANS[w.kind].includes(o.skill)) {
         mul = 1; ai.ward -= (o.raw || 0) * Math.min(1, (s.run?.skills?.[o.skill] || 1) / 5) ** 2;   // 답 스킬은 5레벨이 돼야 방벽을 제대로 깬다
         if (ai.ward <= 0) {
-          ai.openUntil = s.bt + WARD.open; weakFound(s, m.kind); mission('ward');
+          ai.openUntil = s.bt + WARD.open; weakFound(s, m.kind); mission('ward'); buzz(60);
           const tx = s.add.text(m.x, m.y - m.displayHeight * 0.5, t('battle.6fbdb2'), font(12, '#ffe060', 3)).setOrigin(0.5).setDepth(40);
           s.tweens.add({ targets: tx, y: tx.y - 20, alpha: 0, duration: 900, onComplete: () => tx.destroy() });
         }

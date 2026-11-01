@@ -13,7 +13,8 @@ import {
 import { sellPrice, tidyList, tidyTotals, tidyApply, sellOne, salvageOne } from './gearSell.js';
 import { t, tt } from './i18n.js';
 
-const { W, H } = D;
+const { W } = D;
+import { H } from './data.js';   // 실시간 값(ui.js hiCam)
 const PAGE = 24, COLS = 6, CELL = 40;
 const SHORT = { hp: t('data.a45ea5'), atk: t('gearTab.f737ae'), def: t('gearTab.2a87c1'), spd: t('gearTab.19377a'), mag: t('data.0d4fff'), luck: t('gearTab.9046ff'), regen: t('data.95ca12'), cd: t('gearTab.275b16'), pet: t('codex.153119') };
 

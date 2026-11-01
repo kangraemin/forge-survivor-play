@@ -138,7 +138,7 @@ export function sfx(name, gap = 40, p) {
 
 // 폰 진동: 손에 오는 타격감. 소리를 끄면 같이 꺼진다. 너무 자주 울리면 저려서 간격을 둔다
 // 아이폰 사파리는 navigator.vibrate가 없다 → 앱판(앱인토스 triggerHaptic·네이티브 햅틱)은 forgePlatform.haptic(ms)로 넣는다
-const BUZZ = { crit: 12, hurt: 25, boom: 30, success: 40, shatter: 120, bossIn: 60 };
+const BUZZ = { crit: 12, hurt: 25, boom: 30, success: 40, shatter: 120, bossIn: 60, weak: 35 };   // weak: 보스 약점을 때린 순간
 let lastBuzz = 0;
 export function buzz(ms) {
   const now = performance.now();

@@ -2,7 +2,7 @@
 // 공용 함수 coachRun(여러 장)·coachOne(한 장). 새 탭·기능이 처음 열릴 때 같은 모양으로 한 장만 띄울 수 있다
 // 본 기록은 sv.tut.coach[id]에 남는다(저장 형식은 그대로: tut은 자유 칸)
 import { W, H, PC } from './data.js';
-import { font, font9, button, fixedContainer } from './ui.js';
+import { font, font9, button, fixedContainer, viewPt } from './ui.js';
 import { insetsGame, inTossShell } from './safeArea.js';
 import { sfx } from './sfx.js';
 import { track } from './log.js';
@@ -27,7 +27,8 @@ export function coachRun(scene, steps, { id, onEnd, skip = steps.length > 1 } = 
   const cv = scene.game.canvas;
   const onDown = e => {
     if (done || !card) return;
-    const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+    const r = cv.getBoundingClientRect(), battle = scene.sys.settings.key === 'Battle';   // 메뉴 화면은 카메라가 세이프존 안 칸이라 칸 기준으로 바꾼다
+    const { x, y } = battle ? { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H } : viewPt(scene, e);
     if (!(x >= card[0] && x <= card[0] + card[2] && y >= card[1] && y <= card[1] + card[3])) end(false, true);
   };
   cv.addEventListener('pointerdown', onDown, true);

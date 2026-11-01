@@ -1,6 +1,8 @@
 // 안전 영역: 토스 SDK의 SafeAreaInsets(1.4.7+: get()·subscribe())와 CSS env(safe-area-inset-*)의 큰 쪽을 쓴다.
 // 값은 CSS 픽셀이라 게임 좌표(270x480, 캔버스는 FIT이라 위아래 여백이 있다)로 바꿔 준다.
 // 토스 안에서는 오른쪽 위에 닫기(X) 버튼이 떠 있다: 오른쪽 HUD는 그 아래로 내린다.
+let boxed = false;
+export const setBoxed = v => { boxed = v; };
 let sdkIn = { top: 0, bottom: 0, left: 0, right: 0 }, probe = null, started = false;
 const XBTN_BOTTOM = 52;   // 위 인셋 아래로 X 버튼(top+5, 높이 약 36)이 차지하는 CSS px + 여유
 
@@ -39,6 +41,7 @@ export function insetsCss() {
 
 // 게임 좌표로 바꾼 값: top·bottom은 캔버스 안으로 실제로 파고드는 만큼, xTop은 오른쪽 HUD가 X 버튼을 피해 내려갈 만큼(토스 안에서만)
 export function insetsGame(game) {
+  if (boxed) return { top: 0, bottom: 0, xTop: 0 };   // 메뉴 화면은 카메라가 이미 세이프존 안 칸이다
   const cv = game?.canvas, r = cv?.getBoundingClientRect?.();
   if (!r || !r.width) return { top: 0, bottom: 0, xTop: 0 };
   const k = r.width / 270, ins = insetsCss();
@@ -46,4 +49,11 @@ export function insetsGame(game) {
   const bottom = Math.max(0, (ins.bottom - (innerHeight - r.bottom)) / k);
   const xTop = inTossShell() ? Math.max(0, (ins.top + XBTN_BOTTOM - r.top) / k - 7) : 0;
   return { top: Math.round(top), bottom: Math.round(bottom), xTop: Math.round(Math.max(top, xTop)) };
+}
+
+// 메뉴 화면(로비 등) 칸: 위는 노치·상태바(토스 안에서는 X 버튼 아래까지), 아래는 홈 바만큼 뺀 게임 좌표
+export function boxInsets(game) {
+  const was = boxed; boxed = false;
+  const i = insetsGame(game); boxed = was;
+  return { top: inTossShell() ? i.xTop : i.top, bottom: i.bottom };
 }

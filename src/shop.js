@@ -18,7 +18,8 @@ import { t, tt, lang } from './i18n.js';
 // 토스 미니앱 안이면 window.forgePlatform을 채운다(웹에서는 아무 일도 안 한다)
 installToss();
 
-const W = 270, H = D.H;
+const W = 270;
+import { H } from './data.js';   // 실시간 값(ui.js hiCam)
 const devpay = () => { try { return new URLSearchParams(location.search).has('devpay'); } catch { return false; } };
 // 가격 표시는 전부 여기서 한다. 한국·앱인토스는 원화 그대로, 네이티브(플레이·앱스토어)는 스토어가 준 현지화 가격 문자열
 // (Play Billing formattedPrice / StoreKit displayPrice)을 window.forgePlatform.prices[상품id]로 받아 쓰고, 없으면 원화로 대신한다.

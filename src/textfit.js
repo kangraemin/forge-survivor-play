@@ -98,7 +98,7 @@ export function installTextFit(game) {
         (pending ||= []).push(o);
       }
       if (!pending) continue;
-      const GH = Math.round(game.scale.gameSize.height / sc.cameras.main.zoom);
+      const GH = Math.round(sc.cameras.main.height / sc.cameras.main.zoom);   // 카메라 칸 높이(메뉴 화면은 세이프존 안 칸)
       const panels = acc.panels.map(o => { const m = worldOf(o); return { x: m.tx + o.box.x, y: m.ty + o.box.y, w: o.box.w, h: o.box.h, pc: o.parentContainer }; });
       const rects = [];
       for (const [q, v] of acc.texts) if (v && !q.isBtnLabel && String(q.text).trim()) { const b = q.getBounds(); rects.push({ o: q, x: b.x, y: b.y, w: b.width, h: b.height }); }

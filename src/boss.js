@@ -5,9 +5,10 @@ import { insetsGame } from './safeArea.js';
 import { font, toast, viewRect } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
 import { MID_PATTERNS } from './midPat.js';
-import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has } from './fx2.js';
+import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has, sweepBlade } from './fx2.js';
 import { t, tt } from './i18n.js';
 import { weakOf, GuardMixin, showHint } from './bossWeak.js';
+import { attachSkin, probeHit, skinSkill, skinHurt, skinDie, skinGhosts } from './anim2.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 const PAT_NAME = { jump: t('boss.107f3a'), charge: t('boss.420d2b'), slam: t('boss.029568'), ring: t('boss.6d24cb'), aimed: t('boss.36fc49'), summon: t('boss.d66332'), sweep: t('boss.40236d'), pools: t('boss.ec0b01'), wave: t('boss.997e54'), tsunami: t('boss.814117'), spore: t('boss.5c693c'), bloom: t('boss.0768ac'), prism: t('boss.3e97bd'), shatter: t('boss.56758f'), gale: t('boss.071b3a'), cyclone: t('boss.3dbf66'), void: t('boss.a11889'), eclipse: t('boss.895396'), burrow: t('boss.15b7f0'), sink: t('boss.4af90f'), vent: t('boss.418165'), overheat: t('boss.5bbfb4'), bolt: t('boss.7e82c9'), tempest: t('boss.d7dac6'), mirror: t('boss.e70e4d'), reflect: t('boss.2c22c2'), hammer: t('boss.ecef39'), meteor: t('boss.8d6129'), icelance: t('boss.93e20a'), frostquake: t('boss.e480b8'), blizzard: t('boss.87a560'), volley: t('boss.15e4f0'), skydive: t('boss.81537e'), broadside: t('boss.054902'), squall: t('boss.071b3a'), chime: t('boss.3e801a'), rewindpat: t('boss.099f7b'), gearsaw: t('boss.1497d7'), stoptime: t('boss.cb1b40'), frostslide: t('boss.patFrostslide'), clockhands: t('boss.patClockhands'), checkmate: t('boss.patCheckmate'),
@@ -54,6 +55,7 @@ export class BossAI {
     m.y -= 60; m.setAlpha(0);
     s.tweens.add({ targets: m, y: p.y, alpha: 1, duration: 500, ease: 'Quad.In', onComplete: () => this.thud(m.x, m.y, 0) });
     this.makeBar();
+    this.skin = attachSkin(this, D);   // anim2 동작 그림(받는 대로 겹친다. 판정은 m 그대로)
     if (!mid) this.pull0 = s.bt;   // 등장 1.5초 동안 카메라를 보스 쪽으로 살짝 끌었다 돌려놓는다
   }
 
@@ -168,7 +170,8 @@ export class BossAI {
       // 47차: 초반 보스(1~2장)는 공격 간격을 줄여 피할 일이 생기게 한다
       this.t = (enraged ? 2400 : 3200) * (!this.mid && s.c <= 1 && !s.endless ? 0.8 : 1) + R(0, 600);
       this.callout(pat);
-      this[pat](enraged);
+      if (this.skin?.sp) skinSkill(this.skin, pat, probeHit(this, pat, enraged, () => this[pat](enraged)));
+      else this[pat](enraged);
     }
   }
 
@@ -178,7 +181,7 @@ export class BossAI {
     const t = s.add.text(m.x, m.y - m.displayHeight * 0.62, name, font(10, '#ffe0a0', 3)).setOrigin(0.5).setDepth(41);
     s.tweens.add({ targets: t, y: t.y - 10, alpha: 0, duration: 900, delay: 350, onComplete: () => t.destroy() });
     // 16~18장 보스: 패턴이 시작되면 예고 그림(_telegraph)으로 잠깐 바뀐다
-    if (this.b.lateCh && s.anims.exists(this.key + 'Tele')) { m.play(this.key + 'Tele', true); s.time.delayedCall(1000, () => m.active && m.play(this.key, true)); }
+    if (this.b.lateCh && !this.skin?.sp && s.anims.exists(this.key + 'Tele')) { m.play(this.key + 'Tele', true); s.time.delayedCall(1000, () => m.active && m.play(this.key, true)); }
   }
 
   // 47차: 보스 머리 위 말풍선 한 줄
@@ -209,6 +212,7 @@ export class BossAI {
     const ring = s.add.image(m.x, m.y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffe060).setDepth(30).setScale(0.4);
     s.tweens.add({ targets: ring, scale: m.displayWidth / 28 + 1.4, alpha: 0, duration: 520, onComplete: () => ring.destroy() });
     s.tweens.add({ targets: m, scaleX: m.scaleX * 1.15, scaleY: m.scaleY * 0.9, duration: 160, yoyo: true });
+    skinHurt(this.skin);
     this.openWeak(4200, true);
     const sh = this.tune.sh[i - 1] || 0;
     if (sh > 0) this.addShield(sh);
@@ -305,6 +309,7 @@ export class BossAI {
     s.time.delayedCall(220, () => {
       if (!m.active) return;
       s.tweens.add({ targets: m, x: tx, duration: fast ? 520 : 720, ease: 'Sine.InOut' });
+      skinGhosts(this.skin, fast ? 520 : 720, 90);
       s.tweens.add({ targets: m, y: ty, duration: fast ? 520 : 720, ease: 'Back.In', onComplete: () => m.active && this.thud(tx, ty, r) });
     });
   }
@@ -358,6 +363,7 @@ export class BossAI {
       // 돌진이 시작되면 지나간 자리에 먼지 자국
       playOnce(s, 'impact_charge', sx0, sy0, { sx: 1.6, sy: Math.max(0.8, w / 40), rot: a, depth: 8, origin: [0, 0.5], alpha: 0.9 });
       m.setVelocity(cx * 520, cy * 520);
+      skinGhosts(this.skin, 500);   // 돌진 잔상
       s.cameras.main.shake(300, 0.004);
       s.time.delayedCall(500, () => { if (m.active) m.setVelocity(0, 0); });
     });
@@ -407,7 +413,7 @@ export class BossAI {
         onUpdate: () => {
           if (!m.active || !g.active) return;
           const c = Math.cos(st.a), sn = Math.sin(st.a);
-          g.clear().lineStyle(11, 0xff3040, 0.5).lineBetween(ox, oy, ox + c * len, oy + sn * len).lineStyle(4, 0xffe0e0, 1).lineBetween(ox, oy, ox + c * len, oy + sn * len);
+          sweepBlade(g, ox, oy, len, a0, st.a, dir);
           const dx = s.hero.x - ox, dy = s.hero.y - oy, along = dx * c + dy * sn;
           if (!hit && along > 0 && along < len && Math.abs(dy * c - dx * sn) < 8) { hit = true; s.hurt(m.dmg * 1.2); }
         },
@@ -457,8 +463,10 @@ export class BossAI {
       const f = s.add.sprite(m.x + R(-20, 20), m.y + R(-24, 16), 'fx1_r1s').setBlendMode(Phaser.BlendModes.ADD).setDepth(31).setScale(1.6).play('fxHit');
       f.once('animationcomplete', () => f.destroy());
     });
+    if (!skinDie(this.skin)) {
     const c = s.add.sprite(m.x, m.y, m.texture.key, m.frame.name).setFlipX(m.flipX).setScale(m.scaleX).setDepth(12).setTintFill(0xffffff);
     s.tweens.add({ targets: c, scaleX: c.scaleX * 1.3, scaleY: c.scaleY * 0.1, alpha: 0, duration: 700, delay: 250, ease: 'Quad.In', onComplete: () => c.destroy() });
+    }
     s.goo.setParticleTint(this.b.color); s.goo.explode(60, m.x, m.y);
     const x = m.x, y = m.y;
     m.destroy();

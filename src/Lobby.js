@@ -9,7 +9,7 @@ import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmeti
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
 import { sfx, setSound, setMusic, setMusicLevel, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, markIcon, fixedContainer, skinFx, hiCam, skillIcon, weaponIcon, setBackdrop } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, markIcon, fixedContainer, skinFx, hiCam, viewPt, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { iapTag, showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
 import { track, logUser, trackOnce } from './log.js';
 import { GearTab } from './gearTab.js';
@@ -26,7 +26,8 @@ import { openRank, rankVisible } from './rankPanel.js';
 import { loadTop, noteGear, seedFromSave, tossSubmitRecord, tossBoard } from './rank.js';
 import { notifyAskDue, openNotifyAsk, notifySync, notifyInstall } from './notify.js';
 
-const { W, H } = D;
+const { W } = D;
+import { H } from './data.js';   // 실시간 값: 메뉴 화면은 세이프존 안 칸 높이(ui.js hiCam)
 const R = Phaser.Math.Between;
 // 하단 탭은 넷(디자인 인계): 훈련은 성장 탭 안 '훈련' 칸으로 옮겼다. show('train')은 성장 > 훈련으로 연다
 const TABS = [['battle', t('lobby.b9e139'), 1], ['forge', t('lobby.348786'), 13], ['gear', t('lobby.705103'), 11], ['shop', t('lobby.f7cc86'), 12]];
@@ -463,7 +464,7 @@ export class Lobby extends Phaser.Scene {
   }
   installScroll() {
     const cv = this.game.canvas; let d = null;
-    const gy = e => { const r = cv.getBoundingClientRect(); return (e.clientY - r.top) / r.height * H; };
+    const gy = e => viewPt(this, e).y;
     const down = e => { d = null; if (!this.scrollMax || this.busy) return; const y = gy(e); if (y > 35 && y < H - 50) d = { y0: y, off0: this.scrollOff, on: false }; };
     const move = e => {
       if (!d) return; const dy = gy(e) - d.y0;

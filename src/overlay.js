@@ -21,7 +21,8 @@ import * as PRO from './proBattle.js';
 import { noteTower, tossSubmitRecord } from './rank.js';
 const R = Phaser.Math.Between;
 
-const { W, H } = D;
+const { W } = D;
+import { H } from './data.js';   // 실시간 값: 전투는 화면 전체, 메뉴 화면은 세이프존 안 칸(ui.js hiCam)
 const DEPTH = 150;
 
 export class Overlay {
