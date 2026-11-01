@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "氷すべり",
  "boss.patClockhands": "時計の針",
  "boss.patCheckmate": "詰み",
- "lobby.shRefund": "ゴールド {gold} 返還 ({pct}%)"
+ "lobby.shRefund": "ゴールド {gold} 返還 ({pct}%)",
+ "settingsPanel.advTitle": "詳細設定",
+ "settingsPanel.replayIntro": "イントロをもう一度見る",
+ "settingsPanel.wipe": "データ初期化",
+ "settingsPanel.wipeAsk": "もう一度押すとすべて消えます",
+ "settingsPanel.wipeNote1": "進行と通貨がすべて消え、最初から始まります",
+ "settingsPanel.wipeNote2": "購入した商品は購入の復元で戻せます"
 }

@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Glissade glacée",
  "boss.patClockhands": "Aiguilles",
  "boss.patCheckmate": "Échec et mat",
- "lobby.shRefund": "{gold} or remboursé ({pct}%)"
+ "lobby.shRefund": "{gold} or remboursé ({pct}%)",
+ "settingsPanel.advTitle": "Avancé",
+ "settingsPanel.replayIntro": "Revoir l'intro",
+ "settingsPanel.wipe": "Réinitialiser",
+ "settingsPanel.wipeAsk": "Touchez encore pour tout effacer",
+ "settingsPanel.wipeNote1": "Progression et monnaie seront effacées",
+ "settingsPanel.wipeNote2": "Les achats se récupèrent via Restaurer les achats"
 }

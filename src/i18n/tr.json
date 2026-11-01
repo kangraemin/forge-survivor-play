@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Buz Kayışı",
  "boss.patClockhands": "Saat Kolları",
  "boss.patCheckmate": "Şah Mat",
- "lobby.shRefund": "{gold} altın iade ({pct}%)"
+ "lobby.shRefund": "{gold} altın iade ({pct}%)",
+ "settingsPanel.advTitle": "Gelişmiş",
+ "settingsPanel.replayIntro": "Girişi tekrar izle",
+ "settingsPanel.wipe": "Verileri sıfırla",
+ "settingsPanel.wipeAsk": "Hepsini silmek için tekrar dokun",
+ "settingsPanel.wipeNote1": "Tüm ilerleme ve para silinecek",
+ "settingsPanel.wipeNote2": "Satın alımlar Satın Alımları Geri Yükle ile geri gelir"
 }

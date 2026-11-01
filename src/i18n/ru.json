@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Ледяной рывок",
  "boss.patClockhands": "Стрелки часов",
  "boss.patCheckmate": "Шах и мат",
- "lobby.shRefund": "Возврат {gold} золота ({pct}%)"
+ "lobby.shRefund": "Возврат {gold} золота ({pct}%)",
+ "settingsPanel.advTitle": "Дополнительно",
+ "settingsPanel.replayIntro": "Посмотреть пролог",
+ "settingsPanel.wipe": "Сбросить данные",
+ "settingsPanel.wipeAsk": "Нажмите ещё раз, чтобы всё стереть",
+ "settingsPanel.wipeNote1": "Весь прогресс и валюта будут стёрты",
+ "settingsPanel.wipeNote2": "Покупки вернёт «Восстановить покупки»"
 }

@@ -1,7 +1,7 @@
 // 설정 창: 저장 내보내기/가져오기(복사용 코드), 구매 복원, 클라우드 저장, 버전
 import { W } from './data.js';
 import { font, font9, panel, button, toast } from './ui.js';
-import { load, save, exportSave, importSave, loadStatus, store } from './save.js';
+import { load, save, exportSave, importSave, loadStatus, store, reset } from './save.js';
 import { importCode, brief, restorePurchases } from './saveCore.js';
 import { cloudEnabled, cloudMeta, restorePlatformPurchases } from './cloudSave.js';
 import { openCloud } from './cloudPanel.js';
@@ -54,6 +54,33 @@ function langPicker(scene) {
     }, { size: 11, color: code === lang ? 0x2f6b3a : 0x3a3846 }));
   });
 }
+// 고급 창: 저장 가져오기, 인트로 다시 보기, 데이터 초기화. 토스·스토어 앱은 주소(?prologue)를 바꿀 수 없어 여기서 연다
+function openAdvanced(scene) {
+  const c = scene.modal();
+  c.add(panel(scene, 26, 120, W - 52, 230, { fill: 0x1a1426, line: 0xffd75e }));
+  c.add(scene.add.text(W / 2, 138, tt('settingsPanel.advTitle'), font(14, '#ffd75e')).setOrigin(0.5));
+  c.add(button(scene, W - 48, 138, 26, 22, 'X', () => c.close(), { size: 11 }));
+  const row = (y, label, fn, color = 0x3a3846) => { const b = button(scene, W / 2, y, W - 80, 28, label, fn, { size: 11, color }); c.add(b); return b; };
+  row(172, tt('settingsPanel.be28ca'), () => textDialog({
+    title: t('settingsPanel.dc3734'), note: t('settingsPanel.8738f3'), ok: t('settingsPanel.e01dd0'),
+    onOk: (v, err, close) => {
+      let d; try { d = importCode(v); } catch (e) { return e.message; }
+      const a = brief(d), b = brief(load());
+      if (!err.dataset.ask) { err.dataset.ask = '1'; err.style.color = '#ffd75e'; return t('settingsPanel.9d3dec', { gold: a.gold, gem: a.gem, enh: a.enh, gold2: b.gold, gem2: b.gem, enh2: b.enh }); }
+      importSave(v); track('save_import'); close(); scene.scene.restart();
+    },
+  }));
+  // 인트로(프롤로그)만 다시 본다: 진행은 그대로, 보상은 다시 주지 않는다(Prologue.js replay)
+  row(206, tt('settingsPanel.replayIntro'), () => { track('prologue_replay'); scene.scene.start('Prologue', { replay: true }); });
+  // 데이터 초기화: 두 번 눌러야 지운다. 직전 저장은 save()가 백업 칸에 남긴다
+  let ask = false;
+  const wb = row(250, tt('settingsPanel.wipe'), () => {
+    if (!ask) { ask = true; wb.label.setText(tt('settingsPanel.wipeAsk')); wb.label.setColor('#ffd75e'); return; }
+    track('data_wipe', { cleared: load().cleared }); reset(); location.reload();
+  }, 0x5a2a2a);
+  const note = [tt('settingsPanel.wipeNote1')].concat(cashHidden() ? [] : [tt('settingsPanel.wipeNote2')]).map(x => '- ' + x).join('\n');
+  c.add(scene.add.text(46, 274, note, { ...font9(10, '#a1b2b6'), wordWrap: { width: W - 92 } }).setLineSpacing(3));
+}
 export function openSettings(scene) {
   const sv = load(), c = scene.modal(), st = loadStatus();
   const cloud = cloudEnabled();
@@ -91,20 +118,8 @@ export function openSettings(scene) {
     track('save_export');
     textDialog({ title: t('settingsPanel.9f6960'), note: t('settingsPanel.78d36c'), value: exportSave(), readonly: true });
   });
-  // 52차: 붉고 커서 위험해 보였다 — 접힌 '고급' 칸으로 두고, 열어도 덮어쓰기 확인을 한 번 더 거친다(아래 onOk)
-  let advOpen = false;
-  const ib = row(266, t('settingsPanel.6bdb31'), () => {
-    if (!advOpen) { advOpen = true; ib.label.setText(tt('settingsPanel.be28ca')); return; }
-    textDialog({
-      title: t('settingsPanel.dc3734'), note: t('settingsPanel.8738f3'), ok: t('settingsPanel.e01dd0'),
-      onOk: (v, err, close) => {
-        let d; try { d = importCode(v); } catch (e) { return e.message; }
-        const a = brief(d), b = brief(load());
-        if (!err.dataset.ask) { err.dataset.ask = '1'; err.style.color = '#ffd75e'; return t('settingsPanel.9d3dec', { gold: a.gold, gem: a.gem, enh: a.enh, gold2: b.gold, gem2: b.gem, enh2: b.enh }); }
-        importSave(v); track('save_import'); close(); scene.scene.restart();
-      },
-    });
-  }, 0x3a3846);
+  // 52차: 붉고 커서 위험해 보였다 — 접힌 '고급' 창 안에 두고, 열어도 덮어쓰기 확인을 한 번 더 거친다
+  row(266, t('settingsPanel.6bdb31'), () => { c.close(); openAdvanced(scene); }, 0x3a3846);   // 설정 창을 닫고 연다: 뒤에 깔린 버튼과 겹친다고 보고 textfit이 제목을 줄였다
   if (!cashHidden()) row(296, tt('settingsPanel.d359b2'), async () => {
     const n = restorePurchases(store(), load()) + await restorePlatformPurchases();
     save(); track('purchase_restore_tap', { n }); toast(scene, n ? t('settingsPanel.d97561', { n }) : t('settingsPanel.5fc588'), n ? '#5fdc6a' : '#ffffff');

@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "ไถลน้ำแข็ง",
  "boss.patClockhands": "เข็มนาฬิกา",
  "boss.patCheckmate": "รุกฆาต",
- "lobby.shRefund": "คืนทอง {gold} ({pct}%)"
+ "lobby.shRefund": "คืนทอง {gold} ({pct}%)",
+ "settingsPanel.advTitle": "ขั้นสูง",
+ "settingsPanel.replayIntro": "ดูอินโทรอีกครั้ง",
+ "settingsPanel.wipe": "ล้างข้อมูล",
+ "settingsPanel.wipeAsk": "แตะอีกครั้งเพื่อลบทั้งหมด",
+ "settingsPanel.wipeNote1": "ความคืบหน้าและเงินทั้งหมดจะถูกลบ",
+ "settingsPanel.wipeNote2": "ซื้อแล้วกู้คืนได้ด้วยกู้คืนการซื้อ"
 }

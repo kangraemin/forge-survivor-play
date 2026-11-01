@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Luncuran Es",
  "boss.patClockhands": "Jarum Jam",
  "boss.patCheckmate": "Skakmat",
- "lobby.shRefund": "{gold} emas dikembalikan ({pct}%)"
+ "lobby.shRefund": "{gold} emas dikembalikan ({pct}%)",
+ "settingsPanel.advTitle": "Lanjutan",
+ "settingsPanel.replayIntro": "Tonton intro lagi",
+ "settingsPanel.wipe": "Hapus data",
+ "settingsPanel.wipeAsk": "Ketuk lagi untuk menghapus semua",
+ "settingsPanel.wipeNote1": "Semua progres dan mata uang akan dihapus",
+ "settingsPanel.wipeNote2": "Pembelian bisa dipulihkan lewat Pulihkan Pembelian"
 }

@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Deslizamiento helado",
  "boss.patClockhands": "Manecillas",
  "boss.patCheckmate": "Jaque mate",
- "lobby.shRefund": "{gold} de oro devuelto ({pct}%)"
+ "lobby.shRefund": "{gold} de oro devuelto ({pct}%)",
+ "settingsPanel.advTitle": "Avanzado",
+ "settingsPanel.replayIntro": "Ver intro de nuevo",
+ "settingsPanel.wipe": "Borrar datos",
+ "settingsPanel.wipeAsk": "Toca otra vez para borrar todo",
+ "settingsPanel.wipeNote1": "Se borrará todo el progreso y la moneda",
+ "settingsPanel.wipeNote2": "Las compras se recuperan con Restaurar compras"
 }

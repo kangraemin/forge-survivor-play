@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Eisrutsche",
  "boss.patClockhands": "Uhrzeiger",
  "boss.patCheckmate": "Schachmatt",
- "lobby.shRefund": "{gold} Gold zurück ({pct}%)"
+ "lobby.shRefund": "{gold} Gold zurück ({pct}%)",
+ "settingsPanel.advTitle": "Erweitert",
+ "settingsPanel.replayIntro": "Intro erneut ansehen",
+ "settingsPanel.wipe": "Daten zurücksetzen",
+ "settingsPanel.wipeAsk": "Nochmal tippen, um alles zu löschen",
+ "settingsPanel.wipeNote1": "Fortschritt und Währung werden gelöscht",
+ "settingsPanel.wipeNote2": "Käufe holst du über Käufe wiederherstellen zurück"
 }

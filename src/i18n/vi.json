@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Trượt băng",
  "boss.patClockhands": "Kim đồng hồ",
  "boss.patCheckmate": "Chiếu bí",
- "lobby.shRefund": "Hoàn {gold} vàng ({pct}%)"
+ "lobby.shRefund": "Hoàn {gold} vàng ({pct}%)",
+ "settingsPanel.advTitle": "Nâng cao",
+ "settingsPanel.replayIntro": "Xem lại phần mở đầu",
+ "settingsPanel.wipe": "Xóa dữ liệu",
+ "settingsPanel.wipeAsk": "Chạm lần nữa để xóa hết",
+ "settingsPanel.wipeNote1": "Toàn bộ tiến trình và tiền tệ sẽ bị xóa",
+ "settingsPanel.wipeNote2": "Món đã mua có thể lấy lại bằng Khôi phục giao dịch"
 }

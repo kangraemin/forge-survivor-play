@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Ice Slide",
  "boss.patClockhands": "Clock Hands",
  "boss.patCheckmate": "Checkmate",
- "lobby.shRefund": "{gold} gold refunded ({pct}%)"
+ "lobby.shRefund": "{gold} gold refunded ({pct}%)",
+ "settingsPanel.advTitle": "Advanced",
+ "settingsPanel.replayIntro": "Replay Intro",
+ "settingsPanel.wipe": "Reset Data",
+ "settingsPanel.wipeAsk": "Tap again to erase everything",
+ "settingsPanel.wipeNote1": "All progress and currency will be erased",
+ "settingsPanel.wipeNote2": "Purchases can be recovered with Restore Purchases"
 }

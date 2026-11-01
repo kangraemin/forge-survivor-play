@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "冰滑冲",
  "boss.patClockhands": "时钟指针",
  "boss.patCheckmate": "将死",
- "lobby.shRefund": "返还金币 {gold}（{pct}%）"
+ "lobby.shRefund": "返还金币 {gold}（{pct}%）",
+ "settingsPanel.advTitle": "高级",
+ "settingsPanel.replayIntro": "重看开场",
+ "settingsPanel.wipe": "重置数据",
+ "settingsPanel.wipeAsk": "再点一次将全部清除",
+ "settingsPanel.wipeNote1": "进度和货币将全部清除，从头开始",
+ "settingsPanel.wipeNote2": "已购商品可通过恢复购买找回"
 }

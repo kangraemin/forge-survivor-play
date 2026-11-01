@@ -2236,5 +2236,11 @@
  "boss.patFrostslide": "Deslize de Gelo",
  "boss.patClockhands": "Ponteiros",
  "boss.patCheckmate": "Xeque-mate",
- "lobby.shRefund": "{gold} de ouro devolvido ({pct}%)"
+ "lobby.shRefund": "{gold} de ouro devolvido ({pct}%)",
+ "settingsPanel.advTitle": "Avançado",
+ "settingsPanel.replayIntro": "Rever introdução",
+ "settingsPanel.wipe": "Apagar dados",
+ "settingsPanel.wipeAsk": "Toque de novo para apagar tudo",
+ "settingsPanel.wipeNote1": "Todo o progresso e moedas serão apagados",
+ "settingsPanel.wipeNote2": "Compras podem ser recuperadas em Restaurar compras"
 }
