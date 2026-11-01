@@ -28,7 +28,13 @@ export function dressHero(hero, look) {
   if (!BODY_LOOKS.some(it => it.id === id)) return hero;
   const rows = COS_ROWS.map((_, i) => `cos_${id}_${i}`);
   const anim = (key, row, rate, repeat = -1, frames = [0, 1, 2, 3]) => hero.anims.create({ key, frames: frames.map(frame => ({ key: rows[row], frame })), frameRate: rate, repeat });
-  anim('walkFront', 0, 8); anim('walkUp', 1, 8); anim('walkSide', 2, 8); anim('slash', 3, 26, 0);
+  // 걷기는 8장판(smooth.js cos8_)이 있으면 그걸로: 한 바퀴 길이(4장/8fps)는 그대로
+  const walk = (key, row, d) => {
+    const t = hero.scene && smoothHeld(hero.scene, `cos8_${id}_${d}`), n = t && hero.scene.textures.get(t).frameTotal - 1;
+    if (!t) return anim(key, row, 8);
+    hero.anims.create({ key, frames: Array.from({ length: n }, (_, i) => ({ key: t, frame: i })), frameRate: 8 * n / 4, repeat: -1 }); hero.cos8 = true;
+  };
+  walk('walkFront', 0, 'front'); walk('walkUp', 1, 'up'); walk('walkSide', 2, 'side'); anim('slash', 3, 26, 0);
   anim('idle', 4, 2.5, -1, [2, 3]); anim('idleL', 4, 2.5, -1, [2, 3]);
   anim('hurtPose', 4, 1, 0, [0]); anim('dashPose', 4, 1, 0, [1]);
   hero.cosBody = id; if (hero.scene) followPause(hero.scene, hero); hero.play('idle'); return hero;
@@ -78,11 +84,12 @@ function followPause(sc, hero) {
   sc.events.once('shutdown', () => { m.off('pauseall', pause); m.off('resumeall', resume); });
 }
 // 쥔 그림의 프레임 번호를 원래 시트 번호로 바꾼다(머리 꾸미기 자리 표가 원래 시트 기준): 숨쉬기 0·1→2·3, 베기 1~4→0~3
-// 8장판(전설 주인공·smooth.js)은 애니메이션 안 위치를 원래 4장(숨쉬기 2장)에 나눠 맞춘다
+// 8장판(전설 주인공·smooth.js·몸 꾸미기 걷기)은 애니메이션 안 위치를 원래 4장(숨쉬기 2장)에 나눠 맞춘다
 const baseFi = (h, row, fi) => {
-  if (!h.heldW) return fi;
+  if (!h.heldW && !h.cos8) return fi;
   const len = h.anims.currentAnim?.frames.length | 0, pos = (h.anims.currentFrame?.index | 0) - 1;
   if (len > 1 && pos >= 0) return row === 4 ? 2 + Math.min(1, Math.floor(pos * 2 / len)) : Math.min(3, Math.floor(pos * 4 / len));
+  if (!h.heldW) return fi;
   return row === 4 ? Math.min(3, fi + 2) : row === 3 ? Math.max(0, Math.min(3, fi - 1)) : fi;
 };
 export const weaponKey = (look, wid, tier) => look.weapon ? `cos_${look.weapon}` : `w_${wid}${tier}`;
@@ -96,9 +103,9 @@ export function anchorPoint(hero, x, y, width = hero.width) {
 export function handOf(hero) {
   const k = hero.anims.currentAnim?.key;
   const hands = hero.cosBody ? COS_HAND : HAND;
-  const T = hands[k] || hands.pose, fi = Number(hero.anims.currentFrame?.textureFrame ?? 2);
-  let [gx, gy, th] = T.f[Math.min(fi, 3)];
   const row = ({ walkFront: 0, walkUp: 1, walkSide: 2, slash: 3 })[k] ?? 4;
+  const T = hands[k] || hands.pose, tf = Number(hero.anims.currentFrame?.textureFrame ?? 2), fi = hero.cos8 ? baseFi(hero, row, tf) : tf;
+  let [gx, gy, th] = T.f[Math.min(fi, 3)];
   const anchor = COS_ANCHORS[hero.cosBody]?.[row]?.[fi];
   if (anchor) { [gx, gy] = anchor; th = anchor[4] ?? th; }
   return [gx, gy, th, T.w, row, Math.min(fi, 3)];
