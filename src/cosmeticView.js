@@ -39,7 +39,8 @@ export const HELD_SHEETS = { idle: 63, front: 37, up: 39, side: 40, atk: 58 };
 export function holdHero(sc, hero, look, wid) {
   if (hero.cosBody || !HELD_W.includes(wid)) return false;
   // 무기 꾸미기를 끼면 무기를 지운 빈손 몸(heroW2)에 꾸미기 무기를 손 자리(heroGrip2.js) 그대로 쥐여 준다(11/1: 덧그린 무기가 손에서 떠 보였다)
-  const bare = !!look.weapon, p = bare ? 'hw2' : 'hw';
+  // 프롤로그(sc.pro)는 전설 갑옷·대검을 든 몸(assets/heroL, 검만)
+  const bare = !!look.weapon, p = bare ? 'hw2' : sc.pro && sc.textures?.exists(`hl_${wid}_idle`) ? 'hl' : 'hw';
   const k = a => `${p}_${wid}_${a}`;
   if (!hero.anims?.create || !Object.keys(HELD_SHEETS).every(a => sc.textures?.exists(k(a)))) return false;
   const anim = (key, a, rate, repeat = -1, frames = [0, 1, 2, 3]) => hero.anims.create({ key, frames: frames.map(frame => ({ key: k(a), frame })), frameRate: rate, repeat });

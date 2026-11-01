@@ -21,10 +21,10 @@ export const PRO_FIRST_LV_MS = 6500;     // 첫 레벨업은 빨리(10초 안에
 export const PRO_TOUGH = 14;             // 시작 때 몹·보스 떼 체력 배수
 export const PRO_EASE = 0.55;            // 카드 한 장마다 곱한다(14 → 7.7 → 4.2 → 2.3 → 1.3 → 1)
 export const PRO_SKILLS = { sword: 4, spin: 4, bolt: 4, fireball: 3, might: 3, haste: 4, area: 3, magnet: 2 };   // 액티브·패시브 슬롯이 꽉 찬 채 시작: 카드는 전부 지금 가진 걸 올린다
-const PRO_SET = 'axe';
+const PRO_SET = 'sword';   // 11/1 사용자 "도끼 들고 있는 거 어색해": 전설의 대검(그림 assets/heroL/)
 const KEEP = ['lang', 'sound', 'musicOff', 'musicLvl', 'vibOff', 'fxLite', 'bagAuto'];
 const MAXC = RARITY[4].color;
-const WEAPON_ICON = 'w_axe9';
+const WEAPON_ICON = 'w_sword9';
 const GEAR_ICONS = ['gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar'];
 
 // 단단함: 체력은 그대로 TOUGH배, 피해는 TOUGH^0.7배(14배면 6.3배)라 체력이 5% 바닥까지 내려간다
@@ -55,15 +55,15 @@ export function proPick(s, big) {
 // 모래판 저장: 진짜 저장은 건드리지 않는 새 객체(설정 몇 개만 복사)
 export function makeProSv(real) {
   const sv = fresh();
-  applyPreset(sv, 'c15');                          // 15장 클리어 상태: 최강 장비(전설 5부위)·훈련·도끼
-  setWeapon(sv, 'axe');
+  applyPreset(sv, 'c15');                          // 15장 클리어 상태: 최강 장비(전설 5부위)·훈련(무기는 아래에서 검으로)
+  setWeapon(sv, 'sword');
   sv.tier = D.TIERS.length - 1; sv.enh = D.ENH_MAX;
   sv.pets = { thunderdragon: PET_MAX }; sv.pet = 'thunderdragon';
   for (const tr of D.TRAINING) sv.train[tr.id] = tr.max;
   sv.train.revive = 0;                             // 부활로 판이 이어지지 않게
   sv.stats.runs = 9; sv.tut.ult = true; sv.book = null;
   sv.cleared = 45; sv.prologue = 1;
-  // 11/1 "갑옷 세트·장신구 세트가 없어 노잼": 낀 네 부위를 도끼 전용 세트로 맞춰 4세트 효과까지 켠다(이름도 '<세트> 투구'로 바뀐다)
+  // 11/1 "갑옷 세트·장신구 세트가 없어 노잼": 낀 네 부위를 검 전용 세트로 맞춰 4세트 효과까지 켠다(이름도 '<세트> 투구'로 바뀐다)
   for (const it of sv.inv) if (Object.values(sv.eq).includes(it.u) && it.s !== 'collar') it.set = PRO_SET;
   for (const k of KEEP) if (real?.[k] !== undefined) sv[k] = real[k];
   return sv;

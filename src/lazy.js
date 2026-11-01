@@ -55,6 +55,7 @@ export function ensureBattle(scene) {
   const t = [ch, eq, k => (n >= 2 || scene.mode) && bossTest(k)];
   if (!early) t.push(k => /^(x_|pr_|role_|status_|fx_mark_target|hdie_|ult_)/.test(k));   // 보스 연출(fx2)·펫 역할 그림·원인별 쓰러짐(heroDeath.js)
   if (scene.mode) t.push(k => /^ma_/.test(k));
+  if (scene.pro) t.push(k => /^hl_/.test(k));   // 프롤로그: 전설 장비 주인공
   return queue(scene, k => t.some(f => f(k)));
 }
 // 프롤로그처럼 정해진 그림만 받는 화면용(scene.preload 안): 키가 test에 맞는 것 중 아직 없는 것을 올린다

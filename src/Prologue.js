@@ -38,7 +38,7 @@ export class Prologue extends Phaser.Scene {
 
   // 15장 몹·15장 마지막 보스·바닥·최강 펫 그림은 첫 실행에서 아직 안 받았다: 시작 직전에 받는다(전투도 이 그림들을 쓴다)
   preload() {
-    ensureKeys(this, k => /^(z15_r[012]|boss5_r0|tile15)$/.test(k));
+    ensureKeys(this, k => /^(z15_r[012]|boss5_r0|tile15|hl_sword_idle)$/.test(k));
     for (const [k, fw, fh] of PRO_SHEETS) if (!this.textures.exists(k)) this.load.spritesheet(k, `assets/${k}.png`, { frameWidth: fw, frameHeight: fh });
   }
 
@@ -91,9 +91,11 @@ export class Prologue extends Phaser.Scene {
       if (this.anims.exists(k)) m.play(k);
       this.tweens.add({ targets: m, y: m.y + RND(50, 90), duration: 7000, ease: 'Linear' });
     }
-    this.hero = this.add.sprite(this.HX + 16, this.HY, this.idleTex).setOrigin(0.5, 1).setScale(1.7).setDepth(8).play('pro_idle');
+    // 11/1 사용자 "첨에 도끼 들고 있는 거 어색해": 옆에 띄운 무기 대신 전설 갑옷·대검을 쥔 그림(전투와 같은 몸)
+    const leg = this.anims.exists('pro_legend');
+    this.hero = this.add.sprite(this.HX + 16, this.HY, leg ? 'hl_sword_idle' : this.idleTex).setOrigin(0.5, 1).setScale(1.7).setDepth(8).play(leg ? 'pro_legend' : 'pro_idle');
+    if (leg) this.hero.preFX?.addGlow(MAXC, 2, 0, false, 0.1, 8);
     this.add.ellipse(this.HX + 16, this.HY - 2, 50, 14, 0x000000, 0.4).setDepth(7);
-    if (this.textures.exists('w_axe9')) { const ax = this.add.image(this.HX + 44, this.HY - 32, 'w_axe9').setScale(1.1).setAngle(-30).setDepth(9); ax.preFX?.addGlow(MAXC, 3, 0, false, 0.1, 8); }
     this.priest = this.add.sprite(this.HX - 50, this.HY + 6, 'pro_priest', 0).setOrigin(0.5, 1).setScale(1.2).setDepth(8).play('pro_priest_idle');
     this.cameras.main.fadeIn(400, 0, 0, 0);
     this.lines = INTRO;
@@ -122,6 +124,7 @@ export class Prologue extends Phaser.Scene {
     const A = (key, tex, frames, rate, repeat) => { if (!this.anims.exists(key) && this.textures.exists(tex)) this.anims.create({ key, frames: this.anims.generateFrameNumbers(tex, frames ? { frames } : {}), frameRate: rate, repeat }); };
     this.idleTex = this.textures.exists('hn_hero2_r2s') ? 'hn_hero2_r2s' : 'hero2_r2s';
     A('pro_idle', this.idleTex, [2, 3], 2.5, -1);
+    A('pro_legend', 'hl_sword_idle', [0, 1], 2.5, -1);
     A('pro_sword', 'hero2_r2s', [2, 3], 2.5, -1); A('pro_pillar', 'pro_revive_fx', null, 9, -1); A('pro_priest_idle', 'pro_priest', [0, 1], 2, -1); A('pro_priest_pray', 'pro_priest', [2, 3], 4, -1);
   }
   makeGround() {

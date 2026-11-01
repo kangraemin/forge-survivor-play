@@ -150,6 +150,7 @@ export class Boot extends Phaser.Scene {
     for (const w of HELD_W) for (const [a, fw] of Object.entries(HELD_SHEETS)) S.load.spritesheet(`hw_${w}_${a}`, `assets/heroW/${w}_${a}.png`, { frameWidth: fw, frameHeight: 52 });   // 무기를 쥔 주인공(cosmeticView.holdHero)
     for (const w of HELD_W) for (const [a, fw] of Object.entries(HELD_SHEETS)) for (const g of ['', 'g']) S.load.spritesheet(`hw2${g}_${w}_${a}`, `assets/heroW2/${w}_${a}${g ? '_grip' : ''}.png`, { frameWidth: fw, frameHeight: 52 });   // 무기 꾸미기용 빈손 몸과 손가락 덮개(docs/heroW2.md)
     for (const [k, m] of Object.entries(MOBS)) if (m.die === undefined && MOB_DIE.has(k)) S.load.image(`${m.sheet}_r${m.row}_die`, `assets/mobDie/${k}.png`);   // 2~18장 몹 쓰러짐 6장면(art/mobDie). 장 그림과 같이 받는다(lazy chapterTest)
+    for (const a of Object.keys(HELD_SHEETS)) S.load.spritesheet(`hl_sword_${a}`, `assets/heroL/sword_${a}.png`, { frameWidth: 63, frameHeight: 52 });   // 프롤로그 전용: 전설 갑옷·대검을 든 주인공(cosmeticView.holdHero). 칸은 모두 63폭(몸 판정 상자가 칸 폭을 따라 움직이지 않게)
     for (const w of ULT_W) S.load.spritesheet('ult_' + w, `assets/ult/${w}.png`, { frameWidth: ULT_FW, frameHeight: ULT_FW });   // 무기별 궁극기(ult.js)
     for (const c of DIE_CAUSES) S.load.spritesheet('hdie_' + c, `assets/heroDie/${c}.png`, { frameWidth: DIE_FW, frameHeight: 52 });   // 죽은 원인별 쓰러짐(heroDeath.js)
     for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => S.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
