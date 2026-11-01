@@ -6,7 +6,7 @@ import { cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
 import * as D from './data.js';
 import { save, mission } from './save.js';
 import { sfx, endBgm } from './sfx.js';
-import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap } from './ui.js';
+import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedContainer, skillIcon, onTap, fitText } from './ui.js';
 import { showAd, adsLeft } from './shop.js';
 import { itemName, SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, lastTidy, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW } from './gear.js';
 import { itemBox } from './gearTab.js';
@@ -89,6 +89,7 @@ export class Overlay {
     s.hint?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.hint = null;
     // 떠 있던 배너(웨이브·보스 이름)도 지운다: 창 제목과 겹쳐 읽을 수 없었다
     s.bannerObjs?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.bannerObjs = null; s.bannerQ = [];
+    s.toasts?.slice().forEach(o => { s.tweens.killTweensOf(o); o.destroy(); });
     s.joy.o = null; s.joy.v.reset(); s.joy.base.setVisible(false); s.joy.knob.setVisible(false);
     s.showUlt?.(false);   // 창 아래 안내 글과 겹치지 않게 궁극기 버튼을 숨긴다
     // 세로로 긴 폰(H>480)에서는 창 내용을 남는 높이의 절반만큼 내려 가운데로(48차). 어둡게 덮는 막은 그만큼 올려 화면 전체를 덮는다
@@ -430,14 +431,14 @@ export class Overlay {
         return;
       }
       c.add(itemBox(s, x, 200, it, 32));
-      c.add(s.add.text(x, 224, itemName(it), font9(10, RARITY[it.r].css)).setOrigin(0.5));
+      c.add(fitText(s.add.text(x, 224, itemName(it), font9(10, RARITY[it.r].css)).setOrigin(0.5), 104, 7));
       // 주운 것은 지금 것보다 오른 능력치를 초록 ▲, 내린 것을 빨강 ▼로(계산 안 해도 보이게)
       // 지금 것에만 있는 능력치는 '잃음'으로 빨갛게 보여 준다(새 템에 없으면 손해를 몰랐다)
       const keys = it === item && cur ? [...new Set([...Object.keys(it.st), ...Object.keys(cur.st)])] : Object.keys(it.st);
       keys.forEach((k, i) => {
         const v = it.st[k] || 0, o = it === item && cur ? cur.st[k] || 0 : null, mark = o == null || v === o ? '' : v > o ? ' ▲' : ' ▼';
         const txt = v ? statText(k, v) + mark : statText(k, o).replace('+', '-') + ' ▼';   // 잃는 만큼 빼서 보여 준다
-        c.add(s.add.text(x, 240 + i * 13, txt, font9(9, mark === ' ▲' ? '#5fdc6a' : mark ? '#ff8a8a' : '#a1b2b6')).setOrigin(0.5));
+        c.add(fitText(s.add.text(x, 240 + i * 13, txt, font9(9, mark === ' ▲' ? '#5fdc6a' : mark ? '#ff8a8a' : '#a1b2b6')).setOrigin(0.5), 104, 6));   // 한 줄로만 줄인다(두 줄로 접히면 다음 줄과 겹쳤다)
       });
     };
     side(W / 2 - 54, cur, t('overlay.d07eb3'), '#a1b2b6');
@@ -631,7 +632,7 @@ export class Overlay {
     const gm = button(s, W / 2, 268, 170, 28, t('overlay.5bcd68', { REVIVE_GEM: D.REVIVE_GEM }), () => {
       if (busy || c !== this.c || sv.gem < D.REVIVE_GEM) return;
       sv.gem -= D.REVIVE_GEM; save(); s.log('revive_choice', { via: 'gem', ok: true, gem_left: sv.gem }); up();
-    }, { size: 11, color: 0x3a3846 });
+    }, { size: 11, color: 0x3a3846, lead: 24 });
     // 보석이 모자라면 버튼 대신 작은 안내만(못 누르는 큰 버튼이 광고 부활을 가렸다)
     if (sv.gem >= D.REVIVE_GEM) {
       c.add([gm, gemIcon(s, W / 2 - 62, 268, 12)]);
@@ -737,7 +738,7 @@ export class Overlay {
     // 도감: 이번 판 처치·획득으로 새로 찬 칸
     const dexNew = dexRefresh(sv);
     save();
-    if (dexNew > 0 && !s.bot) s.time.delayedCall(1200, () => toast(s, t('overlay.b6f158', { dexNew, v: Math.round(dexNew * DEX_HP * 1000) / 10 }), '#9ae0ff', s.cosCard ? 8 : 454));   // 63차: 결과 창(y 84~452) 제목·무기 줄을 가리던 위쪽 띠를 창 아래로
+    if (dexNew > 0 && !s.bot) s.time.delayedCall(1200, () => toast(s, t('overlay.b6f158', { dexNew, v: Math.round(dexNew * DEX_HP * 1000) / 10 }), '#9ae0ff', s.cosCard ? 22 : 52));   // 8이면 띠 위쪽이 화면 밖으로 잘렸다(11/1 344x882)   // 11/1: 창 아래(454)는 아래 버튼과 겹쳤다 → 창 위 빈 띠로   // 63차: 결과 창(y 84~452) 제목·무기 줄을 가리던 위쪽 띠를 창 아래로
     if (win && first && !hard && !s.endless && !dun && !s.bot && !s.mode) {   // 깔때기: 1-1·1-3 첫 클리어(한 기기에 한 번)
       if (idx === 0) trackOnce('funnel_clear_1_1', { t: Math.round(s.bt / 1000), power: D.powerOf(sv) });
       if (idx === 2) trackOnce('funnel_clear_1_3', { t: Math.round(s.bt / 1000), power: D.powerOf(sv) });
@@ -945,9 +946,9 @@ export class Overlay {
       const goNext = () => { s.log('result_action', { act: 'next', win }); const nc = Math.floor(nextIdx / D.STAGES_PER_CHAPTER), ns = nextIdx % D.STAGES_PER_CHAPTER; if (forgeMain && !hard && nc === 0 && D.isBossS(ns)) { s.scene.start('Lobby', { tab: 'battle', autoStart: { c: nc, s: ns } }); return; }   // 65차: 보스 벽 도전도 로비의 '강화하면 쉬워져요' 확인(enhGate)을 거친다
       s.scene.start('Battle', { chapter: Math.floor(nextIdx / D.STAGES_PER_CHAPTER), stage: nextIdx % D.STAGES_PER_CHAPTER, hard, bot: s.bot }); };
       if (forgeMain) {
-        c.add(s.add.text(W / 2, 400, t('overlay.weakHint', { n: sv.stone | 0 }), font9(10, '#7fe6ee')).setOrigin(0.5));
-        c.add(button(s, 63, 430, 76, 26, t('overlay.weakGo', { nextName }), goNext, { color: 0x3a3846, size: 9 }));
-        c.add(button(s, 180, 430, 150, 36, t('nextGoal.enh'), goForge, { color: 0x2f6b3a, size: 13 }));
+        c.add(fitText(s.add.text(W / 2, 408, t('overlay.weakHint', { n: sv.stone | 0 }), font9(10, '#7fe6ee')).setOrigin(0.5, 1), W - 52, 7, 22));   // 11/1: 독일어 두 줄이 아래 버튼(위 끝 410)에 닿았다 → 아래 끝을 408에 묶는다
+        c.add(button(s, 63, 426, 76, 26, t('overlay.weakGo', { nextName }), goNext, { color: 0x3a3846, size: 9 }));
+        c.add(button(s, 175, 426, 138, 32, t('nextGoal.enh'), goForge, { color: 0x2f6b3a, size: 13 }));   // 11/1: 폭 150·높이 36은 창 오른쪽·아래 테두리를 넘었다
       } else {
         c.add(button(s, 63, 424, 66, 26, t('lobby.348786'), goForge, { color: 0x3a3846, size: 10 }));
         c.add(button(s, 174, 424, 140, 40, t('overlay.37f495', { nextName }), goNext, { color: 0x2f6b3a, size: 14 }));

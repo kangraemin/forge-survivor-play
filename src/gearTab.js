@@ -234,7 +234,7 @@ export const GearTab = {
     const chN = c => t('lobby.022fbd', { v: c + 1 });
     // 한 쪽에 여섯 마리: 장이 늘어 펫이 열여섯이 됐다
     const PER = 6, pages = Math.ceil(PETS.length / PER), pg = Math.min(this.petPg || 0, pages - 1);
-    b.add(this.add.text(W / 2, 74, t('gearTab.056d12'), font9(10, '#a1b2b6')).setOrigin(0.5));
+    { const ht = this.add.text(W / 2, 74, t('gearTab.056d12'), font9(10, '#a1b2b6')).setOrigin(0.5); ht.setScale(Math.min(1, (W - 84) / ht.width)); b.add(ht); }   // 11/1: 양옆 ◀▶ 버튼에 글자가 잘렸다
     if (pages > 1) {
       const go = d => { if (this.busy) return; this.petPg = (pg + d + pages) % pages; sfx('click'); this.show('gear'); };
       b.add(button(this, 22, 74, 28, 16, '◀', () => go(-1), { size: 9 }));
@@ -248,11 +248,11 @@ export const GearTab = {
       // 전투와 같은 모습(보스를 작게)
       if (!open) b.add(this.add.text(34, y + 23, '?', font(14, '#6a6080')).setOrigin(0.5));
       else if (this.anims.exists(p.id)) { const sp = this.add.sprite(34, y + 23, null).play(p.id).setScale(fb[p.id] ? 0.8 : 0.36); if (fb[p.id]) sp.setTint(p.color); b.add(sp); }
-      b.add(this.add.text(56, y + 5, open ? `${p.name}  Lv ${lv}` : `??? · ${p.hint}`, font(11, open ? '#ffffff' : '#6a6080')));
+      { const nm = this.add.text(56, y + 5, open ? `${p.name}  Lv ${lv}` : `??? · ${p.hint}`, font(11, open ? '#ffffff' : '#6a6080')); nm.setScale(Math.min(1, (open ? 112 : W - 80) / nm.width)); b.add(nm); }   // 긴 이름이 오른쪽 버튼에 닿았다
       if (!open) { b.add(this.add.text(56, y + 23, t('gearTab.267e2a'), font9(10, '#5c6e76'))); return; }
       const rl = roleOf(p.id);
       if (rl && this.textures.exists(rl.icon)) { b.add(this.add.image(W - 91, y + 23, rl.icon).setScale(0.62)); { const rn = this.add.text(W - 93, y + 37, rl.name, font9(8, rl.color)).setOrigin(0.5, 0); rn.setScale(Math.min(1, 28 / rn.width)); b.add(rn); } }   // 55차: 오른쪽 버튼과 겹치지 않게
-      const fitW = o => { o.setScale(Math.min(1, 118 / o.width)); return o; };   // 52차: 역할 아이콘·버튼과 겹치지 않게 폭 118 안으로
+      const fitW = o => { o.setScale(Math.min(1, 104 / o.width)); return o; };   // 52차: 역할 아이콘·버튼과 겹치지 않게(11/1: 118은 아이콘(167~)에 닿아 104로)
       b.add(fitW(this.add.text(56, y + 20, p.desc, font9(10, '#f2e4bc'))));
       const fit = t('gearTab.d8ac3d', { v: [...(p.good || []).map(chN), ...(p.id === 'demonlord' ? [t('gearTab.86b73a')] : [])].join('·') || '-', v2: p.weak ? t('gearTab.659c1c', { join: p.weak.map(chN).join('·') }) : '' });
       b.add(fitW(this.add.text(56, y + 33, fit, font9(9, '#8fdc8a'))));

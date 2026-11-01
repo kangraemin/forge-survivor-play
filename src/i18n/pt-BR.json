@@ -2113,7 +2113,7 @@
  "lobby.gateStone": "Você ainda tem {n} Pedras de aprimoramento",
  "lobby.gatePower": "Poder atual {pw}, recomendado {rec}",
  "lobby.gateGo": "Lutar mesmo assim",
- "overlay.weakHint": "Gaste {n} Pedras de aprimoramento na Forja para facilitar a próxima luta",
+ "overlay.weakHint": "Forje com {n} pedras: luta mais fácil",
  "overlay.weakGo": "Lutar {nextName}",
  "rank.short": "Ranking",
  "desk.goalTitle": "Próximo objetivo",

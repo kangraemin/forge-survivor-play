@@ -2113,7 +2113,7 @@
  "lobby.gateStone": "Kamu masih punya {n} Batu Penguatan",
  "lobby.gatePower": "Kekuatan {pw}, disarankan {rec}",
  "lobby.gateGo": "Tetap lawan",
- "overlay.weakHint": "Gunakan {n} Batu Penguatan di Tempa untuk membuat pertarungan berikutnya lebih mudah",
+ "overlay.weakHint": "Tempa pakai {n} batu: lawan berikut mudah",
  "overlay.weakGo": "Lawan {nextName}",
  "rank.short": "Peringkat",
  "desk.goalTitle": "Target Berikutnya",

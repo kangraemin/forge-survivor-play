@@ -2113,7 +2113,7 @@
  "lobby.gateStone": "You still have {n} enhance stones",
  "lobby.gatePower": "Power {pw}, recommended {rec}",
  "lobby.gateGo": "Fight anyway",
- "overlay.weakHint": "Spend {n} stones at the Forge to make the next fight easier",
+ "overlay.weakHint": "Forge with {n} stones: next fight easier",
  "overlay.weakGo": "Fight {nextName}",
  "rank.short": "Ranking",
  "desk.goalTitle": "Next Goal",

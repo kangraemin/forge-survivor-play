@@ -403,8 +403,10 @@ export class Battle extends Phaser.Scene {
     // 콤보는 가운데 위(오른쪽 숫자 밑에 붙어 처치 수와 헷갈렸다)
     this.comboTxt = sf(this.add.text(W - 57, 52, '', font(11, '#ffb347')).setOrigin(0.5).setAlpha(0));   // 스킬 아이콘 줄(왼쪽 위)과 겹치지 않게 처치 칸 아래
     // 시간은 HP 칸(끝 108)과 처치 칸(시작 182) 사이 가운데: 화면 가운데(135)면 '남은 0:33'이 HP 칸에 붙었다(40차)
-    this.timeTxt = sf(this.add.text(145, 16, '', font(14)).setOrigin(0.5));
-    this.waveTxt = sf(this.add.text(145, 31, '', font(9, '#a1b2b6')).setOrigin(0.5));
+    // 11/1 점검: '남은 1784m'·'어려움 · 웨이브 1/3'(긴 언어)이 양옆 칸을 넘었다 → 바꿀 때마다 두 칸 사이(72px)에 맞춰 줄인다
+    const fitW = o => { const st = o.setText.bind(o); o.setText = v => { st(v); o.setScale(Math.min(1, 72 / Math.max(1, o.width))); return o; }; return o; };
+    this.timeTxt = sf(fitW(this.add.text(145, 16, '', font(14)).setOrigin(0.5)));
+    this.waveTxt = sf(fitW(this.add.text(145, 31, '', font(9, '#a1b2b6')).setOrigin(0.5)));
     // 처치·은화: 점 아이콘만으로는 무슨 숫자인지 몰랐다. 글자 이름을 붙인다
     sf(this.add.rectangle(W - 88, 7, 62, 34, 0x000000, 0.45).setOrigin(0));
     sf(this.add.text(W - 85, 17, t('battle.5e9c0f'), font9(10, '#a1b2b6')).setOrigin(0, 0.5));

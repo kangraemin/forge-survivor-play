@@ -77,7 +77,7 @@ export function panel(scene, x, y, w, h, { fill = COLOR.panel, line = COLOR.line
 // 그리는 색은 디자인 인계 토큰으로 바꿔 칠한다: 주 행동 = 불빛 주황(ink 글자), 기본 = iron 면 + line 테두리
 const BTN_FILL = { 0x2f6b3a: 0xffb85c, 0x3a3846: 0x293845 };
 // ghost: 주황 테두리만 있는 보조 버튼(한 화면에 채운 주황 버튼은 하나만, 나머지는 이 모양 — 49차)
-export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size = 12, textColor = '#ffffff', onDeny, ghost = false } = {}) {
+export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size = 12, textColor = '#ffffff', onDeny, ghost = false, lead = 0 } = {}) {
   const c = scene.add.container(x, y);
   const g = scene.add.graphics();
   const lit = f => { const r = Math.min(255, ((f >> 16) & 255) + 28), gg = Math.min(255, ((f >> 8) & 255) + 28), bb = Math.min(255, (f & 255) + 28); return (r << 16) | (gg << 8) | bb; };   // 마우스를 올리면 살짝 밝게
@@ -92,7 +92,8 @@ export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size
   const primary = color === 0x2f6b3a && textColor === '#ffffff' && !ghost;
   const t = scene.add.text(0, 0, label, font(size, primary ? '#111923' : ghost && textColor === '#ffffff' ? '#ffd9a0' : textColor, primary ? 0 : 3)).setOrigin(0.5);
   t.isBtnLabel = true;
-  fitText(t, w - 6, 7, h - 2);   // 긴 번역은 줄여서 버튼 안에 넣는다
+  t.x = lead / 2;   // lead: 왼쪽에 아이콘(보석 등)을 붙이는 버튼은 글자를 그만큼 오른쪽 칸에만 넣는다(11/1: 긴 언어에서 아이콘이 첫 글자를 가렸다)
+  fitText(t, w - 6 - lead, 7, h - 2);   // 긴 번역은 줄여서 버튼 안에 넣는다
   c.add([g, t]); c.setSize(w, h).setInteractive({ useHandCursor: true });
   c.label = t; c.enabled = true; c.col = color; c.isBtn = true;
   c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x221f2a, false); t.setAlpha(v ? 1 : 0.45); return c; };
@@ -146,6 +147,8 @@ export function toast(scene, msg, color = '#ffffff', y) {
   t.add([scene.add.rectangle(0, 0, Math.min(262, tx.width + 24), 24, 0x0a0710, 0.85).setStrokeStyle(1, 0x475c66), tx]);
   scene.tweens.add({ targets: t, alpha: 1, y, duration: 160, ease: 'Back.Out' });
   scene.tweens.add({ targets: t, alpha: 0, y: y - 12, delay: 1300, duration: 300, onComplete: () => t.destroy() });
+  // 전투에서 창(레벨업·상인·장비)이 열리면 overlay.js begin()이 지운다: 멈춘 동안 트윈도 멈춰 창 제목 위에 남았다(11/1 점검)
+  (scene.toasts ||= []).push(t); t.once('destroy', () => { scene.toasts = scene.toasts?.filter(o => o !== t); });
 }
 
 // 칼빛 꾸미기: 궤적 그림(하늘색)의 색상을 돌려 다른 색으로 만든다. tint는 곱셈이라 하늘색을 빨강·금색으로 못 바꾼다

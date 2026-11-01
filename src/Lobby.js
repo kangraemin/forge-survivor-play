@@ -157,12 +157,12 @@ export class Lobby extends Phaser.Scene {
       body.removeAll(true);
       // 위: 오늘 / 이번 주 두 칸
       [['day', t('lobby.276ef2')], ['week', t('lobby.db9056')], ['order', t('lobby.ordTitle')]].forEach(([id, name], i) => {
-        const x = 46 + i * 66, on = this.misPage === id;
-        const nt = this.add.text(x, 80, name, font(on ? 13 : 11, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5); nt.setScale(Math.min(1, 62 / nt.width)); body.add(nt);
-        if (on) body.add(this.add.rectangle(x, 92, 56, 2, 0xffd75e));
-        if (id === 'week' && this.weeklyReady()) body.add(this.add.circle(x + 29, 74, 3.5, 0xff3a3a));
-        if (id === 'order' && this.ordersReady()) body.add(this.add.circle(x + 29, 74, 3.5, 0xff3a3a));
-        const hit = this.add.rectangle(x, 80, 66, 24, 0, 0).setInteractive({ useHandCursor: true });
+        const x = 52 + i * 58, on = this.misPage === id;   // 11/1: 첫 칸이 창 왼쪽 테두리를 넘었다(46±31)
+        const nt = this.add.text(x, 80, name, font(on ? 13 : 11, on ? '#ffd75e' : '#7d8f94')).setOrigin(0.5); nt.setScale(Math.min(1, 54 / nt.width)); body.add(nt);
+        if (on) body.add(this.add.rectangle(x, 92, 50, 2, 0xffd75e));
+        if (id === 'week' && this.weeklyReady()) body.add(this.add.circle(x + 26, 74, 3.5, 0xff3a3a));
+        if (id === 'order' && this.ordersReady()) body.add(this.add.circle(x + 26, 74, 3.5, 0xff3a3a));
+        const hit = this.add.rectangle(x, 80, 58, 24, 0, 0).setInteractive({ useHandCursor: true });
         hit.on('pointerup', () => { if (this.misPage === id) return; sfx('click'); this.misPage = id; draw(); });
         body.add(hit);
       });
@@ -173,8 +173,8 @@ export class Lobby extends Phaser.Scene {
       ms.forEach((m, i) => {
         const y = 102 + i * gap, have = Math.min(m.need, sv.mis[m.id] || 0), done = have >= m.need, got = sv.misGot[m.id];
         body.add(panel(this, 26, y, W - 52, gap - 6 + (gap < 40 ? 3 : 0), { fill: got ? 0x141018 : 0x293845 }));
-        body.add(this.add.text(36, y + 5, m.name, font9(10, got ? '#6a6080' : '#ffffff')));
-        body.add(this.add.text(36, y + 19, t('lobby.cb7823', { have, need: m.need, gem: D.MISSION_GIVE.gem, stone: D.MISSION_GIVE.stone }), font9(10, done ? '#5fdc6a' : '#a1b2b6')));
+        { const mt = this.add.text(36, y + 5, m.name, font9(10, got ? '#6a6080' : '#ffffff')); mt.setScale(Math.min(1, (W - 126) / mt.width)); body.add(mt); }
+        { const rt = this.add.text(36, y + 19, t('lobby.cb7823', { have, need: m.need, gem: D.MISSION_GIVE.gem, stone: D.MISSION_GIVE.stone }), font9(10, done ? '#5fdc6a' : '#a1b2b6')); rt.setScale(Math.min(1, (W - 126) / rt.width)); body.add(rt); }   // 긴 언어에서 '받기' 버튼과 겹쳤다
         const bt = button(this, W - 60, y + 17, 52, 24, got ? t('lobby.8d8680') : t('lobby.98d0f0'), () => {
           if (got || !done) return;
           sv.misGot[m.id] = true; track('mission_claim', { mission: m.id }); grant(sv, D.MISSION_GIVE); sfx('coin'); this.refreshTop(); draw();
@@ -433,6 +433,7 @@ export class Lobby extends Phaser.Scene {
     if (id === 'gear') this.gearTab();
     if (id === 'shop') this.shopTab();
     this.body.setAlpha(0); this.tweens.add({ targets: this.body, alpha: 1, duration: 150 });
+    this.fitScroll();
     // 53차: 장비·펫·교역은 그 탭을 처음 열 때 안내 한 장씩(메인 안내는 필수 3장만)
     const tc = id === 'shop' ? 'tab_shop' : id === 'gear' ? (this.gearPage === 'pet' ? 'tab_pet' : this.gearPage === 'gear' ? 'tab_gear' : '') : '';
     if (tc) this.time.delayedCall(450, () => this.tab === id && !this.busy && tabCoach(this, tc));
@@ -447,10 +448,17 @@ export class Lobby extends Phaser.Scene {
     if (this.bn && this.bn.y > 100) this.scrollMax = Math.max(0, Math.ceil(this.bn.y + this.bnH + 6 - (H - 50)));
   }
   // 로비 본문 스크롤: 손가락으로 위아래로 민다. 끄는 동안에는 버튼이 눌리지 않게 입력을 잠깐 끈다
+  // 11/1 점검: 본문 자체가 탭 줄 아래로 내려가는 화면(H 480의 도전 시작 버튼·비급 시너지 목록·옛 꾸미기 돌아가기)도 밀 수 있게 본문 아래 끝을 잰다
+  fitScroll() {
+    let bot = 0;
+    this.body.list.forEach(o => { if (!o.visible || !o.getBounds) return; try { const b = o.getBounds(); if (b.height < H) bot = Math.max(bot, b.bottom); } catch { /* 크기를 못 재는 오브젝트 */ } });
+    const need = Math.ceil(bot + 6 - (H - 50));
+    if (need > (this.scrollMax || 0)) this.scrollMax = need;
+  }
   setScroll(v) {
     this.scrollOff = Math.max(0, Math.min(this.scrollMax || 0, v));
     const y = -this.scrollOff;
-    this.bg.y = y; if (this.tab !== 'shop') this.body.y = y;
+    this.bg.y = y; this.body.y = (this.bodyY0 || 0) + y;
     if (this.bn) this.bn.y = this.bnY + y;
   }
   installScroll() {
@@ -465,11 +473,13 @@ export class Lobby extends Phaser.Scene {
     };
     // Phaser는 손 뗌을 다음 프레임에 처리한다: 몇 프레임 뒤에 입력을 다시 켜야 끈 자리의 버튼이 눌리지 않는다
     const up = () => { if (d?.on) setTimeout(() => { if (this.sys.isActive()) this.input.enabled = true; }, 120); d = null; };
+    const wheel = e => { if (this.scrollMax && !this.busy) this.setScroll(this.scrollOff + e.deltaY * 0.25); };   // PC 마우스 휠
+    cv.addEventListener('wheel', wheel, { passive: true });
     cv.addEventListener('pointerdown', down); addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
-    this.events.once('shutdown', () => { cv.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); this.input.enabled = true; });
+    this.events.once('shutdown', () => { cv.removeEventListener('wheel', wheel); cv.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); this.input.enabled = true; });
   }
   banner0(id) {
-    this.bn?.destroy(); this.bn = null; this.body.y = 0;
+    this.bn?.destroy(); this.bn = null; this.body.y = this.bodyY0 = 0;
     const extra = H - 480, sv = this.sv, top = id === 'shop';
     const bh0 = Math.min(top ? extra - 4 : extra - 10, 50);
     // 짧은 화면: 아래 카드는 글자 두 줄이 들어가는 높이(46)로 두고 스크롤로 보여 준다(그전엔 34까지 줄여 글자가 잘렸다)
@@ -506,7 +516,7 @@ export class Lobby extends Phaser.Scene {
       return;
     }
     const y0 = top ? 38 : 436, ts = todaySale(), win = available({ winter: true });
-    if (top) this.body.y = bh + 4;
+    if (top) this.body.y = this.bodyY0 = bh + 4;
     const c = this.bn = this.add.container(0, y0).setDepth(10);
     const goSkin = (tab, sel) => { sfx('click'); this.shopPage = 'skin'; this.skinTab = tab; if (sel) { this.cosSelected = this.cosSelected || {}; this.cosSelected[ts.kind] = sel; } track('banner_tap', { to: tab }); this.show('shop'); };
     const card = (x, w, line, title, tc, sub, fn) => {
@@ -1107,13 +1117,13 @@ export class Lobby extends Phaser.Scene {
       track('shatter_restore_click', { from, enough: sv.gem >= back });
       if (sv.gem < back) { c.close(); this.shopPage = cashHidden() ? 'gem' : 'pack'; this.show('shop'); toast(this, t('lobby.60eef5'), '#ff9a8a'); return; }
       sv.gem -= back; sv.enh = from; sv.stats.destroyed--; save(); sfx('win'); c.close(); this.refreshTop(); this.show('forge'); toast(this, t('lobby.50781e', { from }), '#ffd75e');
-    }, { size: 11, color: 0x3a3846 });
+    }, { size: 11, color: 0x3a3846, lead: 24 });
     c.add([rb, gemIcon(this, W / 2 - 80, 247, 12)]);
     const bt = button(this, W / 2, 284, 190, 28, t('lobby.31f2b8', { cost }), () => {
       track('shatter_guard_click', { enough: sv.gem >= cost });
       if (sv.gem < cost) { c.close(); this.shopPage = cashHidden() ? 'gem' : 'pack'; this.show('shop'); toast(this, t('lobby.60eef5'), '#ff9a8a'); return; }
       sv.gem -= cost; sv.guard++; save(); sfx('buy'); c.close(); toast(this, t('lobby.99ad39'), '#9ae0ff');
-    }, { size: 11, color: 0x3a3846 });
+    }, { size: 11, color: 0x3a3846, lead: 24 });
     c.add([bt, gemIcon(this, W / 2 - 80, 284, 12)]);
     // 68차: 닫기도 같은 크기로(평가: 작은 닫기 버튼 때문에 보석 버튼 두 개가 강매처럼 보였다)
     // 69차: 주황은 '그냥 닫기' 하나만(보석 버튼이 주황이면 눈이 먼저 결제로 간다)

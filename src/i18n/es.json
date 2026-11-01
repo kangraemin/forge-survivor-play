@@ -2113,7 +2113,7 @@
  "lobby.gateStone": "Te quedan {n} piedras de mejora",
  "lobby.gatePower": "Poder actual {pw}, recomendado {rec}",
  "lobby.gateGo": "Pelear igual",
- "overlay.weakHint": "Gasta {n} piedras en la Forja para hacer más fácil el próximo combate",
+ "overlay.weakHint": "Forja con {n} piedras: combate más fácil",
  "overlay.weakGo": "Pelear {nextName}",
  "rank.short": "Ranking",
  "desk.goalTitle": "Próximo objetivo",
