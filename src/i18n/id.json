@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "Saran Pandai Besi",
  "lobby.lossTip1": "Kalah? Senjatamu masih lemah.",
  "lobby.lossTip2": "Tekan tombol Tingkatkan di bawah. +1 saja sudah terasa.",
- "lobby.lossTipBroke": "Emas kurang. Main ulang tahap yang sudah lewat."
+ "lobby.lossTipBroke": "Emas kurang. Main ulang tahap yang sudah lewat.",
+ "ult.sword": "Seribu Tebasan",
+ "ult.spear": "Hujan Tombak",
+ "ult.axe": "Pembelah Bumi",
+ "ult.bow": "Hujan Panah",
+ "ult.gun": "Gempuran",
+ "ult.knuckle": "Seratus Tinju",
+ "ult.staff": "Hujan Meteor"
 }

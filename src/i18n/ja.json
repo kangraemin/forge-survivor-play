@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "鍛冶屋のひとこと",
  "lobby.lossTip1": "負けたか。剣がまだ弱いんだ。",
  "lobby.lossTip2": "下の強化ボタンを押してみな。1回でも全然違うぞ。",
- "lobby.lossTipBroke": "金貨が足りないな。クリアした所をもう一度回って集めてこい。"
+ "lobby.lossTipBroke": "金貨が足りないな。クリアした所をもう一度回って集めてこい。",
+ "ult.sword": "千刃斬り",
+ "ult.spear": "光槍の雨",
+ "ult.axe": "大地割り",
+ "ult.bow": "矢の雨",
+ "ult.gun": "集中砲火",
+ "ult.knuckle": "百烈拳",
+ "ult.staff": "流星群"
 }

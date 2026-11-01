@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "Lời khuyên thợ rèn",
  "lobby.lossTip1": "Thua à? Vũ khí còn yếu lắm.",
  "lobby.lossTip2": "Nhấn nút Cường hóa bên dưới. +1 thôi cũng khác hẳn.",
- "lobby.lossTipBroke": "Thiếu vàng. Chơi lại màn đã qua để kiếm thêm."
+ "lobby.lossTipBroke": "Thiếu vàng. Chơi lại màn đã qua để kiếm thêm.",
+ "ult.sword": "Thiên Kiếm Trảm",
+ "ult.spear": "Mưa Giáo",
+ "ult.axe": "Phá Địa",
+ "ult.bow": "Mưa Tên",
+ "ult.gun": "Pháo Kích",
+ "ult.knuckle": "Bách Liệt Quyền",
+ "ult.staff": "Mưa Thiên Thạch"
 }

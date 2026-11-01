@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "Smith's Advice",
  "lobby.lossTip1": "You lost? Your blade is still too weak.",
  "lobby.lossTip2": "Tap the Enhance button below. Even +1 makes a big difference.",
- "lobby.lossTipBroke": "Not enough gold. Replay a cleared stage to earn more."
+ "lobby.lossTipBroke": "Not enough gold. Replay a cleared stage to earn more.",
+ "ult.sword": "Thousand Slashes",
+ "ult.spear": "Spear Rain",
+ "ult.axe": "Earthsplitter",
+ "ult.bow": "Arrow Storm",
+ "ult.gun": "Barrage",
+ "ult.knuckle": "Hundred Fists",
+ "ult.staff": "Meteor Shower"
 }

@@ -53,7 +53,7 @@ export function ensureBattle(scene) {
   const sv = scene.sv, n = (scene.c | 0) + 1, ch = chapterTest(n, false), eq = equippedTest(scene.cosLook);
   const early = n === 1 && (scene.s | 0) === 0 && !scene.mode && !scene.endless && !scene.dungeon;   // 1-1: 기본 그림만으로 충분하다
   const t = [ch, eq, k => (n >= 2 || scene.mode) && bossTest(k)];
-  if (!early) t.push(k => /^(x_|pr_|role_|status_|fx_mark_target|hdie_)/.test(k));   // 보스 연출(fx2)·펫 역할 그림·원인별 쓰러짐(heroDeath.js)
+  if (!early) t.push(k => /^(x_|pr_|role_|status_|fx_mark_target|hdie_|ult_)/.test(k));   // 보스 연출(fx2)·펫 역할 그림·원인별 쓰러짐(heroDeath.js)
   if (scene.mode) t.push(k => /^ma_/.test(k));
   return queue(scene, k => t.some(f => f(k)));
 }
@@ -81,7 +81,7 @@ export function startBg(game, buildAnims, sv) {
   const rest = [];   // 나머지 장: 가까운 장부터
   for (let d = 0; d <= 18; d++) for (const c of [n + d, n - d]) if (c >= 1 && c <= 18 && !rest.includes(c)) rest.push(c);
   const steps = [
-    k => /^(x_|pr_|role_|status_|fx_mark_target|hdie_)/.test(k),
+    k => /^(x_|pr_|role_|status_|fx_mark_target|hdie_|ult_)/.test(k),
     chapterTest(n), bossTest, k => /^(ma_|ban_)/.test(k),
     k => /^cos_/.test(k),
     ...rest.map(chapterTest),

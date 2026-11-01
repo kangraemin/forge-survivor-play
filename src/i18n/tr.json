@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "Demircinin Tavsiyesi",
  "lobby.lossTip1": "Kaybettin mi? Silahın hâlâ zayıf.",
  "lobby.lossTip2": "Aşağıdaki Güçlendir'e dokun. +1 bile çok fark eder.",
- "lobby.lossTipBroke": "Altın yetmiyor. Geçtiğin bir bölümü tekrar oyna."
+ "lobby.lossTipBroke": "Altın yetmiyor. Geçtiğin bir bölümü tekrar oyna.",
+ "ult.sword": "Bin Kesik",
+ "ult.spear": "Mızrak Yağmuru",
+ "ult.axe": "Yer Yaran",
+ "ult.bow": "Ok Yağmuru",
+ "ult.gun": "Bombardıman",
+ "ult.knuckle": "Yüz Yumruk",
+ "ult.staff": "Meteor Yağmuru"
 }

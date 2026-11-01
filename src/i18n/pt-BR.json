@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "Dica do ferreiro",
  "lobby.lossTip1": "Perdeu? Sua arma ainda está fraca.",
  "lobby.lossTip2": "Toque em Aprimorar abaixo. Até +1 já faz diferença.",
- "lobby.lossTipBroke": "Falta ouro. Jogue de novo uma fase vencida para juntar mais."
+ "lobby.lossTipBroke": "Falta ouro. Jogue de novo uma fase vencida para juntar mais.",
+ "ult.sword": "Mil Cortes",
+ "ult.spear": "Chuva de Lanças",
+ "ult.axe": "Racha-Terra",
+ "ult.bow": "Chuva de Flechas",
+ "ult.gun": "Bombardeio",
+ "ult.knuckle": "Cem Punhos",
+ "ult.staff": "Chuva de Meteoros"
 }

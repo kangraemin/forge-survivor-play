@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "Rat des Schmieds",
  "lobby.lossTip1": "Verloren? Deine Klinge ist noch zu schwach.",
  "lobby.lossTip2": "Tippe unten auf Verbessern. Schon +1 macht viel aus.",
- "lobby.lossTipBroke": "Zu wenig Gold. Spiel eine geschaffte Stufe erneut."
+ "lobby.lossTipBroke": "Zu wenig Gold. Spiel eine geschaffte Stufe erneut.",
+ "ult.sword": "Tausend Hiebe",
+ "ult.spear": "Speerregen",
+ "ult.axe": "Erdspalter",
+ "ult.bow": "Pfeilhagel",
+ "ult.gun": "Sperrfeuer",
+ "ult.knuckle": "Hundert Fäuste",
+ "ult.staff": "Meteorschauer"
 }

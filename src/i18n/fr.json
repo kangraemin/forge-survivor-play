@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "Conseil du forgeron",
  "lobby.lossTip1": "Perdu ? Ta lame est encore trop faible.",
  "lobby.lossTip2": "Touche Améliorer en bas. Même +1 change tout.",
- "lobby.lossTipBroke": "Pas assez d'or. Rejoue un niveau réussi pour en gagner."
+ "lobby.lossTipBroke": "Pas assez d'or. Rejoue un niveau réussi pour en gagner.",
+ "ult.sword": "Mille Entailles",
+ "ult.spear": "Pluie de Lances",
+ "ult.axe": "Fend-Terre",
+ "ult.bow": "Pluie de Flèches",
+ "ult.gun": "Barrage",
+ "ult.knuckle": "Cent Poings",
+ "ult.staff": "Pluie de Météores"
 }

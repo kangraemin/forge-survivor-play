@@ -26,6 +26,7 @@ import { line } from './lines.js';
 import { setupWide } from './wide.js';
 import { isTest } from './testMode.js';
 import { onHit as synHit } from './synergy.js';
+import { castUlt, ultAnims, ultLv } from './ult.js';   // 무기·등급·단계마다 다른 궁극기
 import { weakMul } from './bossWeak.js';
 import { tst, testBattleStart } from './testBattle.js';   // 테스트 모드(바로 가기·무적·배속)
 import { sandboxEnd } from './save.js';
@@ -75,6 +76,18 @@ export class Battle extends Phaser.Scene {
 
   create() {
     D.setLayoutH(D.FULL_H); setBoxed(false);   // 전투는 화면 전체(메뉴 화면의 세이프존 칸 높이가 남아 있지 않게)
+    // 화면 흔들림이 겹쳐 정신없었다: 세기 40%, 길이 400ms까지, 250ms 안에 또 오면 건너뛴다
+    const cam0 = this.cameras.main;
+    if (!cam0.shake0) {
+      cam0.shake0 = cam0.shake;
+      cam0.shake = (d = 100, k = 0.05, ...a) => {
+        const now = this.time.now;
+        if (now - (cam0.shakeT ?? -1e9) < 250) return cam0;
+        cam0.shakeT = now;
+        return cam0.shake0(Math.min(d, 400), (typeof k === 'number' ? k : 0.05) * 0.4, ...a);
+      };
+    }
+    cam0.shakeT = -1e9;
     const sv = this.sv;
     this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
     this.paused = false; this.hitstop = 0; this.over = false; this.mv = null; this.formT = 0;
@@ -160,6 +173,7 @@ export class Battle extends Phaser.Scene {
     cam.shake = (d, i = 0.005, ...r) => i <= 0.005 ? cam : shake.call(cam, Math.min(d, 250), i * 0.4, ...r);
     this.weapons = new Weapons(this);
     this.boss = null;
+    if (!this.bot) ultAnims(this);   // 궁극기 그림(ult.js)
     if (this.ch?.boss) anim2Warm(this, [this.ch.boss, this.ch.mid].filter(Boolean), D);   // 이 판 보스 동작 그림을 미리 뒤에서 받는다
     this.ui = new Overlay(this);
     this.petShield = false;
@@ -1298,8 +1312,8 @@ export class Battle extends Phaser.Scene {
     this.run.mana = 0;
     if (!this.sv.tut.ult) { this.sv.tut.ult = true; save(); }
     if (this.ultTip) { this.tweens.killTweensOf(this.ultTip); this.ultTip.ring?.destroy(); this.ultTip.destroy(); }
-    this.log('ult_use', { boss: !!this.boss, mobs: this.mobs.countActive() });
-    this.blast(9, false);
+    this.log('ult_use', { boss: !!this.boss, mobs: this.mobs.countActive(), lv: ultLv(this) });
+    castUlt(this);
   }
 
   blast(mult, revive) {
@@ -1739,7 +1753,7 @@ export class Battle extends Phaser.Scene {
       this.tweens.add({ targets: ur, scale: 1.8, alpha: 0, duration: 700, repeat: -1 });
       this.ultTip.ring = ur;
     }
-    this.ultTxt.setText(full ? (D.PC ? tt('pc.ultGo') : tt('battle.621771')) : tt('battle.612a31', { floor: Math.floor(mf * 100) })).setColor(full ? '#ffd75e' : '#a1b2b6');
+    this.ultTxt.setText(full ? (D.PC ? tt('pc.ultGo') : tt('battle.621771')) + ' Lv' + ultLv(this) : tt('battle.612a31', { floor: Math.floor(mf * 100) }) + ' Lv' + ultLv(this)).setColor(full ? '#ffd75e' : '#a1b2b6');
     // 조명
     this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);
     const L = this.env?.lightK < 1 || this.env?.blackT > 0 ? this.env.light.setScale(this.env.blackT > 0 ? 0.4 : this.env.lightK) : null;   // 심연·일식은 밝히는 범위가 좁다

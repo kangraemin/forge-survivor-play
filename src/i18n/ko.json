@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "대장장이의 한마디",
  "lobby.lossTip1": "졌구먼. 칼이 아직 약해서 그래.",
  "lobby.lossTip2": "아래 강화 버튼을 눌러 봐. 한 번만 올려도 확 달라진다.",
- "lobby.lossTipBroke": "금화가 모자라네. 깼던 판을 다시 돌아 모아 오게."
+ "lobby.lossTipBroke": "금화가 모자라네. 깼던 판을 다시 돌아 모아 오게.",
+ "ult.sword": "천 갈래 검기",
+ "ult.spear": "빛의 창비",
+ "ult.axe": "대지 가르기",
+ "ult.bow": "화살비",
+ "ult.gun": "집중 포격",
+ "ult.knuckle": "백열권",
+ "ult.staff": "유성우"
 }

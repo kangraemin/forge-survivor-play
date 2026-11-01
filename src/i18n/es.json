@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "Consejo del herrero",
  "lobby.lossTip1": "¿Perdiste? Tu arma aún es débil.",
  "lobby.lossTip2": "Pulsa Mejorar abajo. Incluso +1 se nota mucho.",
- "lobby.lossTipBroke": "Te falta oro. Repite una fase superada para ganar más."
+ "lobby.lossTipBroke": "Te falta oro. Repite una fase superada para ganar más.",
+ "ult.sword": "Mil Tajos",
+ "ult.spear": "Lluvia de Lanzas",
+ "ult.axe": "Rompetierras",
+ "ult.bow": "Tormenta de Flechas",
+ "ult.gun": "Bombardeo",
+ "ult.knuckle": "Cien Puños",
+ "ult.staff": "Lluvia de Meteoros"
 }

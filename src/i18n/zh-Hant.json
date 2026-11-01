@@ -2246,5 +2246,12 @@
  "lobby.lossTipT": "鐵匠的忠告",
  "lobby.lossTip1": "輸了吧？劍還太弱了。",
  "lobby.lossTip2": "點下面的強化按鈕。強化一次就大不相同。",
- "lobby.lossTipBroke": "金幣不夠。去重打已通關的關卡攢一些。"
+ "lobby.lossTipBroke": "金幣不夠。去重打已通關的關卡攢一些。",
+ "ult.sword": "千刃斬",
+ "ult.spear": "光槍雨",
+ "ult.axe": "裂地擊",
+ "ult.bow": "箭雨",
+ "ult.gun": "集中砲擊",
+ "ult.knuckle": "百裂拳",
+ "ult.staff": "流星雨"
 }
