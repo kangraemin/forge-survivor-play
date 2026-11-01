@@ -146,6 +146,7 @@ export class Boot extends Phaser.Scene {
     for (const k of MODE_IMAGES) S.load.image('ma_' + k, `assets/modes/${k}.png`);
     for (const k of ['hero2_r0', 'hero2_r1', 'hero_r1', 'hero_r2', 'hero2_r2']) S.load.image('hn_' + k, `assets/hn_${k}.png`);   // 검을 지운 전투용 주인공(검은 Battle이 단계별로 쥔다)
     for (const w of HELD_W) for (const [a, fw] of Object.entries(HELD_SHEETS)) S.load.spritesheet(`hw_${w}_${a}`, `assets/heroW/${w}_${a}.png`, { frameWidth: fw, frameHeight: 52 });   // 무기를 쥔 주인공(cosmeticView.holdHero)
+    for (const w of HELD_W) for (const [a, fw] of Object.entries(HELD_SHEETS)) for (const g of ['', 'g']) S.load.spritesheet(`hw2${g}_${w}_${a}`, `assets/heroW2/${w}_${a}${g ? '_grip' : ''}.png`, { frameWidth: fw, frameHeight: 52 });   // 무기 꾸미기용 빈손 몸과 손가락 덮개(docs/heroW2.md)
     for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => S.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
     for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) S.load.image(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`);
     for (const it of CASH_PETS) { S.load.spritesheet(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`, { frameWidth: 28, frameHeight: 28 }); if (it.dir) S.load.spritesheet(`cos_${it.id}_slash`, `assets/${it.dir}/${it.id}_slash.png`, { frameWidth: 28, frameHeight: 28 }); }

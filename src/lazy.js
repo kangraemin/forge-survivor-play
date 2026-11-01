@@ -21,7 +21,7 @@ const bossTest = k => /^(boss|mid)\d/.test(k) && !/^boss(1[6-8])/.test(k);
 const equippedTest = look => {
   const ids = Object.values(look || {}).filter(Boolean);
   const re = ids.length ? new RegExp(`^cos_(${ids.join('|')})(_\\d|_slash)?$`) : null;
-  return k => !!re && re.test(k) || ids.some(id => k === `cos_aura_${id}`);
+  return k => !!re && re.test(k) || ids.some(id => k === `cos_aura_${id}`) || !!look?.weapon && /^hw2g?_/.test(k);   // 무기 꾸미기는 빈손 몸(heroW2)에 쥔다
 };
 const lobbyTest = sv => {
   const n = chNo(sv);

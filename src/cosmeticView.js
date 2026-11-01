@@ -1,6 +1,7 @@
 import { COS_ANCHORS as ANCH1, BASE_HEAD } from './cosmeticAnchors.js';
 import { HOLD } from './cosmeticHold.js';
 import { GRIP } from './weaponGrip.js';
+import { GRIP2 } from './heroGrip2.js';
 import { COS_ANCHORS2 } from './cosmeticAnchors2.js';
 const COS_ANCHORS = { ...ANCH1, ...COS_ANCHORS2 };
 import { BODY_LOOKS, COS_ROWS, cosmetic, EFFECT_FRAMES, AURAS, effectTex } from './cosmetics.js';
@@ -36,13 +37,19 @@ export function dressHero(hero, look) {
 export const HELD_W = ['sword', 'spear', 'axe', 'bow', 'gun', 'knuckle', 'staff'];
 export const HELD_SHEETS = { idle: 63, front: 37, up: 39, side: 40, atk: 58 };
 export function holdHero(sc, hero, look, wid) {
-  if (hero.cosBody || look.weapon || !HELD_W.includes(wid)) return false;
-  const k = a => `hw_${wid}_${a}`;
+  if (hero.cosBody || !HELD_W.includes(wid)) return false;
+  // 무기 꾸미기를 끼면 무기를 지운 빈손 몸(heroW2)에 꾸미기 무기를 손 자리(heroGrip2.js) 그대로 쥐여 준다(11/1: 덧그린 무기가 손에서 떠 보였다)
+  const bare = !!look.weapon, p = bare ? 'hw2' : 'hw';
+  const k = a => `${p}_${wid}_${a}`;
   if (!hero.anims?.create || !Object.keys(HELD_SHEETS).every(a => sc.textures?.exists(k(a)))) return false;
   const anim = (key, a, rate, repeat = -1, frames = [0, 1, 2, 3]) => hero.anims.create({ key, frames: frames.map(frame => ({ key: k(a), frame })), frameRate: rate, repeat });
   anim('walkFront', 'front', 8); anim('walkUp', 'up', 8); anim('walkSide', 'side', 8); anim('slash', 'atk', 26, 0, [1, 2, 3, 4]);
   anim('idle', 'idle', 2.5, -1, [0, 1]); anim('hurtPose', 'idle', 1, 0, [0]); anim('dashPose', 'idle', 1, 0, [1]);   // 원래 자세 칸과 같은 63px 폭(폭이 바뀌면 몸 판정 상자 자리가 바뀐다)
-  hero.heldW = wid; followPause(sc, hero); hero.play('idle'); return true;
+  hero.heldW = wid; followPause(sc, hero); hero.play('idle');
+  if (!bare) return true;
+  hero.bareW = wid;
+  hero.gripImg = sc.add.image(0, 0, `hw2g_${wid}_idle`, 0).setVisible(false);   // 무기 손잡이 위로 손가락을 다시 덮는 조각(몸 앞에 든 프레임만)
+  return false;   // 무기 그림은 Battle이 따로 만들어 placeHeld로 쥔다
 }
 // 주인공에게만 만든 애니메이션은 장면 전체 멈춤(pauseAll: 타격 순간 멈춤)을 듣지 않는다(Phaser Animation은 관리자가 on을 가질 때만 구독).
 // 공용 애니메이션처럼 같이 멈추게 붙인다. 안 붙이면 멈춤 동안 베기가 흘러 끝나는 틱이 달라지고 시뮬과 어긋났다
@@ -78,6 +85,7 @@ export function handOf(hero) {
 // (tools/weapon_check.mjs가 무기 7종·검 등급·무기 스킨·모든 몸·모든 프레임에서 몸통 겹침을 잰다)
 export function placeHeld(hero, weapon) {
   if (!weapon) return;
+  if (hero.bareW && placeBare(hero, weapon)) return;
   const k = hero.anims.currentAnim?.key, f = hero.flipX ? -1 : 1;
   const [gx, gy, th0, w, row, fi] = handOf(hero);
   const hold = HOLD[hero.cosBody || 'base']?.[row]?.[fi];
@@ -90,6 +98,26 @@ export function placeHeld(hero, weapon) {
   weapon.setPosition(at.x + ox * Math.cos(a) - oy * Math.sin(a), at.y + ox * Math.sin(a) + oy * Math.cos(a))
     .setFlipX(f < 0).setAngle(te + (f > 0 ? 45 : 135) + hero.angle)
     .setDepth(hero.depth + (k === 'walkUp' ? -0.001 : 0.001)).setAlpha(hero.alpha);
+}
+
+// 빈손 몸(heroW2)일 때: 프레임마다 정해 둔 손 자리·각도에 꾸미기 무기를 놓고, 몸 앞에 든 프레임은 손가락 조각을 위에 덮는다
+function placeBare(hero, weapon) {
+  const key = hero.texture.key, a = key.slice(key.lastIndexOf('_') + 1), fi = Number(hero.frame.name) || 0;
+  const g = GRIP2[hero.bareW]?.[a]?.[fi];
+  if (!g) return false;
+  const [gx, gy, th, front] = g, f = hero.flipX ? -1 : 1;
+  const at = anchorPoint(hero, gx + 0.5, gy + 0.5, hero.frame.width);
+  const [gx0, gy0] = gripOf(weapon);
+  weapon.setOrigin(f > 0 ? gx0 : 1 - gx0, gy0).setPosition(at.x, at.y).setFlipX(f < 0)
+    .setAngle((f > 0 ? th + 45 : 315 - th) + hero.angle)   // 꾸미기 그림은 손잡이(왼쪽 아래)에서 오른쪽 위(-45도)를 향한다
+    .setDepth(hero.depth + (front ? 0.001 : -0.001)).setAlpha(hero.alpha);
+  const gr = hero.gripImg;
+  if (gr?.scene) {
+    gr.setVisible(!!front && hero.visible);
+    if (front) gr.setTexture(`hw2g_${hero.bareW}_${a}`, fi).setOrigin(hero.originX, hero.originY).setPosition(hero.x, hero.y)
+      .setScale(hero.scaleX, hero.scaleY).setFlipX(hero.flipX).setAngle(hero.angle).setDepth(hero.depth + 0.002).setAlpha(hero.alpha);
+  }
+  return true;
 }
 
 // 전투 주인공이 손에 드는 무기 그림: 크기·기준점을 한 곳에서 정한다(전투·자동 검사가 같은 함수를 쓴다)

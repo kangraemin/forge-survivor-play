@@ -1152,7 +1152,7 @@ export class Battle extends Phaser.Scene {
     sfx('heal');
     const t = this.add.text(this.hero.x, this.hero.y - 26, '+' + Math.round(n), font(10, '#5fdc6a')).setOrigin(0.5).setDepth(40);
     this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 700, onComplete: () => t.destroy() });
-    this.hero.setTint(0x9dff9d); this.heroWeapon?.setTint(0x9dff9d); this.time.delayedCall(120, () => { this.hero.clearTint(); this.heroWeapon?.clearTint(); });
+    this.hero.setTint(0x9dff9d); this.heroWeapon?.setTint(0x9dff9d); this.hero.gripImg?.setTint(0x9dff9d); this.time.delayedCall(120, () => { this.hero.clearTint(); this.heroWeapon?.clearTint(); this.hero.gripImg?.clearTint(); });
   }
 
   gainXp(v) {
@@ -1195,7 +1195,7 @@ export class Battle extends Phaser.Scene {
     this.cameras.main.shake(90, 0.004);
     // 폰에서는 짧게 떨어 맞은 걸 손으로도 느끼게 한다(38차: 위험이 안 느껴졌다)
     buzz(30);
-    this.hero.setTint(0xff7070); this.heroWeapon?.setTint(0xff7070); this.time.delayedCall(90, () => { this.hero.clearTint(); this.heroWeapon?.clearTint(); });
+    this.hero.setTint(0xff7070); this.heroWeapon?.setTint(0xff7070); this.hero.gripImg?.setTint(0xff7070); this.time.delayedCall(90, () => { this.hero.clearTint(); this.heroWeapon?.clearTint(); this.hero.gripImg?.clearTint(); });
     this.hurtUntil = this.bt + 160; this.hero.play('hurtPose');
     const t = this.add.text(this.hero.x, this.hero.y - 26, '-' + d, font(10, '#ff5050')).setOrigin(0.5).setDepth(40);
     this.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 600, onComplete: () => t.destroy() });

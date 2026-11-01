@@ -1,0 +1,2101 @@
+{
+  "schemaVersion": 2,
+  "sourceSpec": "../heroW/spec.json",
+  "sourceSpecSha256": "a351075402f30de57fab454602a9ca328cb9df72d9720094b764b6efaa733736",
+  "frameIndexBase": 0,
+  "layout": "horizontal",
+  "spacing": 0,
+  "margin": 0,
+  "coordinates": {
+    "origin": "top-left pixel center of individual frame",
+    "units": "native pixels",
+    "x": "right",
+    "y": "down",
+    "angle": "degrees; right=0, clockwise positive",
+    "mirrorX": "Reflect the complete body/prop/grip composite: destination.x = frameWidth - 1 - destination.x. Hand x mirrors the same way; axis angle becomes (180 - angle + 360) % 360. Do not also apply a second prop reflection.",
+    "propTransform": "destination = hand + scale * R(angle - axisAngle) * (sourcePixel - pivot)",
+    "layer": "front: body then prop then grip (grip restores fingers over the handle); back: prop then body"
+  },
+  "review": {
+    "nativeCell": [
+      136,
+      124
+    ],
+    "bodyOffset": [
+      36,
+      36
+    ],
+    "zoom": 3,
+    "backgrounds": [
+      "#626b78",
+      "#283c30",
+      "#191e2a",
+      "#626b78"
+    ],
+    "rows": [
+      "pinwheel",
+      "leek",
+      "umbrella",
+      "dragon"
+    ],
+    "maxPropEdge": 24
+  },
+  "props": {
+    "pinwheel": {
+      "file": "game/assets/cosmetics/pinwheel.png",
+      "pivot": [
+        5,
+        26
+      ],
+      "axisAngle": -45,
+      "sha256": "2d63a524c4385869d691b221fc2fdcaffb3930c6ddb401fe3bd9ca960ead1599",
+      "width": 32,
+      "height": 32,
+      "displayMaxEdge": 24,
+      "scale": 0.75
+    },
+    "leek": {
+      "file": "game/assets/cosmetics/leek.png",
+      "pivot": [
+        5,
+        26
+      ],
+      "axisAngle": -45,
+      "sha256": "61a056b5b983990feb9b2547839f7a60008c1056050609eb267b039c78af4932",
+      "width": 32,
+      "height": 32,
+      "displayMaxEdge": 24,
+      "scale": 0.75
+    },
+    "umbrella": {
+      "file": "game/assets/cosmetics/umbrella.png",
+      "pivot": [
+        5,
+        24
+      ],
+      "axisAngle": -45,
+      "sha256": "72e6ddaf346de55fa29ccf14f0b098d6219a24e4b3409023eb06d6160a25657a",
+      "width": 32,
+      "height": 32,
+      "displayMaxEdge": 24,
+      "scale": 0.75
+    },
+    "dragon": {
+      "file": "game/assets/cosmetics/dragon.png",
+      "pivot": [
+        5,
+        26
+      ],
+      "axisAngle": -45,
+      "sha256": "854273596bef6b0824f5f45aceb238edefadaac29dfcee0d3dc56466060983c8",
+      "width": 32,
+      "height": 32,
+      "displayMaxEdge": 24,
+      "scale": 0.75
+    }
+  },
+  "weapons": {
+    "sword": {
+      "sheets": {
+        "idle": {
+          "file": "sword_idle.png",
+          "gripFile": "sword_idle_grip.png",
+          "frameWidth": 63,
+          "frameHeight": 52,
+          "frameCount": 2,
+          "fps": 2.5,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "exhale",
+            "inhale"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 22,
+              "y": 35,
+              "angle": 110,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 22,
+              "y": 35,
+              "angle": 110,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "fa9b03270f2855d1c08ead21d3beef96b76691861c2a20f4970d03c7080a0e61",
+          "sha256": "b5bf1bc1fb357fa1be952c72fc32b3db15ecabec57797c9700291a10a0e2aa80",
+          "gripSha256": "fc8986932c06a6857fdb8a9a4f86b2a654cdba8a445fddbc1086fa4357f52aa8",
+          "review": "../../../art/heroW2/review/sword_idle.png"
+        },
+        "front": {
+          "file": "sword_front.png",
+          "gripFile": "sword_front_grip.png",
+          "frameWidth": 37,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 8,
+              "y": 32,
+              "angle": 190,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 7,
+              "y": 33,
+              "angle": 115,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 7,
+              "y": 32,
+              "angle": 165,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 8,
+              "y": 32,
+              "angle": 140,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "4adf17e8c2b7b2b1a94d52807a514a7bced7b634f1d662b58c649c5cae44fbbc",
+          "sha256": "802ff691c25a604fdc92b47a5c755a301d9b7aa219433f5b64f66de894a65b20",
+          "gripSha256": "26ec62c726fee9e4698fb0b4c657ad1dc8b069281190e2a9aa26b4240ea144b6",
+          "review": "../../../art/heroW2/review/sword_front.png"
+        },
+        "up": {
+          "file": "sword_up.png",
+          "gripFile": "sword_up_grip.png",
+          "frameWidth": 39,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 29,
+              "y": 33,
+              "angle": 75,
+              "layer": "back"
+            },
+            {
+              "frame": 1,
+              "x": 29,
+              "y": 33,
+              "angle": 345,
+              "layer": "back"
+            },
+            {
+              "frame": 2,
+              "x": 29,
+              "y": 33,
+              "angle": 330,
+              "layer": "back"
+            },
+            {
+              "frame": 3,
+              "x": 29,
+              "y": 32,
+              "angle": 345,
+              "layer": "back"
+            }
+          ],
+          "sourceSha256": "f93e7cc0b5976367a8a217e45a5c1de16a7499d396412553ebc6f696b40b6e38",
+          "sha256": "bf4811b6dbd4f53c0022be429937dbdd043a2c0f7ed16ce4f0cffade57208865",
+          "gripSha256": "f58ac4631424c746e6b3a3595423801e9601ceb4a80da60cb6d78984c7fa0c3e",
+          "review": "../../../art/heroW2/review/sword_up.png"
+        },
+        "side": {
+          "file": "sword_side.png",
+          "gripFile": "sword_side_grip.png",
+          "frameWidth": 40,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 13,
+              "y": 35,
+              "angle": 80,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 11,
+              "y": 35,
+              "angle": 80,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 30,
+              "y": 34,
+              "angle": 25,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 30,
+              "y": 34,
+              "angle": 50,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "1c51b43eb05dce5e9243664abce8ae8b6e3ef25821b29393b9605cca2bd635ca",
+          "sha256": "7e539cd6cb5a083a320a75d6c39ff80d3dd4c5405b839c6722b4ea9dbef0071f",
+          "gripSha256": "086f3124bec28a026f9f8bb7a9d8c402b3bc5b1ad8ddd3a3a77c57a2b4f0f469",
+          "review": "../../../art/heroW2/review/sword_side.png"
+        },
+        "atk": {
+          "file": "sword_atk.png",
+          "gripFile": "sword_atk_grip.png",
+          "frameWidth": 58,
+          "frameHeight": 52,
+          "frameCount": 6,
+          "fps": 16,
+          "repeat": 0,
+          "releaseFrame": null,
+          "impactFrame": 3,
+          "phases": [
+            "ready",
+            "raise",
+            "slash_start",
+            "slash_impact",
+            "retract",
+            "ready"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 14,
+              "y": 35,
+              "angle": 80,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 12,
+              "y": 17,
+              "angle": 210,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 34,
+              "y": 33,
+              "angle": 320,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 34,
+              "y": 35,
+              "angle": 75,
+              "layer": "front"
+            },
+            {
+              "frame": 4,
+              "x": 24,
+              "y": 35,
+              "angle": 95,
+              "layer": "front"
+            },
+            {
+              "frame": 5,
+              "x": 15,
+              "y": 35,
+              "angle": 80,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "3c7897ceb3ab605e3845ae8469e81361df445fa075a76bc7c80f26aa172ccef0",
+          "sha256": "be5152faeb1acb23de23ad30e5ac946ccb9aa591170371392d96396950a6731f",
+          "gripSha256": "606c1ee7451b84bd2312adc392b57b9477dde53129d4518ce919de4ce9880334",
+          "review": "../../../art/heroW2/review/sword_atk.png"
+        }
+      }
+    },
+    "spear": {
+      "sheets": {
+        "idle": {
+          "file": "spear_idle.png",
+          "gripFile": "spear_idle_grip.png",
+          "frameWidth": 63,
+          "frameHeight": 52,
+          "frameCount": 2,
+          "fps": 2.5,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "exhale",
+            "inhale"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 43,
+              "y": 31,
+              "angle": 315,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 41,
+              "y": 31,
+              "angle": 315,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "91695bba5910901b09a4cacb0012fce8c8ff32cfd85cef6e5f119e210c416eec",
+          "sha256": "7170fe9afd072a12546f5956d77a66efe1ff2474a4ef04b2c96aae0b72df2cfa",
+          "gripSha256": "629f9a69c908ae61dc2466178c89cc8cbd4c8655fb9f37fee800ba8c85f0497c",
+          "review": "../../../art/heroW2/review/spear_idle.png"
+        },
+        "front": {
+          "file": "spear_front.png",
+          "gripFile": "spear_front_grip.png",
+          "frameWidth": 37,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 29,
+              "y": 31,
+              "angle": 310,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 28,
+              "y": 31,
+              "angle": 355,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 31,
+              "y": 31,
+              "angle": 310,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 30,
+              "y": 31,
+              "angle": 310,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "9ba8e43a7bf04165b72f6202a2e9d060b586227b73a85f00d2a1a2b369f26f9f",
+          "sha256": "fbaa05073fd66acc383c4cb8f2deffd0e9c8a8869ed33dd77e8e96fadb66b4c4",
+          "gripSha256": "96c8a1abfaafaa4640cc9d7c23d1973b13e504ef641c64070da8b721a8a3327d",
+          "review": "../../../art/heroW2/review/spear_front.png"
+        },
+        "up": {
+          "file": "spear_up.png",
+          "gripFile": "spear_up_grip.png",
+          "frameWidth": 39,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 30,
+              "y": 29,
+              "angle": 310,
+              "layer": "back"
+            },
+            {
+              "frame": 1,
+              "x": 30,
+              "y": 30,
+              "angle": 310,
+              "layer": "back"
+            },
+            {
+              "frame": 2,
+              "x": 29,
+              "y": 29,
+              "angle": 345,
+              "layer": "back"
+            },
+            {
+              "frame": 3,
+              "x": 28,
+              "y": 29,
+              "angle": 345,
+              "layer": "back"
+            }
+          ],
+          "sourceSha256": "6e80c84bdb5050fb4339fa89e1c3299a04f42ea7ac1660aa7d6df1469ff7d1ac",
+          "sha256": "55e8654b057c54bd70eb491073b10ec8261fbe7e7dd300a01b57c37ab1822578",
+          "gripSha256": "c5e12fbb580b56ab9d552908a81aba15d0ebcd3b96e4401576d96550040c983a",
+          "review": "../../../art/heroW2/review/spear_up.png"
+        },
+        "side": {
+          "file": "spear_side.png",
+          "gripFile": "spear_side_grip.png",
+          "frameWidth": 40,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 32,
+              "y": 30,
+              "angle": 305,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 31,
+              "y": 30,
+              "angle": 315,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 33,
+              "y": 30,
+              "angle": 305,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 34,
+              "y": 30,
+              "angle": 295,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "9589c8dca841793a59c68dd6279c4170b85ec621b785a940eee765ac54528ff4",
+          "sha256": "be0f69ded02f015bd1ce97ba74654aa182877da70f6f8aa8870bbf73121024d0",
+          "gripSha256": "da852f9e23ffe3e33c550eaa3065ccbfdb9841b9e14f48695b856e5384abe2b2",
+          "review": "../../../art/heroW2/review/spear_side.png"
+        },
+        "atk": {
+          "file": "spear_atk.png",
+          "gripFile": "spear_atk_grip.png",
+          "frameWidth": 58,
+          "frameHeight": 52,
+          "frameCount": 6,
+          "fps": 14,
+          "repeat": 0,
+          "releaseFrame": null,
+          "impactFrame": 3,
+          "phases": [
+            "upright",
+            "angle_forward",
+            "thrust_start",
+            "full_extension",
+            "pull_back",
+            "upright"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 34,
+              "y": 32,
+              "angle": 310,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 29,
+              "y": 28,
+              "angle": 325,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 29,
+              "y": 28,
+              "angle": 345,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 33,
+              "y": 27,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 4,
+              "x": 30,
+              "y": 27,
+              "angle": 355,
+              "layer": "front"
+            },
+            {
+              "frame": 5,
+              "x": 35,
+              "y": 31,
+              "angle": 310,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "602a96ee836e89b34edc6986d204d78dd2abb94dcff46af8fb96a1ffc6aeac73",
+          "sha256": "3f39c681a0ac1ad41f62aea3c2d32386d66aa25540730c43eb8ae669fcf765e7",
+          "gripSha256": "47e69e8515027142364ca10799adb4030d0939c477d0c3a44cec8dec8799866b",
+          "review": "../../../art/heroW2/review/spear_atk.png"
+        }
+      }
+    },
+    "axe": {
+      "sheets": {
+        "idle": {
+          "file": "axe_idle.png",
+          "gripFile": "axe_idle_grip.png",
+          "frameWidth": 63,
+          "frameHeight": 52,
+          "frameCount": 2,
+          "fps": 2.5,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "exhale",
+            "inhale"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 21,
+              "y": 34,
+              "angle": 140,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 21,
+              "y": 34,
+              "angle": 140,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "2ee4e06d460c782138501f1fc79b0666e19a658b9b9a87fadb87521aa4947662",
+          "sha256": "8658184219f51ef8de80e344e8b967ea19468393010903b4aea8ca17235d79ec",
+          "gripSha256": "5bee8c3b6e7e4706ca20e09f4ee40363e1685c60503795069aa5e0f2dbfb6582",
+          "review": "../../../art/heroW2/review/axe_idle.png"
+        },
+        "front": {
+          "file": "axe_front.png",
+          "gripFile": "axe_front_grip.png",
+          "frameWidth": 37,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 7,
+              "y": 34,
+              "angle": 110,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 8,
+              "y": 34,
+              "angle": 115,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 7,
+              "y": 34,
+              "angle": 115,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 8,
+              "y": 35,
+              "angle": 110,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "b38ab82685917e9e8e7b4daf880fe76a42d752e4b466d68467a9d91f8824aa70",
+          "sha256": "735533af5caf708dcb0b4c22a62e3cf975b34697e6c320c26ef81024bf6441a7",
+          "gripSha256": "3bfed55c408950c9d5ea7e3982f839b5df7e60600933e86018d05d9769307940",
+          "review": "../../../art/heroW2/review/axe_front.png"
+        },
+        "up": {
+          "file": "axe_up.png",
+          "gripFile": "axe_up_grip.png",
+          "frameWidth": 39,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 29,
+              "y": 33,
+              "angle": 80,
+              "layer": "back"
+            },
+            {
+              "frame": 1,
+              "x": 29,
+              "y": 34,
+              "angle": 80,
+              "layer": "back"
+            },
+            {
+              "frame": 2,
+              "x": 31,
+              "y": 32,
+              "angle": 20,
+              "layer": "back"
+            },
+            {
+              "frame": 3,
+              "x": 30,
+              "y": 33,
+              "angle": 320,
+              "layer": "back"
+            }
+          ],
+          "sourceSha256": "58c41f6616aca2e16a629343eb25e97caaa557d6286b8d395427d9b36dd90ceb",
+          "sha256": "3092a58d3ccdb0090c1b05a217d5970902cce23b230493d99b741b98f08b4289",
+          "gripSha256": "2546e00a00ca0f633b9133bd11a9ca545980a0c40960b129735f9953ad91d0de",
+          "review": "../../../art/heroW2/review/axe_up.png"
+        },
+        "side": {
+          "file": "axe_side.png",
+          "gripFile": "axe_side_grip.png",
+          "frameWidth": 40,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 13,
+              "y": 34,
+              "angle": 150,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 13,
+              "y": 35,
+              "angle": 80,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 13,
+              "y": 34,
+              "angle": 90,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 15,
+              "y": 35,
+              "angle": 80,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "f00b400c5c0b5ab91162d5e58920dd644f8db394b5b6aead1692e28633b18ae2",
+          "sha256": "4a964b9d614473dccac53d4a5fda38a347d868b8bf8ab7c70364c33f0d09cb79",
+          "gripSha256": "cd921276cb276a259680502d5cdfba006cff081dc8176db228f5fc369eefa24b",
+          "review": "../../../art/heroW2/review/axe_side.png"
+        },
+        "atk": {
+          "file": "axe_atk.png",
+          "gripFile": "axe_atk_grip.png",
+          "frameWidth": 58,
+          "frameHeight": 52,
+          "frameCount": 6,
+          "fps": 10,
+          "repeat": 0,
+          "releaseFrame": null,
+          "impactFrame": 3,
+          "phases": [
+            "low_ready",
+            "raise",
+            "overhead",
+            "chop_impact",
+            "follow_through",
+            "low_ready"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 14,
+              "y": 36,
+              "angle": 140,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 32,
+              "y": 24,
+              "angle": 350,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 18,
+              "y": 13,
+              "angle": 230,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 31,
+              "y": 34,
+              "angle": 5,
+              "layer": "front"
+            },
+            {
+              "frame": 4,
+              "x": 29,
+              "y": 36,
+              "angle": 355,
+              "layer": "front"
+            },
+            {
+              "frame": 5,
+              "x": 13,
+              "y": 36,
+              "angle": 115,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "160e9b0162f97955ac66fbd883b1796f5ed19c368da12fe8dd0d9450624b870f",
+          "sha256": "e659fa51229328de3721b6aacada3ec9315087bdb67eaf04413d62f98ce93636",
+          "gripSha256": "d4e5b71ad91f8b3f077ff69dd0c2363b6f1e205acbfd5ae564bb194c26ea81fc",
+          "review": "../../../art/heroW2/review/axe_atk.png"
+        }
+      }
+    },
+    "bow": {
+      "sheets": {
+        "idle": {
+          "file": "bow_idle.png",
+          "gripFile": "bow_idle_grip.png",
+          "frameWidth": 63,
+          "frameHeight": 52,
+          "frameCount": 2,
+          "fps": 2.5,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "exhale",
+            "inhale"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 46,
+              "y": 31,
+              "angle": 295,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 46,
+              "y": 30,
+              "angle": 295,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "d1ac8f1f941dcabb99e47373cdc457526e3ba379c3085705012942a27d06350d",
+          "sha256": "63b167488c927d6f23a1a65b40e9298dfdbf78b1c008b76a6292c4d04753cbbc",
+          "gripSha256": "d9f59cc8fbc73a0098bfbe89f95c840b4a28455525e9dd1f2649f680fea5d542",
+          "review": "../../../art/heroW2/review/bow_idle.png"
+        },
+        "front": {
+          "file": "bow_front.png",
+          "gripFile": "bow_front_grip.png",
+          "frameWidth": 37,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 33,
+              "y": 31,
+              "angle": 295,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 29,
+              "y": 32,
+              "angle": 345,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 31,
+              "y": 33,
+              "angle": 345,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 30,
+              "y": 31,
+              "angle": 310,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "e9f1d1d78452f67ba90d63cb2718985247e7c27729a238010cb32031d21ce986",
+          "sha256": "d7a3e283b305257d1243412c1fbda9c4f895f537fc4f5166a84b0d4c9e8b487d",
+          "gripSha256": "f4b35ad6c9042524b7a0875028f348333948802e83c12e699d9a4f48e2649f72",
+          "review": "../../../art/heroW2/review/bow_front.png"
+        },
+        "up": {
+          "file": "bow_up.png",
+          "gripFile": "bow_up_grip.png",
+          "frameWidth": 39,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 31,
+              "y": 31,
+              "angle": 305,
+              "layer": "back"
+            },
+            {
+              "frame": 1,
+              "x": 30,
+              "y": 32,
+              "angle": 350,
+              "layer": "back"
+            },
+            {
+              "frame": 2,
+              "x": 31,
+              "y": 31,
+              "angle": 305,
+              "layer": "back"
+            },
+            {
+              "frame": 3,
+              "x": 28,
+              "y": 31,
+              "angle": 350,
+              "layer": "back"
+            }
+          ],
+          "sourceSha256": "eece06918b2c70acc810849fbff2de9bc5deb7add841d3674a54289dd4c9324a",
+          "sha256": "c0150408f481130317fce6b7e70846bee14bb7dbca29493f7f9f29367a40b69c",
+          "gripSha256": "e90c665a6b32300663fcc043152d5dd64a39434b34f4e51eb8012766ff558348",
+          "review": "../../../art/heroW2/review/bow_up.png"
+        },
+        "side": {
+          "file": "bow_side.png",
+          "gripFile": "bow_side_grip.png",
+          "frameWidth": 40,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 34,
+              "y": 30,
+              "angle": 295,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 34,
+              "y": 30,
+              "angle": 295,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 32,
+              "y": 30,
+              "angle": 310,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 34,
+              "y": 30,
+              "angle": 295,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "4b465f1520a3a10d86fa0f9fff16e20fad8e86aecfa70fe8d292472188a884ff",
+          "sha256": "54b64f6c8a999ed67cf47a1b480b2ead17a7a856d4cb06f235f7081659094c12",
+          "gripSha256": "678266943cff4f43a493ffd68bc003659865b97978aa30405467efeafb25e51c",
+          "review": "../../../art/heroW2/review/bow_side.png"
+        },
+        "atk": {
+          "file": "bow_atk.png",
+          "gripFile": "bow_atk_grip.png",
+          "frameWidth": 58,
+          "frameHeight": 52,
+          "frameCount": 6,
+          "fps": 12,
+          "repeat": 0,
+          "releaseFrame": 3,
+          "impactFrame": null,
+          "phases": [
+            "raise",
+            "nock_arrow",
+            "full_draw",
+            "release",
+            "follow_through",
+            "recover"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 42,
+              "y": 26,
+              "angle": 280,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 42,
+              "y": 26,
+              "angle": 345,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 47,
+              "y": 26,
+              "angle": 275,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 44,
+              "y": 26,
+              "angle": 275,
+              "layer": "front"
+            },
+            {
+              "frame": 4,
+              "x": 45,
+              "y": 26,
+              "angle": 275,
+              "layer": "front"
+            },
+            {
+              "frame": 5,
+              "x": 37,
+              "y": 33,
+              "angle": 295,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "358126dae51463a4779a84f262e02e612c17ca2bfb201a10e50f1eaf088bf0ae",
+          "sha256": "571c3b2d4094ec322932a138b2c8644741b51ff2822cbfad68d9cd3d1ed17158",
+          "gripSha256": "54f184885649591140e0005bc9e86336ff538bde3e130a2bce1bda5a3aa61a5a",
+          "review": "../../../art/heroW2/review/bow_atk.png"
+        }
+      }
+    },
+    "gun": {
+      "sheets": {
+        "idle": {
+          "file": "gun_idle.png",
+          "gripFile": "gun_idle_grip.png",
+          "frameWidth": 63,
+          "frameHeight": 52,
+          "frameCount": 2,
+          "fps": 2.5,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "exhale",
+            "inhale"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 38,
+              "y": 34,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 37,
+              "y": 33,
+              "angle": 0,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "bfdee755962d1e63a15e62ae892e553f4abdcd24e1823e39613da8f9563dcb53",
+          "sha256": "5bb9b70c70186fa24df7340d17ba214be6e11b0169db4d65a4d87a197a9229fb",
+          "gripSha256": "34f8eee462cfa5194cb7e274af5738fe969986bb81e008a8c1b5f7c3b50ee529",
+          "review": "../../../art/heroW2/review/gun_idle.png"
+        },
+        "front": {
+          "file": "gun_front.png",
+          "gripFile": "gun_front_grip.png",
+          "frameWidth": 37,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 29,
+              "y": 31,
+              "angle": 50,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 29,
+              "y": 31,
+              "angle": 50,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 28,
+              "y": 31,
+              "angle": 75,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 31,
+              "y": 32,
+              "angle": 50,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "75e1dad885c70424b2618b97629488ac5095b9410dfdde6e5a336cf60c7f3ce8",
+          "sha256": "3d719765ec8d563f6d7d53de2c01a9bea7c0d522d57bc4f31ec89ea2258075b7",
+          "gripSha256": "c6bb717ac0e0e071b984196472fce0f07617b5a36e2f3894b15cc6320b9d7f9d",
+          "review": "../../../art/heroW2/review/gun_front.png"
+        },
+        "up": {
+          "file": "gun_up.png",
+          "gripFile": "gun_up_grip.png",
+          "frameWidth": 39,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 29,
+              "y": 32,
+              "angle": 75,
+              "layer": "back"
+            },
+            {
+              "frame": 1,
+              "x": 28,
+              "y": 32,
+              "angle": 75,
+              "layer": "back"
+            },
+            {
+              "frame": 2,
+              "x": 30,
+              "y": 31,
+              "angle": 5,
+              "layer": "back"
+            },
+            {
+              "frame": 3,
+              "x": 29,
+              "y": 32,
+              "angle": 75,
+              "layer": "back"
+            }
+          ],
+          "sourceSha256": "363858cb329f94c53c7b14f1a835ed594521ab1cb9419dbd8a344baa953283e8",
+          "sha256": "bcb0a4ea7a3b15f724e8c34dc26e9570ab4f32b3ce6d4e23eb5e00cba509a09f",
+          "gripSha256": "eb7c853af41420bcb7b1b23748fcaa62b097a5a5b9ece15e5820ea37eb3c1bd0",
+          "review": "../../../art/heroW2/review/gun_up.png"
+        },
+        "side": {
+          "file": "gun_side.png",
+          "gripFile": "gun_side_grip.png",
+          "frameWidth": 40,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 28,
+              "y": 30,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 30,
+              "y": 32,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 30,
+              "y": 32,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 28,
+              "y": 30,
+              "angle": 0,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "762c9db2aea3abe06bc308790f70630855b26fbe466b8c8277549afaf73f0163",
+          "sha256": "464073fd0e44788b5984d5ce0f8668b9c9138efb94af8b106f01bcb9690a33cb",
+          "gripSha256": "7ac1f87acaf4f4bc22c699b2c160995b6d283c01e8c60b6b67cf50bb411beb87",
+          "review": "../../../art/heroW2/review/gun_side.png"
+        },
+        "atk": {
+          "file": "gun_atk.png",
+          "gripFile": "gun_atk_grip.png",
+          "frameWidth": 58,
+          "frameHeight": 52,
+          "frameCount": 6,
+          "fps": 16,
+          "repeat": 0,
+          "releaseFrame": 2,
+          "impactFrame": null,
+          "phases": [
+            "raise",
+            "aim",
+            "fire",
+            "recoil",
+            "lower",
+            "recover"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 36,
+              "y": 18,
+              "angle": 290,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 36,
+              "y": 23,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 35,
+              "y": 23,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 34,
+              "y": 16,
+              "angle": 320,
+              "layer": "front"
+            },
+            {
+              "frame": 4,
+              "x": 34,
+              "y": 29,
+              "angle": 50,
+              "layer": "front"
+            },
+            {
+              "frame": 5,
+              "x": 32,
+              "y": 32,
+              "angle": 5,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "0a54d2f0c5b72c8950372ac2c505f3ecd9d5f2b2c58f9a4c822097bb7b5ec6da",
+          "sha256": "922428914e44142d1688e838a9ee902e2db1256084aab3a3ffcb74e6eafab5ae",
+          "gripSha256": "abe948479b6ea8d5a784fb6cf655e5fcb76b3db3e914dabec55336cf3adf82f4",
+          "review": "../../../art/heroW2/review/gun_atk.png"
+        }
+      }
+    },
+    "knuckle": {
+      "sheets": {
+        "idle": {
+          "file": "knuckle_idle.png",
+          "gripFile": "knuckle_idle_grip.png",
+          "frameWidth": 63,
+          "frameHeight": 52,
+          "frameCount": 2,
+          "fps": 2.5,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "exhale",
+            "inhale"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 41,
+              "y": 27,
+              "angle": 5,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 41,
+              "y": 27,
+              "angle": 320,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "dafca82b74fd626134b9c8d189f6d4c6746f817e52c1614b9cb6988db2d8e1af",
+          "sha256": "c476b09c3fe8db4008c9f85496e31b229ef03464065679f8399effec7d459979",
+          "gripSha256": "f91b2c19d6082185bb9df961be3c391e24ba55dee71532670cf86e65045c58ff",
+          "review": "../../../art/heroW2/review/knuckle_idle.png"
+        },
+        "front": {
+          "file": "knuckle_front.png",
+          "gripFile": "knuckle_front_grip.png",
+          "frameWidth": 37,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 29,
+              "y": 31,
+              "angle": 50,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 30,
+              "y": 34,
+              "angle": 50,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 29,
+              "y": 31,
+              "angle": 20,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 30,
+              "y": 32,
+              "angle": 50,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "173e0cfbf9e4363b867015912fe5545a3e6cdec88e01e6dcfa3ada22e99e08ba",
+          "sha256": "db8eac4b307e5fd7ec0341e947abc3a43c1c1cbf93a07bdfe8e3e6d037525d2f",
+          "gripSha256": "e33d3c19ced67a5d634b64dc876521fab3dd42a77f0dc8717e7a779f14b117af",
+          "review": "../../../art/heroW2/review/knuckle_front.png"
+        },
+        "up": {
+          "file": "knuckle_up.png",
+          "gripFile": "knuckle_up_grip.png",
+          "frameWidth": 39,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 30,
+              "y": 33,
+              "angle": 50,
+              "layer": "back"
+            },
+            {
+              "frame": 1,
+              "x": 30,
+              "y": 33,
+              "angle": 50,
+              "layer": "back"
+            },
+            {
+              "frame": 2,
+              "x": 30,
+              "y": 33,
+              "angle": 60,
+              "layer": "back"
+            },
+            {
+              "frame": 3,
+              "x": 30,
+              "y": 33,
+              "angle": 50,
+              "layer": "back"
+            }
+          ],
+          "sourceSha256": "7c223aa81065f79846e08f94b9ee705f669a689dd6f6f51557e2e42841bd3abd",
+          "sha256": "cbac48de1e4d7f9448a1cc4dfef3deb2591521aa1db1d2efdfe840e6985ff1ce",
+          "gripSha256": "5982b945eb4aa547afbe6a9c21e7c100234563f0e9a8023d395248e2a66280fb",
+          "review": "../../../art/heroW2/review/knuckle_up.png"
+        },
+        "side": {
+          "file": "knuckle_side.png",
+          "gripFile": "knuckle_side_grip.png",
+          "frameWidth": 40,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 31,
+              "y": 28,
+              "angle": 325,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 29,
+              "y": 28,
+              "angle": 330,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 31,
+              "y": 29,
+              "angle": 330,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 29,
+              "y": 29,
+              "angle": 330,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "7b8898c419bbec9fa43083f52fc164cc22110f40801595a5578535dee8dc73cb",
+          "sha256": "8db5ff273bdc8e0401fde9236bc344c184cc66b4995918872f07f03f82cd49c3",
+          "gripSha256": "f44a30579f089d567609552a2287ee043cb17b74d96c36ef5031b9973d542204",
+          "review": "../../../art/heroW2/review/knuckle_side.png"
+        },
+        "atk": {
+          "file": "knuckle_atk.png",
+          "gripFile": "knuckle_atk_grip.png",
+          "frameWidth": 58,
+          "frameHeight": 52,
+          "frameCount": 6,
+          "fps": 18,
+          "repeat": 0,
+          "releaseFrame": null,
+          "impactFrame": 3,
+          "phases": [
+            "guard",
+            "wind_up",
+            "jab_start",
+            "jab_contact",
+            "retract",
+            "guard"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 33,
+              "y": 24,
+              "angle": 295,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 36,
+              "y": 24,
+              "angle": 305,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 42,
+              "y": 24,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 43,
+              "y": 24,
+              "angle": 0,
+              "layer": "front"
+            },
+            {
+              "frame": 4,
+              "x": 34,
+              "y": 24,
+              "angle": 295,
+              "layer": "front"
+            },
+            {
+              "frame": 5,
+              "x": 33,
+              "y": 24,
+              "angle": 320,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "0ec47e77b7e3e5418656e14e61b42a394fabef4b3ad33638b88525eb9d5232a2",
+          "sha256": "1b404931a41350e7acc5798e61adc241ba4ec93bab88072c06a44ad595b107a0",
+          "gripSha256": "4a343dbfa09e01e540beb4cffdd6deb7d94437c86e8e6f96eccba94fe96cd5e8",
+          "review": "../../../art/heroW2/review/knuckle_atk.png"
+        }
+      }
+    },
+    "staff": {
+      "sheets": {
+        "idle": {
+          "file": "staff_idle.png",
+          "gripFile": "staff_idle_grip.png",
+          "frameWidth": 63,
+          "frameHeight": 52,
+          "frameCount": 2,
+          "fps": 2.5,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "exhale",
+            "inhale"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 44,
+              "y": 30,
+              "angle": 305,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 44,
+              "y": 30,
+              "angle": 305,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "a07db11faa898312d8e559211ba0623bfe3bbf894a0a5a26b1016cf17e23c072",
+          "sha256": "53ff2430cc13998ee204e086784e4fdea58676f1d78c67f4c2eb71533bee8e55",
+          "gripSha256": "e3a5bd6dffe669467d70340c64c547834d6dca9e5a6fa7cb093a4d583a2a5913",
+          "review": "../../../art/heroW2/review/staff_idle.png"
+        },
+        "front": {
+          "file": "staff_front.png",
+          "gripFile": "staff_front_grip.png",
+          "frameWidth": 37,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 31,
+              "y": 30,
+              "angle": 355,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 30,
+              "y": 30,
+              "angle": 355,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 32,
+              "y": 30,
+              "angle": 310,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 32,
+              "y": 29,
+              "angle": 305,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "21357cb158de27d7f01824c54177f48d28b5125f10461fc14fc0fcc1400786bd",
+          "sha256": "b5f7c24ae4ee7053566c81e88b13a1567716b84bce645c5030ec3352c6b3505a",
+          "gripSha256": "a616ef6d9b4b18252396c7192a9087017ffc8bd99d037e44e133beb31643a25f",
+          "review": "../../../art/heroW2/review/staff_front.png"
+        },
+        "up": {
+          "file": "staff_up.png",
+          "gripFile": "staff_up_grip.png",
+          "frameWidth": 39,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 31,
+              "y": 29,
+              "angle": 345,
+              "layer": "back"
+            },
+            {
+              "frame": 1,
+              "x": 31,
+              "y": 28,
+              "angle": 345,
+              "layer": "back"
+            },
+            {
+              "frame": 2,
+              "x": 31,
+              "y": 27,
+              "angle": 345,
+              "layer": "back"
+            },
+            {
+              "frame": 3,
+              "x": 31,
+              "y": 27,
+              "angle": 345,
+              "layer": "back"
+            }
+          ],
+          "sourceSha256": "03d39d32c939c49bdb1050ec3b99ed5200dca985f4fdb7612aedd5db4c724434",
+          "sha256": "270144541f0343dc02ae474081d8e484ee90bed8a869d6588c11c954134e6814",
+          "gripSha256": "4b280bbf00eea005cabb1b8c301e45671a9240f6501bb84ec62cca071965a15e",
+          "review": "../../../art/heroW2/review/staff_up.png"
+        },
+        "side": {
+          "file": "staff_side.png",
+          "gripFile": "staff_side_grip.png",
+          "frameWidth": 40,
+          "frameHeight": 52,
+          "frameCount": 4,
+          "fps": 8,
+          "repeat": -1,
+          "releaseFrame": null,
+          "impactFrame": null,
+          "phases": [
+            "step_a",
+            "pass_a",
+            "step_b",
+            "pass_b"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 33,
+              "y": 29,
+              "angle": 320,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 33,
+              "y": 30,
+              "angle": 310,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 34,
+              "y": 29,
+              "angle": 320,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 34,
+              "y": 30,
+              "angle": 310,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "2ec45313514c83d573705cbb08ae685c15ac46e97e03bec689763db672eee295",
+          "sha256": "135fa24d851d70bcc3d2be512d061bfc5a89d46e2871bf07f956a0751ec5a8ab",
+          "gripSha256": "4c8efa5507022f59138797256310a10669b6af7efb53e7131bb78f737596d0a4",
+          "review": "../../../art/heroW2/review/staff_side.png"
+        },
+        "atk": {
+          "file": "staff_atk.png",
+          "gripFile": "staff_atk_grip.png",
+          "frameWidth": 58,
+          "frameHeight": 52,
+          "frameCount": 6,
+          "fps": 12,
+          "repeat": 0,
+          "releaseFrame": 3,
+          "impactFrame": null,
+          "phases": [
+            "upright",
+            "lift",
+            "charge",
+            "cast",
+            "fade",
+            "upright"
+          ],
+          "frames": [
+            {
+              "frame": 0,
+              "x": 36,
+              "y": 30,
+              "angle": 305,
+              "layer": "front"
+            },
+            {
+              "frame": 1,
+              "x": 38,
+              "y": 23,
+              "angle": 285,
+              "layer": "front"
+            },
+            {
+              "frame": 2,
+              "x": 32,
+              "y": 23,
+              "angle": 320,
+              "layer": "front"
+            },
+            {
+              "frame": 3,
+              "x": 40,
+              "y": 25,
+              "angle": 345,
+              "layer": "front"
+            },
+            {
+              "frame": 4,
+              "x": 36,
+              "y": 28,
+              "angle": 320,
+              "layer": "front"
+            },
+            {
+              "frame": 5,
+              "x": 37,
+              "y": 30,
+              "angle": 300,
+              "layer": "front"
+            }
+          ],
+          "sourceSha256": "d3d4a7ab0373348b79f77b3cbf78b005eb6d53bc226ca35bc95c81e0f4cfe06a",
+          "sha256": "a0f717d64312f6604c84e38e52ade69cbe596ad8f50add02c96f4f397694e840",
+          "gripSha256": "f510d9e9cd75cb2d0121bc15faed6bd154dd3e98ca22e11ebe3745dfb141c2fc",
+          "review": "../../../art/heroW2/review/staff_atk.png"
+        }
+      }
+    }
+  },
+  "bodyArtStatus": "reviewed-weapon-remnants-resolved",
+  "pathBases": {
+    "sourceSpec": "relative to grip.json",
+    "sheetFile": "relative to grip.json",
+    "gripFile": "relative to grip.json",
+    "review": "relative to grip.json",
+    "propFile": "repository root"
+  },
+  "knownIssues": [],
+  "knownIssuesEvidence": "../../../art/heroW2/review-findings.png",
+  "anchorNotes": {
+    "staff_atk": "Final hand pixels visually remeasured on the existing empty-hand sheet; supersedes source/hand-corrections.json. Frame 2 old [39,20] is transparent; final [32,23]."
+  },
+  "bodyArtCorrection": {
+    "baselineCommit": "b898e602d910f9b75b0dc16c060f07e0eff0cba4",
+    "evidence": "../../../art/heroW2/review-findings.png",
+    "scope": "Four body sheets, six frames; 100 listed weapon-remnant pixels cleared; 5 string pixels over the bow_atk frame 5 sleeve replaced with adjacent sleeve colors. Hand/arm/body shape and grip overlays preserved.",
+    "reviewSnapshots": "art/heroW2/review/*.png and verification.json are pre-correction snapshots; review-findings.png is the current before/after evidence.",
+    "edits": [
+      {
+        "file": "bow_front.png",
+        "frame": 1,
+        "clearedRuns": [
+          [
+            26,
+            35,
+            46
+          ],
+          [
+            27,
+            47,
+            47
+          ]
+        ]
+      },
+      {
+        "file": "bow_side.png",
+        "frame": 2,
+        "clearedRuns": [
+          [
+            28,
+            26,
+            27
+          ],
+          [
+            28,
+            33,
+            38
+          ],
+          [
+            28,
+            40,
+            46
+          ]
+        ]
+      },
+      {
+        "file": "bow_atk.png",
+        "frame": 4,
+        "clearedRuns": [
+          [
+            39,
+            29,
+            40
+          ]
+        ]
+      },
+      {
+        "file": "bow_atk.png",
+        "frame": 5,
+        "clearedRuns": [
+          [
+            33,
+            26,
+            29
+          ],
+          [
+            33,
+            35,
+            40
+          ],
+          [
+            33,
+            42,
+            47
+          ],
+          [
+            34,
+            47,
+            48
+          ]
+        ],
+        "filledPixels": [
+          {
+            "at": [
+              33,
+              30
+            ],
+            "copiedFrom": [
+              32,
+              30
+            ]
+          },
+          {
+            "at": [
+              33,
+              31
+            ],
+            "copiedFrom": [
+              32,
+              31
+            ]
+          },
+          {
+            "at": [
+              33,
+              32
+            ],
+            "copiedFrom": [
+              32,
+              32
+            ]
+          },
+          {
+            "at": [
+              33,
+              33
+            ],
+            "copiedFrom": [
+              32,
+              33
+            ]
+          },
+          {
+            "at": [
+              33,
+              34
+            ],
+            "copiedFrom": [
+              32,
+              34
+            ]
+          }
+        ]
+      },
+      {
+        "file": "staff_side.png",
+        "frame": 1,
+        "clearedRuns": [
+          [
+            30,
+            34,
+            45
+          ],
+          [
+            31,
+            47,
+            47
+          ]
+        ]
+      },
+      {
+        "file": "staff_side.png",
+        "frame": 3,
+        "clearedRuns": [
+          [
+            31,
+            8,
+            16
+          ],
+          [
+            31,
+            22,
+            26
+          ],
+          [
+            31,
+            34,
+            47
+          ],
+          [
+            32,
+            47,
+            47
+          ]
+        ]
+      }
+    ]
+  }
+}
