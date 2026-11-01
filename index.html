@@ -8,7 +8,9 @@
 html,body{margin:0;height:100%;background:#0b0b10;overflow:hidden;touch-action:none}
 /* 아이폰 사파리: 100%는 주소창 뒤까지 잡혀 화면 위가 잘렸다. 보이는 영역(dvh)에 고정한다 */
 body{position:fixed;inset:0}
-#game{position:fixed;left:0;top:0;width:100vw;height:100vh;height:100dvh}
+/* 세이프존: 상태바·노치·홈 바·안드로이드 내비게이션 자리를 비우고 그 안에만 게임을 그린다.
+   토스 안에서는 ait-entry.js가 SDK 값(--sat·--sab)과 토스 위 버튼 줄 높이(--navh)를 넣는다 */
+#game{position:fixed;left:0;right:0;top:calc(max(var(--sat,0px),env(safe-area-inset-top,0px)) + var(--navh,0px));bottom:max(var(--sab,0px),env(safe-area-inset-bottom,0px))}
 </style></head>
 <body><div id="game"></div>
 <div style="font-family:G11;position:absolute;opacity:0">가</div><div style="font-family:G9;position:absolute;opacity:0">가</div>
