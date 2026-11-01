@@ -36,6 +36,8 @@ export const CHAPTERS = [
   { name: t('data.e37437'), tiles: 'tile16', mobs: ['frostguard', 'froshound', 'frostmage'], boss: 'frostking', mid: 'frostknight', dur: 312, dark: 0.4, light: 0x8ad8ff, deco: 0x90c0e8, env: 'palace', lateCh: 16, note: t('data.724478') },
   { name: t('data.f1967b'), tiles: 'tile17', mobs: ['harpooner', 'skyray', 'balloon'], boss: 'skywhale', mid: 'skypirate', dur: 320, dark: 0.3, light: 0xffc890, deco: 0xc89860, env: 'skyway', lateCh: 17, note: t('data.1d0e45') },
   { name: t('data.d0cadf'), tiles: 'tile18', mobs: ['gearbeetle', 'duelist', 'alarmowl'], boss: 'clockwarden', mid: 'clockdancer', dur: 328, dark: 0.45, light: 0xffd890, deco: 0xc0a060, env: 'clocktower', lateCh: 18, note: t('data.1cba79') },
+  { name: t('late19.name'), tiles: 'tile19', mobs: ['bonewyrm', 'graverobber', 'bonepriest'], boss: 'bonedragon', mid: 'boneknight', dur: 336, dark: 0.5, light: 0xb890ff, deco: 0xa098b0, env: 'grave', lateCh: 19, note: t('late19.note') },
+  { name: t('late20.name'), tiles: 'tile20', mobs: ['shade', 'cursedknight', 'trumpeter'], boss: 'blackking', mid: 'royalguard', dur: 344, dark: 0.55, light: 0xff6a5a, deco: 0xa04050, env: 'throne', lateCh: 20, note: t('late20.note') },
 ];
 // 출시 본편 장 수. 16장부터는 업데이트로 연다(원격 설정 contentChapters, 기본 15). 웹/앱은 부팅 때 version.json 값을 받아 둔다
 export const MAIN_CHAPTERS = 15;
@@ -43,7 +45,7 @@ const OPEN_KEY = 'forge-content-ch';
 let OPEN = MAIN_CHAPTERS;
 if (isTest()) OPEN = CHAPTERS.length;   // 테스트 모드: 모든 장을 연다(기기의 열림 값은 읽지도 쓰지도 않는다)
 else try { const v = Number(localStorage.getItem(OPEN_KEY)); if (Number.isInteger(v) && v >= MAIN_CHAPTERS && v <= CHAPTERS.length) OPEN = v; } catch { /* 저장소 없음 */ }
-export const openN = () => OPEN;                                   // 지금 열린 장 수(15~18)
+export const openN = () => OPEN;                                   // 지금 열린 장 수(15~20)
 export const openTotal = () => OPEN * 3;                           // 열린 판 수
 export const setOpenN = n => {
   const v = Math.max(MAIN_CHAPTERS, Math.min(CHAPTERS.length, Math.floor(Number(n)) || MAIN_CHAPTERS));
@@ -118,6 +120,13 @@ export const MOBS = {
   gearbeetle: { sheet: 'z18', row: 0, hp: 68, spd: 28, dmg: 11, ai: 'chase', color: 0xd0a050, fx: 'rewind', lateCh: 18 },
   duelist: { sheet: 'z18', row: 1, hp: 24, spd: 46, dmg: 8, ai: 'charge', color: 0xa0a0d0, fx: 'timeskip', lateCh: 18 },
   alarmowl: { sheet: 'z18', row: 2, hp: 18, spd: 50, dmg: 7, ai: 'swarm', color: 0xe0d0b0, fx: 'alarm', lateCh: 18 },
+  // 19~20장(용의 무덤 · 검은 왕좌): 그림은 assets/ch19-20
+  bonewyrm: { sheet: 'z19', row: 0, hp: 24, spd: 50, dmg: 8, ai: 'swarm', color: 0xc8b8ff, fx: 'lunge', lateCh: 19 },
+  graverobber: { sheet: 'z19', row: 1, hp: 30, spd: 54, dmg: 7.5, ai: 'chase', color: 0xd0b080, fx: 'steal', lateCh: 19 },
+  bonepriest: { sheet: 'z19', row: 2, hp: 19, spd: 28, dmg: 7.5, ai: 'ranged', color: 0xb890ff, fx: 'raise', lateCh: 19 },
+  shade: { sheet: 'z20', row: 0, hp: 26, spd: 48, dmg: 8.5, ai: 'charge', color: 0x705080, fx: 'shadowtrail', lateCh: 20 },
+  cursedknight: { sheet: 'z20', row: 1, hp: 72, spd: 23, dmg: 11.5, ai: 'tank', color: 0xc05060, fx: 'curse', lateCh: 20 },
+  trumpeter: { sheet: 'z20', row: 2, hp: 22, spd: 30, dmg: 7, ai: 'ranged', color: 0xe0b050, fx: 'rally', lateCh: 20 },
 };
 
 export const MOB_NAMES = {
@@ -131,6 +140,7 @@ export const MOB_NAMES = {
   anvilimp: t('data.bb5bd7'), flamegiant: t('data.5db3d1'), starskull: t('data.59ee18'),
   frostguard: t('data.20d4ce'), froshound: t('data.443dbb'), frostmage: t('data.2590f1'), harpooner: t('data.4ae714'), skyray: t('data.4ac09c'), balloon: t('data.ed8dfa'),
   gearbeetle: t('data.59164c'), duelist: t('data.9357d2'), alarmowl: t('data.fbd14f'),
+  bonewyrm: t('late19.m0'), graverobber: t('late19.m1'), bonepriest: t('late19.m2'), shade: t('late20.m0'), cursedknight: t('late20.m1'), trumpeter: t('late20.m2'),
 };
 // 변종: 스테이지마다 하나씩 새로 나와 판마다 몬스터가 달라 보이게 한다(같은 그림에 색·크기·행동을 바꾼다)
 export const VARIANTS = {
@@ -181,9 +191,11 @@ export const BOSSES = {
   mirrorlord: { name: t('data.91fb7c'), sheet: 'boss5', row: 2, hp: 2550, dmg: 18, spd: 26, color: 0x90ffe8, pattern: ['mirror', 'ring', 'aimed', 'mirror'], rage: 'reflect' },
   forgegod: { name: t('data.66d303'), sheet: 'boss6', row: 0, hp: 2800, dmg: 19, spd: 24, color: 0xffd75e, pattern: ['hammer', 'ring', 'slam', 'hammer'], rage: 'meteor' },
   // 16~18장 보스: 시트는 assets/ch16-18/boss<장>_r0(이동 2프레임)·_telegraph(패턴 예고 2프레임)
-  frostking: { name: t('data.3d46cb'), sheet: 'boss16', row: 0, hp: 3000, dmg: 20, spd: 26, color: 0x8ad8ff, pattern: ['icelance', 'charge', 'frostquake', 'icelance'], rage: 'blizzard', lateCh: 16 },
+  frostking: { name: t('data.3d46cb'), sheet: 'boss16', row: 0, hp: 3000, dmg: 20, spd: 26, color: 0x8ad8ff, pattern: ['icelance', 'frostslide', 'frostquake', 'icelance'], rage: 'blizzard', lateCh: 16 },
   skywhale: { name: t('data.862fee'), sheet: 'boss17', row: 0, hp: 3250, dmg: 21, spd: 24, color: 0xe08a50, pattern: ['volley', 'skydive', 'broadside', 'volley'], rage: 'squall', lateCh: 17 },
-  clockwarden: { name: t('data.f3231a'), sheet: 'boss18', row: 0, hp: 3500, dmg: 22, spd: 22, color: 0xd0a050, pattern: ['chime', 'rewindpat', 'gearsaw', 'rewindpat'], rage: 'stoptime', lateCh: 18 },
+  clockwarden: { name: t('data.f3231a'), sheet: 'boss18', row: 0, hp: 3500, dmg: 22, spd: 22, color: 0xd0a050, pattern: ['chime', 'rewindpat', 'gearsaw', 'clockhands'], rage: 'stoptime', lateCh: 18 },
+  bonedragon: { name: t('late19.boss'), sheet: 'boss19', row: 0, hp: 3750, dmg: 23, spd: 24, color: 0xb890ff, pattern: ['bonebreath', 'graverise', 'ribcage', 'bonebreath'], rage: 'dragonfall', lateCh: 19 },
+  blackking: { name: t('late20.boss'), sheet: 'boss20', row: 0, hp: 4000, dmg: 24, spd: 24, color: 0xff6a5a, pattern: ['shadowgrid', 'kingsword', 'sigil', 'checkmate'], rage: 'crownfall', lateCh: 20 },
   // 장마다 다른 중간보스(x-2 마지막 웨이브). 그림 assets/mid1~6_r0~2(2프레임, 높이 80), 패턴은 midPat.js·envfx.js·lateEnv.js. general은 무한의 탑 전용(펫으로도 쓴다)
   chief: { name: t('data.2512ff'), sheet: 'mid1', row: 0, hp: 440, dmg: 11, spd: 24, color: 0x7ac05a, pattern: ['charge', 'clubs', 'summon', 'clubs'], rage: 'slam', mid: true },
   gravekeeper: { name: t('data.d061cb'), sheet: 'mid1', row: 1, hp: 480, dmg: 11, spd: 20, color: 0x9dd0a0, pattern: ['graves', 'pools', 'aimed', 'graves'], rage: 'slam', mid: true },
@@ -203,6 +215,8 @@ export const BOSSES = {
   frostknight: { name: t('data.923d9e'), sheet: 'mid6', row: 0, hp: 1040, dmg: 16, spd: 24, color: 0x8ad8ff, pattern: ['icelance', 'frostquake', 'charge', 'icelance'], rage: 'blizzard', mid: true, lateCh: 16 },
   skypirate: { name: t('data.1bdaa0'), sheet: 'mid6', row: 1, hp: 1080, dmg: 16, spd: 28, color: 0xe08a50, pattern: ['volley', 'broadside', 'swoop', 'volley'], rage: 'squall', mid: true, lateCh: 17 },
   clockdancer: { name: t('data.744747'), sheet: 'mid6', row: 2, hp: 1120, dmg: 17, spd: 26, color: 0xd0a050, pattern: ['chime', 'gearsaw', 'rewindpat', 'chime'], rage: 'stoptime', mid: true, lateCh: 18 },
+  boneknight: { name: t('late19.mid'), sheet: 'mid7', row: 0, hp: 1160, dmg: 17, spd: 26, color: 0xb890ff, pattern: ['graverise', 'charge', 'bonebreath', 'graverise'], rage: 'ribcage', mid: true, lateCh: 19 },
+  royalguard: { name: t('late20.mid'), sheet: 'mid7', row: 1, hp: 1200, dmg: 18, spd: 28, color: 0xff6a5a, pattern: ['kingsword', 'charge', 'shadowgrid', 'kingsword'], rage: 'sigil', mid: true, lateCh: 20 },
   general: { name: t('battle.20631e'), sheet: 'boss2', row: 2, hp: 500, dmg: 11, spd: 24, color: 0xe8e2c8, pattern: ['charge', 'summon', 'aimed'], rage: 'slam' },
 };
 
@@ -212,7 +226,10 @@ export const PROLOGUE_BOSS = CHAPTERS[14].boss;
 // 챕터 배율: 무기 등급이 오를 때(약 2.1배) 몬스터 체력도 같이 오른다. 4~5장 벽이 너무 높아 조금 낮췄다
 // 6장부터는 장마다 REC_G배씩 오른다(무기 등급이 2장마다 오르므로 등급 한 칸 2.56배 = 장당 1.6배). 5장까지는 예전 그대로
 export const REC_G = 1.4;
-export const chapterHp = c => (c < 5 ? Math.pow(2.05, c) : Math.pow(2.05, 4) * Math.pow(REC_G, c - 4)) * GEAR_HP(c);           // c는 0부터
+// 19장부터는 장당 1.4배 대신 1.05배: 무기 등급은 14장에서 끝나고 강화도 +20이 끝이라 19-3 권장의 75%·20-3 52%밖에 못 닿았다(시뮬 late4). 19·20장의 어려움은 보스 약점·기믹이 맡는다
+const FLAT_C = 17, FLAT_G = 1.05 / REC_G;
+const flatK = c => c > FLAT_C ? Math.pow(FLAT_G, c - FLAT_C) : 1;
+export const chapterHp = c => (c < 5 ? Math.pow(2.05, c) : Math.pow(2.05, 4) * Math.pow(REC_G, c - 4)) * GEAR_HP(c) * flatK(c);           // c는 0부터
 export const chapterDmgRaw = c => 0.65 * Math.pow(1.18, c);   // 어려움 모드는 이 값 그대로(어려움 표는 따로 맞춰 둠)
 // 50차: 10장부터 몹 피해가 장마다 18%씩 늘어 15장에선 주인공 체력(선형)이 몇 대에 녹았다. 권장 전투력 1.2배로도 보스에 못 닿았다
 // 10장부터는 장당 증가를 10%로 줄인다(몹 피해·지형 피해 둘 다 이 값에서 나온다). 플레이어 쪽은 건드리지 않는다
@@ -245,7 +262,7 @@ export const TIERS = [
 // 승급에 필요한 깬 판 수(그 등급으로 올라가려면). 5장까지는 장마다, 6장부터는 두 장마다
 export const TIER_AT = [0, 3, 6, 9, 12, 15, 21, 27, 33, 39];
 // 그 장을 권장할 때 쓰는 무기 공격력 기준
-export const REC_BASE = c => c < 5 ? TIERS[c].atk : Math.round(190 * Math.pow(REC_G, c - 4));
+export const REC_BASE = c => c < 5 ? TIERS[c].atk : Math.round(190 * Math.pow(REC_G, c - 4) * flatK(c));
 // 무기 종류마다 이름이 다르다(검은 원래 이름, 나머지는 등급 + 무기)
 const TIER_PRE = [t('data.a30c87'), t('data.5d91e5'), t('data.4834de'), t('data.967598'), t('data.40f556'), t('data.cafc55'), t('data.eeac0d'), t('data.c53ca8'), t('data.82267f'), t('data.8ec2bb')];
 export const tierName = (tier, w) => !w || w.id === 'sword' ? TIERS[tier].name : `${TIER_PRE[tier]} ${w.noun}`;
@@ -301,8 +318,8 @@ export const FIRST_CLEAR_MUL = 2.5;
 // 마지막 장(15장) 보스를 처음 잡을 때 따로 받는 완주 보상(업적·무기·펫과 별개). 장비는 한 등급 위로 2개
 export const RELIC_DROP = 0.05;   // 15장 마지막 보스 희귀 보상(마왕의 목걸이) 확률
 export const FINALE = { gem: 150, sweep: 3, guard: 2, stone: 40, items: 2 };
-// 16~18장 보스를 처음 잡을 때 받는 새 보상(장마다 하나씩). 18장은 마지막이라 크다. 세트 장비(palace·skyway·clock)는 gear.js
-export const LATE_FIRST = { 15: { gem: 100, stone: 30, guard: 2, items: 1, title: t('codex.93326b') }, 16: { gem: 120, stone: 36, guard: 2, items: 1, sweep: 2 }, 17: { gem: 200, stone: 50, guard: 3, items: 2, sweep: 3 } };
+// 16~20장 보스를 처음 잡을 때 받는 새 보상(장마다 하나씩). 20장은 마지막이라 크다. 세트 장비(palace·skyway·clock·grave·throne)는 gear.js
+export const LATE_FIRST = { 15: { gem: 100, stone: 30, guard: 2, items: 1, title: t('codex.93326b') }, 16: { gem: 120, stone: 36, guard: 2, items: 1, sweep: 2 }, 17: { gem: 200, stone: 50, guard: 3, items: 2, sweep: 3 }, 18: { gem: 230, stone: 56, guard: 3, items: 2, sweep: 3 }, 19: { gem: 300, stone: 70, guard: 4, items: 3, sweep: 4, title: t('late20.title') } };
 export const CHAPTER_INTRO = { from: 5, goldMul: 2, sweep: 1 };
 export const introOf = c => c >= CHAPTER_INTRO.from ? { gold: Math.round(clearGold(c, 0) * CHAPTER_INTRO.goldMul / 5) * 5, sweep: CHAPTER_INTRO.sweep } : null;
 export const clearStone = (c, s) => 3 + oldS(s) + c * 2;
@@ -583,7 +600,10 @@ export const MISSIONS = [
   { id: 'kill', name: t('data.0c8b84'), need: 100 },
   { id: 'clear', name: t('data.31ae7b'), need: 1 },
   { id: 'enh', name: t('data.35b3d5'), need: 1 },
+  { id: 'ward', name: t('data.misWard'), need: 1, from: 9 },   // 69차: 방벽은 4장부터 나와서 그때부터 보인다
 ];
+// 지금 보일 임무(from: 깬 판 수가 이만큼 돼야 보인다)
+export const missionsFor = (list, sv) => list.filter(m => !m.from || (sv?.cleared || 0) >= m.from);
 export const MISSION_GIVE = { gem: 5, stone: 2 };
 // 55차: 대장간 의뢰 — 매일 3개(날짜 번호로 돌려 가며 고른다). 진행은 오늘 임무 칸(mis)의 같은 세는 값을 쓰고 받은 표시는 misGot('o_id')에 둔다
 // 확률·보상 수치는 그대로 두고 '강화에 실패해도 쌓이는 진행'을 더해 2장부터의 금화 벽 구간에 강화석·방지권이 들어오게 한다
@@ -659,6 +679,7 @@ export const WEEKLY = [
   { id: 'clear', name: t('data.8a2177'), need: 15 },
   { id: 'enh', name: t('data.c72d7e'), need: 10 },
   { id: 'dun', name: t('data.65c72e'), need: 4 },
+  { id: 'ward', name: t('data.wkWard', { need: 10 }), need: 10, from: 9 },
 ];
 export const WEEKLY_GIVE = { gem: 20, stone: 10 };
 export const WEEKLY_ALL = { gem: 50, guard: 1 };

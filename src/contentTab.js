@@ -7,7 +7,8 @@ import { font, font9, panel, button, icon, fmt, toast, gemIcon, skillIcon } from
 import { grant, giveText } from './shop.js';
 import { track } from './log.js';
 import { dexState, achList, achReady, titles, titleName, DEX_HP, DEX_SET_ATK } from './codex.js';
-import { WTYPES, SETS } from './gear.js';
+import { WTYPES, SETS, wtypeOf } from './gear.js';
+import { WEAK, KINDS, answersFor } from './bossWeak.js';
 import { t } from './i18n.js';
 
 const { W } = D;
@@ -84,14 +85,15 @@ export const ContentTab = {
   // ── 주간 도전(임무 창 '이번 주' 칸) ──
   weeklyReady() {
     const wk = this.sv.wk || { mis: {}, got: {} };
-    const n = D.WEEKLY.filter(m => (wk.mis[m.id] || 0) >= m.need && !wk.got[m.id]).length;
-    return n + (D.WEEKLY.every(m => wk.got[m.id]) && !wk.got.all ? 1 : 0);
+    const ws = D.missionsFor(D.WEEKLY, this.sv), n = ws.filter(m => (wk.mis[m.id] || 0) >= m.need && !wk.got[m.id]).length;
+    return n + (ws.every(m => wk.got[m.id]) && !wk.got.all ? 1 : 0);
   },
   weeklyDraw(body, redraw) {
     const sv = this.sv, wk = sv.wk;
-    D.WEEKLY.forEach((m, i) => {
-      const y = 102 + i * 40, have = Math.min(m.need, wk.mis[m.id] || 0), done = have >= m.need, got = wk.got[m.id];
-      body.add(panel(this, 26, y, W - 52, 34, { fill: got ? 0x141018 : 0x293845 }));
+    const ws = D.missionsFor(D.WEEKLY, sv), gap = ws.length > 4 ? 34 : 40, off = ws.length > 4 ? 8 : 0;   // 69차: 5개면 줄 간격을 좁힌다
+    ws.forEach((m, i) => {
+      const y = 102 + i * gap, have = Math.min(m.need, wk.mis[m.id] || 0), done = have >= m.need, got = wk.got[m.id];
+      body.add(panel(this, 26, y, W - 52, gap < 40 ? 31 : 34, { fill: got ? 0x141018 : 0x293845 }));
       body.add(this.add.text(36, y + 5, m.name, font9(10, got ? '#6a6080' : '#ffffff')));
       { const rt = this.add.text(36, y + 19, `${fmt(have)}/${fmt(m.need)} · ${giveText(D.WEEKLY_GIVE)}`, font9(10, done ? '#5fdc6a' : '#a1b2b6')); rt.setScale(Math.min(1, 144 / rt.width)); body.add(rt); }   // 55차: 버튼과 겹치지 않게 폭에 맞춘다
       const bt = button(this, W - 60, y + 17, 52, 24, got ? t('lobby.8d8680') : t('lobby.98d0f0'), () => {
@@ -100,15 +102,15 @@ export const ContentTab = {
       }, { size: 10, color: 0x2f6b3a });
       bt.setEnabled(done && !got); body.add(bt);
     });
-    const allDone = D.WEEKLY.every(m => wk.got[m.id]);
-    const ab = button(this, W / 2, 278, 200, 24, wk.got.all ? t('lobby.96d0ce') : t('contentTab.1f39b1', { giveText: giveText(D.WEEKLY_ALL) }), () => {
+    const allDone = ws.every(m => wk.got[m.id]);
+    const ab = button(this, W / 2, 278 + off, 200, 24, wk.got.all ? t('lobby.96d0ce') : t('contentTab.1f39b1', { giveText: giveText(D.WEEKLY_ALL) }), () => {
       if (!allDone || wk.got.all) return;
       wk.got.all = true; track('weekly_claim', { id: 'all' }); grant(sv, D.WEEKLY_ALL); sfx('win'); this.refreshTop(); redraw();
     }, { size: 10, color: 0x2f6b3a });
     ab.setEnabled(allDone && !wk.got.all); body.add(ab);
     const left = (8 - new Date().getDay()) % 7 || 7;
-    body.add(this.add.text(W / 2, 312, t('contentTab.d3baf4', { left }), font9(10, '#a1b2b6')).setOrigin(0.5));
-    body.add(this.add.text(W / 2, 330, t('contentTab.1ea30f'), font9(10, '#7d8f94')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 312 + off, t('contentTab.d3baf4', { left }), font9(10, '#a1b2b6')).setOrigin(0.5));
+    body.add(this.add.text(W / 2, 330 + off, t('contentTab.1ea30f'), font9(10, '#7d8f94')).setOrigin(0.5));
   },
 
   // ── 대장간 의뢰(임무 창 '의뢰' 칸 + 대장간 탭 칩) ──
@@ -185,12 +187,15 @@ export const ContentTab = {
       body.add(this.add.text(x + gw / 2, 127, g.name, font9(10, on ? '#ffffff' : '#a1b2b6')).setOrigin(0.5));
       body.add(this.add.text(x + gw / 2, 141, `${g.n}/${g.list.length}`, font9(9, full ? '#ffd75e' : '#7d8f94')).setOrigin(0.5));
       const hit = this.add.rectangle(x + gw / 2, 134, gw - 3, 32, 0, 0).setInteractive({ useHandCursor: true });
-      hit.on('pointerup', () => { if (this.dexG === i) return; sfx('click'); this.dexG = i; redraw(); });
+      hit.on('pointerup', () => { if (this.dexG === i) return; sfx('click'); this.dexG = i; this.dexP = 0; redraw(); });
       body.add(hit);
     });
     const g = st.groups[this.dexG], cols = g.list.length > 12 || g.id === 'weapon' ? 4 : 3, cw = (W - 36) / cols;
     const sprite = g.id === 'mob' || g.id === 'boss' || g.id === 'pet', ch = sprite || g.id === 'weapon' ? 58 : g.id === 'egg' ? 60 : 36;
-    g.list.forEach((cell, i) => {
+    // 69차: 칸이 많은 묶음(몬스터 60·보스 41)이 창(아래 끝 436) 밖으로 잘렸다 → 쪽 넘기기(업적과 같은 자리)
+    const per = cols * Math.floor((400 - 156) / (ch + 3)), pages = Math.ceil(g.list.length / per);
+    this.dexP = Math.min(this.dexP || 0, Math.max(0, pages - 1));
+    g.list.slice(this.dexP * per, (this.dexP + 1) * per).forEach((cell, i) => {
       const x = 18 + (i % cols) * cw, y = 156 + Math.floor(i / cols) * (ch + 3);
       body.add(panel(this, x, y, cw - 3, ch, { fill: cell.on ? 0x1d2a22 : 0x15111f, line: cell.on ? 0x5fdc6a : 0x293845 }));
       const cx = x + (cw - 3) / 2;
@@ -207,8 +212,35 @@ export const ContentTab = {
       }
       const col = g.id === 'set' && cell.on ? SETS[cell.id].css : cell.on ? '#ffffff' : '#6a6080';
       body.add(this.add.text(cx, ty, cell.name, font9(cell.name.length > 6 ? 9 : 10, col)).setOrigin(0.5, 0));
-      body.add(this.add.text(cx, ty + 12, cell.sub, { ...font9(9, cell.on ? '#5fdc6a' : '#7d8f94'), align: 'center', wordWrap: { width: cw - 8 } }).setOrigin(0.5, 0));
+      body.add(this.add.text(cx, ty + 12, cell.sub, { ...font9(9, cell.weak ? '#ffe060' : cell.on ? '#5fdc6a' : '#7d8f94'), align: 'center', wordWrap: { width: cw - 8 } }).setOrigin(0.5, 0));
+      // 69차: 약점 있는 보스 칸을 누르면 약점·답 스킬(지금 무기 기준)을 자세히
+      if (g.id === 'boss' && WEAK[cell.id] && cell.on) {
+        const hit = this.add.rectangle(cx, y + ch / 2, cw - 3, ch, 0, 0).setInteractive({ useHandCursor: true });
+        hit.on('pointerup', () => { sfx('click'); this.weakWin(cell); });
+        body.add(hit);
+      }
     });
+    if (pages > 1) {
+      body.add(this.add.text(W / 2, 410, `${this.dexP + 1} / ${pages}`, font(10, '#a1b2b6')).setOrigin(0.5));
+      [[-1, W / 2 - 50, '◀'], [1, W / 2 + 50, '▶']].forEach(([d, x, t]) => {
+        const ok = this.dexP + d >= 0 && this.dexP + d < pages;
+        const bt = button(this, x, 410, 36, 22, t, () => { if (!ok) return; sfx('click'); this.dexP += d; redraw(); }, { size: 10 });
+        bt.setEnabled(ok); body.add(bt);
+      });
+    }
+  },
+
+  weakWin(cell) {
+    const parent = this.modalC, c = this.modal(), k = WEAK[cell.id], seen = !!this.sv.dex?.w?.[cell.id];
+    c.close = () => { c.destroy(); this.modalC = parent; };   // 도감 창 위에 뜬 창: 닫아도 도감 창이 열린 상태(busy·Esc 대상)는 그대로
+    c.add(panel(this, 24, 150, W - 48, 160, { fill: 0x1a1426, line: 0x7fd8ff }));
+    c.add(this.add.text(W / 2, 168, cell.name, font(13, '#ffffff')).setOrigin(0.5));
+    const list = answersFor(k, wtypeOf(this.sv).id).map(x => D.SKILLS[x].name).join(' · ');
+    c.add(this.add.text(W / 2, 186, seen ? cell.sub : t('bw.dexUnknown'), font(11, seen ? '#ffe060' : '#7d8f94')).setOrigin(0.5));
+    // 70차: 한 덩어리로 감싸면 '안 / 들어간다'처럼 문장 중간에서 끊겼다 → 문장마다 '- ' 한 줄
+    const lines = (seen ? KINDS[k].hint(list) : t('bw.dexHow')).split(/(?<=[!.。！？?])\s*/).filter(x => x.trim()).map(x => '- ' + x.trim());
+    c.add(this.add.text(40, 202, lines.join('\n'), { ...font9(10, '#f2e4bc'), wordWrap: { width: W - 84 } }).setLineSpacing(3));
+    c.add(button(this, W / 2, 288, 90, 24, t('bw.dexClose'), () => c.close(), { size: 11 }));
   },
 
   achDraw(body, redraw) {

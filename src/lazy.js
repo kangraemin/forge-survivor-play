@@ -34,7 +34,7 @@ export function criticalKeys(sv, { REQUIRED, ICONS }) {
   const eq = equippedTest(equippedLook(sv));
   const first = (sv.stats?.runs | 0) === 0 && (sv.cleared | 0) === 0;
   const lob = first ? () => false : lobbyTest(sv);
-  return k => base.has(k) || /^(hn_|w_)/.test(k) || eq(k) || lob(k);
+  return k => base.has(k) || /^(hn_|w_|hw_)/.test(k) || eq(k) || lob(k);
 }
 
 // 장면 안 로더에 아직 없는 그림만 올린다(받을 게 있으면 true)

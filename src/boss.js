@@ -10,7 +10,7 @@ import { t, tt } from './i18n.js';
 import { weakOf, GuardMixin, showHint } from './bossWeak.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
-const PAT_NAME = { jump: t('boss.107f3a'), charge: t('boss.420d2b'), slam: t('boss.029568'), ring: t('boss.6d24cb'), aimed: t('boss.36fc49'), summon: t('boss.d66332'), sweep: t('boss.40236d'), pools: t('boss.ec0b01'), wave: t('boss.997e54'), tsunami: t('boss.814117'), spore: t('boss.5c693c'), bloom: t('boss.0768ac'), prism: t('boss.3e97bd'), shatter: t('boss.56758f'), gale: t('boss.071b3a'), cyclone: t('boss.3dbf66'), void: t('boss.a11889'), eclipse: t('boss.895396'), burrow: t('boss.15b7f0'), sink: t('boss.4af90f'), vent: t('boss.418165'), overheat: t('boss.5bbfb4'), bolt: t('boss.7e82c9'), tempest: t('boss.d7dac6'), mirror: t('boss.e70e4d'), reflect: t('boss.2c22c2'), hammer: t('boss.ecef39'), meteor: t('boss.8d6129'), icelance: t('boss.93e20a'), frostquake: t('boss.e480b8'), blizzard: t('boss.87a560'), volley: t('boss.15e4f0'), skydive: t('boss.81537e'), broadside: t('boss.054902'), squall: t('boss.071b3a'), chime: t('boss.3e801a'), rewindpat: t('boss.099f7b'), gearsaw: t('boss.1497d7'), stoptime: t('boss.cb1b40'),
+const PAT_NAME = { jump: t('boss.107f3a'), charge: t('boss.420d2b'), slam: t('boss.029568'), ring: t('boss.6d24cb'), aimed: t('boss.36fc49'), summon: t('boss.d66332'), sweep: t('boss.40236d'), pools: t('boss.ec0b01'), wave: t('boss.997e54'), tsunami: t('boss.814117'), spore: t('boss.5c693c'), bloom: t('boss.0768ac'), prism: t('boss.3e97bd'), shatter: t('boss.56758f'), gale: t('boss.071b3a'), cyclone: t('boss.3dbf66'), void: t('boss.a11889'), eclipse: t('boss.895396'), burrow: t('boss.15b7f0'), sink: t('boss.4af90f'), vent: t('boss.418165'), overheat: t('boss.5bbfb4'), bolt: t('boss.7e82c9'), tempest: t('boss.d7dac6'), mirror: t('boss.e70e4d'), reflect: t('boss.2c22c2'), hammer: t('boss.ecef39'), meteor: t('boss.8d6129'), icelance: t('boss.93e20a'), frostquake: t('boss.e480b8'), blizzard: t('boss.87a560'), volley: t('boss.15e4f0'), skydive: t('boss.81537e'), broadside: t('boss.054902'), squall: t('boss.071b3a'), chime: t('boss.3e801a'), rewindpat: t('boss.099f7b'), gearsaw: t('boss.1497d7'), stoptime: t('boss.cb1b40'), frostslide: t('boss.patFrostslide'), clockhands: t('boss.patClockhands'), checkmate: t('boss.patCheckmate'),
   clubs: t('boss.05f230'), graves: t('boss.0a1ef8'), lavaspit: t('boss.d9d2de'), icicles: t('boss.b3b24e'), chains: t('boss.3a008c'), claw: t('boss.e62c5f'), tongue: t('boss.3ba158'), stinger: t('boss.e2a932'), swoop: t('boss.35fb4a'), gaze: t('boss.b9dfe0'), unwrap: t('boss.4bc136'), piston: t('boss.f17946'), shards: t('boss.e11a57'), anvilrain: t('boss.1655ad') };
 const MID_EXTRA = ['ring', 'jump'];   // 50차: 중간보스 페이즈 1·2에서 늘어나는 새 패턴
 const PHASE_LINE = [t('boss.d58fa8'), t('boss.6bf13b')];
@@ -178,7 +178,7 @@ export class BossAI {
     const t = s.add.text(m.x, m.y - m.displayHeight * 0.62, name, font(10, '#ffe0a0', 3)).setOrigin(0.5).setDepth(41);
     s.tweens.add({ targets: t, y: t.y - 10, alpha: 0, duration: 900, delay: 350, onComplete: () => t.destroy() });
     // 16~18장 보스: 패턴이 시작되면 예고 그림(_telegraph)으로 잠깐 바뀐다
-    if (this.b.lateCh && s.anims.exists(this.key + 'Tele')) { m.anims.play(this.key + 'Tele', true); s.time.delayedCall(1000, () => m.active && m.anims.play(this.key, true)); }
+    if (this.b.lateCh && s.anims.exists(this.key + 'Tele')) { m.play(this.key + 'Tele', true); s.time.delayedCall(1000, () => m.active && m.play(this.key, true)); }
   }
 
   // 47차: 보스 머리 위 말풍선 한 줄

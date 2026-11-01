@@ -18,7 +18,7 @@ import { runMidEvent } from './midPat.js';
 import { ModeRun } from './modes.js';   // 모드(지키기·점령·돌파·사냥) 규칙. 여기선 연결만
 
 import { consumeTrial, cosmetic, wardrobe, salePrice, buyCosmetic } from './cosmetics.js';
-import { dressHero, CosmeticActor, weaponKey, placeHeld, heldSpec, sizeHeld, placeWeapon } from './cosmeticView.js';
+import { dressHero, holdHero, CosmeticActor, weaponKey, placeHeld, heldSpec, sizeHeld, placeWeapon } from './cosmeticView.js';
 import { t, tt } from './i18n.js';
 import { line } from './lines.js';
 import { setupWide } from './wide.js';
@@ -343,7 +343,8 @@ export class Battle extends Phaser.Scene {
     if (sv.enh >= 10) this.hero.preFX?.addGlow(rc, sv.enh >= 15 ? 3 : 2, 0, false, 0.1, 8);
     // 주인공 그림은 검을 들고 있다: 다른 무기면 손에 그 무기 그림을 겹쳐 든다
     const wk = weaponKey(this.cosLook, this.wtype.id, sv.tier);
-    this.heroWeapon = this.textures.exists(wk) ? this.add.image(0, 0, wk) : null;
+    const held = holdHero(this, this.hero, this.cosLook, this.wtype.id);   // 무기를 쥔 채 그린 몸이면 따로 얹지 않는다
+    this.heroWeapon = !held && this.textures.exists(wk) ? this.add.image(0, 0, wk) : null;
     this.heroSword = this.wtype.id === 'sword' || !!this.cosLook.weapon;
     if (this.heroWeapon) {
       // 검은 등급마다 다른 그림(w_sword0~9)을 손잡이 끝으로 쥔다. +5·+10·+15를 넘으면 검이 커지고 강화 색으로 빛난다

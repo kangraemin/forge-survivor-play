@@ -3,6 +3,7 @@ import { MOBS, MOB_NAMES, BOSSES, HARD, chapterOpen } from './data.js';
 import { MODE_DEFS, MODE_N, MODE_IDS, modeCount } from './modeData.js';
 import { WTYPES, PETS, SETS, EGGS, ownsW } from './gear.js';
 import { t } from './i18n.js';
+import { WEAK } from './weakData.js';
 
 export const DEX_KILL = 100;                 // 몬스터 칸은 이만큼 잡아야 찬다
 export const DEX_HP = 0.005, DEX_SET_ATK = 0.02;   // 칸 하나 최대 체력 +0.5%, 묶음 하나 다 채우면 모든 피해 +2%
@@ -13,12 +14,19 @@ const kills = (sv, k) => sv.dex?.m?.[k] || 0;
 // 묶음: 칸마다 이름·찼나·진행 글자
 export const DEX_GROUPS = [
   { id: 'mob', name: t('codex.fa2390'), cells: sv => Object.keys(MOBS).filter(k => shown(MOBS[k])).map(k => ({ id: k, name: MOB_NAMES[k], anim: k, on: kills(sv, k) >= DEX_KILL, sub: `${Math.min(DEX_KILL, kills(sv, k))}/${DEX_KILL}` })) },
-  { id: 'boss', name: t('battle.792e7e'), cells: sv => Object.keys(BOSSES).filter(k => shown(BOSSES[k])).map(k => ({ id: k, name: BOSSES[k].name, anim: k, on: kills(sv, k) >= 1, sub: kills(sv, k) ? t('codex.e8885d', { kills: kills(sv, k) }) : t('codex.cb74c6') })) },
+  { id: 'boss', name: t('battle.792e7e'), cells: sv => Object.keys(BOSSES).filter(k => shown(BOSSES[k])).map(k => ({ id: k, name: BOSSES[k].name, anim: k, on: kills(sv, k) >= 1, ...bossSub(sv, k) })) },
   { id: 'weapon', name: t('lobby.8c4dac'), cells: sv => WTYPES.map(w => ({ id: w.id, name: w.name, on: ownsW(sv, w.id), sub: ownsW(sv, w.id) ? t('codex.cb4483') : t('codex.d58fa7') })) },
   { id: 'pet', name: t('codex.153119'), cells: sv => PETS.map(p => ({ id: p.id, name: p.name, anim: p.id, on: sv.cleared >= p.unlock, sub: sv.cleared >= p.unlock ? t('codex.01aff8') : p.hint })) },
   { id: 'set', name: t('codex.aaba48'), cells: sv => Object.entries(SETS).map(([k, s]) => ({ id: k, name: s.name, on: !!sv.dex?.s?.[k], sub: sv.dex?.s?.[k] ? t('codex.de937c') : t('codex.d58fa7') })) },
   { id: 'egg', name: t('codex.a34b3f'), cells: sv => Object.entries(EGGS).map(([k, e]) => ({ id: k, name: sv.eggs?.[k] ? e.name : '???', on: !!sv.eggs?.[k], sub: sv.eggs?.[k] ? t('codex.de937c') : e.hint })) },
 ];
+
+export const KIND_NAME = { thorn: () => t('bw.kind.thorn'), ward: () => t('bw.kind.ward'), mirror: () => t('bw.kind.mirror'), armor: () => t('bw.kind.armor'), swift: () => t('bw.kind.swift'), guard: () => t('bw.kind.guard') };
+// 68차: 보스 칸 둘째 줄. 약점을 한 번 풀면 처치 수 대신 약점 이름(노랑), 잡았지만 아직 못 풀었으면 '약점 ???'
+export const weakSeen = sv => Object.keys(sv.dex?.w || {}).filter(k => WEAK[k] && (!BOSSES[k] || shown(BOSSES[k])));
+const bossSub = (sv, k) => sv.dex?.w?.[k] && WEAK[k] ? { sub: t('bw.dexWeak', { k: KIND_NAME[WEAK[k]]() }), weak: true }
+  : { sub: !kills(sv, k) ? t('codex.cb74c6') : WEAK[k] ? t('bw.dexUnknown') : t('codex.e8885d', { kills: kills(sv, k) }) };
+const weakKinds = sv => new Set(weakSeen(sv).map(k => WEAK[k])).size;
 
 export function dexState(sv) {
   let n = 0, all = 0, full = 0;
@@ -53,6 +61,8 @@ export const ACHIEVES = [
   { id: 'ch16', name: t('codex.93326b'), desc: t('codex.b62dc7'), need: 48, v: sv => sv.cleared, gem: 120, late: 16 },
   { id: 'ch17', name: t('codex.05f58b'), desc: t('codex.f50cab'), need: 51, v: sv => sv.cleared, gem: 150, late: 17 },
   { id: 'ch18', name: t('codex.771e08'), desc: t('codex.94b02e'), need: 54, v: sv => sv.cleared, gem: 200, title: t('codex.4c4c1a'), late: 18 },
+  { id: 'ch19', name: t('late19.ach'), desc: t('late19.achDesc'), need: 57, v: sv => sv.cleared, gem: 220, late: 19 },
+  { id: 'ch20', name: t('late20.title'), desc: t('late20.achDesc'), need: 60, v: sv => sv.cleared, gem: 300, title: t('late20.achTitle'), late: 20 },
   { id: 'hard5', name: t('codex.db6427'), desc: t('codex.76c4c6'), need: HARD.unlock, v: sv => sv.hardCleared || 0, gem: 150, title: t('codex.db6427') },
   { id: 'tower10', name: t('lobby.6369c3'), desc: t('codex.92754e'), need: 10, v: sv => sv.endBest || 0, gem: 30 },
   { id: 'tower25', name: t('codex.6f4889'), desc: t('codex.4f8102'), need: 25, v: sv => sv.endBest || 0, gem: 100, title: t('codex.6f4889') },
@@ -62,6 +72,8 @@ export const ACHIEVES = [
   { id: 'day30', name: t('codex.af7b6d'), desc: t('codex.0928c5'), need: 30, v: sv => sv.streak || 0, gem: 100, title: t('codex.af7b6d') },
   { id: 'dun10', name: t('codex.073fe8'), desc: t('codex.c22128'), need: 10, v: sv => st(sv, 'dun'), gem: 40 },
   { id: 'gob10', name: t('codex.f0a5a4'), desc: t('codex.02061f'), need: 10, v: sv => st(sv, 'gob'), gem: 40 },
+  { id: 'weak10', name: t('bw.ach1'), desc: t('bw.ach1Desc'), need: 10, v: sv => weakSeen(sv).length, gem: 40 },
+  { id: 'weakAll', name: t('bw.ach2'), desc: t('bw.ach2Desc'), need: 6, v: weakKinds, gem: 100, title: t('bw.ach2') },
   { id: 'dex25', name: t('codex.433b87'), desc: t('codex.f9cfb9'), need: 25, v: sv => dexState(sv).n, gem: 50 },
   { id: 'dexAll', name: t('codex.c12360'), desc: t('codex.b573b6'), get need() { return dexAllN(); }, v: sv => dexState(sv).n, gem: 150, title: t('codex.c12360') },
 ];

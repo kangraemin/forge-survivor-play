@@ -15,6 +15,7 @@ import { isFirstRun } from './coach.js';
 import { HAVE } from './assetList.js';   // assets/ 맨 위 PNG 목록(tools/gen_asset_list.mjs). 없는 선택 그림은 요청하지 않아 404·'Missing resource'가 없다
 import { registerAssets, criticalKeys, startBg, quietDupes } from './lazy.js';
 import { isTest } from './testMode.js';
+import { HELD_W, HELD_SHEETS } from './cosmeticView.js';
 import { setSound, setMusic, setMusicLevel, setVib, unlock, primeAudio } from './sfx.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
@@ -22,14 +23,15 @@ const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero
   'mob2_r0', 'mob2_r1', 'mob2_r2', 'fx1_r0', 'fx1_r1', 'fx1_r2', 'fx2_r0', 'fx2_r1', 'fx2_r2', 'tiles', 'deco'];
 // 6~15장 그림은 기존 그림의 색만 바꿔 만든다(tools/palette.py). 몹 시트 z6~z15(장당 3행), 보스 boss3~boss6, 바닥 tile6~tile15
 const NEW_CH = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', 'mid1', 'mid2', 'mid3', 'mid4', 'mid5', 'mid6', ...NEW_CH.map(c => 'z' + c)].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
+const OPTIONAL = ['z2', 'z3', 'z4', 'z5', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', 'mid1', 'mid2', 'mid3', 'mid4', 'mid5', 'mid6', 'mid7', ...NEW_CH.map(c => 'z' + c)].flatMap(k => [0, 1, 2].map(r => `${k}_r${r}`))
   .concat(['boss6_r0'], NEW_CH.map(c => 'tile' + c), NEW_CH.map(c => 'prop' + c), [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(c => 'lobby_bg' + c))
   .concat(['icons_r0', 'icons_r1', 'icons_r2', 'icons_r3', 'forge_bg', 'lobby_bg', 'bell', 'tile2', 'tile3', 'tile4', 'tile5']);
 // 코드로 그리던 작은 그림을 대신하는 PNG(assets/icon). 있으면 makeTextures가 건너뛴다
-// 16~18장 그림(assets/ch16-18): 키는 다른 장과 같은 규칙(z16_r0·tile16·prop16·lobby_bg16·boss16_r0), 공격 시트는 _attack, 보스 예고는 _telegraph
-const LATE_CH = [16, 17, 18];
+// 16~20장 그림(assets/ch16-18·ch19-20): 키는 다른 장과 같은 규칙(z16_r0·tile16·prop16·lobby_bg16·boss16_r0), 공격 시트는 _attack, 보스 예고는 _telegraph
+const LATE_CH = [16, 17, 18, 19, 20];
+const lateDir = k => (/(^|[a-z_])(19|20)(_|$)/.test(k) ? 'ch19-20' : 'ch16-18');
 const LATE_IMAGES = LATE_CH.flatMap(c => [0, 1, 2].flatMap(r => [`z${c}_r${r}`, `z${c}_r${r}_attack`]).concat([`tile${c}`, `prop${c}`, `lobby_bg${c}`, `boss${c}_r0`, `boss${c}_r0_telegraph`]))
-  .concat(['gimmick16_frost_vent', 'gimmick16_ice_patch', 'gimmick17_deck_vent', 'gimmick17_wind_sail', 'gimmick18_hourglass', 'gimmick18_stopped_clock']);
+  .concat(['gimmick16_frost_vent', 'gimmick16_ice_patch', 'gimmick17_deck_vent', 'gimmick17_wind_sail', 'gimmick18_hourglass', 'gimmick18_stopped_clock', 'gimmick19_dragon_skull', 'gimmick19_bone_pile', 'gimmick20_throne_eye', 'gimmick20_candle']);
 const ICONS = ['gemc', 'gs_helm', 'gs_armor', 'gs_boots', 'gs_ring', 'gs_collar', 'loot', 'chest', 'silver',
   'magnetItem', 'gem1', 'gem2', 'gem3', 'ebullet', 'fireball', 'ice', 'hammer', 'wave', 'dagger', 'orb'];
 // 무기 그림 PNG(assets/weapon/<종류><등급>.png). 있으면 makeWeaponTextures가 건너뛴다
@@ -143,6 +145,7 @@ export class Boot extends Phaser.Scene {
     for (const [k, fw, fh] of CH_SHEETS) S.load.spritesheet('ma_' + k, `assets/modes/${k}.png`, { frameWidth: fw, frameHeight: fh });   // 3~15장 장 테마 그림(파일이 없으면 도형으로)
     for (const k of MODE_IMAGES) S.load.image('ma_' + k, `assets/modes/${k}.png`);
     for (const k of ['hero2_r0', 'hero2_r1', 'hero_r1', 'hero_r2', 'hero2_r2']) S.load.image('hn_' + k, `assets/hn_${k}.png`);   // 검을 지운 전투용 주인공(검은 Battle이 단계별로 쥔다)
+    for (const w of HELD_W) for (const [a, fw] of Object.entries(HELD_SHEETS)) S.load.spritesheet(`hw_${w}_${a}`, `assets/heroW/${w}_${a}.png`, { frameWidth: fw, frameHeight: 52 });   // 무기를 쥔 주인공(cosmeticView.holdHero)
     for (const it of BODY_LOOKS) COS_ROWS.forEach((w, row) => S.load.spritesheet(`cos_${it.id}_${row}`, `assets/${it.dir || 'cosmetics'}/${it.id}_${row}.png`, { frameWidth: w, frameHeight: 52 }));
     for (const it of [...WEAPON_LOOKS, ...HEAD_LOOKS]) S.load.image(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`);
     for (const it of CASH_PETS) { S.load.spritesheet(`cos_${it.id}`, `assets/${it.dir || 'cosmetics'}/${it.id}.png`, { frameWidth: 28, frameHeight: 28 }); if (it.dir) S.load.spritesheet(`cos_${it.id}_slash`, `assets/${it.dir}/${it.id}_slash.png`, { frameWidth: 28, frameHeight: 28 }); }
@@ -152,7 +155,7 @@ export class Boot extends Phaser.Scene {
     S.load.spritesheet('cos_fx2', 'assets/cosmetics2/fx.png', { frameWidth: 16, frameHeight: 16 });
     for (const id of AURAS) S.load.spritesheet(`cos_aura_${id}`, `assets/cosmetics2/fx_${id}.png`, { frameWidth: 52, frameHeight: 52 });
     loadFx2(S);
-    for (const k of LATE_IMAGES) S.load.image(k, `assets/ch16-18/${k}.png`);
+    for (const k of LATE_IMAGES) S.load.image(k, `assets/${lateDir(k)}/${k}.png`);
     for (const k of ICONS) S.load.image(k, `assets/icon/${k}.png`);
     for (const id of WEAPONS) for (let t = 0; t < 10; t++) S.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
     registerAssets(rec);

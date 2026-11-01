@@ -52,10 +52,12 @@ export const SETS = {
   sky: { name: t('gear.5bf334'), pre: t('gear.f1c803'), css: '#e8f4ff', two: { spd: 0.08 }, twoTxt: t('data.3c4ccd'), fourTxt: t('gear.467826'), minC: 9 },
   steam: { name: t('gear.b618ff'), pre: t('gear.620db6'), css: '#e08a50', two: { hp: 0.1 }, twoTxt: t('gear.fefbab'), fourTxt: t('gear.8a95df'), minC: 11 },
   mirror: { name: t('gear.2e8831'), pre: t('gear.a5d2e8'), css: '#90ffe8', two: { atk: 0.08 }, twoTxt: t('gear.9e0581'), fourTxt: t('gear.d88cb8'), minC: 13 },
-  // 16~18장 세트: 장 열릴 때만 나온다(minC가 그 장). 4세트는 그 장의 기믹 피해를 약 40% 줄인다
+  // 16~20장 세트: 장 열릴 때만 나온다(minC가 그 장). 4세트는 그 장의 기믹 피해를 약 40% 줄인다
   palace: { name: t('gear.9bba5e'), pre: t('gear.e7b3bd'), css: '#8ad8ff', two: { def: 0.07 }, twoTxt: t('gear.234918'), fourTxt: t('gear.df87e2'), minC: 15 },
   skyway: { name: t('gear.432096'), pre: t('gear.6fe2e2'), css: '#ffc890', two: { spd: 0.1 }, twoTxt: t('gear.1077c1'), fourTxt: t('gear.b302bd'), minC: 16 },
   clock: { name: t('gear.2cc839'), pre: t('gear.d121fc'), css: '#e8d090', two: { cd: 0.09 }, twoTxt: t('gear.aed6ea'), fourTxt: t('gear.29a9a9'), minC: 17 },
+  grave: { name: t('late19.set'), pre: t('late19.setPre'), css: '#b890ff', two: { hp: 0.11 }, twoTxt: t('late19.set2'), fourTxt: t('late19.set4'), minC: 18 },
+  throne: { name: t('late20.set'), pre: t('late20.setPre'), css: '#ff6a5a', two: { atk: 0.09 }, twoTxt: t('late20.set2'), fourTxt: t('late20.set4'), minC: 19 },
   thorn: { name: t('gear.804e48'), pre: t('gear.804e48'), css: '#7fd06a', two: { hp: 0.1 }, twoTxt: t('gear.fefbab'), fourTxt: t('gear.f353a7'), minC: 0 },
   gold: { name: t('gear.b25c04'), pre: t('gear.46395b'), css: '#ffd75e', two: { mag: 0.3 }, twoTxt: t('data.7703b8'), fourTxt: t('gear.aff98a'), minC: 1 },
   // 무기 전용 세트: 그 무기를 들고 싸울 때만 나온다(상인도 판다)
@@ -207,7 +209,7 @@ export function rollRarity(boost = 0) {
 export function makeItem(c, opt = {}) {
   const r = opt.rarity ?? rollRarity(opt.boost || 0);
   const slot = slotOf(opt.slot || pick(SLOTS.map(s => s.id)));
-  const ci = Math.min(c, 17), ni = c < 5 ? c : Math.min(slot.names.length - 1, 5 + Math.floor((c - 5) / 2));   // ci: 장(수치), ni: 이름 칸(두 장에 한 칸)
+  const ci = Math.min(c, 19), ni = c < 5 ? c : Math.min(slot.names.length - 1, 5 + Math.floor((c - 5) / 2));   // ci: 장(수치), ni: 이름 칸(두 장에 한 칸)
   // 희귀 이상은 55% 확률로 세트(든 무기의 전용 세트 60%, 나머지는 그 챕터 공용 세트). 4세트가 너무 안 모였다
   const sets = Object.entries(SETS).filter(([, s]) => !s.w && s.minC <= c).map(([k]) => k);
   const wset = opt.w && SETS[opt.w] ? opt.w : null;

@@ -131,8 +131,8 @@ export class Lobby extends Phaser.Scene {
   // ── 오늘의 임무 + 출석 ──
   missionReady() {
     const sv = this.sv;
-    const n = D.MISSIONS.filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length;
-    const all = D.MISSIONS.every(m => sv.misGot[m.id]) && !sv.misGot.all;
+    const n = D.missionsFor(D.MISSIONS, sv).filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length;
+    const all = D.missionsFor(D.MISSIONS, sv).every(m => sv.misGot[m.id]) && !sv.misGot.all;
     return n + (all ? 1 : 0) + (sv.loginGot ? 0 : 1) + this.weeklyReady() + this.ordersReady();
   }
   // auto: 하루 첫 접속에 저절로 뜬 창이면 출석 보상을 바로 준다(누를 필요 없이)
@@ -168,9 +168,10 @@ export class Lobby extends Phaser.Scene {
       body.add(button(this, W - 38, 80, 26, 22, 'X', () => c.close(), { size: 11, color: 0x3a3846 }));
       if (this.misPage === 'week') return this.weeklyDraw(body, draw);
       if (this.misPage === 'order') return this.ordersDraw(body, draw);
-      D.MISSIONS.forEach((m, i) => {
-        const y = 102 + i * 40, have = Math.min(m.need, sv.mis[m.id] || 0), done = have >= m.need, got = sv.misGot[m.id];
-        body.add(panel(this, 26, y, W - 52, 34, { fill: got ? 0x141018 : 0x293845 }));
+      const ms = D.missionsFor(D.MISSIONS, sv), gap = ms.length > 3 ? 34 : 40, off = (ms.length - 3) * gap + (gap - 40) * 3;   // 4개면 줄 간격을 좁히고 아래(출석)를 off만큼 내린다
+      ms.forEach((m, i) => {
+        const y = 102 + i * gap, have = Math.min(m.need, sv.mis[m.id] || 0), done = have >= m.need, got = sv.misGot[m.id];
+        body.add(panel(this, 26, y, W - 52, gap - 6 + (gap < 40 ? 3 : 0), { fill: got ? 0x141018 : 0x293845 }));
         body.add(this.add.text(36, y + 5, m.name, font9(10, got ? '#6a6080' : '#ffffff')));
         body.add(this.add.text(36, y + 19, t('lobby.cb7823', { have, need: m.need, gem: D.MISSION_GIVE.gem, stone: D.MISSION_GIVE.stone }), font9(10, done ? '#5fdc6a' : '#a1b2b6')));
         const bt = button(this, W - 60, y + 17, 52, 24, got ? t('lobby.8d8680') : t('lobby.98d0f0'), () => {
@@ -179,18 +180,18 @@ export class Lobby extends Phaser.Scene {
         }, { size: 10, color: 0x2f6b3a });
         bt.setEnabled(done && !got); body.add(bt);
       });
-      const allDone = D.MISSIONS.every(m => sv.misGot[m.id]);
-      const ab = button(this, W / 2, 236, 190, 24, sv.misGot.all ? t('lobby.96d0ce') : t('lobby.1eb65d', { gem: D.MISSION_ALL.gem }), () => {
+      const allDone = ms.every(m => sv.misGot[m.id]);
+      const ab = button(this, W / 2, 236 + off, 190, 24, sv.misGot.all ? t('lobby.96d0ce') : t('lobby.1eb65d', { n: ms.length, gem: D.MISSION_ALL.gem }), () => {
         if (!allDone || sv.misGot.all) return;
         sv.misGot.all = true; track('mission_claim', { mission: 'all' }); grant(sv, D.MISSION_ALL); sfx('win'); this.refreshTop(); draw();
       }, { size: 10, color: 0x3a3846 });
       ab.setEnabled(allDone && !sv.misGot.all); body.add(ab);
       // 출석 7일
-      body.add(this.add.rectangle(W / 2, 258, W - 60, 1, 0x475c66));
-      body.add(this.add.text(W / 2, 272, t('lobby.659c18', { streak: sv.streak }), font(12, '#9ae0ff')).setOrigin(0.5));
-      body.add(this.add.text(W / 2, 288, mul > 1 ? t('lobby.d10aaa', { v: Math.floor((sv.streak - 1) / 7) + 1, mul }) : t('lobby.a5d115'), font9(10, mul > 1 ? '#ffd75e' : '#a1b2b6')).setOrigin(0.5));
+      body.add(this.add.rectangle(W / 2, 258 + off, W - 60, 1, 0x475c66));
+      body.add(this.add.text(W / 2, 272 + off, t('lobby.659c18', { streak: sv.streak }), font(12, '#9ae0ff')).setOrigin(0.5));
+      body.add(this.add.text(W / 2, 288 + off, mul > 1 ? t('lobby.d10aaa', { v: Math.floor((sv.streak - 1) / 7) + 1, mul }) : t('lobby.a5d115'), font9(10, mul > 1 ? '#ffd75e' : '#a1b2b6')).setOrigin(0.5));
       D.LOGIN_REWARDS.map(scaled).forEach((g, i) => {
-        const x = W / 2 + (i - 3) * 31, y = 324, past = i < day || (i === day && sv.loginGot), today = i === day;
+        const x = W / 2 + (i - 3) * 31, y = 324 + off, past = i < day || (i === day && sv.loginGot), today = i === day;
         body.add(this.add.rectangle(x, y, 28, 50, today ? 0x3b2f5c : 0x15111f).setStrokeStyle(1, today ? 0xffd75e : 0x293845));
         body.add(this.add.text(x, y - 16, t('lobby.e69dc6', { v: i + 1 }), font9(10, today ? '#ffd75e' : '#7d8f94')).setOrigin(0.5).setPadding(0, 2));
         const [k, v] = Object.entries(g)[0];
@@ -384,8 +385,8 @@ export class Lobby extends Phaser.Scene {
   refreshTop() { this.topTxt.forEach(t => t.setText(t.get())); this.bellDot?.setVisible(this.missionReady() > 0); this.bellHint?.setText(this.bellText()); }
   // 받을 것이 하나뿐이면 이름, 여럿이면 개수. 없으면 빈 글
   bellText() {
-    const sv = this.sv, n = D.MISSIONS.filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length + this.ordersReady();
-    const all = D.MISSIONS.every(m => sv.misGot[m.id]) && !sv.misGot.all, wk = this.weeklyReady(), lg = sv.loginGot ? 0 : 1;
+    const sv = this.sv, n = D.missionsFor(D.MISSIONS, sv).filter(m => (sv.mis[m.id] || 0) >= m.need && !sv.misGot[m.id]).length + this.ordersReady();
+    const all = D.missionsFor(D.MISSIONS, sv).every(m => sv.misGot[m.id]) && !sv.misGot.all, wk = this.weeklyReady(), lg = sv.loginGot ? 0 : 1;
     const kinds = (n + (all ? 1 : 0) > 0) + (wk > 0) + lg;
     if (!kinds) return '';
     if (kinds > 1) return t('lobby.c56722', { v: n + (all ? 1 : 0) + wk + lg });
@@ -965,7 +966,8 @@ export class Lobby extends Phaser.Scene {
     sv.pity = win || !D.pityOn(enh) ? 0 : (sv.pity || 0) + 1;
     let outcome = win ? 'success' : danger && !guard ? 'shatter' : 'fail';
     if (guard && !win) sv.guard--;   // 방지권은 칼을 지켜 냈을 때만 쓴다(성공해도 사라지면 아까워서 안 켰다)
-    if (!win && danger) sv.gold += Math.round(gold * D.FAIL_REFUND);
+    this.refund = !win && danger ? Math.round(gold * D.FAIL_REFUND) : 0;
+    sv.gold += this.refund;
     if (win) { sv.enh++; sv.stats.maxEnh = Math.max(sv.stats.maxEnh || 0, sv.enh); noteGear(sv); }
     else if (outcome === 'shatter') {
       sv.enh = D.shatterTo(enh); sv.stats.destroyed++;
@@ -1061,20 +1063,28 @@ export class Lobby extends Phaser.Scene {
     c.add(this.add.text(W / 2, 164, t('lobby.34db2f', { from, shatterTo: D.shatterTo(from) }), font(14, '#ff5050')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 188, sv.guard > 0 ? t('lobby.b7c259') : t('lobby.8f31cf'), font9(11, '#f2e4bc')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 206, t('lobby.a63109', { guard: sv.guard }), font9(10, '#a1b2b6')).setOrigin(0.5));
+    // 70차: 잃기만 한 게 아니라는 한 줄(위험 구간 실패는 금화 30%를 돌려준다)
+    // 71차: 작아서 안 보였다 → 금화 아이콘 + 굵은 12px
+    if (this.refund > 0) {
+      const rt = this.add.text(W / 2 + 9, 224, t('lobby.shRefund', { gold: fmt(this.refund), pct: Math.round(D.FAIL_REFUND * 100) }), font(12, '#ffd75e')).setOrigin(0.5);
+      c.add([rt, icon(this, rt.x - rt.width / 2 - 10, 224, 12, 14)]);
+    }
     // 부서진 바로 그 자리에서만 되살릴 수 있다(창을 닫으면 끝)
-    const rb = button(this, W / 2, 240, 190, 30, t('lobby.3f14ed', { from, back }), () => {
+    const rb = button(this, W / 2, 247, 190, 30, t('lobby.3f14ed', { from, back }), () => {
       track('shatter_restore_click', { from, enough: sv.gem >= back });
       if (sv.gem < back) { c.close(); this.shopPage = cashHidden() ? 'gem' : 'pack'; this.show('shop'); toast(this, t('lobby.60eef5'), '#ff9a8a'); return; }
       sv.gem -= back; sv.enh = from; sv.stats.destroyed--; save(); sfx('win'); c.close(); this.refreshTop(); this.show('forge'); toast(this, t('lobby.50781e', { from }), '#ffd75e');
-    }, { size: 11, color: 0x2f6b3a });
-    c.add([rb, gemIcon(this, W / 2 - 80, 240, 12)]);
-    const bt = button(this, W / 2, 280, 190, 28, t('lobby.31f2b8', { cost }), () => {
+    }, { size: 11, color: 0x3a3846 });
+    c.add([rb, gemIcon(this, W / 2 - 80, 247, 12)]);
+    const bt = button(this, W / 2, 284, 190, 28, t('lobby.31f2b8', { cost }), () => {
       track('shatter_guard_click', { enough: sv.gem >= cost });
       if (sv.gem < cost) { c.close(); this.shopPage = cashHidden() ? 'gem' : 'pack'; this.show('shop'); toast(this, t('lobby.60eef5'), '#ff9a8a'); return; }
       sv.gem -= cost; sv.guard++; save(); sfx('buy'); c.close(); toast(this, t('lobby.99ad39'), '#9ae0ff');
     }, { size: 11, color: 0x3a3846 });
-    c.add([bt, gemIcon(this, W / 2 - 80, 280, 12)]);
-    c.add(button(this, W / 2, 322, 110, 24, t('lobby.0ad48e'), () => { track('shatter_offer_close', { from }); c.close(); }, { size: 10, color: 0x3a3846 }));
+    c.add([bt, gemIcon(this, W / 2 - 80, 284, 12)]);
+    // 68차: 닫기도 같은 크기로(평가: 작은 닫기 버튼 때문에 보석 버튼 두 개가 강매처럼 보였다)
+    // 69차: 주황은 '그냥 닫기' 하나만(보석 버튼이 주황이면 눈이 먼저 결제로 간다)
+    c.add(button(this, W / 2, 320, 190, 28, t('lobby.0ad48e'), () => { track('shatter_offer_close', { from }); c.close(); }, { size: 11, color: 0x2f6b3a }));
   }
 
   promote() {

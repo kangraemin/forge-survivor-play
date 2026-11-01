@@ -773,6 +773,38 @@
    "Personne dans cette ville ne creuse mieux que moi.",
    "Je n'ai pas encore décidé quoi graver sur ta pierre tombale.",
    "Tu n'as pas peur, hein ? Je dois dire que cette réplique me met un peu mal à l'aise."
+  ],
+  "bonedragon": [
+   "La chair est partie, le caractère est resté.",
+   "Mon souffle sent un peu le moisi. Il a quelques siècles.",
+   "Des trous dans les ailes, mais je vole encore. Sans doute.",
+   "Chacun de mes os se souvient. Bientôt l'un d'eux se souviendra de toi.",
+   "Une visite au tombeau ? Tu choisis déjà ta place ?",
+   "Ça souffle drôlement entre ces côtes."
+  ],
+  "blackking": [
+   "Pour t'asseoir sur ce trône, il faudra d'abord me déplacer.",
+   "La couronne est trop lourde pour que je m'incline. Incline-toi.",
+   "Caché derrière les bougies ? Je te vois. À peu près.",
+   "Dans ce palais, il ne reste que moi et les ombres. Et toi, maintenant.",
+   "Personne n'était arrivé si loin. J'aurais dû préparer du thé.",
+   "L'avantage du noir : le sang ne se voit pas."
+  ],
+  "boneknight": [
+   "Je garde le tombeau. Tu as un ticket ?",
+   "Il n'y a rien dans cette armure. C'est pour ça que ça ne fait pas mal.",
+   "Ce cliquetis ? Je ris.",
+   "Pour voir le Roi Dragon, remonte d'abord mes os.",
+   "Debout depuis si longtemps que ma rotule est tombée. Un instant.",
+   "Je tombe, je me relève. L'habitude."
+  ],
+  "royalguard": [
+   "Personne n'entre dans la chambre de Sa Majesté. Pas même moi, en fait.",
+   "Trois cents ans de service. Toujours pas de vacances.",
+   "Tu entends les trompettes ? C'est ta marche funèbre.",
+   "Cette lance est un équipement royal officiel. Prends-le comme un honneur.",
+   "C'est toi, le rat qui s'est glissé avec les ombres ?",
+   "C'était quand, ma relève ? Ah oui. Jamais."
   ]
  }
 }

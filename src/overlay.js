@@ -10,8 +10,9 @@ import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, fixedCont
 import { showAd, adsLeft } from './shop.js';
 import { itemName, SKILL_UNLOCK, PETS, SLOTS, RARITY, statText, equipped, itemScore, addItems, lastTidy, makeItem, grantEgg, eggsSettled, WTYPES, grantWeapon, hasW } from './gear.js';
 import { itemBox } from './gearTab.js';
-import { dexRefresh, dexState, DEX_HP, titleName } from './codex.js';
+import { dexRefresh, dexState, DEX_HP, titleName, KIND_NAME } from './codex.js';
 import { t } from './i18n.js';
+import { stageWeak } from './bossWeak.js';
 import { sideDim } from './wide.js';
 import { petCard } from './petRoles.js';
 import { nextGoal, powerAct } from './nextGoal.js';
@@ -186,6 +187,7 @@ export class Overlay {
     const recLv = s.sv.stats.runs <= 1 && s.run.lv <= 4;
     c.add(s.add.text(W / 2, 122, firstLv ? (D.PC ? t('pc.pickCard') : t('overlay.245621')) : t('overlay.a38227'), font9(11, firstLv ? '#ffffff' : '#a1b2b6')).setOrigin(0.5));
     const cards = s.add.container(0, 0); c.add(cards);
+    this.stageWk = stageWeak(s);
     this.cardsC = cards;   // 키보드 1·2·3으로 고르려고 pcInput.js가 쓴다
     // 다시 뽑기와 헷갈렸다: 카드의 '빼기'는 그 카드만 바꾼다고 짧게 적는다(긴 설명은 화면 밖으로 넘쳤다)
     const banInfo = () => banTxt.setText(r.banLeft > 0 ? t('overlay.ac8276', { banLeft: r.banLeft }) : t('overlay.35d4d7', { BAN_GEM: D.BAN_GEM }));
@@ -297,13 +299,23 @@ export class Overlay {
     if (!special) c.add(s.add.text(-60 + nm.width + 5, -23, lv ? `Lv ${lv}→${lv + 1}` : isAct ? t('overlay.2a9c18') : def.mode ? t('modeScreen.cd1abb') : t('overlay.51378a'), font9(10, def.mode ? '#ffd75e' : '#a1b2b6')));
     let desc = special ? (k === '_heal' ? t('overlay.1e2e56') : t('overlay.fcc82d')) : def.type === 'passive' && !def.mode ? def.desc[0] : def.desc[lv];
     if (def?.bonus && lv + 1 === D.PASSIVE_LV3) desc += t('overlay.91feb3', { bonus: def.bonus });
-    c.add(s.add.text(-60, -6, desc, { ...font9(11, '#f2e4bc'), wordWrap: { width: 165 } }).setLineSpacing(1));
+    const dt = s.add.text(-60, -6, desc, { ...font9(11, '#f2e4bc'), wordWrap: { width: 165 } }).setLineSpacing(1); c.add(dt);
+    // 71차: 보너스 줄이 붙으면 세 줄이 되어 레벨 칸 아래로 삐져나왔다 → 한 단계 작게, 넓게 쓰고 그래도 길면 위로 올린다
+    if (dt.height > 28) { dt.setFontSize(10).setWordWrapWidth(172); if (dt.height > 28) dt.setY(-9); }
     // 레벨 칸
     if (!special) for (let j = 0; j < D.SKILL_MAX; j++) c.add(s.add.rectangle(-60 + j * 9, 26, 7, 4, j < lv ? 0xd8d2e8 : j === lv ? 0x5fdc6a : 0x293845).setOrigin(0, 0.5));
     // 진화 재료 표시: 이 스킬이 다른 스킬의 진화에 쓰이면 짝을 알려 준다
     const evoOf = special ? null : def.type === 'active' ? D.EVOS[k] && D.SKILLS[D.EVOS[k].need].name : Object.keys(D.EVOS).filter(b => D.EVOS[b].need === k).map(b => D.SKILLS[b].name).join('·');
     // 시너지: 이 스킬을 고르면 이미 가진 짝 스킬과 시너지가 생긴다(진화 안내보다 먼저 보여 준다)
     const syn = special || lv ? [] : D.synOf(k, sk);
+    // 68차: 이번 판 보스 약점을 푸는 스킬이면 딱지(평가: 힌트가 4초 뒤 사라져 카드에서 답을 못 골랐다)
+    const wkAns = !special && !s.pro && this.stageWk?.ans?.includes(k);
+    // 69차: 딱지가 오른쪽 아래 시너지·진화 안내 자리를 빼앗았다 → 파란 테두리 + 아이콘 밑 글로 옮기고 오른쪽 안내는 그대로 둔다
+    if (wkAns) {
+      c.add(s.add.rectangle(0, 0, 230, 70).setStrokeStyle(2, 0x7fd8ff));
+      // 70차: 10px 아래로 작아 안 읽혔다 → 카드 위 테두리에 걸친 이름표(갈래 이름까지)
+      c.add(s.add.text(-108, -35, ` ${t('bw.cardTag')} · ${KIND_NAME[this.stageWk.kind]?.() ?? ''} `, { ...font(11, '#7fd8ff', 2), backgroundColor: '#1a1426' }).setOrigin(0, 0.5));
+    }
     if (syn.length) c.add(s.add.text(108, 26, t('overlay.9230ff', { name: syn[0].name }), font9(10, '#ffb050')).setOrigin(1, 0.5));
     else if (evoOf && !firstRun && !s.pro && !(def.type === 'active' && s.run.evo[k])) c.add(s.add.text(108, 26, def.type === 'active' ? t('overlay.f0f907', { evoOf }) : t('overlay.440133', { evoOf }), font9(10, '#a1b2b6')).setOrigin(1, 0.5));
     // 프롤로그: 한 번만 더 고르면 MAX → 금테와 안내
@@ -394,8 +406,14 @@ export class Overlay {
 
   // ── 주운 장비가 지금 낀 것보다 좋으면 바로 낄지 묻는다 ──
   lootAsk(item, cur) {
-    if (this.open) { this.queue.push(() => this.lootAsk(item, cur)); return; }
     const s = this.s;
+    // 69차: 빈 부위면 낄지 말지 물을 게 없다 → 창 없이 바로 끼고 알림만(1-1 첫 판이 '갑옷 획득' 창에 자꾸 멈췄다)
+    if (!equipped(s.sv).find(x => x.s === item.s)) {
+      s.equipNow(item);
+      if (!s.bot) { sfx('level'); toast(s, t('overlay.autoEquip', { name: itemName(item) }), RARITY[item.r].css, 112); s.log('loot_ask', { equip: true, auto: true }); }
+      return;
+    }
+    if (this.open) { this.queue.push(() => this.lootAsk(item, cur)); return; }
     // 줄 서 있던 사이 더 좋은 걸 꼈으면 묻지 않는다
     cur = equipped(s.sv).find(x => x.s === item.s);
     if (cur && itemScore(item) <= itemScore(cur)) return;
@@ -491,6 +509,12 @@ export class Overlay {
     };
     // 체력이 절반 넘게 남았으면 회복 물약은 안 판다(1-2에서 늘 가득이라 살 일이 없었다)(42차)
     const roll = () => { stock = [gearCard(), ...Phaser.Utils.Array.Shuffle(D.SHOP_ITEMS.filter(it => it.id !== 'meat' || s.hp < s.maxHp * 0.5)).slice(0, D.SHOP_SLOTS - 1).map(it => ({ ...it, price: Math.floor(D.shopPrice(it.price, round) * off), sold: false }))]; };
+    // 70차: 산 칸은 새 물건으로 한 번 채운다(산 줄이 남아 살 수 있는 칸이 2개로 줄었다). 채운 칸을 또 사면 그 칸은 '팔림'
+    const refill = i => {
+      if (stock[i].re) return;
+      const nx = Phaser.Utils.Array.Shuffle(D.SHOP_ITEMS.filter(o => !stock.some(x => x.id === o.id) && (o.id !== 'meat' || s.hp < s.maxHp * 0.5)))[0];
+      if (nx) stock[i] = { ...nx, price: Math.floor(D.shopPrice(nx.price, round) * off), sold: false, re: true };
+    };
     const draw = () => {
       grid.removeAll(true);
       silverTxt.setText(t('overlay.078341', { silver: r.silver }));
@@ -512,6 +536,7 @@ export class Overlay {
           r.silver -= it.price; it.sold = true; sfx('buy');
           s.log('run_shop_buy', { item: it.id, price: it.price, round, silver: r.silver });
           if (it.item) s.gotLoot(it.item); else this.apply(it.id);
+          refill(i);
           // 멈춘 동안에도 뒤 HUD(은화·체력)를 바로 맞춘다(가운데와 위 숫자가 달라 보였다)
           s.updateHud(s.time.now); s.hpLag.width = s.hpBar.width;
           draw();
@@ -534,7 +559,14 @@ export class Overlay {
       // 봇: 체력이 낮으면 고기, 아니면 살 수 있는 것 중 비싼 것부터
       stock.sort((a, b) => b.price - a.price);
       if (s.hp < s.maxHp * 0.5) stock.sort((a, b) => (b.id === 'meat') - (a.id === 'meat'));
-      stock.forEach(it => { if (!it.sold && r.silver >= it.price) { r.silver -= it.price; it.sold = true; if (it.item) s.gotLoot(it.item); else this.apply(it.id); } });
+      for (let n = 0; n < 8; n++) {
+        const i = stock.findIndex(it => !it.sold && r.silver >= it.price);
+        if (i < 0) break;
+        const it = stock[i]; r.silver -= it.price; it.sold = true; if (it.item) s.gotLoot(it.item); else this.apply(it.id);
+        refill(i);
+        stock.sort((a, b) => b.price - a.price);
+        if (s.hp < s.maxHp * 0.5) stock.sort((a, b) => (b.id === 'meat') - (a.id === 'meat'));
+      }
       if (c !== this.c) return;
       r.shopRound++; this.end(c); onDone?.();
     });
@@ -564,6 +596,12 @@ export class Overlay {
     c.add(panel(s, 45, 150, 180, 170));
     if (D.PC) c.add(s.add.text(W / 2, 330, t('pc.pauseKeys'), font9(9, '#a1b2b6')).setOrigin(0.5, 0));
     c.add(s.add.text(W / 2, 172, t('overlay.3b6992'), font(14)).setOrigin(0.5));
+    // 68차: 이번 판 보스 약점을 다시 볼 수 있게(등장 힌트는 4초 뒤 사라진다)
+    const wk = stageWeak(s);
+    if (wk) {
+      const wt = s.add.text(W / 2, 144, wk.hint, { ...font(10, '#ffe9a0', 3), wordWrap: { width: W - 30 }, align: 'center' }).setOrigin(0.5, 1);
+      c.add([s.add.rectangle(W / 2, 144 - wt.height / 2, Math.min(W - 10, wt.width + 16), wt.height + 6, 0x000000, 0.7), wt]);
+    }
     const sk = Object.entries(s.run.skills).map(([k, lv]) => `${D.SKILLS[k].name} ${lv}`).join('\n');
     c.add(s.add.text(W / 2, 192, sk, { ...font9(10), align: 'center' }).setOrigin(0.5, 0).setLineSpacing(1));
     c.add(button(s, W / 2, 268, 130, 26, t('overlay.9cb367'), () => this.end(c), { color: 0x2f6b3a }));
