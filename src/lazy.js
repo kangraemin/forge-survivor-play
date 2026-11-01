@@ -6,10 +6,11 @@
 import { equippedLook } from './cosmetics.js';
 import { STAGES_PER_CHAPTER } from './data.js';
 import { load } from './save.js';
+import { withSmooth } from './smooth.js';
 
 const reg = new Map();   // key -> ['image'|'spritesheet', key, url, cfg]
 export const registerAssets = list => { for (const it of list) reg.set(it[1], it); };
-const items = pred => [...reg.values()].filter(it => pred(it[1]));
+const items = pred => { const p = withSmooth(pred); return [...reg.values()].filter(it => p(it[1])); };   // 8장 그림(sm_)은 원래 그림과 같이 받는다
 const chNo = sv => Math.min(18, Math.floor(((sv?.cleared | 0)) / STAGES_PER_CHAPTER) + 1);   // 로비가 처음 보여 주는 장(1부터)
 
 // 장 n의 그림: 몹·바닥·소품·로비 배경·(16~18장) 보스·장치

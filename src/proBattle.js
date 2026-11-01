@@ -258,6 +258,7 @@ function bossIn(s) {
   m.dmg = s.maxHp * 0.1;   // 몸통 박치기도 장판 한 대 정도(0.22면 붙어 싸우다 두 번에 반이 날아갔다)
   m.body.setSize(m.width * 0.5, m.height * 0.3).setOffset(m.width * 0.25, m.height * 0.6);
   m.body.enable = false; m.setImmovable(true); m.spd = 20;
+  bossPose(m, 0);
   P.boss = m; P.bph = 1; P.live = [];
   P.shadow = s.add.ellipse(tx, ty + 6, 170, 34, 0x000000, 0.55).setDepth(6).setAlpha(0);
   P.aura = s.add.image(tx, ty - 60, 'disc').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff3010).setScale(5).setDepth(11).setAlpha(0);
@@ -358,12 +359,18 @@ function attack(s, ph) {
   return 1150;
 }
 
+// 보스 자세: 0은 숨 쉬며 움직이는 8장(assets/smooth/pro_boss.png), 1은 포효 그림 한 장
+function bossPose(m, f) {
+  if (f === 0 && m.scene.anims.exists('pro_boss_idle')) return m.play('pro_boss_idle', true);
+  m.anims.stop(); m.setTexture('pro_boss', f);
+}
+
 // 단계가 바뀔 때: 붉게 번쩍이고 한 줄 외친다
 function phaseUp(s, ph) {
   const P = s.pro, m = P.boss;
   P.bph = ph; P.aT = 900;
   sfx('bossIn'); s.cameras.main.shake(500, 0.012); s.cameras.main.flash(220, 255, 60, 40);
-  m.setFrame(1); s.time.delayedCall(700, () => m.active && !P.killed && m.setFrame(0));
+  bossPose(m, 1); s.time.delayedCall(700, () => m.active && !P.killed && bossPose(m, 0));
   s.tweens.add({ targets: P.aura, scale: 5 + ph, duration: 500 });
   shout(s, [t('prologue.p2'), t('prologue.p3'), t('prologue.p4')][ph - 2], '#ff6a5a', 200);
   track('prologue_boss_phase', { ph, ft: Math.round(P.ft) });
@@ -373,7 +380,7 @@ function phaseUp(s, ph) {
 function doom(s) {
   const P = s.pro;
   sfx('warn'); sfx('bossIn');
-  P.boss.setFrame(1);
+  bossPose(P.boss, 1);
   s.tweens.add({ targets: P.boss, scale: 1.45, duration: 1800, ease: 'Sine.Out' });
   s.tweens.add({ targets: P.aura, alpha: 0.9, scale: 8, duration: 1800 });
   const v = s.add.rectangle(0, 0, D.GW, D.H, 0xff1a10, 0.05).setOrigin(0).setScrollFactor(0).setDepth(58).setBlendMode(Phaser.BlendModes.ADD);

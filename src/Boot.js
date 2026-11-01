@@ -19,6 +19,7 @@ import { registerAssets, criticalKeys, startBg, quietDupes } from './lazy.js';
 import { isTest } from './testMode.js';
 import { HELD_W, HELD_SHEETS } from './cosmeticView.js';
 import { setSound, setMusic, setMusicLevel, setVib, unlock, primeAudio } from './sfx.js';
+import { loadSmooth, applySmooth, withSmooth } from './smooth.js';
 
 // 있으면 쓰고 없으면 대체 그림으로 돌린다(새 지역 그림이 아직 없을 때도 게임은 돌아가게)
 const REQUIRED = ['hero_r0', 'hero_r1', 'hero_r2', 'hero2_r0', 'hero2_r1', 'hero2_r2', 'mob_r0', 'mob_r1', 'mob_r2',
@@ -73,7 +74,7 @@ export function buildAnims(s) {
     const A = (key, sheetKey, rate, repeat = -1, frames) => {
       if (!sheetKey) return;
       const old = s.anims.get(key);
-      if (old) { if (old.frames[0]?.textureKey === sheetKey) return; s.anims.remove(key); }
+      if (old) { if (old.frames[0]?.textureKey === sheetKey || old.smSrc === sheetKey) return; s.anims.remove(key); }   // smSrc: 8장으로 바꾼 것(smooth.js)
       s.anims.create({ key, frames: s.anims.generateFrameNumbers(sheetKey, frames ? { frames } : {}), frameRate: rate, repeat });
     };
     // 전투 주인공은 검을 지운 시트(hn_)를 쓴다. 로비는 검이 그려진 원본 'idleL'
@@ -118,6 +119,7 @@ export function buildAnims(s) {
     for (const it of CASH_PETS) { A(`pet_${it.id}`, T(`cos_${it.id}`), 6); if (it.dir) A(`pet_${it.id}_slash`, T(`cos_${it.id}_slash`), 10, 0); }
     makePetRoleAnims(s);
     for (const id of AURAS) A(`aura_${id}`, T(`cos_aura_${id}`), 8);
+    applySmooth(s);   // 끊기던 2~4장 애니메이션을 8장 그림으로
   s.registry.set('fallback', fallback);
 }
 
@@ -162,11 +164,12 @@ export class Boot extends Phaser.Scene {
     S.load.spritesheet('cos_fx2', 'assets/cosmetics2/fx.png', { frameWidth: 16, frameHeight: 16 });
     for (const id of AURAS) S.load.spritesheet(`cos_aura_${id}`, `assets/cosmetics2/fx_${id}.png`, { frameWidth: 52, frameHeight: 52 });
     loadFx2(S);
+    loadSmooth(S);   // 2~4장 애니메이션의 8장판(smooth.js)
     for (const k of LATE_IMAGES) S.load.image(k, `assets/${lateDir(k)}/${k}.png`);
     for (const k of ICONS) S.load.image(k, `assets/icon/${k}.png`);
     for (const id of WEAPONS) for (let t = 0; t < 10; t++) S.load.image(`w_${id}${t}`, `assets/weapon/${id}${t}.png`);
     registerAssets(rec);
-    const need = criticalKeys(load(), { REQUIRED, ICONS });
+    const need = withSmooth(criticalKeys(load(), { REQUIRED, ICONS }));
     for (const [t, k, u, c] of rec) if (need(k)) (t === 'image' ? this.load.image(k, u) : this.load.spritesheet(k, u, c));
   }
 

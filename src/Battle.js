@@ -76,18 +76,6 @@ export class Battle extends Phaser.Scene {
 
   create() {
     D.setLayoutH(D.FULL_H); setBoxed(false);   // 전투는 화면 전체(메뉴 화면의 세이프존 칸 높이가 남아 있지 않게)
-    // 화면 흔들림이 겹쳐 정신없었다: 세기 40%, 길이 400ms까지, 250ms 안에 또 오면 건너뛴다
-    const cam0 = this.cameras.main;
-    if (!cam0.shake0) {
-      cam0.shake0 = cam0.shake;
-      cam0.shake = (d = 100, k = 0.05, ...a) => {
-        const now = this.time.now;
-        if (now - (cam0.shakeT ?? -1e9) < 250) return cam0;
-        cam0.shakeT = now;
-        return cam0.shake0(Math.min(d, 400), (typeof k === 'number' ? k : 0.05) * 0.4, ...a);
-      };
-    }
-    cam0.shakeT = -1e9;
     const sv = this.sv;
     this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
     this.paused = false; this.hitstop = 0; this.over = false; this.mv = null; this.formT = 0;
@@ -168,9 +156,7 @@ export class Battle extends Phaser.Scene {
     this.kx = Math.max(1, (D.GW / 2 + 25) / 200);   // 넓은 화면: 화면 밖에서 나오게 가로 스폰 거리를 늘린다(몹 수·세기·스폰 빈도는 그대로)
     this.wide = setupWide(this);
     hiCam(this).startFollow(this.hero, true, 1, 1).setFollowOffset(D.GW / 2, H / 2).setBounds(D.GW * (PX - 1) / 2 - MX, H * (PX - 1) / 2 - MT, WORLD + 2 * MX, WORLD + MT + MB).setRoundPixels(true);
-    // 화면 흔들림: 공격·피격마다 흔들려 머리가 아팠다. 작은 흔들림은 없애고 큰 것(보스·엘리트)만 약하고 짧게
-    const cam = this.cameras.main, shake = Phaser.Cameras.Scene2D.Camera.prototype.shake;
-    cam.shake = (d, i = 0.005, ...r) => i <= 0.005 ? cam : shake.call(cam, Math.min(d, 250), i * 0.4, ...r);
+    // 화면 흔들림은 main.js에서 모든 화면에 끈다(11/1 사용자 "머리 아파")
     this.weapons = new Weapons(this);
     this.boss = null;
     if (!this.bot) ultAnims(this);   // 궁극기 그림(ult.js)

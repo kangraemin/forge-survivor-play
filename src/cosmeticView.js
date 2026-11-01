@@ -5,6 +5,7 @@ import { GRIP2 } from './heroGrip2.js';
 import { COS_ANCHORS2 } from './cosmeticAnchors2.js';
 const COS_ANCHORS = { ...ANCH1, ...COS_ANCHORS2 };
 import { BODY_LOOKS, COS_ROWS, cosmetic, EFFECT_FRAMES, AURAS, effectTex } from './cosmetics.js';
+import { smoothHeld } from './smooth.js';
 
 export const HAND = {
   walkFront: { w: 37, f: [[7, 30, 115], [6, 31, 115], [7, 31, 115], [6, 32, 115]] },
@@ -44,8 +45,22 @@ export function holdHero(sc, hero, look, wid) {
   const k = a => `${p}_${wid}_${a}`;
   if (!hero.anims?.create || !Object.keys(HELD_SHEETS).every(a => sc.textures?.exists(k(a)))) return false;
   const anim = (key, a, rate, repeat = -1, frames = [0, 1, 2, 3]) => hero.anims.create({ key, frames: frames.map(frame => ({ key: k(a), frame })), frameRate: rate, repeat });
-  anim('walkFront', 'front', 8); anim('walkUp', 'up', 8); anim('walkSide', 'side', 8); anim('slash', 'atk', 26, 0, [1, 2, 3, 4]);
-  anim('idle', 'idle', 2.5, -1, [0, 1]); anim('hurtPose', 'idle', 1, 0, [0]); anim('dashPose', 'idle', 1, 0, [1]);   // 원래 자세 칸과 같은 63px 폭(폭이 바뀌면 몸 판정 상자 자리가 바뀐다)
+  if (p === 'hl') {
+    // 전설 주인공은 걷기 8장·숨쉬기 4장·베기 8장. 한 걸음 주기(0.5초)와 베기 길이(4장/26fps)는 그대로 두고 장수만 늘려 부드럽게
+    const n = a => Array.from({ length: sc.textures.get(k(a)).frameTotal - 1 }, (_, i) => i);
+    anim('walkFront', 'front', 16, -1, n('front')); anim('walkUp', 'up', 16, -1, n('up')); anim('walkSide', 'side', 16, -1, n('side'));
+    anim('slash', 'atk', 39, 0, [1, 2, 3, 4, 5, 6]); anim('idle', 'idle', 5, -1, n('idle'));
+  } else {
+    // 걷기·숨쉬기는 8장판(smooth.js)이 있으면 그걸로: 한 바퀴 길이는 그대로
+    const sm = (key, a, rate) => {
+      const t = p === 'hw' && smoothHeld(sc, k(a)), n = t && sc.textures.get(t).frameTotal - 1;
+      if (!t) return anim(key, a, rate, -1, a === 'idle' ? [0, 1] : [0, 1, 2, 3]);
+      hero.anims.create({ key, frames: Array.from({ length: n }, (_, i) => ({ key: t, frame: i })), frameRate: rate * n / (a === 'idle' ? 2 : 4), repeat: -1 });
+    };
+    sm('walkFront', 'front', 8); sm('walkUp', 'up', 8); sm('walkSide', 'side', 8); anim('slash', 'atk', 26, 0, [1, 2, 3, 4]);
+    sm('idle', 'idle', 2.5);
+  }
+  anim('hurtPose', 'idle', 1, 0, [0]); anim('dashPose', 'idle', 1, 0, [1]);   // 원래 자세 칸과 같은 63px 폭(폭이 바뀌면 몸 판정 상자 자리가 바뀐다)
   hero.heldW = wid; followPause(sc, hero); hero.play('idle');
   if (!bare) return true;
   hero.bareW = wid;
@@ -63,7 +78,13 @@ function followPause(sc, hero) {
   sc.events.once('shutdown', () => { m.off('pauseall', pause); m.off('resumeall', resume); });
 }
 // 쥔 그림의 프레임 번호를 원래 시트 번호로 바꾼다(머리 꾸미기 자리 표가 원래 시트 기준): 숨쉬기 0·1→2·3, 베기 1~4→0~3
-const baseFi = (h, row, fi) => !h.heldW ? fi : row === 4 ? Math.min(3, fi + 2) : row === 3 ? Math.max(0, Math.min(3, fi - 1)) : fi;
+// 8장판(전설 주인공·smooth.js)은 애니메이션 안 위치를 원래 4장(숨쉬기 2장)에 나눠 맞춘다
+const baseFi = (h, row, fi) => {
+  if (!h.heldW) return fi;
+  const len = h.anims.currentAnim?.frames.length | 0, pos = (h.anims.currentFrame?.index | 0) - 1;
+  if (len > 1 && pos >= 0) return row === 4 ? 2 + Math.min(1, Math.floor(pos * 2 / len)) : Math.min(3, Math.floor(pos * 4 / len));
+  return row === 4 ? Math.min(3, fi + 2) : row === 3 ? Math.max(0, Math.min(3, fi - 1)) : fi;
+};
 export const weaponKey = (look, wid, tier) => look.weapon ? `cos_${look.weapon}` : `w_${wid}${tier}`;
 export function anchorPoint(hero, x, y, width = hero.width) {
   const dx = (hero.flipX ? width - x : x) - hero.originX * width;
