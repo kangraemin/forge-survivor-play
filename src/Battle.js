@@ -1,7 +1,7 @@
 // 전투: 웨이브 생존, 자동 공격 스킬, 레벨업 3택, 웨이브 사이 상점, 궁극기, 보스
 import * as D from './data.js';
 import { load, save, mission } from './save.js';
-import { sfx, playBgm, stopBgm, leaveBgm, buzz, audioRunning } from './sfx.js';
+import { sfx, playBgm, stopBgm, leaveBgm, audioRunning } from './sfx.js';
 import { font, font9, panel, button, icon, skillIcon, fmt, COLOR, hiCam, viewRect, PX, toast, skinFx, setBackdrop, clearBackdrop } from './ui.js';
 import { Weapons } from './weapons.js';
 import { BossAI } from './boss.js';
@@ -1194,10 +1194,9 @@ export class Battle extends Phaser.Scene {
     this.iframe = this.bt + D.PLAYER.iframe;
     this.run.mana = Math.min(D.MANA_MAX, this.run.mana + D.MANA_HURT);
     sfx('hurt', 120);
-    this.hurtFx.setAlpha(0.3); this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 240 });
-    this.cameras.main.shake(90, 0.004);
-    // 폰에서는 짧게 떨어 맞은 걸 손으로도 느끼게 한다(38차: 위험이 안 느껴졌다)
-    buzz(30);
+    this.hurtFx.setAlpha(0.4); this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 300 });
+    this.cameras.main.shake(120, 0.006);
+    // 폰 진동은 sfx('hurt')가 낸다(BUZZ.hurt). 깜빡임은 update에서 무적 시간 동안
     this.hero.setTint(0xff7070); this.heroWeapon?.setTint(0xff7070); this.hero.gripImg?.setTint(0xff7070); this.time.delayedCall(90, () => { this.hero.clearTint(); this.heroWeapon?.clearTint(); this.hero.gripImg?.clearTint(); });
     this.hurtUntil = this.bt + 160; this.hero.play('hurtPose');
     const t = this.add.text(this.hero.x, this.hero.y - 26, '-' + d, font(10, '#ff5050')).setOrigin(0.5).setDepth(40);
@@ -1481,7 +1480,9 @@ export class Battle extends Phaser.Scene {
     h.setAngle(slashing ? 0 : rock + v.x * 4);
     // 휘두를 때의 늘어남(weapons.js)을 덮어쓰지 않게 그동안은 손대지 않는다
     if (!slashing) h.setScale(this.HS, this.HS * (moving ? 1 : 1 + Math.sin(this.walkT) * 0.025));
-    h.setAlpha(this.bt < this.iframe && Math.floor(this.bt / 60) % 2 ? 0.55 : 1);
+    // 맞은 뒤 무적 시간 동안 깜빡임(0.55는 폰에서 거의 안 보였다)
+    const blink = this.bt < this.iframe && Math.floor(this.bt / 70) % 2 ? 0.15 : 1;
+    h.setAlpha(blink); this.heroWeapon?.setAlpha(blink);
     h.setDepth(HERO_D + h.y / WORLD);
     if (moving && this.bt - (this.lastDust || 0) > 170) { this.lastDust = this.bt; this.dust.explode(3, h.x - v.x * 6, h.y + h.displayHeight / 2 - 3); }
     this.heroRing.setPosition(h.x, h.y + h.displayHeight / 2 - 2);
