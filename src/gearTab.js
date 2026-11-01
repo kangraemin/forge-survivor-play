@@ -8,7 +8,7 @@ import { track } from './log.js';
 import { roleOf, petCard } from './petRoles.js';
 import {
   SLOTS, slotOf, RARITY, STATS, statText, SETS, EGGS, WTYPES, PETS, PET_MAX, petCost, petPow, SP, SP_RESET_GEM, SKILL_TAG, TAG_NAME,
-  spFree, spTotal, gearStats, itemScore, INV_MAX, statMul, ownsW, SP_MILE, SP_MILE_DMG, SP_MILE_HP,
+  spFree, spTotal, gearStats, itemScore, INV_MAX, statMul, ownsW, SP_MILE, SP_MILE_DMG, SP_MILE_HP, itemName,
 } from './gear.js';
 import { sellPrice, tidyList, tidyTotals, tidyApply, sellOne, salvageOne } from './gearSell.js';
 import { t, tt } from './i18n.js';
