@@ -20,7 +20,7 @@ export const ANS = {
   armor: ['dagger', 'ice', 'javelin', 'volley', 'missile', 'grenade', 'wave', 'quake'],
   swift: ['ice', 'palm', 'holy', 'javelin', 'quake', 'volley', 'wave'],
 };
-// 68차: 무기 전용 스킬이 약점 다섯 갈래 중 꼭 셋을 푼다(검·창·총은 하나뿐이라 주력 몰빵 빌드가 16~18-3에서 8~26%였다)
+// 68차: 무기 전용 스킬이 약점을 풀게 했다 — 70차부터 검기·지진은 다섯 갈래 모두 푼다(검·창·총은 하나뿐이라 주력 몰빵 빌드가 16~18-3에서 8~26%였다)
 export const WARD = { frac: 0.13, block: 0.2, open: 9000, tc: 6000, th: 0.55, rs: 4, midx: 2, midRs: 1.5, lateRs: 0.55 };   // lateRs: 16장부터 되갚기 배수(무기가 막힌 비율이 15장보다 커서 같은 세기면 C가 보스전 20~40초에 쓰러졌다)
 // 70차: 1장 보스는 약점이 '맛보기'다 — 막혀도 덜 깎이고(block) 되갚기가 약하다(rs). 무작위 카드로도 가끔 지게 하되 첫 장이 막히진 않게
 export const SOFT = { kingslime: { block: 0.75, rs: 0.2 } };

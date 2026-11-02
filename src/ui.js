@@ -110,9 +110,10 @@ export function button(scene, x, y, w, h, label, onTap, { color = 0x3a3846, size
   fitText(t, w - 6 - lead, 7, h - 2);   // 긴 번역은 줄여서 버튼 안에 넣는다
   c.add([g, t]); c.setSize(w, h).setInteractive({ useHandCursor: true });
   c.label = t; c.enabled = true; c.col = color; c.isBtn = true;
-  c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x221f2a, false); t.setAlpha(v ? 1 : 0.45); return c; };
   // 주 행동 색(주황)일 때만 글자를 진한 잉크로, 아니면 흰 글자 + 외곽선
   const ink = col => { if (textColor !== '#ffffff') return; const p = col === 0x2f6b3a && !ghost; t.setColor(p ? '#111923' : ghost ? '#ffd9a0' : '#ffffff').setStroke('#0a0710', p ? 0 : 3); };
+  // 못 누르는 주 행동 버튼은 어두운 칸이라 진한 잉크 글자가 묻힌다(재련·강화 '재료 부족'): 다른 회색 버튼처럼 흰 글자 + 외곽선으로 바꾼다
+  c.setEnabled = v => { c.enabled = v; draw(v ? c.col : 0x221f2a, false); ink(v ? c.col : 0x3a3846); t.setAlpha(v ? 1 : 0.7); return c; };
   c.setColor = col => { c.col = col; ink(col); draw(col, false); return c; };
   draw(color, false);
   c.on('pointerdown', (p, lx, ly, ev) => { ev?.stopPropagation?.(); c.armed = true; draw(c.enabled ? c.col : 0x3a3a44, true); t.y = 2; });
