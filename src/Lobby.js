@@ -780,7 +780,8 @@ export class Lobby extends Phaser.Scene {
   sweep(c, s) {
     const sv = this.sv, gold = D.goldOf(c, s, this.hard), stone = D.stoneOf(c, s, this.hard);
     if (sv.sweep <= 0) return;
-    sv.sweep--; sv.gold += gold; sv.stone += stone; mission('clear'); mission('sweep'); save();
+    const ore = this.hard ? 0 : D.oreOf(c, s);
+    sv.sweep--; sv.gold += gold; sv.stone += stone; sv.refOre = (sv.refOre | 0) + ore; mission('clear'); mission('sweep'); save();
     track('sweep', { stage: `${this.hard ? 'H' : ''}${c + 1}-${s + 1}`, gold, stone, left: sv.sweep });
     sfx('coin');
     for (let i = 0; i < 10; i++) {
@@ -790,7 +791,7 @@ export class Lobby extends Phaser.Scene {
     // 소탕도 절반 확률로 장비 하나(대부분 일반)
     const it = Math.random() < 0.5 ? makeItem(this.hard ? D.openN() - 1 : c, { rarity: Math.random() < 0.75 ? 0 : 1 }) : null;
     if (it) { addItems(sv, [it]); save(); }
-    toast(this, t('lobby.21fc0a', { fmt: fmt(gold), stone, v: it ? `  ·  ${RARITY[it.r].name} ${itemName(it)}` : '' }), '#ffd75e');
+    toast(this, t('lobby.21fc0a', { fmt: fmt(gold), stone, v: (ore ? `  ·  ${t('refine.oreN', { n: ore })}` : '') + (it ? `  ·  ${RARITY[it.r].name} ${itemName(it)}` : '') }), '#ffd75e');
     this.time.delayedCall(500, () => this.show('battle'));
   }
 
@@ -867,7 +868,7 @@ export class Lobby extends Phaser.Scene {
     b.add(this.add.text(14, 40, tt('lobby.348786'), font(18, '#f2e4bc', 0)));
     b.add(this.add.text(W - 14, 44, max ? tt('lobby.05f3c1', { enh }) : `+${enh} → +${enh + 1}`, font(13, enh >= 15 ? '#ff9a3a' : '#ffb85c', 0)).setOrigin(1, 0));
     b.add(this.add.text(14, 64, D.tierName(sv.tier, wtypeOf(sv)), font(11, '#a1b2b6', 0)));
-    b.add(this.add.text(W - 14, 64, tt('lobby.f87b0a', { fmt: fmt(Math.round(D.weaponAtk(sv.tier, enh))), v: max ? '' : ` → ${fmt(Math.round(D.weaponAtk(sv.tier, enh + 1)))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1) / D.weaponAtk(sv.tier, enh) - 1) * 100)}%)` }), font(11, '#73d6c1', 0)).setOrigin(1, 0));
+    b.add(this.add.text(W - 14, 64, tt('lobby.f87b0a', { fmt: fmt(Math.round(D.weaponAtk(sv.tier, enh, sv.refine))), v: max ? '' : ` → ${fmt(Math.round(D.weaponAtk(sv.tier, enh + 1)))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1) / D.weaponAtk(sv.tier, enh) - 1) * 100)}%)` }), font(11, '#73d6c1', 0)).setOrigin(1, 0));
     // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
     if (!max) {
       const next = (Math.floor(enh / D.ENH_MILESTONE) + 1) * D.ENH_MILESTONE;
@@ -914,9 +915,22 @@ export class Lobby extends Phaser.Scene {
     // 정보 패널
     // 높이는 체크 줄 수만큼(부적 줄이 패널 테두리에 걸쳐 겹쳐 보였다)
     const nChk = max ? 0 : (enh >= D.DESTROY_FROM ? 1 : 0) + (sv.charm > 0 && D.ENH_RATE[enh] < 100 ? 1 : 0);
-    b.add(panel(this, 12, 272, W - 24, max ? 56 : 62 + nChk * 17 + (nChk === 2 ? 6 : 0), { fill: 0x15111f }));   // 빈 칸 없이 내용만큼
-    if (max) {
-      b.add(this.add.text(W / 2, 300, tt('lobby.6ea04e'), font(14, '#ffd75e')).setOrigin(0.5));
+    // 71차 재련: +20이 되면 같은 자리에서 ★1~★10까지 더 벼린다(실패·파괴 없음). 결정은 16장부터 판·소탕에서 나온다
+    const rLv = D.refineLv(sv), rDone = rLv >= D.REFINE_MAX, rOre = D.REFINE_ORE[rLv], rGold = D.refineGold(rLv), rHave = sv.refOre | 0;
+    const rOk = max && !rDone && rHave >= rOre && sv.gold >= rGold;
+    b.add(panel(this, 12, 272, W - 24, max ? (rDone ? 56 : 82) : 62 + nChk * 17 + (nChk === 2 ? 6 : 0), { fill: 0x15111f }));   // 빈 칸 없이 내용만큼
+    if (max && rDone) {
+      b.add(this.add.text(W / 2, 300, tt('refine.done', { n: D.REFINE_MAX }), font(14, '#ffd75e')).setOrigin(0.5));
+    } else if (max) {
+      const row = (y, a, v, col) => { b.add(this.add.text(24, y, a, font9(10, '#a1b2b6'))); const vt = this.add.text(W - 24, y, v, font(10, col)).setOrigin(1, 0); vt.setScale(Math.min(1, (W - 120) / vt.width)); b.add(vt); };
+      row(280, tt('refine.name'), tt('refine.step', { a: rLv, b: rLv + 1 }), '#ffd75e');
+      row(296, tt('refine.atk'), tt('refine.atkV', { a: D.refineBonus(rLv), b: D.refineBonus(rLv + 1) }), '#73d6c1');
+      row(312, tt('refine.cost'), tt('refine.costV', { have: fmt(rHave), need: rOre, gold: fmt(rGold) }), rOk ? '#ffd75e' : '#ff7070');
+      b.add(icon(this, 24 + 4, 342, 9, 14));
+      const ht = this.add.text(36, 342, tt('refine.hint'), font9(9, '#7d8f94')).setOrigin(0, 0.5); ht.setScale(Math.min(1, (W - 60) / ht.width)); b.add(ht);
+      const both = sv.enh >= D.PROMOTE_NEED && sv.tier < D.TIERS.length - 1;
+      const rb = button(this, both ? 82 : W / 2, 404, both ? 124 : 180, 30, rOk ? tt('refine.btn') : rHave < rOre ? tt('refine.needOre', { v: rOre - rHave }) : tt('lobby.06342c', { fmt: fmt(rGold - sv.gold) }), () => this.refine(), { size: rOk ? 15 : 11, color: 0x2f6b3a, onDeny: () => this.refine() });
+      rb.setEnabled(rOk); b.add(rb);
     } else {
       const pity = D.pityRate(sv), rate = Math.min(100, D.ENH_RATE[enh] + (this.useCharm ? D.CHARM_RATE : 0) + this.apron() + pity), gold = D.enhGold(sv.tier, enh), stone = D.enhStone(sv.tier, enh);
       const danger = enh >= D.DESTROY_FROM;
@@ -961,7 +975,7 @@ export class Lobby extends Phaser.Scene {
       const need = D.TIER_AT[sv.tier + 1], okBoss = sv.cleared >= need, cost = D.promoteGold(sv.tier);
       // 54차: 3장 무기 이상으로 올릴 때부터 도전 증표가 든다. 모자라면 승급 버튼이 도전 화면으로 가는 버튼이 된다
       const mkNeed = D.markNeed(sv.tier + 1), mkHave = sv.mark | 0, okMark = mkHave >= mkNeed, markBlock = okBoss && !okMark;
-      const pb = button(this, max ? W / 2 : 200, 404, max ? 180 : 110, 30, markBlock ? tt('lobby.24e1eb') : tt('lobby.3adf57', { fmt: fmt(cost) }), () => markBlock ? this.goChallenge() : this.promote(), { size: 12, color: markBlock ? 0x1d6f80 : 0x2f6b3a });
+      const solo = max && rDone, pb = button(this, solo ? W / 2 : 200, 404, solo ? 180 : 110, 30, markBlock ? tt('lobby.24e1eb') : tt('lobby.3adf57', { fmt: fmt(cost) }), () => markBlock ? this.goChallenge() : this.promote(), { size: 12, color: markBlock ? 0x1d6f80 : 0x2f6b3a });
       pb.setEnabled(okBoss && (markBlock || sv.gold >= cost)); b.add(pb);
       if (mkNeed && okBoss) {
         const mt = this.add.text(W / 2, 361, tt('lobby.ab8f9f', { mkHave, mkNeed }), font9(10, okMark ? '#7fe6ee' : '#ff9a8a')).setOrigin(0.5, 0); mt.setScale(Math.min(1, (W - 80) / mt.width)); b.add(mt); b.add(markIcon(this, mt.x - mt.displayWidth / 2 - 9, 367, 12));
@@ -972,7 +986,7 @@ export class Lobby extends Phaser.Scene {
       else if (markBlock) { const g = nextGoal(sv), mt2 = this.add.text(W / 2, 375, g?.sub || tt('lobby.867885'), font9(10, '#7fe6ee')).setOrigin(0.5, 0).setInteractive({ useHandCursor: true }); mt2.on('pointerup', () => this.goChallenge()); b.add(mt2); }   // 53차: '도전 X장을 깨면 증표' 구체 목표 + 탭하면 도전으로
       else {
         // 승급하면 몇 강부터 시작하는지와 공격력을 지금과 견줘 보여 준다
-        const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh)), next = Math.round(D.weaponAtk(sv.tier + 1, e));
+        const e = D.promoteEnh(sv.tier, sv.enh), now = Math.round(D.weaponAtk(sv.tier, sv.enh, sv.refine)), next = Math.round(D.weaponAtk(sv.tier + 1, e, sv.refine));
         b.add(this.add.text(W / 2, 375, tt('lobby.ade394', { tierName: D.tierName(sv.tier + 1, wtypeOf(sv)), fmt: fmt(now), fmt2: fmt(next), e }), font9(10, next >= now ? '#c8a0ff' : '#ff9a8a')).setOrigin(0.5, 0));
       }
     }
@@ -993,6 +1007,32 @@ export class Lobby extends Phaser.Scene {
       if (r.gem) { b.label.setText(t('overlay.ab7e90')); this.refreshTop(); } else b.setEnabled(true);
     }, { size: 10, color: 0x3a3846 }).setDepth(60);
     this.bragT = this.time.delayedCall(8000, () => this.clearBrag());
+  }
+
+  // 71차 재련: 결정 + 금화로 ★를 하나 올린다. 실패·파괴 없음. 효과는 칼 공격력 +%(data.js REFINE_BONUS)
+  refine() {
+    const sv = this.sv, r = D.refineLv(sv);
+    if (this.busy || sv.enh < D.ENH_MAX || r >= D.REFINE_MAX) return;
+    const ore = D.REFINE_ORE[r], gold = D.refineGold(r);
+    if ((sv.refOre | 0) < ore || sv.gold < gold) { sfx('deny'); toast(this, tt('refine.short'), '#ffd75e', 372); return; }
+    this.clearBrag(); this.busy = true;
+    sv.refOre = (sv.refOre | 0) - ore; sv.gold -= gold; sv.refine = r + 1;
+    track('refine', { to: r + 1, ore, gold_cost: gold, ore_left: sv.refOre, gold_left: sv.gold, tier: sv.tier });
+    save(); this.refreshTop();
+    const h = this.hammer, sw = this.sword, a0 = Math.round(D.weaponAtk(sv.tier, sv.enh, r)), a1 = Math.round(D.weaponAtk(sv.tier, sv.enh, r + 1));
+    this.tweens.add({ targets: h, angle: -50, x: W / 2 + 26, y: 150, duration: 140, ease: 'Quad.In', onComplete: () => {
+      sfx('anvil'); sfx('success');
+      this.cameras.main.shake(90, 0.006);
+      this.sparks(W / 2 + 6, 176, 30, 0xffe08a);
+      sw.setTintFill?.(0xffffff); this.time.delayedCall(60, () => sw.clearTint?.());
+      this.tweens.add({ targets: sw, scale: sw.scale * 1.2, duration: 160, yoyo: true });
+      this.flashText(tt('refine.ok', { n: r + 1 }), '#ffd75e');
+      const tx = this.add.text(W / 2, 222, tt('lobby.3fa514', { fmt: fmt(a0), fmt2: fmt(a1) }), font(18, '#ffe08a', 4)).setOrigin(0.5).setDepth(60).setScale(0.3);
+      this.tweens.add({ targets: tx, scale: 1, duration: 260, ease: 'Back.Out' });
+      this.tweens.add({ targets: tx, y: 210, alpha: 0, delay: 700, duration: 400, onComplete: () => tx.destroy() });
+      this.tweens.add({ targets: h, angle: 30, x: W / 2 + 54, y: 130, duration: 220, ease: 'Quad.Out' });
+      this.time.delayedCall(1100, () => { this.busy = false; this.show('forge'); });
+    } });
   }
 
   // 대장장이 앞치마를 끼면 강화 성공 +5%p
@@ -1073,7 +1113,7 @@ export class Lobby extends Phaser.Scene {
       bubble(this, line('forge', [10, 15, 20].includes(from + 1) ? 'm' + (from + 1) : 'ok'), { y: 118, depth: 61, delay: 1250 });   // 62차: 대장장이 한마디(미리 만든 대사)
       // +8부터와 각성(+5 단위)은 화면을 번쩍이고 오른 공격력을 크게 띄운다
       if (big) {
-        const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from)), a1 = Math.round(D.weaponAtk(tier, from + 1));
+        const tier = this.sv.tier, a0 = Math.round(D.weaponAtk(tier, from, this.sv.refine)), a1 = Math.round(D.weaponAtk(tier, from + 1, this.sv.refine));
         this.cameras.main.flash(220, 255, 220, 120);
         this.sparks(W / 2, 168, 30, 0xffffff);
         const t = this.add.text(W / 2, 222, tt('lobby.3fa514', { fmt: fmt(a0), fmt2: fmt(a1) }), font(18, '#ffe08a', 4)).setOrigin(0.5).setDepth(60).setScale(0.3);

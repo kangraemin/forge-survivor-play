@@ -14,14 +14,16 @@ export { WEAK };
 // 66·67차: 약점 갈래마다 '답 스킬' 2~5개(범용 2 + 무기 전용 몇 개). 무기 기본 공격은 답이 아니다 — 스킬을 골라 키워야 풀린다.
 // 막힌 딱지가 붙은 스킬은 피해가 WARD.block 배만 들어가고, 답 스킬이 보스 방벽(WARD.frac x 체력)을 깨면 WARD.open ms 동안 약점이 드러나 전부 들어간다. 방벽은 다시 차오른다.
 export const ANS = {
-  thorn: ['dagger', 'bolt', 'volley', 'grenade', 'missile', 'javelin', 'wave'],
+  thorn: ['dagger', 'bolt', 'volley', 'grenade', 'missile', 'javelin', 'wave', 'quake'],
   ward: ['spin', 'dagger', 'quake', 'palm', 'wave', 'grenade'],
   mirror: ['spin', 'dagger', 'wave', 'quake', 'palm', 'missile'],
-  armor: ['dagger', 'ice', 'javelin', 'volley', 'missile', 'grenade'],
-  swift: ['ice', 'palm', 'holy', 'javelin', 'quake', 'volley'],
+  armor: ['dagger', 'ice', 'javelin', 'volley', 'missile', 'grenade', 'wave', 'quake'],
+  swift: ['ice', 'palm', 'holy', 'javelin', 'quake', 'volley', 'wave'],
 };
 // 68차: 무기 전용 스킬이 약점 다섯 갈래 중 꼭 셋을 푼다(검·창·총은 하나뿐이라 주력 몰빵 빌드가 16~18-3에서 8~26%였다)
 export const WARD = { frac: 0.13, block: 0.2, open: 9000, tc: 6000, th: 0.55, rs: 4, midx: 2, midRs: 1.5, lateRs: 0.55 };   // lateRs: 16장부터 되갚기 배수(무기가 막힌 비율이 15장보다 커서 같은 세기면 C가 보스전 20~40초에 쓰러졌다)
+// 70차: 1장 보스는 약점이 '맛보기'다 — 막혀도 덜 깎이고(block) 되갚기가 약하다(rs). 무작위 카드로도 가끔 지게 하되 첫 장이 막히진 않게
+export const SOFT = { kingslime: { block: 0.75, rs: 0.2 } };
 // hint: 등장 때 말풍선(답 스킬 이름이 {list}로 들어간다), tag: 막혔을 때 뜨는 짧은 글
 export const KINDS = {
   thorn: { hint: list => t('bw.hint.thorn', { list }), tag: t('bw.tag.thorn') },
@@ -42,7 +44,7 @@ export function weakOf(s, key) {
   if (s.endless || s.dungeon || s.practice || s.mode || s.pro) return null;
   const k = WEAK[key];
   if (!k) return null;
-  const w = { kind: k, ...KINDS[k] };
+  const w = { kind: k, ...KINDS[k], ...(SOFT[key] || {}) };
   w.hint = w.hint(answersFor(k, s.wtype?.id).map(x => D.SKILLS[x].name).join(' · '));
   return w;
 }
@@ -74,7 +76,7 @@ export function weakMul(s, m, o) {
           const tx = s.add.text(m.x, m.y - m.displayHeight * 0.5, t('battle.6fbdb2'), font(12, '#ffe060', 3)).setOrigin(0.5).setDepth(40);
           s.tweens.add({ targets: tx, y: tx.y - 20, alpha: 0, duration: 900, onComplete: () => tx.destroy() });
         }
-      } else mul = WARD.block;
+      } else mul = w.block ?? WARD.block;
     }
     ai.wardFrac = ai.openUntil > s.bt ? 0 : Math.max(0, ai.ward / wmax);
     wardBar(s, ai);
@@ -89,7 +91,7 @@ export function weakMul(s, m, o) {
   const dt = s.bt - (ai.sT ?? s.bt), dec = Math.exp(-dt / WARD.tc); ai.sT = s.bt;
   const r = o.raw || 1; ai.tw = (ai.tw || 0) * dec + r; ai.pw = (ai.pw || 0) * dec + (mul < 1 ? r : 0);
   const R = w.kind === 'guard' ? null : RETORT[w.kind], share = ai.pw / ai.tw, k = Math.max(0, (share - WARD.th) / (1 - WARD.th));
-  if (mul < 1 && R && k > 0 && s.bt - (ai.thornAt || -1e9) > R[1]) { ai.thornAt = s.bt; s.hurt(Math.max(ai.b?.lateCh ? 0 : m.dmg * R[2], s.maxHp * R[0] * WARD.rs * (ai.mid ? WARD.midRs : 1) * (ai.b?.lateCh ? WARD.lateRs : 1)) * k, w.kind); }   // 16장부터는 보스 공격력이 커서 바닥(공격력 비율)이 되갚기를 집어삼켰다(시뮬 20-3 C 21%) — 내 체력 비율만 쓴다
+  if (mul < 1 && R && k > 0 && s.bt - (ai.thornAt || -1e9) > R[1]) { ai.thornAt = s.bt; s.hurt(Math.max(ai.b?.lateCh ? 0 : m.dmg * R[2], s.maxHp * R[0] * WARD.rs * (w.rs ?? 1) * (ai.mid ? WARD.midRs : 1) * (ai.b?.lateCh ? WARD.lateRs : 1)) * k, w.kind); }   // 16장부터는 보스 공격력이 커서 바닥(공격력 비율)이 되갚기를 집어삼켰다(시뮬 20-3 C 21%) — 내 체력 비율만 쓴다
   return mul;
 }
 
@@ -136,6 +138,12 @@ export const GuardMixin = {
     if (this.gdGfx) { this.gdGfx.setPosition(m.x, m.y).setVisible(on); }
   },
 };
+
+// 70차: 장 보스 판(x-3) 시작 때: 보스가 나오기 전에 약점 힌트를 먼저 보여 준다(보스 등장 힌트와 같은 글·같은 자리)
+export function stageHint(s) {
+  const w = stageWeak(s);
+  if (w) showHint({ wk: w, s, m: { active: true, dead: false } });
+}
 
 // 등장 힌트: 배너(장 이름·각성·변종)가 사라진 뒤 체력 막대 아래 고정 한 줄로 4초. 보스 머리 말풍선(패턴 외침)에 묻혀 안 읽혔다
 export function showHint(ai) {

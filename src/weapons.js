@@ -404,13 +404,13 @@ export class Weapons {
     const s = this.s, h = s.hero;
     const t = this.nearest(220);
     const base = t ? Phaser.Math.Angle.Between(h.x, h.y, t.x, t.y) : (s.face > 0 ? 0 : Math.PI);
-    const n = [1, 1, 2, 2, 4][lv - 1], mult = 1.1 * (lv >= 2 ? 1.3 : 1), sc = lv >= 5 ? 1.8 : 1.3;
+    const n = [1, 1, 2, 2, 4][lv - 1], mult = 1.3 * (lv >= 2 ? 1.3 : 1), sc = lv >= 5 ? 1.8 : 1.3;
     for (let i = 0; i < n; i++) {
       const a = base + (i - (n - 1) / 2) * 0.3;
       this.bullet('wave', h.x, h.y - 4, a, 260, { mult, pierce: lv >= 4 ? 99 : 1, src: 'wave', life: 800, kb: 80, tag: 'ranged', tint: 0x9ad8ff, scale: sc, add: true });
     }
     sfx('swing', 60);
-    return 1400;
+    return 1250;
   }
 
   // ── 투창(창 전용): 화면에서 가장 먼 적에게 창을 꽂는다 ──
@@ -430,7 +430,7 @@ export class Weapons {
   // ── 지진(도끼 전용): 발밑에서 충격파가 퍼진다 ──
   quake(lv) {
     const s = this.s, h = s.hero;
-    const rad = 70 * this.area() * (lv >= 2 ? 1.2 : 1), mult = 1.2 * (lv >= 3 ? 1.4 : 1);
+    const rad = 84 * this.area() * (lv >= 2 ? 1.2 : 1), mult = 2.6 * (lv >= 3 ? 1.4 : 1);
     const once = delay => s.time.delayedCall(delay, () => {
       const x = h.x, y = h.y + 6;
       const ring = s.add.image(x, y, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffb050).setScale(0.2, 0.15).setDepth(8);
@@ -439,11 +439,11 @@ export class Weapons {
       s.cameras.main.shake(90, 0.004);
       sfx('boom', 80);
       s.mobs.getChildren().slice().forEach(m => {
-        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, x, y) < rad + (m.isBoss ? 20 : 0)) s.hitMob(m, mult, { kb: 160, fx: 'big', from: { x, y }, tag: 'melee', skill: 'quake' });
+        if (!m.dead && Phaser.Math.Distance.Between(m.x, m.y, x, y) < rad + (m.isBoss ? 20 : 0)) if (s.hitMob(m, mult, { kb: 160, fx: 'big', from: { x, y }, tag: 'melee', skill: 'quake' }) && m.isBoss) m.slow = Math.max(m.slow || 0, 1500);   // 70차: 지진이 보스를 둔하게 한다(근접 도끼가 보스 앞에서 버티게)
       });
     });
     once(0); if (lv >= 5) once(320);
-    return lv >= 4 ? 2200 : 2800;
+    return lv >= 4 ? 1500 : 2200;
   }
 
   // ── 활·총·지팡이 기본 공격: 가장 가까운 적에게 쏜다 ──
@@ -596,7 +596,7 @@ export class Weapons {
         b.seen.add(m);
         if (b.explode) { dead = true; break; }
         s.hitMob(m, b.mult, { kb: b.kb, from: b, tag: b.tag, skill: b.skill || SRC_SK[b.src], pierce: b.pierce >= 2 });
-        if (m.isBoss && (b.src === 'ice' || b.src === 'palm')) m.slow = Math.max(m.slow || 0, 1500);   // 66차: 얼음·기공파가 보스를 둔하게 한다(빠른 보스 해법)
+        if (m.isBoss && (b.src === 'ice' || b.src === 'palm' || b.src === 'wave')) m.slow = Math.max(m.slow || 0, 1500);   // 66차: 얼음·기공파가 보스를 둔하게 한다(빠른 보스 해법)
         // +10 각성: 기본 공격(화살·총알·마력탄)으로 잡은 적이 터진다(너무 잦으면 화면이 덮여 간격 제한)
         if (m.dead && BASIC.has(b.src) && s.sv.enh >= 10 && s.bt - (this.lastChain || 0) > 160) { this.lastChain = s.bt; const x = m.x, y = m.y; s.time.delayedCall(70, () => !s.over && this.explode(x, y, s.sv.enh >= 15 ? 3 : 1, true)); }
         // 지팡이 마력탄: 맞힌 자리 주변도 마력이 터진다

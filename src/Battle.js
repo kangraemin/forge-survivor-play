@@ -27,7 +27,7 @@ import { setupWide } from './wide.js';
 import { isTest } from './testMode.js';
 import { onHit as synHit } from './synergy.js';
 import { castUlt, ultAnims, ultLv } from './ult.js';   // 무기·등급·단계마다 다른 궁극기
-import { weakMul } from './bossWeak.js';
+import { weakMul, stageHint } from './bossWeak.js';
 import { tst, testBattleStart } from './testBattle.js';   // 테스트 모드(바로 가기·무적·배속)
 import { sandboxEnd } from './save.js';
 import * as PRO from './proBattle.js';
@@ -228,6 +228,7 @@ export class Battle extends Phaser.Scene {
     // 각성한 무기는 판 시작 때 무엇이 달라졌는지 알려 준다
     const aw = D.awakenText(sv.enh);
     if (aw && !this.dungeon && !this.pro) this.time.delayedCall(this.mod ? 7600 : 3400, () => !this.over && this.banner(aw[0], aw[1]));
+    if (!this.bot && this.s === 2) this.time.delayedCall(2600, () => !this.over && stageHint(this));   // 70차: 장 보스 판은 시작 때 약점 힌트를 한 번 보여 준다(보스가 나오기 전에 답 스킬을 미리 고르게)
     if (nv) this.time.delayedCall(1900, () => !this.over && this.banner(t('battle.27535b', { pre: D.VARIANTS[nv[1]].pre, v: D.MOB_NAMES[this.ch.mobs[nv[0]]] }), D.VARIANTS[nv[1]].desc));
     if (!this.practice) { sv.stats.runs++; save(); }
     logCtx({ stage: this.mode ? `mode_${this.mode.id}_${this.mode.n + 1}` : this.endless ? 'tower' : this.dungeon ? 'dungeon' : `${this.hard ? 'H' : ''}${this.c + 1}-${this.s + 1}`, idx: this.endless || this.dungeon ? -1 : this.c * D.STAGES_PER_CHAPTER + this.s });
@@ -363,7 +364,7 @@ export class Battle extends Phaser.Scene {
     this.cosActor.effect ||= ({ crimson: 'ember', shadow: 'star', jade: 'leaf', paladin: 'gold', demon: 'ember' })[sv.hskin];
     this.events.once('shutdown', () => { this.cosActor?.destroy(); this.cosActor = null; });
     this.face = 1; this.walkT = 0; this.iframe = 0;
-    this.atk = D.weaponAtk(sv.tier, sv.enh);
+    this.atk = D.weaponAtk(sv.tier, sv.enh, sv.refine);
   }
 
   makeFx() {

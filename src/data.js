@@ -279,7 +279,18 @@ export const AWAKENINGS = [[5, t('data.632300'), t('data.4ee8e5')], [10, t('data
 export const awakenText = enh => { const a = AWAKENINGS.filter(x => enh >= x[0]); return a.length ? [t('data.33b2fe', { v: a[a.length - 1][0], join: a.map(x => x[1]).join(' · ') }), a[a.length - 1][2]] : null; };
 // +11부터는 한 단계마다 ×1.15: 더하기로는 단계가 오를수록 오름폭이 +10%→+8%로 줄어 파괴를 무릅쓸 이유가 없었다
 export const OVER10_MUL = 1.15;
-export const weaponAtk = (tier, enh) => TIERS[tier].atk * (1 + 0.1 * Math.min(enh, 10)) * Math.pow(OVER10_MUL, Math.max(0, enh - 10)) * Math.pow(MILESTONE_MUL, Math.floor(enh / ENH_MILESTONE));
+// 71차 재련: +20이 된 칼을 ★1~★10으로 더 벼린다(실패·파괴 없음). 16장부터 판·소탕에서 나오는 재련 결정과 금화를 쓴다.
+// 강화 상한(+20)에 막혀 16장 이후 힘이 멈추던 것을 콘텐츠로 푼다(적 수치·기존 보상은 그대로). 저장 칸 sv.refine(★), sv.refOre(결정) — 없으면 0
+export const REFINE_MAX = 10, REFINE_FROM_C = 15;
+export const REFINE_BONUS = [0, 2, 4, 6, 8, 10, 14, 20, 28, 38, 50];   // ★n일 때 칼 공격력 +%(뒤로 갈수록 크게: 앞 별은 가볍고 ★7~★10이 평균·고인물을 가른다)
+export const REFINE_ORE = [4, 5, 6, 7, 8, 10, 12, 14, 18, 36];   // ★n+1로 올리는 데 드는 결정(합 120)
+export const refineGold = r => 60000 + 30000 * r;
+export const refineLv = sv => Math.max(0, Math.min(REFINE_MAX, sv.refine | 0));
+export const refineBonus = r => REFINE_BONUS[Math.max(0, Math.min(REFINE_MAX, r | 0))];
+export const refineMul = r => 1 + refineBonus(r) / 100;
+// 장 c(0부터)·판 s에서 한 번 깰 때(소탕 포함) 나오는 재련 결정: 16장 1·1·3, 17장 2·2·4 ... 20장 5·5·7
+export const oreOf = (c, s) => c >= REFINE_FROM_C ? c - REFINE_FROM_C + 1 + (s === STAGES_PER_CHAPTER - 1 ? 2 : 0) : 0;
+export const weaponAtk = (tier, enh, ref = 0) => TIERS[tier].atk * (1 + 0.1 * Math.min(enh, 10)) * Math.pow(OVER10_MUL, Math.max(0, enh - 10)) * Math.pow(MILESTONE_MUL, Math.floor(enh / ENH_MILESTONE)) * refineMul(ref);
 // 강화 성공 확률(%) — 인덱스는 현재 강화 수치
 // 앞 칸을 낮춰 첫 판 뒤 강화 몇 번 안에 실패→보정→성공을 겪게 한다(37차: +12까지 한 번도 실패가 없었다)
 export const ENH_RATE = [100, 95, 85, 75, 70, 65, 60, 55, 50, 45, 45, 40, 36, 32, 28, 22, 18, 15, 12, 10];
@@ -366,7 +377,7 @@ export const trainVal = (t, lv) => (lv + (t.max >= TRAIN_MILE ? Math.floor(lv / 
 export const powerOf = sv => {
   const tv = id => trainVal(TRAINING.find(t => t.id === id), sv.train?.[id] || 0);
   const g = gearStats(sv);
-  return Math.round(weaponAtk(sv.tier, sv.enh) * (1 + tv('atk') + g.atk) * wMul(sv) * (1 + (tv('hp') + g.hp) * 0.25 + Math.min(0.6, tv('def') + g.def) * 0.5));
+  return Math.round(weaponAtk(sv.tier, sv.enh, sv.refine) * (1 + tv('atk') + g.atk) * wMul(sv) * (1 + (tv('hp') + g.hp) * 0.25 + Math.min(0.6, tv('def') + g.def) * 0.5));
 };
 // 스테이지별 권장 전투력: 그 챕터 무기 등급에서 강화를 조금씩 더 올려야 깨지게
 // 보스 판은 봇 실측에서 권장 100~130%로도 졌다: 권장을 올려 화면이 '충분'이라고 속이지 않게 한다

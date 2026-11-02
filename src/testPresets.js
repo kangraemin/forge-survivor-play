@@ -42,6 +42,15 @@ function giveGear(sv, k, lastRarity) {
   for (const s of SLOTS) { const it = items.find(x => x.s === s.id); if (it) sv.eq[s.id] = it.u; }
 }
 
+// 재련(71차): 깬 판 N개까지의 재련 결정 수입(판마다 plays번 깨거나 소탕: 신입 1·보통 1.3·고인물 3)으로 올릴 수 있는 ★와 남는 결정
+export function refineByPlay(N, plays) {
+  let ore = 0; for (let i = 0; i < N; i++) ore += D.oreOf(Math.floor(i / D.STAGES_PER_CHAPTER), i % D.STAGES_PER_CHAPTER);
+  ore = Math.floor(ore * plays);
+  let r = 0; while (r < D.REFINE_MAX && ore >= D.REFINE_ORE[r]) { ore -= D.REFINE_ORE[r]; r++; }
+  return { refine: r, refOre: ore };
+}
+export const AVG_PLAYS = 1.1;
+
 export function applyPreset(sv, id) {
   const pr = PRESETS.find(p => p.id === id);
   if (!pr) return false;
@@ -78,6 +87,7 @@ export function applyPreset(sv, id) {
   sv.tier = 0; D.TIER_AT.forEach((at, t) => { if (N >= at && t < D.TIERS.length) sv.tier = t; });
   const nextIdx = Math.min(N, D.openTotal() - 1), rec = D.recOf(Math.floor(nextIdx / D.STAGES_PER_CHAPTER), nextIdx % D.STAGES_PER_CHAPTER, false);
   sv.enh = 0; while (sv.enh < D.ENH_MAX && D.powerOf(sv) < rec * 1.1) sv.enh++;
+  Object.assign(sv, sv.enh >= D.ENH_MAX ? refineByPlay(N, AVG_PLAYS) : { refine: 0, refOre: 0 });   // +20이면 평균 수입만큼 재련
   if (id === 'all') {
     unlockAll(sv); sv.tier = D.TIERS.length - 1; sv.enh = Math.max(sv.enh, Math.min(D.ENH_MAX, 18));
     sv.skin = 'flame'; sv.hskin = 'demon';   // 화려한 상태: 높은 등급·+15 이상·칼빛·영웅 스킨·캐시 무기

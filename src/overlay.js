@@ -663,7 +663,7 @@ export class Overlay {
     const idx = s.c * D.STAGES_PER_CHAPTER + s.s, hard = s.hard, dun = s.dungeon;
     const prog = hard ? sv.hardCleared : sv.cleared;   // 어려움은 따로 센다
     const first = win && !s.endless && !dun && idx >= prog;
-    let gold, stone = r.stones, guard = 0, sweep = 0, gem = 0, charm = 0, dunItems = 0;
+    let gold, stone = r.stones, guard = 0, sweep = 0, gem = 0, charm = 0, dunItems = 0, ore = 0;
     const dunF = dun ? r.kills / D.DUNGEON.killNeed : 0;
     // 무한의 탑: 버틴 층만큼 받고, 최고 기록을 넘은 층마다 보석
     const floors = s.wave, best = sv.endBest || 0;
@@ -681,6 +681,7 @@ export class Overlay {
     } else if (win) {
       gold = Math.round(D.goldOf(s.c, s.s, hard) * (first ? D.FIRST_CLEAR_MUL : 1));
       stone += D.stoneOf(s.c, s.s, hard);
+      if (!hard) ore = D.oreOf(s.c, s.s);   // 71차: 16장부터 재련 결정(첫 클리어든 다시 깨든 같다)
       mission('clear');
       if (first && hard) { sv.hardCleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; else charm = 1; gem = s.isBoss ? D.HARD.bossGem : D.HARD.firstGem; }
       else if (first) { sv.cleared = idx + 1; sweep = 1; if (s.isBoss) guard = 1; else charm = 1; gem = s.isBoss ? D.GEM_FREE.bossFirst : D.GEM_FREE.stageFirst; }   // 일반 판 첫 클리어: 강화 성공률을 올리는 행운 부적
@@ -736,7 +737,7 @@ export class Overlay {
     // 보스를 처음 잡으면 그 보스 펫이 합류한다. 펫이 없으면 알아서 데려간다(펫 탭을 안 열어도 보이게)
     const newPet = first && !hard && PETS.find(p => p.unlock === sv.cleared);
     if (newPet && !sv.pet) sv.pet = newPet.id;
-    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.gem += gem; sv.charm = (sv.charm || 0) + charm;
+    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.refOre = (sv.refOre | 0) + ore; sv.gem += gem; sv.charm = (sv.charm || 0) + charm;
     // 도감: 이번 판 처치·획득으로 새로 찬 칸
     const dexNew = dexRefresh(sv);
     save();
@@ -789,6 +790,7 @@ export class Overlay {
     if (sweep) rew.push([15, t('overlay.27f21d'), sweep]);
     if (charm) rew.push([7, t('lobby.c5e28a'), charm]);
     if (gem) rew.push([-1, t('lobby.1fed91'), gem]);
+    if (ore) rew.push([9, t('refine.ore'), ore]);
     const tx = [];
     // 보상은 두 칸 격자(한 줄씩 쌓으면 보스 보상 6줄이 겹쳤다)
     if (keyMode) rew.forEach(([ic, name, n], i) => {   // 아이콘 칩: 한 줄에 셋

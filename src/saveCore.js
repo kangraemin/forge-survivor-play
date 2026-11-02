@@ -13,6 +13,7 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
 
   gold: 150, stone: 10, guard: 1, charm: 0, sweep: SWEEP_DAILY,
   tier: 0, enh: 0,
+  refine: 0, refOre: 0,    // 재련 단계(★0~10)·재련 결정(71차). 없는 옛 저장은 0이라 변환 불필요
   cleared: 0,              // 깬 스테이지 수(0이면 1-1 도전 가능). 챕터c 스테이지s의 번호 = c*3+s
   best: {},                // 스테이지별 최고 기록(초)
   train: {},
