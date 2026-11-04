@@ -2270,5 +2270,18 @@
  "ult.staff": "流星群",
  "prologue.i0": "鍛冶師さま！魔王軍が城門を越えました！",
  "prologue.i1": "心配するな。俺には+20の伝説の剣がある。",
- "prologue.i2": "まとめて薙ぎ払ってやる！"
+ "prologue.i2": "まとめて薙ぎ払ってやる！",
+ "data.rageDragonfall": "竜の落下",
+ "data.rageRibcage": "肋骨の檻",
+ "data.rageCrownfall": "王冠の視線",
+ "data.rageSigil": "追いかける魔法陣",
+ "boss.patBonebreath": "ブレス!",
+ "boss.patGraverise": "骨の棘!",
+ "boss.patRibcage": "肋骨の檻!",
+ "boss.patDragonfall": "竜の落下!",
+ "boss.patShadowgrid": "影のマス!",
+ "boss.patKingsword": "十字の刃!",
+ "boss.patSigil": "魔法陣!",
+ "boss.patCrownfall": "王冠の視線!",
+ "overlay.lateTitle": "新しい称号「{name}」"
 }

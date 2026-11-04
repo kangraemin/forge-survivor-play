@@ -2025,7 +2025,7 @@
  "refine.costV": "Refine Crystal {have}/{need} · Gold {gold}",
  "refine.hint": "Refine Crystals drop from Ch.16+ stages and sweeps",
  "refine.btn": "Refine",
- "refine.needOre": "Need {v} more Crystals",
+ "refine.needOre": "Crystals needed: {v}",
  "refine.short": "Not enough materials",
  "refine.ok": "Refine ★{n}!",
  "battle.chest": "Treasure Chest",
@@ -2270,5 +2270,18 @@
  "ult.staff": "Meteor Shower",
  "prologue.i0": "Smith! The Demon King's army has breached the gate!",
  "prologue.i1": "Don't worry. I have my +20 legendary sword.",
- "prologue.i2": "I'll wipe them all out!"
+ "prologue.i2": "I'll wipe them all out!",
+ "data.rageDragonfall": "Dragonfall",
+ "data.rageRibcage": "Rib Cage",
+ "data.rageCrownfall": "Crown's Gaze",
+ "data.rageSigil": "Chasing Sigil",
+ "boss.patBonebreath": "Breath!",
+ "boss.patGraverise": "Bone Spikes!",
+ "boss.patRibcage": "Rib Cage!",
+ "boss.patDragonfall": "Dragonfall!",
+ "boss.patShadowgrid": "Shadow Grid!",
+ "boss.patKingsword": "Cross Blades!",
+ "boss.patSigil": "Sigil!",
+ "boss.patCrownfall": "Crown's Gaze!",
+ "overlay.lateTitle": "New title: {name}"
 }

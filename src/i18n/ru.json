@@ -2270,5 +2270,18 @@
  "ult.staff": "Метеоритный дождь",
  "prologue.i0": "Кузнец! Армия Короля демонов прорвалась через ворота!",
  "prologue.i1": "Не бойся. У меня есть легендарный меч +20.",
- "prologue.i2": "Сметём их всех!"
+ "prologue.i2": "Сметём их всех!",
+ "data.rageDragonfall": "Падение дракона",
+ "data.rageRibcage": "Рёберная клетка",
+ "data.rageCrownfall": "Взор короны",
+ "data.rageSigil": "Преследующая печать",
+ "boss.patBonebreath": "Дыхание!",
+ "boss.patGraverise": "Костяные шипы!",
+ "boss.patRibcage": "Рёберная клетка!",
+ "boss.patDragonfall": "Падение дракона!",
+ "boss.patShadowgrid": "Теневые клетки!",
+ "boss.patKingsword": "Крестовые клинки!",
+ "boss.patSigil": "Печать!",
+ "boss.patCrownfall": "Взор короны!",
+ "overlay.lateTitle": "Новый титул: {name}"
 }

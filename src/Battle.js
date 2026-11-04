@@ -78,6 +78,9 @@ export class Battle extends Phaser.Scene {
     D.setLayoutH(D.FULL_H); setBoxed(false);   // 전투는 화면 전체(메뉴 화면의 세이프존 칸 높이가 남아 있지 않게)
     const sv = this.sv;
     this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
+    // 씬 객체를 판끼리 다시 쓰므로 앞 판 값이 남지 않게 비운다: 경험치 배율(1-2·1-3 첫 판 1.3배, 프롤로그 0.08배가 다음 판으로 샜다)·중간보스 대기(쌓여서 셋째 x-2부터 중간보스를 안 기다렸다)
+    // ·맞은 시각·서리 4세트 시각(다음 판 1분 동안 얼리기가 안 나왔다)·보스 화살표(지워진 옛 화살표를 다시 써서 둘째 보스부터 안 보였다). 1.3배·0.08배는 아래에서 그 판에만 다시 넣는다
+    this.xpMul = 1; this.midWait = 0; this.hurtUntil = 0; this.frostT = 0; this.bArrow = this.bArrowTxt = null;
     this.paused = false; this.hitstop = 0; this.over = false; this.mv = null; this.formT = 0;
     // 씬을 다시 쓰므로 콤보도 판마다 비운다(앞 판 처치 시각이 남아 다음 판 콤보가 424까지 이어졌다)
     this.combo = 0; this.lastKillT = -1e9;
@@ -693,6 +696,7 @@ export class Battle extends Phaser.Scene {
   // tag: 스킬 갈래(근접·원거리·마법·펫). 스탯 힘·민첩·지능이 갈래별 피해를 올린다
   hitMob(m, mult, { src = 'x', cd = 0, kb = 60, fx = 'small', from, tag, skill, pierce } = {}) {
     if (!m.active || m.dead || m.dive) return false;   // 물귀신은 잠겨 있는 동안 맞지 않는다
+    if (this.over || this.hp <= 0) return false;   // 영웅이 쓰러졌거나(부활 제안 창 포함) 판이 끝난 뒤에는 늦게 닿은 칼질·펫·장판으로 보스를 잡아 승리로 바뀌지 않게
     if (cd && this.bt - (m.hitBy[src] || -1e9) < cd) return false;
     m.hitBy[src] = this.bt;
     const { dmg, crit } = this.dmgCalc(mult, tag);
@@ -1325,7 +1329,9 @@ export class Battle extends Phaser.Scene {
     const it = cosmetic(this.cosTrial);
     this.banner(t('battle.02ab04', { v: it ? it.name : '' }), t('battle.09ae55', { PRACTICE_SEC: D.PRACTICE_SEC }));
     this.pracTxt = this.add.text(W / 2, 34, '', font(10, '#9ae0ff', 3)).setOrigin(0.5).setScrollFactor(0).setDepth(100);
-    this.events.on('update', () => { if (this.pracTxt?.active && !this.over) this.pracTxt.setText(t('battle.0e5133', { max: Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000)) })); });
+    const pracTick = () => { if (this.pracTxt?.active && !this.over) this.pracTxt.setText(t('battle.0e5133', { max: Math.max(0, Math.ceil((this.waveLen - this.waveT) / 1000)) })); };
+    this.events.on('update', pracTick);
+    this.pracTxt.once('destroy', () => this.events.off('update', pracTick));   // 판이 끝나 글자가 지워지면 리스너도 뗀다(연습 판마다 하나씩 쌓였다)
     this.log('practice_start', { id: this.cosTrial });
   }
   practiceEnd(done) {
@@ -1378,7 +1384,8 @@ export class Battle extends Phaser.Scene {
 
   // ── 매 프레임 ──
   update(time, delta) {
-    if (this.over) return;
+    // 멈칫(hitstop) 도중에 판이 끝나면 아래에서 애니를 다시 켜지 못해 쓰러지는 모습이 첫 칸에서 굳었다
+    if (this.over) { if (this.hitstop > 0) { this.hitstop = 0; this.anims.resumeAll(); } return; }
     if (this.hitstop > 0) {
       this.hitstop -= delta;
       if (!this.physics.world.isPaused) this.physics.pause();
@@ -1741,6 +1748,7 @@ export class Battle extends Phaser.Scene {
       this.ultTip.ring = ur;
     }
     this.ultTxt.setText(full ? (D.PC ? tt('pc.ultGo') : tt('battle.621771')) + ' Lv' + ultLv(this) : tt('battle.612a31', { floor: Math.floor(mf * 100) }) + ' Lv' + ultLv(this)).setColor(full ? '#ffd75e' : '#a1b2b6');
+    this.ultTxt.x = Math.min(this.ultPos.x, W - 3 - this.ultTxt.displayWidth / 2);   // ' LvN'이 붙어 넓어지면 오른쪽 끝 글자가 화면 밖으로 잘렸다: 버튼 가운데에서 안쪽으로 당긴다
     // 조명
     this.glow.setPosition(this.hero.x, this.hero.y).setScale(1 + Math.sin(time / 120) * 0.03);
     const L = this.env?.lightK < 1 || this.env?.blackT > 0 ? this.env.light.setScale(this.env.blackT > 0 ? 0.4 : this.env.lightK) : null;   // 심연·일식은 밝히는 범위가 좁다

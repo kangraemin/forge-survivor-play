@@ -39,6 +39,27 @@ export const recAtk = D.recPower;
 // 비급 칸은 좁아 설명 첫 줄만 남기면 문장이 중간에서 잘렸다: 한 줄에 들어가는 짧은 설명
 const BOOK_SHORT = { spin: t('lobby.a93ede'), dagger: t('lobby.84ce88'), bolt: t('lobby.fbf767'), holy: t('lobby.7c19f3'), fireball: t('lobby.d1b2e7'), ice: t('lobby.37aa13'), orb: t('lobby.500ede') };
 
+// 그림(이미지)의 화면 x 기준 왼쪽 끝: 화면 y0~y1 줄에서 처음 보이는(투명하지 않은) 픽셀. 무기 그림마다 둘레 빈칸이 달라 그림 폭으로는 알 수 없다
+const ART_LEFT = {};
+function artLeft(img, y0, y1) {
+  const fr = img.frame, k = img.texture.key + '|' + fr.name;
+  let rows = ART_LEFT[k];
+  if (!rows) {
+    rows = [];
+    try {
+      const cv = document.createElement('canvas'); cv.width = fr.width; cv.height = fr.height;
+      const g = cv.getContext('2d'); g.drawImage(img.texture.getSourceImage(), fr.cutX, fr.cutY, fr.width, fr.height, 0, 0, fr.width, fr.height);
+      const d = g.getImageData(0, 0, fr.width, fr.height).data;
+      for (let y = 0; y < fr.height; y++) { let x = 0; while (x < fr.width && d[(y * fr.width + x) * 4 + 3] < 40) x++; rows.push(x); }
+    } catch { rows = []; }
+    ART_LEFT[k] = rows;
+  }
+  const top = img.y - img.displayHeight * img.originY, sy = img.displayHeight / fr.height, sx = img.displayWidth / fr.width;
+  let m = fr.width;
+  for (let y = Math.max(0, Math.floor((y0 - top) / sy)); y <= Math.min(rows.length - 1, Math.ceil((y1 - top) / sy)); y++) m = Math.min(m, rows[y]);
+  return img.x - img.displayWidth * img.originX + m * sx;
+}
+
 export class Lobby extends Phaser.Scene {
   constructor() { super('Lobby'); }
 
@@ -46,7 +67,8 @@ export class Lobby extends Phaser.Scene {
   init(data) { this.introCoach = !!data?.intro; if (data?.modeSel) { this.modeScr = true; this.modeId = data.modeSel; this.modeN = data.modeN ?? 0; } else this.modeScr = false; this.tab = data?.tab || this.tab || 'battle'; this.lossTip = !!data?.lossTip; this.autoStart = data?.autoStart || null; this.busy = false; this.enhQ = false; this.guardOff = false; this.charmOff = false; if (data?.cosmetic) { this.shopPage = 'skin'; this.skinTab = cosmetic(data.cosmetic)?.kind || 'costume'; this.cosSelected = { [this.skinTab]: data.cosmetic }; this.legacySkins = false; } }
   // 방지권은 가지고 있으면 기본으로 쓴다(직접 끈 경우만 안 씀)
   get useGuard() { return !this.guardOff && this.sv?.guard > 0; }
-  get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] < 100; }
+  // 부적 없이도 100%(기본 + 앞치마 + 실패 보정)면 쓰지 않는다(화면엔 100%로만 보여 하나씩 헛되이 사라졌다)
+  get useCharm() { return !this.charmOff && this.sv?.charm > 0 && D.ENH_RATE[this.sv.enh] + this.apron() + D.pityRate(this.sv) < 100; }
 
   create() {
     // 전투가 멈춘 채 끝났어도 로비 애니메이션은 돌아야 한다(애니메이션 관리자는 장면끼리 공유)
@@ -295,7 +317,9 @@ export class Lobby extends Phaser.Scene {
     c.add(this.add.text(W / 2, 230, giveText(it.give), { ...font9(10, '#f2e4bc'), align: 'center', wordWrap: { width: W - 80 } }).setOrigin(0.5, 0));
     { const tg = this.add.text(W / 2, 268, `${iapTag(it)}  ·  ${priceLabel(it)}`, font(11, '#ffd75e')).setOrigin(0.5); tg.setScale(Math.min(1, (W - 56) / tg.width)); c.add(tg); }
     c.add(button(this, 88, 310, 96, 28, t('lobby.2d4e13'), () => { track('starter_offer_close'); c.close(); }, { size: 11, color: 0x3a3846 }));
+    let buying = false;   // 결제 창이 뜨기 전에 두 번 눌려 주문이 둘 나가지 않게(상점 목록처럼 막는다)
     c.add(button(this, 186, 310, 100, 28, t('lobby.c91e61'), async () => {
+      if (buying) return; buying = true;
       track('starter_offer_click');
       const ok = await buy(this, sv, it);
       if (ok) toast(this, t('lobby.d19e31', { name: it.name }), '#ffd75e');
@@ -319,7 +343,9 @@ export class Lobby extends Phaser.Scene {
     const lt = this.add.text(W / 2, 274, '', font9(10, '#ff9a8a')).setOrigin(0.5); c.add(lt);
     const tick = () => { if (!lt.active) return; lt.setText(t('lobby.480780', { leftText: leftText(growLeft(sv)) })); this.time.delayedCall(1000, tick); }; tick();
     c.add(button(this, 88, 310, 96, 28, t('lobby.2d4e13'), () => { track('grow_offer_close'); c.close(); }, { size: 11, color: 0x3a3846 }));
+    let buying = false;   // 결제 창이 뜨기 전에 두 번 눌려 주문이 둘 나가지 않게(상점 목록처럼 막는다)
     c.add(button(this, 186, 310, 100, 28, t('lobby.c91e61'), async () => {
+      if (buying) return; buying = true;
       track('grow_offer_click');
       const ok = await buy(this, sv, it);
       if (ok) toast(this, t('lobby.d19e31', { name: it.name }), '#ffd75e');
@@ -608,6 +634,9 @@ export class Lobby extends Phaser.Scene {
     this.tweens.add({ targets: halo, scale: 1.3, alpha: 0.18, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     const wpn = weaponIcon(this, W / 2, AY + 46, wtypeOf(sv).id, sv.tier, 70 * (1 + Math.min(enh, 20) * 0.012));
     pv.add(wpn);
+    // 큰 무기 그림이 위쪽 작은 글자(견습생 금화·증표 안내)를 가렸다(영어·독일어처럼 긴 글자): 그 글자 높이에서 그림이 실제로 시작하는 곳 앞에서 글자가 멈추게 줄인다
+    pv.wpnLeft = (y0, y1) => artLeft(wpn, y0, y1) - 3;
+    const fitLeft = (o, right) => { o.setScale(Math.min(1, Math.max(0.7, (right - o.x) / o.width))); o.noFit = true; return o; };   // 0.7배 아래로는 안 줄인다(그래도 넘치면 글자가 그림 위에 테두리째 그려져 읽힌다)
     this.tweens.add({ targets: wpn, y: wpn.y - 3, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     pv.add(this.add.text(W / 2, AY + 84, `+${enh} ${D.tierName(sv.tier, wtypeOf(sv))}`, font(13, enh >= 15 ? '#e8a0ff' : enh >= 10 ? '#ffd75e' : '#ffffff', 3)).setOrigin(0.5));
     // 보스는 오른쪽 위 작게, 아래에 보스까지 몇 판
@@ -623,9 +652,9 @@ export class Lobby extends Phaser.Scene {
       tossSubmitRecord(sv);
       pv.add(button(this, 36, AY + 66, 54, 22, tt('rank.short'), () => { if (this.busy) return; sfx('click'); track('rank_lobby_open'); if (rankVisible()) openRank(this); else tossBoard()?.open(); }, { size: 11, color: 0x1d6f80 }));
     }
-    if (sv.title) pv.add(this.add.text(10, AY + 4, `「${titleName(sv.title)}」`, font9(10, '#ffb050', 3)));
-    // 돌아올 이유: 자리를 비워도 견습생이 번다(조용한 한 줄)
-    if (sv.cleared >= 1) pv.add(this.add.text(sv.title ? 90 : 10, AY + 4, tt('lobby.dc2acf', { fmt: fmt(Math.round(D.dunBase(sv).gold * D.IDLE.perH)) }), font9(9, '#d8d0e8', 3)));
+    if (sv.title) pv.add(fitLeft(this.add.text(10, AY + 4, `「${titleName(sv.title)}」`, font9(10, '#ffb050', 3)), pv.wpnLeft(AY + 4, AY + 16)));
+    // 돌아올 이유: 자리를 비워도 견습생이 번다(조용한 한 줄). 칭호가 있으면 그 아래 줄(옆에 두면 무기 그림 밑으로 들어갔다)
+    if (sv.cleared >= 1) { const y = sv.title ? AY + 16 : AY + 4; pv.add(fitLeft(this.add.text(10, y, tt('lobby.dc2acf', { fmt: fmt(Math.round(D.dunBase(sv).gold * D.IDLE.perH)) }), font9(9, '#d8d0e8', 3)), pv.wpnLeft(y, y + 11))); }
     // 스테이지 3칸: 그림 아래 띠에 작게. 무엇이 다른지는 아래 정보판에
     for (let s = 0; s < D.STAGES_PER_CHAPTER; s++) {
       const idx = c * D.STAGES_PER_CHAPTER + s, x = 47 + s * 88, y = AY + AH - 20;
@@ -766,7 +795,7 @@ export class Lobby extends Phaser.Scene {
     // 새 장 첫 판에 처음 들어가면 도입 보상(금화 꾸러미 + 소탕권). 한 번만
     const intro = !endless && !dungeon && !hard && s === 0 && D.introOf(c);
     if (intro && !(sv.intro ||= {})[c]) {
-      sv.intro[c] = 1; sv.gold += intro.gold; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + intro.sweep); save();
+      sv.intro[c] = 1; sv.gold += intro.gold; sv.sweep = D.sweepAdd(sv.sweep, intro.sweep); save();
       toast(this, t('lobby.7cee49', { fmt: fmt(intro.gold), sweep: intro.sweep }), '#ffd75e');
       track('chapter_intro', { c, gold: intro.gold });
     }
@@ -868,7 +897,7 @@ export class Lobby extends Phaser.Scene {
     b.add(this.add.text(14, 40, tt('lobby.348786'), font(18, '#f2e4bc', 0)));
     b.add(this.add.text(W - 14, 44, max ? tt('lobby.05f3c1', { enh }) : `+${enh} → +${enh + 1}`, font(13, enh >= 15 ? '#ff9a3a' : '#ffb85c', 0)).setOrigin(1, 0));
     b.add(this.add.text(14, 64, D.tierName(sv.tier, wtypeOf(sv)), font(11, '#a1b2b6', 0)));
-    b.add(this.add.text(W - 14, 64, tt('lobby.f87b0a', { fmt: fmt(Math.round(D.weaponAtk(sv.tier, enh, sv.refine))), v: max ? '' : ` → ${fmt(Math.round(D.weaponAtk(sv.tier, enh + 1)))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1) / D.weaponAtk(sv.tier, enh) - 1) * 100)}%)` }), font(11, '#73d6c1', 0)).setOrigin(1, 0));
+    b.add(this.add.text(W - 14, 64, tt('lobby.f87b0a', { fmt: fmt(Math.round(D.weaponAtk(sv.tier, enh, sv.refine))), v: max ? '' : ` → ${fmt(Math.round(D.weaponAtk(sv.tier, enh + 1, sv.refine)))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1, sv.refine) / D.weaponAtk(sv.tier, enh, sv.refine) - 1) * 100)}%)` }), font(11, '#73d6c1', 0)).setOrigin(1, 0));
     // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
     if (!max) {
       const next = (Math.floor(enh / D.ENH_MILESTONE) + 1) * D.ENH_MILESTONE;
@@ -919,6 +948,7 @@ export class Lobby extends Phaser.Scene {
     const rLv = D.refineLv(sv), rDone = rLv >= D.REFINE_MAX, rOre = D.REFINE_ORE[rLv], rGold = D.refineGold(rLv), rHave = sv.refOre | 0;
     const rOk = max && !rDone && rHave >= rOre && sv.gold >= rGold;
     b.add(panel(this, 12, 272, W - 24, max ? (rDone ? 56 : 82) : 62 + nChk * 17 + (nChk === 2 ? 6 : 0), { fill: 0x15111f }));   // 빈 칸 없이 내용만큼
+    let charmRow = null;   // 행운 부적 줄 자리(승급 증표 줄과 겹치지 않게)
     if (max && rDone) {
       b.add(this.add.text(W / 2, 300, tt('refine.done', { n: D.REFINE_MAX }), font(14, '#ffd75e')).setOrigin(0.5));
     } else if (max) {
@@ -952,7 +982,8 @@ export class Lobby extends Phaser.Scene {
         const ck = this.add.container(24, danger ? 357 : 340);
         ck.add(this.add.rectangle(0, 0, 12, 12, 0x000000).setStrokeStyle(1, 0xffd75e).setOrigin(0, 0.5));
         if (this.useCharm) ck.add(this.add.text(6, 0, '✓', font(10, '#ffd75e')).setOrigin(0.5));
-        ck.add(this.add.text(18, 0, tt('lobby.5677bb', { CHARM_RATE: D.CHARM_RATE, charm: sv.charm }), font9(10, '#f2e4bc')).setOrigin(0, 0.5));
+        const ckT = this.add.text(18, 0, tt('lobby.5677bb', { CHARM_RATE: D.CHARM_RATE, charm: sv.charm }), font9(10, '#f2e4bc')).setOrigin(0, 0.5); ck.add(ckT);
+        charmRow = { y: ck.y, r: ck.x + 18 + ckT.displayWidth };   // 승급 증표 줄이 이 줄과 겹치지 않게(아래)
         ck.setSize(200, 18).setInteractive({ useHandCursor: true });
         ck.on('pointerup', () => { if (this.busy) return; sfx('click'); this.charmOff = !this.charmOff; this.show('forge'); });
         b.add(ck);
@@ -978,7 +1009,10 @@ export class Lobby extends Phaser.Scene {
       const solo = max && rDone, pb = button(this, solo ? W / 2 : 200, 404, solo ? 180 : 110, 30, markBlock ? tt('lobby.24e1eb') : tt('lobby.3adf57', { fmt: fmt(cost) }), () => markBlock ? this.goChallenge() : this.promote(), { size: 12, color: markBlock ? 0x1d6f80 : 0x2f6b3a });
       pb.setEnabled(okBoss && (markBlock || sv.gold >= cost)); b.add(pb);
       if (mkNeed && okBoss) {
-        const mt = this.add.text(W / 2, 361, tt('lobby.ab8f9f', { mkHave, mkNeed }), font9(10, okMark ? '#7fe6ee' : '#ff9a8a')).setOrigin(0.5, 0); mt.setScale(Math.min(1, (W - 80) / mt.width)); b.add(mt); b.add(markIcon(this, mt.x - mt.displayWidth / 2 - 9, 367, 12));
+        const mt = this.add.text(W / 2, 361, tt('lobby.ab8f9f', { mkHave, mkNeed }), font9(10, okMark ? '#7fe6ee' : '#ff9a8a')).setOrigin(0.5, 0); mt.setScale(Math.min(1, (W - 80) / mt.width)); b.add(mt);
+        // 방지권 줄 아래로 행운 부적 줄(y 357)이 내려온 경우엔 증표 줄(y 361)과 겹쳤다: 부적 줄 오른쪽 빈자리에 붙인다
+        if (charmRow && charmRow.y > 350) { const room = W - 22 - (charmRow.r + 22); mt.setOrigin(1, 0.5).setPosition(W - 22, charmRow.y).setScale(Math.min(1, room / mt.width)); }
+        b.add(markIcon(this, mt.x - (mt.originX === 1 ? mt.displayWidth : mt.displayWidth / 2) - 9, mt.originX === 1 ? mt.y : 367, 12));
       }
       if (markBlock && !sv.tut.markAsk) { sv.tut.markAsk = true; save(); this.time.delayedCall(300, () => toast(this, tt('lobby.867885'), '#7fe6ee', 112)); }
       if (this.forgeArrow) { /* 첫 강화 안내와 겹치지 않게 승급 안내는 숨긴다 */ }

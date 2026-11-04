@@ -2270,5 +2270,18 @@
  "ult.staff": "Mưa Thiên Thạch",
  "prologue.i0": "Thợ rèn! Quân Ma Vương đã vượt qua cổng thành!",
  "prologue.i1": "Đừng lo. Ta có thanh kiếm huyền thoại +20.",
- "prologue.i2": "Ta sẽ quét sạch chúng!"
+ "prologue.i2": "Ta sẽ quét sạch chúng!",
+ "data.rageDragonfall": "Rồng Giáng",
+ "data.rageRibcage": "Lồng Xương Sườn",
+ "data.rageCrownfall": "Ánh Nhìn Vương Miện",
+ "data.rageSigil": "Ấn Truy Đuổi",
+ "boss.patBonebreath": "Hơi thở!",
+ "boss.patGraverise": "Gai xương!",
+ "boss.patRibcage": "Lồng xương sườn!",
+ "boss.patDragonfall": "Rồng giáng!",
+ "boss.patShadowgrid": "Ô bóng tối!",
+ "boss.patKingsword": "Lưỡi kiếm chữ thập!",
+ "boss.patSigil": "Ấn chú!",
+ "boss.patCrownfall": "Ánh nhìn vương miện!",
+ "overlay.lateTitle": "Danh hiệu mới: {name}"
 }

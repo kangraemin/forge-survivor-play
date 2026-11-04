@@ -178,6 +178,7 @@ export const RAGE_WHAT = {
   tsunami: t('data.a5cc13'), bloom: t('data.2b305f'), shatter: t('data.e6c7d9'), cyclone: t('data.2fab2d'), eclipse: t('data.ee87da'),
   sink: t('data.be3ab6'), overheat: t('data.1c9ca0'), tempest: t('data.d60d02'), reflect: t('data.0db4d5'), meteor: t('data.1b6824'),
   blizzard: t('data.2b095a'), squall: t('data.2ec769'), stoptime: t('data.087d4f'),
+  dragonfall: t('data.rageDragonfall'), ribcage: t('data.rageRibcage'), crownfall: t('data.rageCrownfall'), sigil: t('data.rageSigil'),   // 19·20장 보스·중간보스(빠져서 'undefined'가 떴다)
 };
 export const BOSSES = {
   kingslime: { name: t('data.052600'), sheet: 'boss1', row: 0, hp: 1200, dmg: 12, spd: 26, color: 0x6fe36a, pattern: ['jump', 'charge', 'summon', 'slam', 'ring'], rage: 'pools' },
@@ -357,6 +358,8 @@ export const BOSS_TIRED = { ms: 75000, midMs: 84000, mul: 1.5 };   // 55차: 중
 export const FAIL_GOLD_RATE = 0.5;                         // 실패해도 버틴 시간 비율 × 클리어 금화의 50%를 준다
 // 은화는 판이 끝나면 사라진다(아껴 두지 말고 상점에서 바로 쓰게)
 export const SWEEP_DAILY = 5, SWEEP_MAX = 12;
+// 무료로 쌓이는 소탕권(하루 충전·첫 클리어·장 도입)은 상한까지만 채운다. 이미 상한을 넘겨 가진 것(보석 상점·월정액·꾸러미로 산 것)은 깎지 않는다
+export const sweepAdd = (have, n) => Math.max(have, Math.min(SWEEP_MAX, have + n));
 
 // ── 훈련(영구 능력치). v는 레벨당 효과 ──
 export const TRAINING = [

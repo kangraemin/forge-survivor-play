@@ -12,7 +12,8 @@ import { attachSkin, probeHit, skinSkill, skinHurt, skinDie, skinGhosts } from '
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 const PAT_NAME = { jump: t('boss.107f3a'), charge: t('boss.420d2b'), slam: t('boss.029568'), ring: t('boss.6d24cb'), aimed: t('boss.36fc49'), summon: t('boss.d66332'), sweep: t('boss.40236d'), pools: t('boss.ec0b01'), wave: t('boss.997e54'), tsunami: t('boss.814117'), spore: t('boss.5c693c'), bloom: t('boss.0768ac'), prism: t('boss.3e97bd'), shatter: t('boss.56758f'), gale: t('boss.071b3a'), cyclone: t('boss.3dbf66'), void: t('boss.a11889'), eclipse: t('boss.895396'), burrow: t('boss.15b7f0'), sink: t('boss.4af90f'), vent: t('boss.418165'), overheat: t('boss.5bbfb4'), bolt: t('boss.7e82c9'), tempest: t('boss.d7dac6'), mirror: t('boss.e70e4d'), reflect: t('boss.2c22c2'), hammer: t('boss.ecef39'), meteor: t('boss.8d6129'), icelance: t('boss.93e20a'), frostquake: t('boss.e480b8'), blizzard: t('boss.87a560'), volley: t('boss.15e4f0'), skydive: t('boss.81537e'), broadside: t('boss.054902'), squall: t('boss.071b3a'), chime: t('boss.3e801a'), rewindpat: t('boss.099f7b'), gearsaw: t('boss.1497d7'), stoptime: t('boss.cb1b40'), frostslide: t('boss.patFrostslide'), clockhands: t('boss.patClockhands'), checkmate: t('boss.patCheckmate'),
-  clubs: t('boss.05f230'), graves: t('boss.0a1ef8'), lavaspit: t('boss.d9d2de'), icicles: t('boss.b3b24e'), chains: t('boss.3a008c'), claw: t('boss.e62c5f'), tongue: t('boss.3ba158'), stinger: t('boss.e2a932'), swoop: t('boss.35fb4a'), gaze: t('boss.b9dfe0'), unwrap: t('boss.4bc136'), piston: t('boss.f17946'), shards: t('boss.e11a57'), anvilrain: t('boss.1655ad') };
+  clubs: t('boss.05f230'), graves: t('boss.0a1ef8'), lavaspit: t('boss.d9d2de'), icicles: t('boss.b3b24e'), chains: t('boss.3a008c'), claw: t('boss.e62c5f'), tongue: t('boss.3ba158'), stinger: t('boss.e2a932'), swoop: t('boss.35fb4a'), gaze: t('boss.b9dfe0'), unwrap: t('boss.4bc136'), piston: t('boss.f17946'), shards: t('boss.e11a57'), anvilrain: t('boss.1655ad'),
+  bonebreath: t('boss.patBonebreath'), graverise: t('boss.patGraverise'), ribcage: t('boss.patRibcage'), dragonfall: t('boss.patDragonfall'), shadowgrid: t('boss.patShadowgrid'), kingsword: t('boss.patKingsword'), sigil: t('boss.patSigil'), crownfall: t('boss.patCrownfall') };   // 19·20장(빠져서 모두 '공격!'으로만 떴다)
 const MID_EXTRA = ['ring', 'jump'];   // 50차: 중간보스 페이즈 1·2에서 늘어나는 새 패턴
 const PHASE_LINE = [t('boss.d58fa8'), t('boss.6bf13b')];
 
@@ -230,6 +231,7 @@ export class BossAI {
     const c = s.add.container(m.x, m.y - m.displayHeight * 0.75, [bg, t]).setDepth(42);
     const follow = () => { if (!m.active || !c.active) return; c.setPosition(m.x, m.y - m.displayHeight * 0.75); };
     s.events.on('update', follow);
+    c.once('destroy', () => s.events.off('update', follow));   // 말풍선이 떠 있을 때 판이 끝나도(씬이 닫혀 아래 타이머가 안 돌아도) 리스너가 남지 않게
     s.time.delayedCall(ms, () => { s.events.off('update', follow); s.tweens.add({ targets: c, alpha: 0, duration: 200, onComplete: () => c.destroy() }); });
   }
 
@@ -515,7 +517,7 @@ export class BossAI {
     s.run.silver += D.DROP.bossSilver;
     s.boss = null;
     s.iframe = s.bt + 1e9; s.ebullets.clear(true, true); // 결과 창이 뜨기 전 남은 탄에 죽지 않게
-    s.time.delayedCall(1400, () => s.ui.result(true));
+    s.time.delayedCall(1400, () => { if (!s.over && s.hp > 0) s.ui.result(true); });   // 그 사이 판이 끝났으면(진 판) 승리로 바꾸지 않는다
   }
 }
 

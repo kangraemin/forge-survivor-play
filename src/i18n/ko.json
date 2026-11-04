@@ -2270,5 +2270,18 @@
  "ult.staff": "유성우",
  "prologue.i0": "대장장이님! 마왕군이 성문을 넘었어요!",
  "prologue.i1": "걱정 마. 내 +20 전설의 검이 있다.",
- "prologue.i2": "전부 쓸어버린다!"
+ "prologue.i2": "전부 쓸어버린다!",
+ "data.rageDragonfall": "용의 낙하",
+ "data.rageRibcage": "갈비뼈 감옥",
+ "data.rageCrownfall": "왕관의 시선",
+ "data.rageSigil": "쫓아오는 마법진",
+ "boss.patBonebreath": "숨결!",
+ "boss.patGraverise": "뼈 가시!",
+ "boss.patRibcage": "갈비뼈 감옥!",
+ "boss.patDragonfall": "용의 낙하!",
+ "boss.patShadowgrid": "그림자 칸!",
+ "boss.patKingsword": "십자 칼날!",
+ "boss.patSigil": "마법진!",
+ "boss.patCrownfall": "왕관의 시선!",
+ "overlay.lateTitle": "새 칭호 「{name}」"
 }

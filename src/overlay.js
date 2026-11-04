@@ -24,6 +24,7 @@ const R = Phaser.Math.Between;
 const { W } = D;
 import { H } from './data.js';   // 실시간 값: 전투는 화면 전체, 메뉴 화면은 세이프존 안 칸(ui.js hiCam)
 const DEPTH = 150;
+const FREEZE = new Set(['level', 'loot', 'chest', 'shop', 'pause', 'revive']);   // 판을 멈추고 여는 창(결과 창은 판이 끝난 뒤라 빼고, 끝난 판의 연출은 그대로 마저 돈다)
 
 export class Overlay {
   constructor(s) { this.s = s; this.open = null; this.pendingLv = 0; this.queue = []; }
@@ -86,6 +87,7 @@ export class Overlay {
     const s = this.s;
     this.open = name;
     s.paused = true; s.physics.pause(); s.anims.pauseAll();
+    if (FREEZE.has(name) && !s.over) this.freeze();
     // 이동 안내가 창 뒤로 비치지 않게 바로 지운다
     s.hint?.forEach(o => { s.tweens.killTweensOf(o); o.destroy(); }); s.hint = null;
     // 떠 있던 배너(웨이브·보스 이름)도 지운다: 창 제목과 겹쳐 읽을 수 없었다
@@ -116,7 +118,23 @@ export class Overlay {
     if (next) { this.open = 'next'; s.time.delayedCall(10, () => { if (this.open !== 'next') return; this.open = null; next(); this.settle(); }); return; }
     this.resume();
   }
-  resume() { const s = this.s; s.paused = false; s.physics.resume(); s.anims.resumeAll(); s.showUlt?.(true); }
+  resume() { const s = this.s; s.paused = false; s.physics.resume(); s.anims.resumeAll(); this.thaw(); s.showUlt?.(true); }
+  // 판을 멈추는 창(레벨업·멈춤·부활 등)이 열린 동안, 창이 열리기 전부터 돌던 지연 호출·트윈을 멈춘다(습격·금화 러시·중간보스 패턴 타이머가 돌아 몹이 상한을 넘게 쌓였다)
+  // 창이 열린 뒤 만든 것(창의 버튼·글자·연출, 다음 창 열기)은 그대로 돈다. 창이 이어서 열려도 처음 멈춘 묶음 하나만 들고 있다가 판이 다시 돌 때 한 번에 푼다
+  freeze() {
+    if (this.frozen) return;
+    const s = this.s, tm = s.time;
+    const ev = [...(tm._active || []), ...(tm._pendingInsertion || [])].filter(e => !e.paused && !e.hasDispatched);   // Phaser 3.80에는 getAllEvents가 없다
+    const tw = s.tweens.getTweens().filter(t => !t.paused && !t.isDestroyed());
+    ev.forEach(e => { e.paused = true; }); tw.forEach(t => t.pause());
+    this.frozen = { ev, tw };
+  }
+  thaw() {
+    const f = this.frozen; if (!f) return;
+    this.frozen = null;
+    f.ev.forEach(e => { e.paused = false; });
+    f.tw.forEach(t => { if (!t.isDestroyed()) t.resume(); });
+  }
   // 대기열 항목이 창을 열지 않고 끝났으면(이미 더 좋은 장비·봇 자동 장착 등) 다음 항목으로 넘기거나 일시정지를 푼다
   settle() {
     if (this.open || this.s.over) return;
@@ -608,7 +626,7 @@ export class Overlay {
     const sk = Object.entries(s.run.skills).map(([k, lv]) => `${D.SKILLS[k].name} ${lv}`).join('\n');
     c.add(s.add.text(W / 2, 192, sk, { ...font9(10), align: 'center' }).setOrigin(0.5, 0).setLineSpacing(1));
     c.add(button(s, W / 2, 268, 130, 26, t('overlay.9cb367'), () => this.end(c), { color: 0x2f6b3a }));
-    c.add(button(s, W / 2, 300, 130, 24, t('overlay.851565'), () => { if (c !== this.c) return; s.log('give_up', { wave: s.wave, progress: Math.round(s.runProgress() * 100) }); this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x8a2f3a }));
+    c.add(button(s, W / 2, 300, 130, 24, t('overlay.851565'), () => { if (c !== this.c) return; s.log('give_up', { wave: s.wave, progress: Math.round(s.runProgress() * 100) }); s.run.gaveUp = true; this.end(c); s.over = true; s.physics.pause(); this.result(false); }, { size: 10, color: 0x8a2f3a }));
   }
 
   // ── 쓰러졌을 때 부활 제안(판당 1번): 광고 또는 보석 ──
@@ -711,6 +729,15 @@ export class Overlay {
       s.time.delayedCall(900, () => { sfx('success'); toast(s, t('overlay.relicDrop'), '#c890ff'); });
     }
     if (finale) { gem += D.FINALE.gem; sweep += D.FINALE.sweep; guard += D.FINALE.guard; stone += D.FINALE.stone; for (let i = 0; i < D.FINALE.items; i++) loot.push(makeItem(s.c, { boost: 2 })); }
+    // 16~20장 보스를 처음 잡으면 그 장의 첫 클리어 보상(data.js LATE_FIRST · docs/chapters.md). 표만 있고 주는 코드가 없어 하나도 나오지 않았다. 장비는 보스 보상처럼 한 등급 위로
+    const late = first && !hard && s.isBoss && D.LATE_FIRST[s.c];
+    r.lateTitle = null;
+    if (late) {
+      gem += late.gem || 0; stone += late.stone || 0; guard += late.guard || 0; sweep += late.sweep || 0;
+      for (let i = 0; i < (late.items || 0); i++) loot.push(makeItem(s.c, { boost: 1 }));
+      if (late.title) { (sv.lateT ||= {})[s.c] = 1; r.lateTitle = late.title; if (!sv.title) sv.title = 'late' + s.c; }   // 첫 칭호는 바로 낀다(업적 칭호와 같게)
+      s.log('late_first', { c: s.c, gem: late.gem, title: !!late.title });
+    }
     // 처음 깬 판은 한 등급 위로(판마다 받는 게 손에 잡히게)
     // 어려움은 5장 수치 장비가 한 등급 위로 나온다
     if (win && !s.endless && !dun) for (let i = 0; i < (s.isBoss ? 2 : 1); i++) loot.push(makeItem(hard ? D.openN() - 1 : s.c, { boost: hard || s.isBoss || first ? 1 : 0 }));
@@ -737,7 +764,7 @@ export class Overlay {
     // 보스를 처음 잡으면 그 보스 펫이 합류한다. 펫이 없으면 알아서 데려간다(펫 탭을 안 열어도 보이게)
     const newPet = first && !hard && PETS.find(p => p.unlock === sv.cleared);
     if (newPet && !sv.pet) sv.pet = newPet.id;
-    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = Math.min(D.SWEEP_MAX, sv.sweep + sweep); sv.refOre = (sv.refOre | 0) + ore; sv.gem += gem; sv.charm = (sv.charm || 0) + charm;
+    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = D.sweepAdd(sv.sweep, sweep); sv.refOre = (sv.refOre | 0) + ore; sv.gem += gem; sv.charm = (sv.charm || 0) + charm;
     // 도감: 이번 판 처치·획득으로 새로 찬 칸
     const dexNew = dexRefresh(sv);
     save();
@@ -761,13 +788,14 @@ export class Overlay {
     c.add(title); s.tweens.add({ targets: title, scale: 1, duration: 300, ease: 'Back.Out' });
     c.add(s.add.text(W / 2, 142, s.endless ? t('overlay.9f9bf4', { endBest: sv.endBest }) : dun ? t('battle.023b82', { name: D.DUN_TYPES[dun].name }) : `${hard ? t('lobby.52de23') : ''}${s.c + 1}-${s.s + 1} ${s.ch.name}${first ? t('overlay.d13fa1', { FIRST_CLEAR_MUL: D.FIRST_CLEAR_MUL }) : ''}`, font9(10, hard ? '#ff9090' : '#a1b2b6')).setOrigin(0.5));
     // 61차: 보스 첫 클리어(새 펫·새 무기)는 핵심을 위로 올리고, 판 기록은 한 줄·보상은 아이콘 칩으로 묶는다(10줄 넘게 쌓여 새 무기가 묻혔다. 보상 수치는 그대로)
-    const keyW = win && !s.endless && !dun && r.newW, keyMode = !!(keyW || (win && !s.endless && !dun && newPet));
+    const keyW = win && !s.endless && !dun && r.newW, lateT = win && r.lateTitle, keyMode = !!(keyW || (win && !s.endless && !dun && (newPet || lateT)));
     let rewY0 = 214, rewH = 22, cy = 0;
     if (keyMode) {
       const ln = [];
       if (keyW && newPet) ln.push([t('overlay.7b8cb9', { name: newPet.name }), font9(10, '#ffb050')]);
       if (keyW) ln.push([t('overlay.5e1ee0', { name: keyW.name }), font(11, '#ffd75e')], [t('overlay.41dd1f', { name: keyW.name, st: { str: t('gear.ef089e'), dex: t('gear.64b53c'), int: t('gear.448d3a') }[keyW.stat] }), font9(10, '#f2e4bc')]);
-      else ln.push([t('overlay.7b8cb9', { name: newPet.name }), font(11, '#ffd75e')]);
+      else if (newPet) ln.push([t('overlay.7b8cb9', { name: newPet.name }), font(11, '#ffd75e')]);
+      if (lateT) ln.push([t('overlay.lateTitle', { name: lateT }), keyW || newPet ? font9(10, '#ffb050') : font(11, '#ffd75e')]);   // 16·20장 첫 클리어 칭호
       const ph = 8 + ln.length * 14;
       c.add(panel(s, 36, 154, W - 72, ph, { fill: 0x2a2010, line: 0xffb050 }));
       ln.forEach(([tx0, f], i) => { const o = s.add.text(W / 2, 154 + 13 + i * 14, tx0, f).setOrigin(0.5); o.isBtnLabel = true; o.setScale(Math.min(1, (W - 84) / o.width)); c.add(o); });
@@ -840,7 +868,7 @@ export class Overlay {
     const early = sv.stats.runs <= 3 && !dun && !s.endless;
     const brag = !shareHidden() && !early && !s.bot && !dun && (win || (s.endless && floors > best));
     // 45차: 광고 2배·자랑하기는 한 줄 보조 버튼(둘 다 있으면 반반, 하나면 가운데). 주 버튼은 아래 '다음 판' 하나
-    const adOn = !early && !s.bot && adsLeft(sv, 'double') > 0 && gold + stone > 0;
+    const adOn = !early && !s.bot && !r.gaveUp && adsLeft(sv, 'double') > 0 && gold + stone > 0;   // 일시정지에서 포기한 판은 2배 광고를 내밀지 않는다(쓰러진 판은 그대로)
     const sw = adOn && brag ? 112 : 170, sx = adOn && brag ? 58 : 0;
     if (brag) {
       const gift = sv.shareDay !== sv.day, shareGem = sv.shared ? D.SHARE_GEM : D.SHARE_GEM_FIRST;

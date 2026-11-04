@@ -4,21 +4,22 @@
 //  - startBg는 화면이 뜬 뒤 남은 그림을 장면 밖 로더(BgLoad)로 순서대로 받는다.
 //  - 아직 안 받은 그림은 코드가 textures.exists로 건너뛰거나(대체 그림) 시작 전에 기다린다.
 import { equippedLook } from './cosmetics.js';
-import { STAGES_PER_CHAPTER } from './data.js';
+import { STAGES_PER_CHAPTER, CHAPTERS } from './data.js';
 import { load } from './save.js';
 import { withSmooth } from './smooth.js';
 
 const reg = new Map();   // key -> ['image'|'spritesheet', key, url, cfg]
 export const registerAssets = list => { for (const it of list) reg.set(it[1], it); };
 const items = pred => { const p = withSmooth(pred); return [...reg.values()].filter(it => p(it[1])); };   // 8장 그림(sm_)은 원래 그림과 같이 받는다
-const chNo = sv => Math.min(18, Math.floor(((sv?.cleared | 0)) / STAGES_PER_CHAPTER) + 1);   // 로비가 처음 보여 주는 장(1부터)
+const LAST = CHAPTERS.length;   // 마지막 장(20). 18로 박혀 있어 19·20장 로비 배경을 아예 받지 않았고 장 그림도 미리 받지 않았다
+const chNo = sv => Math.min(LAST, Math.floor(((sv?.cleared | 0)) / STAGES_PER_CHAPTER) + 1);   // 로비가 처음 보여 주는 장(1부터)
 
-// 장 n의 그림: 몹·바닥·소품·로비 배경·(16~18장) 보스·장치
+// 장 n의 그림: 몹·바닥·소품·로비 배경·(16~20장) 보스·장치
 const chapterTest = (n, lobby = true) => k => {
   const m = /^(z|tile|prop|lobby_bg|boss|gimmick)(\d+)(?:_|$)/.exec(k);
   return !!m && +m[2] === n && (m[1] !== 'boss' || n >= 16) && (lobby || m[1] !== 'lobby_bg');
 };
-const bossTest = k => /^(boss|mid)\d/.test(k) && !/^boss(1[6-8])/.test(k);
+const bossTest = k => /^(boss|mid)\d/.test(k) && !/^boss(1[6-9]|20)/.test(k);   // 16~20장 보스는 그 장 그림과 같이 받는다
 const equippedTest = look => {
   const ids = Object.values(look || {}).filter(Boolean);
   const re = ids.length ? new RegExp(`^cos_(${ids.join('|')})(_\\d|_slash)?$`) : null;
@@ -81,7 +82,7 @@ export function startBg(game, buildAnims, sv) {
   const sc = game.scene.add('BgLoad', BgLoad, true);
   const n = chNo(sv);
   const rest = [];   // 나머지 장: 가까운 장부터
-  for (let d = 0; d <= 18; d++) for (const c of [n + d, n - d]) if (c >= 1 && c <= 18 && !rest.includes(c)) rest.push(c);
+  for (let d = 0; d <= LAST; d++) for (const c of [n + d, n - d]) if (c >= 1 && c <= LAST && !rest.includes(c)) rest.push(c);
   const steps = [
     k => /^(x_|pr_|role_|status_|fx_mark_target|hdie_|ult_)/.test(k),
     chapterTest(n), bossTest, k => /^(ma_|ban_)/.test(k),

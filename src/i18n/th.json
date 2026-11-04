@@ -2270,5 +2270,18 @@
  "ult.staff": "ฝนดาวตก",
  "prologue.i0": "ช่างตีเหล็ก! กองทัพราชาปีศาจบุกผ่านประตูเมืองแล้ว!",
  "prologue.i1": "ไม่ต้องห่วง ข้ามีดาบในตำนาน +20",
- "prologue.i2": "จะกวาดล้างให้หมด!"
+ "prologue.i2": "จะกวาดล้างให้หมด!",
+ "data.rageDragonfall": "มังกรดิ่งลง",
+ "data.rageRibcage": "กรงซี่โครง",
+ "data.rageCrownfall": "สายตาแห่งมงกุฎ",
+ "data.rageSigil": "ผนึกไล่ล่า",
+ "boss.patBonebreath": "ลมหายใจ!",
+ "boss.patGraverise": "หนามกระดูก!",
+ "boss.patRibcage": "กรงซี่โครง!",
+ "boss.patDragonfall": "มังกรดิ่งลง!",
+ "boss.patShadowgrid": "ช่องเงา!",
+ "boss.patKingsword": "ดาบกากบาท!",
+ "boss.patSigil": "ผนึก!",
+ "boss.patCrownfall": "สายตาแห่งมงกุฎ!",
+ "overlay.lateTitle": "ฉายาใหม่: {name}"
 }

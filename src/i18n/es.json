@@ -2270,5 +2270,18 @@
  "ult.staff": "Lluvia de Meteoros",
  "prologue.i0": "¡Herrero! ¡El ejército del Rey Demonio ha cruzado la puerta!",
  "prologue.i1": "No te preocupes. Tengo mi espada legendaria +20.",
- "prologue.i2": "¡Los barreré a todos!"
+ "prologue.i2": "¡Los barreré a todos!",
+ "data.rageDragonfall": "Caída del Dragón",
+ "data.rageRibcage": "Jaula de Costillas",
+ "data.rageCrownfall": "Mirada de la Corona",
+ "data.rageSigil": "Sello Perseguidor",
+ "boss.patBonebreath": "¡Aliento!",
+ "boss.patGraverise": "¡Púas de Hueso!",
+ "boss.patRibcage": "¡Jaula de Costillas!",
+ "boss.patDragonfall": "¡Caída del Dragón!",
+ "boss.patShadowgrid": "¡Casillas de Sombra!",
+ "boss.patKingsword": "¡Hojas en Cruz!",
+ "boss.patSigil": "¡Sello!",
+ "boss.patCrownfall": "¡Mirada de la Corona!",
+ "overlay.lateTitle": "Nuevo título: {name}"
 }

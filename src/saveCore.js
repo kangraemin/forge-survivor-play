@@ -44,6 +44,7 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   wk: { id: 0, mis: {}, got: {} }, // 이번 주 번호, 주간 도전 진행·받은 것
   dex: { m: {}, s: {} },   // 도감: 몬스터별 처치 수, 얻은 세트
   ach: {}, title: '',      // 받은 업적, 낀 칭호
+  lateT: {},               // 16~20장 보스 첫 클리어로 얻은 칭호(장 번호 0부터 -> 1). 없는 옛 저장은 빈 칸이라 변환 불필요(소급 지급 없음)
   // 한정 판매: 오늘의 특가 { day, id, off, got }, 성장 꾸러미 { c, at, shown }
   deal: null, grow: null,
   mark: 0, markN: 0, markGift: 0,   // 도전 증표 수, 오늘 다시 깨서 받은 수(하루 3번까지), 업데이트로 받은 선물 수(로비가 한 번 알리고 0으로)

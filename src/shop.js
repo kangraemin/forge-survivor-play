@@ -225,7 +225,8 @@ export function itemBySku(sku) {
   const f = [...D.IAP, ...D.BIG_PACKS, ...COS_PACKS].find(x => x.id === sku);
   if (f) return f;
   const m = /^deal_(.+)_(\d+)$/.exec(sku), d = m && D.DEALS.find(x => x.id === m[1]);
-  if (d) return { ...d, id: sku, price: D.dealPrice(d, +m[2]), onBuy: sv => { if (sv.deal) sv.deal.got = true; } };
+  // 되살린 주문이 지금 걸린 특가(같은 꾸러미·같은 할인)일 때만 '산 것'으로 표시한다(어제 주문을 되살리면 오늘 특가를 못 샀다)
+  if (d) return { ...d, id: sku, price: D.dealPrice(d, +m[2]), onBuy: sv => { if (sv.deal && sv.deal.id === d.id && +sv.deal.off === +m[2]) sv.deal.got = true; } };
   const g = /^grow(\d+)$/.exec(sku);
   if (g) { const c = +g[1] - 1; return { id: sku, once: true, c, price: D.GROW.price[Math.min(c, D.GROW.price.length - 1)], give: D.growGive(c) }; }
   return null;

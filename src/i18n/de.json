@@ -2270,5 +2270,18 @@
  "ult.staff": "Meteorschauer",
  "prologue.i0": "Schmied! Das Heer des Dämonenkönigs ist durchs Tor!",
  "prologue.i1": "Keine Sorge. Ich habe mein legendäres +20-Schwert.",
- "prologue.i2": "Ich fege sie alle weg!"
+ "prologue.i2": "Ich fege sie alle weg!",
+ "data.rageDragonfall": "Drachensturz",
+ "data.rageRibcage": "Rippenkäfig",
+ "data.rageCrownfall": "Blick der Krone",
+ "data.rageSigil": "Verfolgendes Siegel",
+ "boss.patBonebreath": "Atem!",
+ "boss.patGraverise": "Knochenstacheln!",
+ "boss.patRibcage": "Rippenkäfig!",
+ "boss.patDragonfall": "Drachensturz!",
+ "boss.patShadowgrid": "Schattenfelder!",
+ "boss.patKingsword": "Kreuzklingen!",
+ "boss.patSigil": "Siegel!",
+ "boss.patCrownfall": "Blick der Krone!",
+ "overlay.lateTitle": "Neuer Titel: {name}"
 }

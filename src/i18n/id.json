@@ -2270,5 +2270,18 @@
  "ult.staff": "Hujan Meteor",
  "prologue.i0": "Pandai besi! Pasukan Raja Iblis sudah menembus gerbang!",
  "prologue.i1": "Tenang. Aku punya pedang legendaris +20.",
- "prologue.i2": "Akan kusapu bersih mereka!"
+ "prologue.i2": "Akan kusapu bersih mereka!",
+ "data.rageDragonfall": "Terjangan Naga",
+ "data.rageRibcage": "Sangkar Rusuk",
+ "data.rageCrownfall": "Tatapan Mahkota",
+ "data.rageSigil": "Segel Pemburu",
+ "boss.patBonebreath": "Napas!",
+ "boss.patGraverise": "Duri Tulang!",
+ "boss.patRibcage": "Sangkar Rusuk!",
+ "boss.patDragonfall": "Terjangan Naga!",
+ "boss.patShadowgrid": "Petak Bayangan!",
+ "boss.patKingsword": "Bilah Silang!",
+ "boss.patSigil": "Segel!",
+ "boss.patCrownfall": "Tatapan Mahkota!",
+ "overlay.lateTitle": "Gelar baru: {name}"
 }

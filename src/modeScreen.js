@@ -6,6 +6,7 @@ import { font, font9, panel, button, fmt, toast, markIcon } from './ui.js';
 import { ensureModeArt, MODE_ICON } from './modeArt.js';
 import { modeSeen, MODE_IDS, MODE_DEFS, MODE_N, modeStage, modeOpen, modeDone, modeCount, modeReward, repeatReward, modeStars, modeStarTotal, modeBest, markGain, markLeftToday, starTexts, fmtT } from './modeData.js';
 import { t } from './i18n.js';
+import { wrapTo } from './textfit.js';
 import { save } from './save.js';
 
 const { W } = D;
@@ -25,6 +26,7 @@ export const ModeScreen = {
     // 54차: 증표 안내 — 2장 보스를 처음 잡은 뒤(또는 승급이 증표에 막힌 뒤) 도전 버튼을 가리키고, 짧은 카드를 한 번 보여 준다
     if (open && !sv.tut.markGuide && (sv.cleared >= 2 * D.STAGES_PER_CHAPTER || sv.tut.markAsk)) {
       const ar = this.add.text(68, AY + 40, t('modeScreen.5f119b'), font9(10, '#7fe6ee')).setOrigin(0, 0.5); pv.add(ar);
+      if (pv.wpnLeft) { ar.setScale(Math.min(1, Math.max(0.7, (pv.wpnLeft(AY + 33, AY + 47) - 73) / ar.width))); ar.noFit = true; }   // 무기 그림 밑으로 들어가 가려졌다: 좌우로 5px 흔들려도(73까지) 그림 앞에서 멈추게
       this.tweens.add({ targets: ar, x: 73, duration: 350, yoyo: true, repeat: -1 });
       const ring = this.add.rectangle(36, AY + 40, 58, 26, 0x7fe6ee, 0).setStrokeStyle(2, 0x7fe6ee); pv.add(ring);
       this.tweens.add({ targets: ring, alpha: 0.2, duration: 500, yoyo: true, repeat: -1 });
@@ -40,8 +42,9 @@ export const ModeScreen = {
     const dim = this.add.rectangle(0, 0, W, D.H, 0x000000, 0.55).setOrigin(0).setInteractive();
     c.add(dim); c.add(panel(this, 24, 150, W - 48, 160, { fill: 0x16222c, line: 0x7fe6ee }));
     c.add(markIcon(this, W / 2, 172, 20));
-    c.add(this.add.text(W / 2, 192, t('modeScreen.bd273d'), font(14, '#7fe6ee')).setOrigin(0.5));
-    let my = 214; [t('modeScreen.8f15f0'), t('modeScreen.33fe79'), t('modeScreen.8944ef'), t('modeScreen.8dcecb')].forEach(l => { const lt = this.add.text(40, my, l, { ...font9(10, '#e8f6f8'), wordWrap: { width: W - 80 } }); c.add(lt); my += lt.height + 3; });   // 53차: 긴 언어는 줄바꿈(패널 밖으로 넘치던 것)
+    { const tt0 = this.add.text(W / 2, 192, t('modeScreen.bd273d'), font(14, '#7fe6ee')).setOrigin(0.5); tt0.setScale(Math.min(1, (W - 64) / tt0.width)); tt0.noFit = true; c.add(tt0); }
+    // 줄마다 공용 글자 맞춤이 창 뒤 로비 글자와 부딪힌다고 보고 따로 줄여 줄마다 크기가 달랐다(영어·독일어): 창 안 글자는 같은 크기로 여기서 줄바꿈한다
+    let my = 214; [t('modeScreen.8f15f0'), t('modeScreen.33fe79'), t('modeScreen.8944ef'), t('modeScreen.8dcecb')].forEach(l => { const lt = this.add.text(40, my, '', font9(10, '#e8f6f8')); lt.setText(wrapTo(lt, l, W - 80)); lt.noFit = true; c.add(lt); my += lt.height + 3; });   // 53차: 긴 언어는 줄바꿈(패널 밖으로 넘치던 것)
     const ok = button(this, W / 2, 294, 96, 22, t('modeScreen.de96f0'), () => { sfx('click'); c.destroy(); }, { size: 11, color: 0x1d6f80 }); c.add(ok);
     sfx('click');
   },

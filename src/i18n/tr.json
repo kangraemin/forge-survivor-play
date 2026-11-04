@@ -2270,5 +2270,18 @@
  "ult.staff": "Meteor Yağmuru",
  "prologue.i0": "Demirci! İblis Kral’ın ordusu kapıyı geçti!",
  "prologue.i1": "Merak etme. +20 efsanevi kılıcım var.",
- "prologue.i2": "Hepsini süpüreceğim!"
+ "prologue.i2": "Hepsini süpüreceğim!",
+ "data.rageDragonfall": "Ejderha Düşüşü",
+ "data.rageRibcage": "Kaburga Kafesi",
+ "data.rageCrownfall": "Tacın Bakışı",
+ "data.rageSigil": "Takip Eden Mühür",
+ "boss.patBonebreath": "Nefes!",
+ "boss.patGraverise": "Kemik Dikenleri!",
+ "boss.patRibcage": "Kaburga Kafesi!",
+ "boss.patDragonfall": "Ejderha Düşüşü!",
+ "boss.patShadowgrid": "Gölge Kareler!",
+ "boss.patKingsword": "Çapraz Bıçaklar!",
+ "boss.patSigil": "Mühür!",
+ "boss.patCrownfall": "Tacın Bakışı!",
+ "overlay.lateTitle": "Yeni unvan: {name}"
 }

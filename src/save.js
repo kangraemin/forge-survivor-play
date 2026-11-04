@@ -1,5 +1,5 @@
 // 진행 저장(localStorage). 접근이 막힌 브라우저에서도 게임은 돌아가게 메모리로 대체한다
-import { SWEEP_DAILY, SWEEP_MAX, GEM_FREE, PASS_DAILY } from './data.js';
+import { SWEEP_DAILY, sweepAdd, GEM_FREE, PASS_DAILY } from './data.js';
 import { track } from './log.js';
 import { readSave, writeSave, fresh, KEY, exportCode, importCode, restorePurchases, syncLedger } from './saveCore.js';
 import { dexRefresh } from './codex.js';
@@ -30,7 +30,7 @@ export function load() {
   // 하루가 바뀌면 소탕권 충전, 파괴 방지권 1장
   const d = new Date(), today = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; // 기기 시간대 기준 자정에 바뀐다
   if (mem.day !== today) {
-    if (mem.day) { mem.sweep = Math.min(SWEEP_MAX, mem.sweep + SWEEP_DAILY); mem.guard += 1; }
+    if (mem.day) { mem.sweep = sweepAdd(mem.sweep, SWEEP_DAILY); mem.guard += 1; }
     // 출석 보석, 월정액은 남은 날이 있으면 매일 지급
     mem.gem += GEM_FREE.daily; mem.ads = {}; mem.mis = {}; mem.misGot = {}; mem.dunN = 0; mem.markN = 0;
     // 출석: 어제 왔으면 하루 늘고, 며칠 빠졌으면 늘지 않는다(처음으로 돌아가지는 않는다)

@@ -2270,5 +2270,18 @@
  "ult.staff": "流星雨",
  "prologue.i0": "铁匠大人！魔王军攻破城门了！",
  "prologue.i1": "别担心。我有+20的传说之剑。",
- "prologue.i2": "全部扫平！"
+ "prologue.i2": "全部扫平！",
+ "data.rageDragonfall": "巨龙坠击",
+ "data.rageRibcage": "肋骨牢笼",
+ "data.rageCrownfall": "王冠凝视",
+ "data.rageSigil": "追踪法阵",
+ "boss.patBonebreath": "吐息!",
+ "boss.patGraverise": "骨刺!",
+ "boss.patRibcage": "肋骨牢笼!",
+ "boss.patDragonfall": "巨龙坠击!",
+ "boss.patShadowgrid": "暗影方格!",
+ "boss.patKingsword": "十字刃!",
+ "boss.patSigil": "法阵!",
+ "boss.patCrownfall": "王冠凝视!",
+ "overlay.lateTitle": "新称号「{name}」"
 }

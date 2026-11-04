@@ -45,12 +45,13 @@ export const GearTab = {
       const on = this.gearPage === id;
       // 아래 무기 버튼 줄과 똑같이 생겨 헷갈렸다: 위는 글자+밑줄 탭으로 구분한다
       const x = 37 + i * 65.3, t = this.add.text(x, 50, name, font(12, on ? '#ffb85c' : '#a1b2b6', 0)).setOrigin(0.5);
+      t.setScale(Math.min(1, 58 / t.width));   // 긴 번역(독일어 Ausrüstung·Begleiter)이 옆 탭과 붙어 한 낱말처럼 보였다: 칸 폭 안으로 줄인다
       b.add(t);
       if (on) b.add(this.add.rectangle(x, 62, 45, 2, 0xffb85c));
       const hit = this.add.rectangle(x, 52, 64, 28, 0, 0).setInteractive({ useHandCursor: true });
       hit.on('pointerup', () => { if (this.busy) return; this.gearPage = id; this.invPage = 0; sfx('click'); this.show('gear'); });
       b.add(hit);
-      if (id === 'stat' && spFree(sv) > 0) b.add(this.add.circle(x + t.width / 2 + 6, 45, 3, 0xff5050));
+      if (id === 'stat' && spFree(sv) > 0) b.add(this.add.circle(x + t.displayWidth / 2 + 6, 45, 3, 0xff5050));
     });
     if (this.gearPage === 'pet') return this.petPage();
     if (this.gearPage === 'stat') return this.statPage();
@@ -85,10 +86,10 @@ export const GearTab = {
         b.add(this.add.rectangle(x, y, 38, 38, 0x0b111a).setStrokeStyle(1, 0x293845));
         b.add(this.add.image(x, y, 'gs_' + sl.id).setScale(1.5).setTint(0x2a3a4a).setAlpha(0.8));   // 빈 칸: 어두운 부위 그림자
       }
-      b.add(this.add.text(x, y + 25, sl.name, font9(10, '#a1b2b6')).setOrigin(0.5));
+      { const lt = this.add.text(x, y + 25, sl.name, font9(10, '#a1b2b6')).setOrigin(0.5); lt.setScale(Math.min(1, 50 / lt.width)); lt.noFit = true; b.add(lt); }   // 긴 부위 이름(Begleiterhalsband)이 낱말 중간에서 두 줄로 끊겨 칸 테두리에 걸쳤다: 칸 폭(52) 안에서 한 줄로 줄인다
     });
     // 합친 효과
-    const parts = Object.keys(STATS).filter(k => g[k] > 0.0005).map(k => `${SHORT[k]} +${STATS[k].pct ? Math.round(g[k] * 100) + '%' : g[k].toFixed(1)}`);
+    const parts = Object.keys(STATS).filter(k => g[k] > 0.0005).map(k => `${SHORT[k]}\u00a0+${STATS[k].pct ? Math.round(g[k] * 100) + '%' : g[k].toFixed(1)}`);   // 이름과 값 사이는 줄을 바꾸지 않는 빈칸(태국어에서 '자석'과 '+197%'가 다른 줄로 갈렸다)
     b.add(this.add.text(W / 2, 170, parts.length ? parts.join('  ') : tt('gearTab.047469'), { ...font9(9, '#f2e4bc'), align: 'center', wordWrap: { width: W - 20 } }).setOrigin(0.5, 0));
     const setLine = Object.entries(g.sets).map(([k, n]) => `${SETS[k].name} ${n}/4${n >= 4 ? ' ★' : n >= 2 ? ' ☆' : ''}${SETS[k].w && SETS[k].w !== sv.wtype ? '(' + WTYPES.find(w => w.id === SETS[k].w).name + ')' : ''}`).join('  ');
     if (setLine) { const st = this.add.text(W / 2, 189, setLine, font9(9, '#ffb050')).setOrigin(0.5, 0); st.setScale(Math.min(1, (W - 16) / st.width)); b.add(st); }   // 세트가 여럿이면 양옆이 잘렸다

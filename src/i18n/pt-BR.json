@@ -1268,7 +1268,7 @@
  "overlay.03d1f9": "Tentar de novo",
  "overlay.bb3a3e": "Desafiar Chefe ▶",
  "overlay.33b4a9": "Mais uma ▶",
- "overlay.e671aa": "Retry",
+ "overlay.e671aa": "De novo",
  "pets.957f6d": "Bloqueou!",
  "saveCore.560504": "Save não é um objeto",
  "saveCore.4772ec": "Falha ao converter v{from}: {v}",
@@ -2270,5 +2270,18 @@
  "ult.staff": "Chuva de Meteoros",
  "prologue.i0": "Ferreiro! O exército do Rei Demônio passou pelo portão!",
  "prologue.i1": "Calma. Tenho minha espada lendária +20.",
- "prologue.i2": "Vou varrer todos eles!"
+ "prologue.i2": "Vou varrer todos eles!",
+ "data.rageDragonfall": "Queda do Dragão",
+ "data.rageRibcage": "Jaula de Costelas",
+ "data.rageCrownfall": "Olhar da Coroa",
+ "data.rageSigil": "Selo Perseguidor",
+ "boss.patBonebreath": "Sopro!",
+ "boss.patGraverise": "Espinhos de Osso!",
+ "boss.patRibcage": "Jaula de Costelas!",
+ "boss.patDragonfall": "Queda do Dragão!",
+ "boss.patShadowgrid": "Casas de Sombra!",
+ "boss.patKingsword": "Lâminas em Cruz!",
+ "boss.patSigil": "Selo!",
+ "boss.patCrownfall": "Olhar da Coroa!",
+ "overlay.lateTitle": "Novo título: {name}"
 }

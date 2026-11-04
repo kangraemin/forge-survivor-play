@@ -8,7 +8,10 @@ const MIN = 7, SCREEN_W = 270;
 let seg = null;
 try { if (NOSPACE) seg = new Intl.Segmenter(lang, { granularity: 'word' }); } catch { seg = null; }
 
-const tokens = s => seg ? [...seg.segment(s)].map(x => x.segment) : s.split(/(\s+)/).filter(Boolean);
+const bySpace = s => s.split(/([ \t\n]+)/).filter(Boolean);   // 줄을 바꾸지 않는 빈칸(\u00a0)은 덩이 안에 남긴다
+// 태국어는 낱말 사이는 붙여 쓰고 구절 사이만 띄어 쓴다. 낱말 사전이 '자석'(แม่เหล็ก)을 '어머니+쇠'로 갈라 줄 끝에서 끊었다:
+// 태국어는 띄어쓰기로 먼저 나누고, 한 덩이가 줄보다 길 때만 낱말로 더 쪼갠다(일본어·중국어는 예전 그대로 낱말 단위)
+const tokens = (s, w, maxW) => !seg ? bySpace(s) : lang !== 'th' ? [...seg.segment(s)].map(x => x.segment) : bySpace(s).flatMap(c => w(c) > maxW ? [...seg.segment(c)].map(x => x.segment) : [c]);
 
 // 글자 폭을 재서 maxW 안에서 줄바꿈한 문자열을 돌려준다
 export function wrapTo(o, s, maxW) {
@@ -17,7 +20,7 @@ export function wrapTo(o, s, maxW) {
   const out = [];
   for (const para of s.split('\n')) {
     let line = '';
-    for (const tk of tokens(para)) {
+    for (const tk of tokens(para, w, maxW)) {
       if (w(line + tk) <= maxW || !line.trim()) {
         if (!line && /^\s+$/.test(tk)) continue;
         line += tk;

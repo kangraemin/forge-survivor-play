@@ -1,5 +1,5 @@
 // 도감·업적·칭호. 도감 칸을 채우면 영구 보너스(gearStats가 sv.dexB를 읽는다)
-import { MOBS, MOB_NAMES, BOSSES, HARD, chapterOpen } from './data.js';
+import { MOBS, MOB_NAMES, BOSSES, HARD, chapterOpen, LATE_FIRST } from './data.js';
 import { MODE_DEFS, MODE_N, MODE_IDS, modeCount } from './modeData.js';
 import { WTYPES, PETS, SETS, EGGS, ownsW } from './gear.js';
 import { t } from './i18n.js';
@@ -80,5 +80,7 @@ export const ACHIEVES = [
 export const achList = () => ACHIEVES.filter(a => !a.late || chapterOpen(a.late - 1));
 export const achReady = sv => achList().filter(a => !sv.ach?.[a.id] && a.v(sv) >= a.need).length;
 // 칭호는 업적 id로 저장한다(언어를 바꿔도 같은 칭호). 화면에는 titleName으로 현재 언어 이름을 보인다
-export const titles = sv => ACHIEVES.filter(a => a.title && sv.ach?.[a.id]).map(a => a.id);
-export const titleName = id => ACHIEVES.find(a => a.id === id)?.title || '';
+// 16·20장 보스 첫 클리어 칭호(data.js LATE_FIRST)는 업적과 따로 sv.lateT 에 장 번호로 남고, 낄 때는 'late<장 번호>' 로 저장한다
+export const LATE_TITLES = Object.entries(LATE_FIRST).filter(([, r]) => r.title).map(([c, r]) => ({ id: 'late' + c, c: +c, title: r.title }));
+export const titles = sv => [...ACHIEVES.filter(a => a.title && sv.ach?.[a.id]).map(a => a.id), ...LATE_TITLES.filter(x => sv.lateT?.[x.c]).map(x => x.id)];
+export const titleName = id => ACHIEVES.find(a => a.id === id)?.title || LATE_TITLES.find(x => x.id === id)?.title || '';
