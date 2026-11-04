@@ -4,6 +4,7 @@
 //   지키기: cartMul(near) · itemDmgMul(m) · onItemHit(m)       점령: zoneRate(p,i,inside,rate)
 //   사냥: preyInit(m,i) · prey(m,dt)→true면 기본 도망 생략 · preySpd(m) · preyPost(m,dt) · arrowOk(m)
 import { font } from './ui.js';
+import * as D from './data.js';
 import { sfx } from './sfx.js';
 import { makeBreachRule } from './modeBreach.js';
 import { t } from './i18n.js';
@@ -39,7 +40,7 @@ const bolt = (s, a, b, col = 0xffd75e) => {
   s.tweens.add({ targets: l, alpha: 0, duration: 260, onComplete: () => l.destroy() });
 };
 // 화면 안에 한 줄 안내(경고·상태)
-const callout = (r, y = 112) => { const t = r.mkTxt(0, 0, '', font(10, '#ffffff', 3)); t.setOrigin(0.5).setPosition(195, y).setAlpha(0); return (str, col = '#ffffff') => { t.setText(str).setColor(col).setAlpha(str ? 1 : 0); }; };
+const callout = (r, y = 112) => { const t = r.mkTxt(0, 0, '', font(10, '#ffffff', 3)); t.setOrigin(0.5).setPosition(D.W / 2, y).setAlpha(0); return (str, col = '#ffffff') => { t.setText(str).setColor(col).setAlpha(str ? 1 : 0); }; };
 
 // ═══ 지키기 공통: 물건 이름표·빛·위치 고리 ═══
 function guardBase(r, name, glow) {
@@ -480,7 +481,7 @@ const CAPTURE = {
         say(show ? t('modeRules.bfb994') : '', '#ffe8a0');
         if (show) {
           const vr = s.cameras.main, a = Math.atan2(nearest.y - h.y, nearest.x - h.x);
-          arrow.setPosition(195 + Math.cos(a) * 120, 422 + Math.sin(a) * 120).setRotation(a).setScale(1.4);
+          arrow.setPosition(D.W / 2 + Math.cos(a) * (D.W / 2 - 24), D.H / 2 + Math.sin(a) * (D.W / 2 - 24)).setRotation(a).setScale(1.4);
         }
         g.clear();
       },

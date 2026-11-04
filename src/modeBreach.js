@@ -5,8 +5,9 @@ import { sfx } from './sfx.js';
 import { modeAnim, wallArt, WALL_FILL, chSprite } from './modeArt.js';
 import { addPillar, clearPillars } from './modeRules.js';
 import { t } from './i18n.js';
+import * as D from './data.js';
 
-const WORLD = 1600, W = 390;
+const WORLD = 1600, W = D.W, H = D.H;
 const RF = Phaser.Math.FloatBetween;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const HW = 118;                         // 길 반폭
@@ -79,8 +80,8 @@ export class BreachPath {
     this.wsp = s.add.image(0, 0, this.wallKey, 0).setOrigin(0.5, 0).setDepth(37).setVisible(false);
     this.wallF = 0; this.wallAnim = 0;
     this.wlab = s.add.text(0, 0, WALL_NAME[c.rule] || t('modeBreach.b491a5'), font(12, '#ffd0c0', 3)).setOrigin(0.5, 1).setDepth(52).setVisible(false);
-    this.warn = s.add.rectangle(W / 2, 844 - 58, W, 116, 0xc01020, 0).setScrollFactor(0).setDepth(97);   // 벽이 가까우면 화면 아래가 붉게 뛴다
-    this.warnTxt = r.mkTxt(W / 2, 844 - 84, '', font(15, '#ffffff', 4)); this.warnTxt.setOrigin(0.5).setAlpha(0);
+    this.warn = s.add.rectangle(W / 2, H - 58, W, 116, 0xc01020, 0).setScrollFactor(0).setDepth(97);   // 벽이 가까우면 화면 아래가 붉게 뛴다
+    this.warnTxt = r.mkTxt(W / 2, H - 84, '', font(15, '#ffffff', 4)); this.warnTxt.setOrigin(0.5).setAlpha(0);
     this.g = s.add.graphics().setDepth(7);          // 규칙이 매 프레임 그리는 장치
     this.say = (() => { const t = r.mkTxt(0, 0, '', font(10, '#ffffff', 3)); t.setOrigin(0.5).setPosition(W / 2, 124); return (str, col = '#ffffff') => { t.setText(str).setColor(col).setAlpha(str ? 1 : 0); }; })();
     this.arrow = s.add.sprite(0, 0, 'ma_elite_arrow').setScrollFactor(0).setDepth(61).setVisible(false).setTint(0xff6a5a);
@@ -173,7 +174,7 @@ export class BreachPath {
     const s = this.s, h = s.hero, gap = this.sh - this.w;
     if (this.w <= 0 || gap > maxD || gap < 0) { this.arrow.setVisible(false); return; }
     const f = this.at(this.w), a = Math.atan2(f.y - h.y, f.x - h.x);
-    this.arrow.setVisible(true).setPosition(195 + Math.cos(a) * 130, 422 + Math.sin(a) * 160).setRotation(a).setScale(1.3);
+    this.arrow.setVisible(true).setPosition(W / 2 + Math.cos(a) * (W / 2 - 24), H / 2 + Math.sin(a) * (W / 2 - 24)).setRotation(a).setScale(1.3);
   }
 }
 

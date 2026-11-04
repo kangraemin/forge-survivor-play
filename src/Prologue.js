@@ -34,7 +34,7 @@ export class Prologue extends Phaser.Scene {
   constructor() { super('Prologue'); }
 
   // phase: 'play'(전투로 보낸다) | 'after'(보스에게 쓰러진 뒤: 무기 파괴 → 컷신) | 'skip'(건너뛰기: 새 목표 화면으로)
-  init(data) { WON = this.won = !!data?.won; this.replay = !!data?.replay; this.stage = data?.phase || 'play'; this.data0 = data || {}; this.lines = this.linesDone = null; }   // 장면은 같은 것을 다시 쓴다: 전투 앞 대화(3줄, 끝나면 전투)가 쓰러진 뒤 컷신에 남으면 전투가 다시 시작됐다
+  init(data) { this.done = false; this.card = this.cardNone = null; WON = this.won = !!data?.won; this.replay = !!data?.replay; this.stage = data?.phase || 'play'; this.data0 = data || {}; this.lines = this.linesDone = null; }   // 장면은 같은 것을 다시 쓴다: 전투 앞 대화(3줄, 끝나면 전투)가 쓰러진 뒤 컷신에 남으면 전투가 다시 시작됐다
 
   // 15장 몹·15장 마지막 보스·바닥·최강 펫 그림은 첫 실행에서 아직 안 받았다: 시작 직전에 받는다(전투도 이 그림들을 쓴다)
   preload() {

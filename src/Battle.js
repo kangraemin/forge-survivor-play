@@ -80,7 +80,7 @@ export class Battle extends Phaser.Scene {
     this.bt = 0;                        // 전투 시간(멈춘 동안은 안 흐름, ms)
     // 씬 객체를 판끼리 다시 쓰므로 앞 판 값이 남지 않게 비운다: 경험치 배율(1-2·1-3 첫 판 1.3배, 프롤로그 0.08배가 다음 판으로 샜다)·중간보스 대기(쌓여서 셋째 x-2부터 중간보스를 안 기다렸다)
     // ·맞은 시각·서리 4세트 시각(다음 판 1분 동안 얼리기가 안 나왔다)·보스 화살표(지워진 옛 화살표를 다시 써서 둘째 보스부터 안 보였다). 1.3배·0.08배는 아래에서 그 판에만 다시 넣는다
-    this.xpMul = 1; this.midWait = 0; this.hurtUntil = 0; this.frostT = 0; this.bArrow = this.bArrowTxt = null;
+    this.allies = []; this.xpMul = 1; this.midWait = 0; this.hurtUntil = 0; this.frostT = 0; this.bArrow = this.bArrowTxt = null;
     this.paused = false; this.hitstop = 0; this.over = false; this.mv = null; this.formT = 0;
     // 씬을 다시 쓰므로 콤보도 판마다 비운다(앞 판 처치 시각이 남아 다음 판 콤보가 424까지 이어졌다)
     this.combo = 0; this.lastKillT = -1e9;

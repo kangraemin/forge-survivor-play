@@ -4,7 +4,7 @@
 // 앱인토스는 toss.js가 넣는다(설정·API 이름은 거기와 docs/release/toss-sdk.md)
 import { track, logUser } from './log.js';
 import * as D from './data.js';
-import { save, load } from './save.js';
+import { save, load, inSandbox } from './save.js';
 import { HERO_SKINS } from './gear.js';
 import { sfx } from './sfx.js';
 import { font, font9, panel, button, fixedContainer } from './ui.js';
@@ -181,7 +181,12 @@ function buyRaw(scene, sv, item) {
     };
     if (isTest()) { done(true); return; }   // 테스트 모드: 결제 없이 바로 지급(스토어·토스 결제 호출 없음)
     // 앱: 지급을 SDK 지급 콜백 안에서 끝낸다(지급 뒤 true를 돌려줘야 주문이 완료로 닫힌다)
-    if (window.forgePlatform?.buy) return window.forgePlatform.buy(item.id, orderId => { apply(orderId); return true; }).then(done, () => done(false));
+    if (window.forgePlatform?.buy) return window.forgePlatform.buy(item.id, orderId => { apply(orderId); return true; }).then(ok => {
+      if (!ok || applied) return done(ok);
+      // 성공 알림은 왔는데 지급 콜백이 불리지 않았다: 여기서 주문 번호 없이 주면 그 주문이 미지급으로 남아 다음 실행 복구가 한 번 더 줬다
+      // → 미지급 주문 복구(주문 번호로 한 번만 준다)로 지금 받는다. 목록에 아직 없으면 다음 실행 복구가 준다
+      return recoverPurchases().then(n => { if (n) sfx('win'); res({ ok: true, granted: n > 0 }); });
+    }, () => done(false));
     const c = modal(scene);
     c.add(panel(scene, 24, 160, W - 48, 160, { fill: 0x1a1426, line: 0xffd75e }));
     c.add(scene.add.text(W / 2, 186, item.name, font(13, '#ffd75e')).setOrigin(0.5));
@@ -205,6 +210,8 @@ export function showAd(scene, sv, kind) {
 }
 export function buy(scene, sv, item) {
   if (COS_PACKS.some(p => p.id === item.id) && item.give.cosmetics.some(id => wardrobe(sv).owned[id])) return Promise.resolve(false);
+  // 화면이 늦게 바뀐 사이(미지급 복구·다른 창에서 이미 삼) 판매가 끝난 1회·달 1회 상품과 오늘 이미 산 특가는 결제 창을 다시 열지 않는다
+  if (soldOut(sv, item) || (/^deal_/.test(item.id) && sv.deal?.got && item.id === `deal_${sv.deal.id}_${sv.deal.off}`)) return Promise.resolve(false);
   const t0 = Date.now(), first = !sv.paidTotal;
   track('iap_click', { item: item.id, price: item.price, scene: scene.scene.key, first_purchase: first, gem: sv.gem, cleared: sv.cleared, platform: window.forgePlatform?.buy ? 'app' : devpay() ? 'devpay' : 'web' });
   track('begin_checkout', { currency: 'KRW', value: item.price, item_id: item.id });
@@ -215,7 +222,7 @@ export function buy(scene, sv, item) {
       track('purchase', { currency: 'KRW', value: item.price, transaction_id: `${item.id}-${Date.now()}`, item_id: item.id, first_purchase: first });
       logUser({ payer: true, paid_total: sv.paidTotal });
     }
-    return ok;
+    return ok || granted;   // 지급이 끝났으면 SDK가 마지막에 오류를 줘도 화면은 '샀다'로 갱신한다(안 그러면 판매 끝난 버튼이 남아 다시 누르게 된다)
   });
 }
 
@@ -234,10 +241,15 @@ export function itemBySku(sku) {
 export async function recoverPurchases() {
   const P = window.forgePlatform;
   if (!P?.pending) return 0;
+  // 프롤로그 모래판(가짜 풀템 저장)이 열려 있으면 지급이 진짜 저장에 남지 않는데 주문은 '완료'로 닫혔다 → 모래판이 끝난 뒤 다시 한다
+  const later = () => { setTimeout(recoverPurchases, 3000); return 0; };
+  if (inSandbox()) return later();
   let n = 0;
   try {
+    const list = await P.pending();   // 스토어 앱은 여기서 몇 초 걸린다: 그 사이 모래판이 열릴 수 있어 저장은 받은 뒤에 읽는다
     const sv = load();
-    for (const o of await P.pending()) {
+    for (const o of list) {
+      if (inSandbox()) { later(); break; }
       const item = itemBySku(o.sku);
       if (!item) { track('iap_recover_unknown', { sku: o.sku }); continue; }
       if (!(sv.orders || []).includes(o.orderId)) {

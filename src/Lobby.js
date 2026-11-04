@@ -150,8 +150,10 @@ export class Lobby extends Phaser.Scene {
   modal() {
     const c = fixedContainer(this).setDepth(2000);
     c.add(this.add.rectangle(0, 0, W, H, 0x000000, 0.75).setOrigin(0).setInteractive());
+    const parent = this.modalC;
     this.busy = true; this.modalC = c;   // Esc로 닫으려고(pcInput.js) 가장 위 창을 기억
-    c.close = () => { c.destroy(); this.busy = false; this.refreshTop(); this.show(this.tab); if (modeDue(this.sv) && this.tab === 'battle' && !this.modeScr) this.time.delayedCall(250, () => !this.busy && runModeCoach(this)); };   // 앞 창을 닫고 나서 도전 안내(2장 보스 직후 펫·꾸러미 창이 먼저 뜬다)
+    c.close = () => { c.destroy(); if (parent?.scene) { this.modalC = parent; return; }   // 창 위에 뜬 창: 닫아도 아래 창이 열린 상태(busy·Esc 대상)는 그대로
+      this.busy = false; this.refreshTop(); this.show(this.tab); if (modeDue(this.sv) && this.tab === 'battle' && !this.modeScr) this.time.delayedCall(250, () => !this.busy && runModeCoach(this)); };   // 앞 창을 닫고 나서 도전 안내(2장 보스 직후 펫·꾸러미 창이 먼저 뜬다)
     return c;
   }
 
@@ -896,8 +898,11 @@ export class Lobby extends Phaser.Scene {
     // 머리(디자인 인계 forge_ready): 왼쪽 '대장간' 제목, 오른쪽 +N → +N+1. 둘째 줄은 무기 이름과 공격력 변화
     b.add(this.add.text(14, 40, tt('lobby.348786'), font(18, '#f2e4bc', 0)));
     b.add(this.add.text(W - 14, 44, max ? tt('lobby.05f3c1', { enh }) : `+${enh} → +${enh + 1}`, font(13, enh >= 15 ? '#ff9a3a' : '#ffb85c', 0)).setOrigin(1, 0));
-    b.add(this.add.text(14, 64, D.tierName(sv.tier, wtypeOf(sv)), font(11, '#a1b2b6', 0)));
-    b.add(this.add.text(W - 14, 64, tt('lobby.f87b0a', { fmt: fmt(Math.round(D.weaponAtk(sv.tier, enh, sv.refine))), v: max ? '' : ` → ${fmt(Math.round(D.weaponAtk(sv.tier, enh + 1, sv.refine)))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1, sv.refine) / D.weaponAtk(sv.tier, enh, sv.refine) - 1) * 100)}%)` }), font(11, '#73d6c1', 0)).setOrigin(1, 0));
+    const nameT = this.add.text(14, 64, D.tierName(sv.tier, wtypeOf(sv)), font(11, '#a1b2b6', 0));
+    const atkT = this.add.text(W - 14, 64, tt('lobby.f87b0a', { fmt: fmt(Math.round(D.weaponAtk(sv.tier, enh, sv.refine))), v: max ? '' : ` → ${fmt(Math.round(D.weaponAtk(sv.tier, enh + 1, sv.refine)))} (+${Math.round((D.weaponAtk(sv.tier, enh + 1, sv.refine) / D.weaponAtk(sv.tier, enh, sv.refine) - 1) * 100)}%)` }), font(11, '#73d6c1', 0)).setOrigin(1, 0);
+    // 긴 번역(독일어 'Abgrund Axt' + 'Angriff 7308 → 8404 (+15%)')은 두 글자가 한 줄에서 맞붙었다: 사이가 8px 남을 때까지 둘을 같이 줄인다(9px 아래로는 안 줄인다)
+    for (let fs = 11; fs > 9 && nameT.width + atkT.width > W - 28 - 8; ) { fs -= 0.5; nameT.setFontSize(fs); atkT.setFontSize(fs); }
+    b.add([nameT, atkT]);
     // 다음 각성(+5 단위)까지 남은 단계: 거기서 공격력이 한 번 더 뛰고 칼 모습이 바뀐다
     if (!max) {
       const next = (Math.floor(enh / D.ENH_MILESTONE) + 1) * D.ENH_MILESTONE;

@@ -140,8 +140,11 @@ export class SaveError extends Error {}
 // 읽은 값을 현재 모양으로 변환. 모르는 필드는 그대로 둔다. 실패하면 SaveError
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new SaveError(t('saveCore.560504'));
-  const from = Number.isInteger(raw.schemaVersion) && raw.schemaVersion >= 0 ? raw.schemaVersion : 0;
-  const mem = { ...fresh(), ...raw };
+  const sv0 = typeof raw.schemaVersion === 'string' ? Number(raw.schemaVersion) : raw.schemaVersion;   // 글자 "9"를 0으로 읽으면 변환을 다시 타 깬 수가 줄었다
+  const from = Number.isInteger(sv0) && sv0 >= 0 ? sv0 : 0;
+  const base = fresh(), mem = { ...base, ...raw };
+  // 묶음 칸이 null·글자·숫자면 load()가 멈춰 게임이 안 켜졌다: 그 칸만 기본값으로 둔다(배열 등 다른 값은 건드리지 않는다)
+  for (const k in base) if (base[k] && typeof base[k] === 'object' && !Array.isArray(base[k]) && k in raw && (raw[k] === null || typeof raw[k] !== 'object')) mem[k] = base[k];
   if (from > SCHEMA) return mem;   // 더 새 앱이 쓴 저장: 건드리지 않고 그대로 쓴다(schemaVersion도 낮추지 않는다)
   try {
     for (let v = from; v < SCHEMA; v++) STEPS[v](mem);
@@ -237,5 +240,7 @@ export function restorePurchases(st, mem) {
     const o = set(mem); if (!o[id]) { o[id] = 1; n++; }
   }
   mem.ledger = { ...all };
+  // 광고 제거는 산 표시(bought.noads)와 효과(noAds)가 따로다: 기록에서 산 표시만 돌아오면 '판매 끝'인데 광고가 다시 나왔다(서버 저장에서 다른 기기 저장이 이긴 경우 등)
+  if (mem.bought?.noads && !mem.noAds) { mem.noAds = true; n++; }
   return n;
 }

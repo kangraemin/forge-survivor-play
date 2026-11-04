@@ -29,7 +29,8 @@ export function load() {
   if (mem.seenAt) mem.idleMs = Math.max(mem.idleMs || 0, Date.now() - mem.seenAt);
   // 하루가 바뀌면 소탕권 충전, 파괴 방지권 1장
   const d = new Date(), today = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; // 기기 시간대 기준 자정에 바뀐다
-  if (mem.day !== today) {
+  // 날짜가 앞으로 갈 때만 하루를 새로 연다: 시계를 어제로 돌렸다 되돌리면 그때마다 출석 보석·광고 횟수·월정액 하루치가 다시 들어왔다
+  if (mem.day !== today && dayNo(d) > (mem.dayN || 0)) {
     if (mem.day) { mem.sweep = sweepAdd(mem.sweep, SWEEP_DAILY); mem.guard += 1; }
     // 출석 보석, 월정액은 남은 날이 있으면 매일 지급
     mem.gem += GEM_FREE.daily; mem.ads = {}; mem.mis = {}; mem.misGot = {}; mem.dunN = 0; mem.markN = 0;

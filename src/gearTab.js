@@ -194,7 +194,7 @@ export const GearTab = {
         const v = STATS[k].pct ? `${Math.round(Math.abs(d) * 1000) / 10}%` : Math.abs(d).toFixed(2);
         return [`${SHORT[k]} ${d > 0 ? '▲' : '▼'}${v}`, d > 0 ? '#5fdc6a' : '#ff8070'];
       }).filter(Boolean);
-      y += 3; line(cur ? t('gearTab.50a478', { n: cur.n }) : t('gearTab.3f3b86'), '#a1b2b6');
+      y += 3; line(cur ? t('gearTab.50a478', { n: itemName(cur) }) : t('gearTab.3f3b86'), '#a1b2b6');
       if (!diff.length) line(t('gearTab.e2708f'), '#a1b2b6');
       // 두 칸씩 줄을 나눠 글자가 중간에서 잘리지 않게
       diff.forEach(([t, col], i) => c.add(this.add.text(W / 2 + (i % 2 ? 6 : -6), y + Math.floor(i / 2) * 13, t, font9(9, col)).setOrigin(i % 2 ? 0 : 1, 0)));
