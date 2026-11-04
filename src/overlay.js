@@ -900,9 +900,10 @@ export class Overlay {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(s, sv, 'double');
         s.log('double_reward', { ok, gold, stone });
-        if (!ok || !s.scene.isActive()) { db.used = false; db.setEnabled(true); return; }
+        if (!ok) { db.used = false; db.setEnabled(true); return; }
         sv.ads.double = (sv.ads.double || 0) + 1;
-        sv.gold += gold; sv.stone += stone; save();
+        sv.gold += gold; sv.stone += stone; save();   // 광고를 다 봤으면 그 사이 화면을 떠났어도 준다
+        if (!s.scene.isActive()) return;
         tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
         [tx[0], tx[1]].forEach(t => s.tweens.add({ targets: t, scale: 1.4, duration: 120, yoyo: true }));
         sfx('coin'); db.label.setText(t('lobby.63b8a7'));

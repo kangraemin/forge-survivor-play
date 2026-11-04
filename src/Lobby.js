@@ -8,7 +8,7 @@ import { shareBrag, braggable, bragGem, lobbyShareTick, openShare, myCode } from
 import { cosmetic, todaySale, available, winterItems, SALE_OFF } from './cosmetics.js';
 // 로비: 전투(스테이지 선택·소탕), 대장간(강화·승급), 훈련(영구 능력치)
 import * as D from './data.js';
-import { load, save, mission } from './save.js';
+import { load, save, mission, checkDay } from './save.js';
 import { sfx, setSound, setMusic, setMusicLevel, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, markIcon, fixedContainer, skinFx, hiCam, viewPt, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { iapTag, showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
@@ -74,6 +74,7 @@ export class Lobby extends Phaser.Scene {
     // 전투가 멈춘 채 끝났어도 로비 애니메이션은 돌아야 한다(애니메이션 관리자는 장면끼리 공유)
     this.anims.resumeAll(); this.anims.globalTimeScale = 1;
     this.sv = load();
+    checkDay();
     const sv = this.sv;
     setSound(sv.sound); setMusicLevel(sv.musicLvl); setMusic(!sv.musicOff && sv.sound !== false); setVib(!sv.vibOff);
     this.input.once('pointerdown', () => { unlock(); playBgm('lobby'); });
@@ -264,9 +265,11 @@ export class Lobby extends Phaser.Scene {
       const db = button(this, W / 2, 296, 180, 24, sv.noAds ? t('lobby.be822d') : adWord(t('lobby.37b6a9'), t('lobby.be822d')), async () => {
         if (db.used) return; db.used = true; db.setEnabled(false);
         const ok = await showAd(this, sv, 'double');
-        if (!ok || !this.scene.isActive()) { db.used = false; db.setEnabled(true); return; }
+        if (!ok) { db.used = false; db.setEnabled(true); return; }
         sv.ads.double = (sv.ads.double || 0) + 1;
-        sv.gold += gold; sv.stone += stone; save(); this.refreshTop();
+        sv.gold += gold; sv.stone += stone; save();   // 광고를 다 봤으면 그 사이 화면을 떠났어도 준다
+        if (!this.scene.isActive()) return;
+        this.refreshTop();
         tx[0].setText('+' + fmt(gold * 2)); tx[1].setText('+' + fmt(stone * 2));
         sfx('coin'); db.label.setText(t('lobby.63b8a7')); track('idle_double', { gold, stone });
       }, { size: 10, color: 0x1d6f80 });   // 53차: 광고 2배는 청록(보조), 주황은 '좋아' 하나
@@ -1529,9 +1532,10 @@ export class Lobby extends Phaser.Scene {
           this.busy = true;
           const ok = await showAd(this, sv, k);
           this.busy = false;
-          if (!ok || !this.scene.isActive()) return;
-          sv.ads[k] = (sv.ads[k] || 0) + 1; grant(sv, ad.give);
+          if (!ok) return;
+          sv.ads[k] = (sv.ads[k] || 0) + 1; grant(sv, ad.give);   // 광고를 다 봤으면 그 사이 화면을 떠났어도 준다
           track('ad_reward', { kind: k, n: sv.ads[k] });
+          if (!this.scene.isActive()) return;
           after(t('lobby.9a8193', { name: ad.name }));
         }, { size: 10, color: 0x2f6b3a, ghost: i > 0 });   // 49차: 광고 버튼은 첫 줄만 채운 주황, 나머지는 테두리형
         bt.setEnabled(left > 0); b.add(bt);

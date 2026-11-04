@@ -36,8 +36,9 @@ export async function bootSync() {
   let r = null;
   try { r = await Promise.race([syncNow(guard), new Promise(res => setTimeout(() => { guard.late = true; res(null); }, 3500))]); } catch { r = null; }
   cloudReady();
-  // 서버에 못 닿았고 이 기기 저장이 비어 있으면(앱 데이터가 지워진 경우) 기기 안 사본(토스 Storage · 앱 Preferences)에서 되살린다
-  if (!r?.applied && (!r || r.action === 'offline')) {
+  // 이 기기 저장이 비었거나 사본보다 뒤처졌으면(앱 데이터가 지워진 경우) 기기 안 사본(토스 Storage · 앱 Preferences)에서 되살린다
+  // 서버에 닿아도 본다: 서버에 아직 저장이 없으면 사본이 유일한 진짜 저장이다
+  if (!r?.applied) {
     try {
       const m = await cloudPull(), cur = load();
       if (m && compareProgress(progressOf(m.data), progressOf(cur)) > 0) { applyCode((await import('./saveCore.js')).exportCode(m.data)); track('mirror_restore'); r = { applied: true }; }

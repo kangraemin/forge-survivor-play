@@ -164,7 +164,7 @@ export function applyPurchase(sv, item) {
 function buyRaw(scene, sv, item) {
   if (item.stop || (cashHidden() && !isTest())) return Promise.resolve({ ok: false, granted: false });   // 판매 중지 상품(49차) · 포털판은 현금 결제 없음
   return new Promise(res => {
-    let applied = false, granted = false;
+    let applied = false, granted = false, saved = true;
     const apply = orderId => {
       if (applied) return;
       applied = true;
@@ -173,7 +173,7 @@ function buyRaw(scene, sv, item) {
       applyPurchase(sv, item);
       granted = true;
       sv.paidTotal = (sv.paidTotal || 0) + item.price;
-      save(); // SDK 지급 성공 응답 전에 소유권·주문·집계를 함께 저장
+      saved = save(); // SDK 지급 성공 응답 전에 소유권·주문·집계를 함께 저장. 못 썼으면 주문을 닫지 않는다(다음 실행 복구가 준다)
     };
     const done = ok => {
       if (ok) { apply(); sfx('win'); }
@@ -181,7 +181,7 @@ function buyRaw(scene, sv, item) {
     };
     if (isTest()) { done(true); return; }   // 테스트 모드: 결제 없이 바로 지급(스토어·토스 결제 호출 없음)
     // 앱: 지급을 SDK 지급 콜백 안에서 끝낸다(지급 뒤 true를 돌려줘야 주문이 완료로 닫힌다)
-    if (window.forgePlatform?.buy) return window.forgePlatform.buy(item.id, orderId => { apply(orderId); return true; }).then(ok => {
+    if (window.forgePlatform?.buy) return window.forgePlatform.buy(item.id, orderId => { apply(orderId); if (!saved) track('iap_save_fail', { item: item.id }); return saved; }).then(ok => {
       if (!ok || applied) return done(ok);
       // 성공 알림은 왔는데 지급 콜백이 불리지 않았다: 여기서 주문 번호 없이 주면 그 주문이 미지급으로 남아 다음 실행 복구가 한 번 더 줬다
       // → 미지급 주문 복구(주문 번호로 한 번만 준다)로 지금 받는다. 목록에 아직 없으면 다음 실행 복구가 준다
@@ -255,10 +255,11 @@ export async function recoverPurchases() {
       if (!(sv.orders || []).includes(o.orderId)) {
         (sv.orders ||= []).push(o.orderId);
         applyPurchase(sv, item);
-        logUser({ payer: true, paid_total: (sv.paidTotal = (sv.paidTotal || 0) + item.price) }); save();
+        logUser({ payer: true, paid_total: (sv.paidTotal = (sv.paidTotal || 0) + item.price) });
         track('iap_recover', { item: item.id, order: o.orderId });
         n++;
       }
+      if (!save()) { track('iap_save_fail', { item: item.id }); continue; }   // 저장을 못 썼으면 주문을 닫지 않는다: 다음 실행에 다시 준다
       await P.complete(o.orderId);
     }
   } catch (e) { track('iap_recover_fail', { msg: String(e?.message || e).slice(0, 80) }); }

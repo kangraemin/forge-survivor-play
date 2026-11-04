@@ -17,18 +17,18 @@ export function store() { if (st0) return st0;
    if (window.forgePlatform?.storage) return st0 = window.forgePlatform.storage;   // 포털판 저장소(platform/crazygames.js)
    try { localStorage.getItem(KEY); st0 = localStorage; } catch { st0 = memStore; } return st0; }
 export const loadStatus = () => loadInfo;
-export function load() {
-  if (mem) return mem;
-  // 읽기·변환이 실패해도 새 저장으로 덮어쓰지 않는다: 백업 복구, 안 되면 원본을 따로 보관(saveCore.readSave)
-  const r = readSave(store());
-  mem = r.data; loadInfo = { source: r.source, lostRaw: r.lostRaw };
-  const back = restorePurchases(store(), mem);   // 저장이 새로 시작됐거나 구매가 빠졌으면 구매 기록으로 되살린다
-  if (back) track('purchase_restore', { n: back });
-  if (r.source !== 'main') track('save_recover', { source: r.source, lost: r.lostRaw });
-  // 마지막으로 저장한 뒤 얼마나 비웠나(자리 비움 보상). 로비가 읽고 0으로 돌린다
-  if (mem.seenAt) mem.idleMs = Math.max(mem.idleMs || 0, Date.now() - mem.seenAt);
+// 날짜를 보고 하루·주를 새로 연다. 앱을 켜 둔 채 자정을 넘겨도 로비로 돌아오면 바뀐다
+function rollDay() {
   // 하루가 바뀌면 소탕권 충전, 파괴 방지권 1장
   const d = new Date(), today = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; // 기기 시간대 기준 자정에 바뀐다
+  // 시계가 미래로 잘못 갔다가 돌아오면 dayN이 미래에 묶여 일일 보상·광고 횟수가 멈춘다 → 이틀 넘게 앞서 있으면 지금 날짜로 되돌린다(보상 없음)
+  // 시계 왕복으로 보상을 다시 타는 길을 막으려고 저장 하나에 5번까지만
+  const now = dayNo(d);
+  if ((mem.dayN || 0) - now >= 2 && (mem.clockFix | 0) < 5) {
+    mem.clockFix = (mem.clockFix | 0) + 1; mem.dayN = now; mem.day = today;
+    if (mem.wk?.id > Math.floor((now + 3) / 7)) mem.wk.id = Math.floor((now + 3) / 7);
+    track('clock_fix', { n: mem.clockFix });
+  }
   // 날짜가 앞으로 갈 때만 하루를 새로 연다: 시계를 어제로 돌렸다 되돌리면 그때마다 출석 보석·광고 횟수·월정액 하루치가 다시 들어왔다
   if (mem.day !== today && dayNo(d) > (mem.dayN || 0)) {
     if (mem.day) { mem.sweep = sweepAdd(mem.sweep, SWEEP_DAILY); mem.guard += 1; }
@@ -44,7 +44,26 @@ export function load() {
   }
   // 주간 도전: 월요일 0시에 새 주(날짜 번호 0은 1970-01-01 목요일)
   const wk = Math.floor((dayNo(d) + 3) / 7);
-  if (mem.wk.id !== wk) { mem.wk = { id: wk, mis: {}, got: {} }; track('weekly_reset', { wk }); }
+  if (!(mem.wk.id >= wk)) { mem.wk = { id: wk, mis: {}, got: {} }; track('weekly_reset', { wk }); }
+}
+// 로비가 열릴 때 부른다. 바뀌었으면 저장한다
+export function checkDay() {
+  if (!mem || realMem) return;
+  const before = mem.day, wk = mem.wk?.id;
+  rollDay();
+  if (mem.day !== before || mem.wk?.id !== wk) save();
+}
+export function load() {
+  if (mem) return mem;
+  // 읽기·변환이 실패해도 새 저장으로 덮어쓰지 않는다: 백업 복구, 안 되면 원본을 따로 보관(saveCore.readSave)
+  const r = readSave(store());
+  mem = r.data; loadInfo = { source: r.source, lostRaw: r.lostRaw };
+  const back = restorePurchases(store(), mem);   // 저장이 새로 시작됐거나 구매가 빠졌으면 구매 기록으로 되살린다
+  if (back) track('purchase_restore', { n: back });
+  if (r.source !== 'main') track('save_recover', { source: r.source, lost: r.lostRaw });
+  // 마지막으로 저장한 뒤 얼마나 비웠나(자리 비움 보상). 로비가 읽고 0으로 돌린다
+  if (mem.seenAt) mem.idleMs = Math.max(mem.idleMs || 0, Date.now() - mem.seenAt);
+  rollDay();
   dexRefresh(mem);
   save();
   return mem;
