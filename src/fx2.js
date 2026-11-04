@@ -25,6 +25,17 @@ export function makeFx2Anims(scene) {
 }
 export const has = (s, k) => s.textures.exists('x_' + k);
 
+// 3차 버그 수정(9-B): 한 프레임이 길면 Phaser 3.80 Clock.update 의 밀린 콜백 반복문("Very short delay")이 같은 프레임 안에서
+//  반복 콜백을 이어 부르는데, 이 반복문은 event.paused 를 다시 보지 않는다. 그래서 콜백 안에서 부활 창이 열려 freeze(overlay.js)가
+//  그 타이머를 멈춰도 같은 프레임 안에서 몇 번 더 돌았다(블랙홀 끌어당김·장판 수명).
+//  반복 콜백 맨 앞에서 held(ev) 가 참이면 아무것도 하지 않고 돌아간다. 반복문이 곧 깎을 남은 횟수를 하나 되돌려,
+//  창을 닫은 뒤 남은 횟수가 그대로 돈다(정상 길에서는 Phaser 가 멈춘 타이머의 콜백을 부르지 않으므로 이 함수는 거짓만 낸다)
+export function held(ev) {
+  if (!ev?.paused) return false;
+  if (ev.repeatCount > 0) ev.repeatCount++;
+  return true;
+}
+
 // ── 예고 바닥: 시간(0~1)에 따라 안쪽이 바깥 테두리까지 차오른다. 다 차는 순간이 맞는 순간이다 ──
 // 큰 게임 장판처럼: 옅은 바탕 + 또렷한 테두리 + 차오르는 안쪽 + 차오르는 끝선. 깜빡이지 않는다(예전 그림 4장 넘김은 싸 보였다)
 // 그래픽 하나를 (x,y)에 두고 그 안에서 그린다 → setPosition·setRotation·destroy·active를 예전 스프라이트처럼 쓴다

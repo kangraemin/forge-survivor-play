@@ -4,6 +4,7 @@ import { sfx } from './sfx.js';
 import { t } from './i18n.js';
 import * as D from './data.js';
 import { lineWarn, flashLine, segDist } from './lateEnv.js';
+import { held } from './fx2.js';
 
 const R = Phaser.Math.Between, RF = Phaser.Math.FloatBetween;
 const cl = v => Phaser.Math.Clamp(v, 40, 1560);
@@ -15,7 +16,8 @@ function puddle(b, x, y, r, ms, col, src) {
   if (s.env?.addHaz) { s.env.addHaz(x, y, r * 0.8, ms, 0.6, src || 'fire', col); return; }
   const g = s.add.graphics().setDepth(8).fillStyle(col, 0.4).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(2, 0xff4050, 1).strokeEllipse(x, y, r * 2, r * 1.5);
   let left = ms;
-  s.time.addEvent({ delay: 400, repeat: Math.ceil(ms / 400), callback: () => {
+  const ev = s.time.addEvent({ delay: 400, repeat: Math.ceil(ms / 400), callback: () => {
+    if (held(ev)) return;   // 3차 9-B: 느린 프레임에서 부활 창이 열린 뒤 같은 프레임 안에 더 불리면 건너뛴다(남은 횟수는 지킨다)
     if (!g.active) return;
     left -= 400; g.setAlpha(Math.max(0.2, left / ms));
     if (b.m.active && b.inWarn(x, y, r * 0.85)) s.hurt(b.m.dmg * 0.35);

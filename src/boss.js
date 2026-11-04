@@ -5,7 +5,7 @@ import { insetsGame } from './safeArea.js';
 import { font, toast, viewRect } from './ui.js';
 import { BOSS_PATTERNS } from './envfx.js';
 import { MID_PATTERNS } from './midPat.js';
-import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has, sweepBlade } from './fx2.js';
+import { warnDisc, warnStrip, warnFan, runWarn, playOnce, phaseBorder, weakBorder, bubbleFrame, rageAura, has, sweepBlade, held } from './fx2.js';
 import { t, tt } from './i18n.js';
 import { weakOf, GuardMixin, showHint } from './bossWeak.js';
 import { attachSkin, probeHit, skinSkill, skinHurt, skinDie, skinGhosts } from './anim2.js';
@@ -469,7 +469,8 @@ export class BossAI {
         // 바닥 색과 섞이지 않게(용암 장에서 주황 장판이 안 보였다) 독 보라색에 빨간 테를 두른다
         const g = s.add.graphics().setDepth(8).fillStyle(0x9a3aff, 0.4).fillEllipse(x, y, r * 2, r * 1.5).lineStyle(2, 0xff4050, 1).strokeEllipse(x, y, r * 2, r * 1.5);
         let left = 4000;
-        s.time.addEvent({ delay: 400, repeat: 9, callback: () => {
+        const ev = s.time.addEvent({ delay: 400, repeat: 9, callback: () => {
+          if (held(ev)) return;   // 3차 9-B: 느린 프레임에서 부활 창이 열린 뒤 같은 프레임 안에 더 불리면 건너뛴다(남은 횟수는 지킨다)
           if (!g.active) return;
           left -= 400; g.setAlpha(Math.max(0.2, left / 4000));
           if (this.m.active && this.inWarn(x, y, r * 0.85)) s.hurt(this.m.dmg * 0.35);

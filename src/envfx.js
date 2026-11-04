@@ -5,7 +5,7 @@ import * as D from './data.js';
 import { sfx } from './sfx.js';
 import { t } from './i18n.js';
 import { font, viewRect } from './ui.js';
-import { warnDisc, warnStrip, warnFan, runWarn } from './fx2.js';
+import { warnDisc, warnStrip, warnFan, runWarn, held } from './fx2.js';
 import { Late, LATE_PATTERNS, LATE_FX4 } from './lateEnv.js';   // 16~18장 기믹·몹·보스 패턴
 
 const WORLD = 1600;
@@ -689,10 +689,12 @@ export const BOSS_PATTERNS = {
       s.tweens.add({ targets: hole, angle: 360, duration: 2400 });
       let t = 0, hitT = -1e9;
       const ev = s.time.addEvent({ delay: 40, repeat: 58, callback: () => {
+        if (held(ev)) return;   // 9-B: 느린 프레임에서 부활 창이 열린 뒤 같은 프레임 안에 더 불리면 건너뛴다(남은 횟수는 지킨다)
         t += 40;
         if (!m.active || s.over) { ev.remove(); hole.destroy(); core.destroy(); return; }
         const dx = tx - s.hero.x, dy = ty - s.hero.y, d = Math.hypot(dx, dy);
-        if (d < 150) s.env?.impulse(dx / d * 105, dy / d * 105, 60);
+        // 9-A: 중심에 정확히 서 있으면 d = 0 이라 0/0 = NaN 이 영웅 속도·위치에 들어가 판이 깨졌다(203줄 유사 구덩이처럼 0을 막는다)
+        if (d < 150) s.env?.impulse(dx / (d || 1) * 105, dy / (d || 1) * 105, 60);
         if (d < 14 && s.bt - hitT > 600) { hitT = s.bt; s.hurt(m.dmg * 1.4); }
         if (t >= 2300) { hole.destroy(); core.destroy(); }
       } });
