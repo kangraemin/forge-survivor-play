@@ -3,7 +3,8 @@
 import { portalReady } from './platform/index.js';   // 포털판(CrazyGames·itch) 깃발: 다른 모듈보다 먼저
 import './log.js';
 import { W, H, GW, OFF, WIDE } from './data.js';
-import { PX } from './ui.js';
+import { PX, LOW_GFX, LOW_GFX_KEY } from './ui.js';
+import { track } from './log.js';
 import { installTextFit } from './textfit.js';
 import { installPcInput } from './pcInput.js';
 import { Boot, buildAnims } from './Boot.js';
@@ -46,6 +47,18 @@ const start = () => {
   // 테스트 모드(주인용): 켜진 기기에서만 패널을 만든다. ?test로 열었는데 아직 꺼져 있으면 코드 입력 창만 띄운다
   if (isTest()) import('./testPanel.js').then(m => m.installTestPanel(window.game)).catch(() => {});
   else if (testRequested()) askEnableTest();
+  // 전투가 30초 내내 초당 20장 아래면 이 기기는 다음 실행부터 저화질로 그린다(판 도중 판 크기를 바꾸면 글자·좌표가 모두 다시 만들어져야 한다)
+  if (!LOW_GFX && !/[?&](nolog|bot|test)\b/.test(location.search)) {
+    let slow = 0;
+    const watch = setInterval(() => {
+      if (document.hidden || !window.game.scene.isActive('Battle') || window.game.scene.isPaused('Battle')) { slow = 0; return; }
+      slow = window.game.loop.actualFps < 20 ? slow + 1 : 0;
+      if (slow < 6) return;
+      clearInterval(watch);
+      try { localStorage.setItem(LOW_GFX_KEY, '1'); } catch { /* 못 적으면 다음에도 이대로 */ }
+      track('lowgfx_auto', { fps: Math.round(window.game.loop.actualFps), px: PX });
+    }, 5000);
+  }
   installPcInput(window.game);   // PC 키보드·마우스 보조(폰·토스에서는 아무것도 안 한다)
   installTextFit(window.game);   // 긴 번역 글자를 상자 안에 맞춘다(한국어는 아무 일도 안 한다)
   // 판이 화면보다 조금 크면 줄일 때 픽셀이 빠져 글자가 깨진다: 줄일 때는 매끄럽게

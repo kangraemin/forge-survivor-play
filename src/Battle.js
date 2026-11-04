@@ -257,10 +257,11 @@ export class Battle extends Phaser.Scene {
     const rt = this.add.renderTexture(-M, -M, WORLD + 2 * M, WORLD + 2 * M).setOrigin(0).setDepth(-10);
     const stamp = this.make.image({ key: key + '_t', add: false });
     // draw()를 칸마다 부르면 부를 때마다 임시 그림판을 만들었다 지워 소프트웨어 GL(녹화·일부 기기)에서 30초씩 멈췄다: 한 번 열고 한 번에 그린다
-    rt.beginDraw();
     const c = WORLD / 2;
     // 가운데 광장·길 안쪽으로 들어간 거리(밖이면 음수)
     const inside = (x, y) => Math.max(190 - Math.hypot(x - c, y - c), 50 - Math.abs(x - c), 50 - Math.abs(y - c));
+    const bakeFloor = () => {
+    rt.beginDraw();
     // 바깥 바닥을 전부 깔고, 광장 바닥은 경계에서 서서히 짙어지게 겹친다(경계 타일을 쓰면 계단식 사각 패치로 보였다)
     if (key === 'tile9' || key === 'tile12') {
       // 9·12장 바닥은 160x120 한 장이 통째로 이어지는 그림이라 회전·광장 겹침 없이 깐다(칸을 섞으면 사각 이음새가 보였다)
@@ -280,6 +281,12 @@ export class Battle extends Phaser.Scene {
     }
     rt.endDraw();
     stamp.setAlpha(1);
+    };
+    bakeFloor();
+    // 약한 폰은 메모리가 모자라면 그래픽을 통째로 잃었다 되찾는다. 그림판에 구워 둔 바닥만 비어 버리니 다시 굽고 어둠 덮개도 다시 그리게 한다
+    const onRestore = () => this.game.events.once('prestep', () => { if (!this.sys.isActive() && !this.sys.isPaused()) return; rt.clear(); bakeFloor(); this.darkKey && (this.darkKey.length = 0); });
+    this.game.renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, onRestore);
+    this.events.once('shutdown', () => this.game.renderer.off(Phaser.Renderer.Events.RESTORE_WEBGL, onRestore));
     // 못 가는 바깥은 어둡게 덮어 끝이라는 걸 보인다
     this.add.graphics().setDepth(-9).fillStyle(0x000000, 0.5).fillRect(-M, -M, WORLD + 2 * M, M).fillRect(-M, WORLD, WORLD + 2 * M, M).fillRect(-M, 0, M, WORLD).fillRect(WORLD, 0, M, WORLD);
     // 전용 바닥 그림이 없는 챕터는 1챕터 바닥에 색을 입힌다

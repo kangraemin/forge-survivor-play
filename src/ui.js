@@ -7,8 +7,16 @@ import { wrapTo } from './textfit.js';
 
 // 그리는 배율. 카메라를 왼쪽 위 기준으로 PX배 당겨 게임 좌표(270x480)를 그대로 쓴다
 // 기기 실제 픽셀에 맞춘다(1080 폭 폰이면 4배): 화면에 맞추며 정수배가 아니게 늘리거나 줄이면 글자 획이 들쭉날쭉해진다
+// 약한 폰(메모리 2GB 이하, 또는 전투가 계속 끊겨 main.js가 표시해 둔 기기)은 2배로 그린다: 칠할 픽셀과 글자 텍스처가 크게 줄어든다.
+// 게임 좌표와 저장은 그대로이고, 표시값은 저장 파일과 따로 둔다
 const dpr = window.devicePixelRatio || 1;
-export const PX = Math.max(2, Math.min(4, Math.ceil(Math.min(innerWidth * dpr / GW, innerHeight * dpr / GH) - 0.05)));
+export const LOW_GFX_KEY = 'forge-lowgfx-v1';
+export const LOW_GFX = (() => {
+  try { if (localStorage.getItem(LOW_GFX_KEY) === '1') return true; } catch { /* 저장소를 못 쓰면 메모리로만 판단 */ }
+  return navigator.deviceMemory > 0 && navigator.deviceMemory <= 2;
+})();
+const fullPx = Math.max(2, Math.min(4, Math.ceil(Math.min(innerWidth * dpr / GW, innerHeight * dpr / GH) - 0.05)));
+export const PX = LOW_GFX ? 2 : fullPx;
 
 // 글자는 그리는 판 해상도로 만든다(1배로 만들어 PX배로 늘리면 뭉개진다)
 export const font = (size, color = '#ffffff', stroke = 3) =>
