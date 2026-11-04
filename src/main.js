@@ -12,7 +12,8 @@ import { installLazy } from './lazy.js';
 import { Lobby } from './Lobby.js';
 import { Battle } from './Battle.js';
 import { Prologue } from './Prologue.js';
-import { load } from './save.js';
+import { load, onStale } from './save.js';
+import { t } from './i18n.js';
 import { captureRef, deviceId } from './share.js';
 import { initSafeArea } from './safeArea.js';
 import { earlyBgm, setMusicLevel } from './sfx.js';
@@ -59,6 +60,18 @@ const start = () => {
       track('lowgfx_auto', { fps: Math.round(window.game.loop.actualFps), px: PX });
     }, 5000);
   }
+  onStale(() => {   // 다른 창이 저장했다: 이 창은 저장을 멈췄으니 다시 불러오게만 한다
+    try { window.game.pause(); } catch { /* 아직 안 떴어도 안내는 띄운다 */ }
+    const d = document.createElement('div');
+    d.style.cssText = 'white-space:pre-line;position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#0d0a14;color:#f2e4bc;font:16px G11,sans-serif;text-align:center';
+    d.textContent = t('stale.msg');
+    const b = document.createElement('button');
+    b.textContent = t('stale.reload');
+    b.style.cssText = 'padding:12px 24px;font:16px G11,sans-serif;background:#ffd75e;color:#0d0a14;border:0';
+    b.onclick = () => location.reload();
+    d.append(b); document.body.append(d);
+    track('tab_stale');
+  });
   installPcInput(window.game);   // PC 키보드·마우스 보조(폰·토스에서는 아무것도 안 한다)
   installTextFit(window.game);   // 긴 번역 글자를 상자 안에 맞춘다(한국어는 아무 일도 안 한다)
   // 판이 화면보다 조금 크면 줄일 때 픽셀이 빠져 글자가 깨진다: 줄일 때는 매끄럽게

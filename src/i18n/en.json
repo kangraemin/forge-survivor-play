@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "Cross Blades!",
  "boss.patSigil": "Sigil!",
  "boss.patCrownfall": "Crown's Gaze!",
- "overlay.lateTitle": "New title: {name}"
+ "overlay.lateTitle": "New title: {name}",
+ "stale.msg": "The game was opened in another window.\nThis window has stopped so your progress stays safe.",
+ "stale.reload": "Reload"
 }

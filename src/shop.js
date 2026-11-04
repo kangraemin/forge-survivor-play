@@ -254,7 +254,10 @@ export async function recoverPurchases() {
       if (!item) { track('iap_recover_unknown', { sku: o.sku }); continue; }
       if (!(sv.orders || []).includes(o.orderId)) {
         (sv.orders ||= []).push(o.orderId);
+        // 결제가 끝나기 전에 같은 꾸미기를 보석으로 샀으면 받을 것이 겹친다: 겹친 만큼 값어치(10보석=100원)를 보석으로 돌려준다
+        const cos = COS_PACKS.some(p => p.id === item.id) ? item.give?.cosmetics : null, dup = cos ? cos.filter(id => wardrobe(sv).owned[id]).length : 0;
         applyPurchase(sv, item);
+        if (dup) { sv.gem = (sv.gem || 0) + Math.round(item.price / 10 * dup / cos.length); track('iap_recover_dup', { item: item.id, dup }); }
         logUser({ payer: true, paid_total: (sv.paidTotal = (sv.paidTotal || 0) + item.price) });
         track('iap_recover', { item: item.id, order: o.orderId });
         n++;

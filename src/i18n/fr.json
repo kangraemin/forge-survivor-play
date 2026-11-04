@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "Lames en Croix !",
  "boss.patSigil": "Sceau !",
  "boss.patCrownfall": "Regard de la Couronne !",
- "overlay.lateTitle": "Nouveau titre : {name}"
+ "overlay.lateTitle": "Nouveau titre : {name}",
+ "stale.msg": "Le jeu a été ouvert dans une autre fenêtre.\nCette fenêtre est en pause pour protéger ta progression.",
+ "stale.reload": "Recharger"
 }

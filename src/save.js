@@ -73,8 +73,12 @@ let realMem = null;
 export function sandboxBegin(sv) { if (realMem) return; load(); realMem = mem; mem = sv; }
 export function sandboxEnd() { if (!realMem) return; mem = realMem; realMem = null; }
 export const inSandbox = () => !!realMem;
+// 창을 둘 열면 뒤늦게 저장하는 옛 창이 새 창의 진행을 덮는다(업데이트로 새로 생긴 값까지): 다른 창이 저장하면 이 창은 저장을 멈추고 다시 불러오게 한다
+let stale = false, staleCb = null;
+export const onStale = cb => { staleCb = cb; if (stale) cb(); };
+try { window.addEventListener('storage', e => { if (e.key === KEY && e.newValue != null && !stale) { stale = true; staleCb?.(); } }); } catch { /* 창이 없는 환경 */ }
 export function save() {
-  if (realMem) return false;
+  if (realMem || stale) return false;
   if (mem) mem.seenAt = Date.now();
   if (!mem) return false;
   syncLedger(store(), mem);   // 산 것을 저장과 분리된 칸에도 적는다

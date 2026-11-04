@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "ดาบกากบาท!",
  "boss.patSigil": "ผนึก!",
  "boss.patCrownfall": "สายตาแห่งมงกุฎ!",
- "overlay.lateTitle": "ฉายาใหม่: {name}"
+ "overlay.lateTitle": "ฉายาใหม่: {name}",
+ "stale.msg": "เกมถูกเปิดในหน้าต่างอื่น\nหน้าต่างนี้หยุดทำงานเพื่อรักษาความคืบหน้าของคุณ",
+ "stale.reload": "โหลดใหม่"
 }

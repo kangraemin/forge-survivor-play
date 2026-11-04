@@ -1,4 +1,5 @@
 import { cosmeticPage } from './cosmeticShop.js';
+import { loadCosmetics } from './lazy.js';
 import { openSettings } from './settingsPanel.js';
 import { tutorialDue, runTutorial, modeDue, runModeCoach, tabCoach, runIntro } from './tutorial.js';
 import { coachRun } from './coach.js';
@@ -1298,7 +1299,16 @@ export class Lobby extends Phaser.Scene {
 
   // ── 꾸미기: 칼빛·영웅 스킨·캐시 무기를 보석으로 사고 골라 낀다 ──
   skinPage() {
-    if (!this.legacySkins) return cosmeticPage(this);
+    if (!this.legacySkins) {
+      const waiting = () => this.body.add(this.add.text(135, 220, t('rank.loading'), font(11, '#b4cfda')).setOrigin(0.5));
+      if (this.cosWait) return waiting();
+      if (!this.cosTried) {   // 한 번만 받는다: 실패해도 다시 받느라 화면이 안 열리는 일이 없게
+        this.cosTried = true;
+        this.cosWait = loadCosmetics(this, () => { this.cosWait = false; if (this.tab === 'shop' && this.shopPage === 'skin') this.show('shop'); });
+        if (this.cosWait) { this.events.once('shutdown', () => { this.cosWait = false; this.cosTried = false; }); return waiting(); }
+      }
+      return cosmeticPage(this);
+    }
     this.legacySkinPage();
     this.body.add(button(this, 135, 429, 128, 18, t('lobby.3c81f8'), () => { this.legacySkins = false; this.show('shop'); }, { size: 9 }));
   }

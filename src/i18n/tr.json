@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "Çapraz Bıçaklar!",
  "boss.patSigil": "Mühür!",
  "boss.patCrownfall": "Tacın Bakışı!",
- "overlay.lateTitle": "Yeni unvan: {name}"
+ "overlay.lateTitle": "Yeni unvan: {name}",
+ "stale.msg": "Oyun başka bir pencerede açıldı.\nİlerlemen güvende kalsın diye bu pencere durduruldu.",
+ "stale.reload": "Yeniden yükle"
 }

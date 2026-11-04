@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "십자 칼날!",
  "boss.patSigil": "마법진!",
  "boss.patCrownfall": "왕관의 시선!",
- "overlay.lateTitle": "새 칭호 「{name}」"
+ "overlay.lateTitle": "새 칭호 「{name}」",
+ "stale.msg": "다른 창에서 게임을 열었어요.\n진행이 섞이지 않게 이 창은 멈췄어요.",
+ "stale.reload": "다시 불러오기"
 }

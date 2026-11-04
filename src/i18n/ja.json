@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "十字の刃!",
  "boss.patSigil": "魔法陣!",
  "boss.patCrownfall": "王冠の視線!",
- "overlay.lateTitle": "新しい称号「{name}」"
+ "overlay.lateTitle": "新しい称号「{name}」",
+ "stale.msg": "別のウィンドウでゲームが開かれました。\n進行を守るため、このウィンドウは停止しました。",
+ "stale.reload": "再読み込み"
 }

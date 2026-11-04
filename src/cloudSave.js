@@ -14,7 +14,7 @@
 //  · getUserKeyForGame(): 게임 미니앱별 고유 사용자 식별키(hash). "게임 내 데이터 저장, 세이브 데이터 관리"에 쓰라고 안내한다. 토스앱 5.232.0 이상.
 //  · 공식 확인 안 됨: 토스가 저장 데이터를 서버에 대신 보관해 주는 API.
 import { exportCode, importCode } from './saveCore.js';
-import { progressOf, compareProgress, mergeLedger } from './progress.js';
+import { progressOf, compareProgress, mergeLedger, mergeWallet, peekCode } from './progress.js';
 import { deviceId } from './deviceKey.js';
 import { isTest } from './testMode.js';
 
@@ -80,9 +80,10 @@ export async function cloudSync(mem) {
   if (!g.ok) return { action: g.skipped ? 'off' : 'offline' };
   if (g.exists) {
     const L = progressOf(mem);
-    if (!isEmpty(L) ? compareProgress(g.progress, L) > 0 : true) {
+    const S = peekCode(g.code) || g.progress;   // 서버가 준 값에 없는 비교값(대장간)까지 보려고 받은 저장에서 직접 읽는다
+    if (!isEmpty(L) ? compareProgress(S, L) > 0 : true) {
       let data; try { data = importCode(g.code); } catch { return { action: 'offline', error: 'bad_server_code' }; }
-      if (!isEmpty(L)) { ls.set(LOSE_KEY, exportCode(mem)); mergeLedger(data, mem); }
+      if (!isEmpty(L)) { ls.set(LOSE_KEY, exportCode(mem)); mergeLedger(data, mem); mergeWallet(data, mem); }
       setMeta({ rev: g.rev, savedAt: g.savedAt, dirty: false });
       return { action: 'pull', code: exportCode(data), savedAt: g.savedAt, lost: !isEmpty(L) };
     }
@@ -94,7 +95,7 @@ export async function cloudSync(mem) {
   if (p.kept === 'server' && p.serverCode) {   // 올렸는데 서버본이 더 컸다(다른 기기가 방금 먼저 썼다)
     ls.set(LOSE_KEY, exportCode(mem));
     let data; try { data = importCode(p.serverCode); } catch { return { action: 'offline' }; }
-    mergeLedger(data, mem);
+    mergeLedger(data, mem); mergeWallet(data, mem);
     return { action: 'pull', code: exportCode(data), savedAt: p.savedAt, lost: true };
   }
   return { action: 'pushed', savedAt: p.savedAt };

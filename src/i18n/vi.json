@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "Lưỡi kiếm chữ thập!",
  "boss.patSigil": "Ấn chú!",
  "boss.patCrownfall": "Ánh nhìn vương miện!",
- "overlay.lateTitle": "Danh hiệu mới: {name}"
+ "overlay.lateTitle": "Danh hiệu mới: {name}",
+ "stale.msg": "Trò chơi đã được mở ở cửa sổ khác.\nCửa sổ này đã dừng để giữ an toàn cho tiến trình của bạn.",
+ "stale.reload": "Tải lại"
 }

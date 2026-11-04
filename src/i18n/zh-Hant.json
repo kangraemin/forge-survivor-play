@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "十字刃!",
  "boss.patSigil": "法陣!",
  "boss.patCrownfall": "王冠凝視!",
- "overlay.lateTitle": "新稱號「{name}」"
+ "overlay.lateTitle": "新稱號「{name}」",
+ "stale.msg": "遊戲已在另一個視窗開啟。\n為保護你的進度,此視窗已停止。",
+ "stale.reload": "重新載入"
 }

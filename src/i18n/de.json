@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "Kreuzklingen!",
  "boss.patSigil": "Siegel!",
  "boss.patCrownfall": "Blick der Krone!",
- "overlay.lateTitle": "Neuer Titel: {name}"
+ "overlay.lateTitle": "Neuer Titel: {name}",
+ "stale.msg": "Das Spiel wurde in einem anderen Fenster geöffnet.\nDieses Fenster wurde angehalten, damit dein Fortschritt sicher bleibt.",
+ "stale.reload": "Neu laden"
 }

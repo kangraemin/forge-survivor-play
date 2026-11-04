@@ -187,14 +187,20 @@ export function writeSave(st, mem) {
   } catch { return false; }
   const cur = get(st, KEY);
   if (cur != null && cur !== s) {
-    let ok = false; try { JSON.parse(cur); ok = true; } catch { /* 깨진 저장은 백업으로 밀지 않는다 */ }
+    let ok = false; try { const o = JSON.parse(cur); ok = !!o && typeof o === 'object'; } catch { /* 깨진 저장은 백업으로 밀지 않는다 */ }   // 'null' 같은 빈 값도 좋은 백업을 밀어내지 않게
     if (ok && cur !== get(st, BAK[0])) {
       const b1 = get(st, BAK[0]);
       if (b1 != null) put(st, BAK[1], b1);
       put(st, BAK[0], cur);
     }
   }
-  return put(st, KEY, s) && get(st, KEY) === s;
+  if (put(st, KEY, s) && get(st, KEY) === s) return true;
+  // 저장소가 꽉 찼다: 오래된 백업부터 비우고 다시 쓴다(지금 진행이 백업보다 중요하다)
+  for (const b of [BAK[1], BAK[0]]) {
+    try { st.removeItem(b); } catch { /* 지우지 못해도 다음 칸을 해 본다 */ }
+    if (put(st, KEY, s) && get(st, KEY) === s) return true;
+  }
+  return false;
 }
 
 // ── 내보내기/가져오기 코드: FS1.<base64url 저장>.<체크섬 8자리> ──

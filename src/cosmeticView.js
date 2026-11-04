@@ -27,6 +27,8 @@ export function dressHero(hero, look) {
   const id = bodyId(look);
   if (!BODY_LOOKS.some(it => it.id === id)) return hero;
   const rows = COS_ROWS.map((_, i) => `cos_${id}_${i}`);
+  if (hero.scene && !rows.every(r => hero.scene.textures.exists(r))) return hero;   // 그림을 아직 못 받았으면 기본 몸 그대로
+  releaseOnDestroy(hero);
   const anim = (key, row, rate, repeat = -1, frames = [0, 1, 2, 3]) => hero.anims.create({ key, frames: frames.map(frame => ({ key: rows[row], frame })), frameRate: rate, repeat });
   // 걷기는 8장판(smooth.js cos8_)이 있으면 그걸로: 한 바퀴 길이(4장/8fps)는 그대로
   const walk = (key, row, d) => {
@@ -50,6 +52,7 @@ export function holdHero(sc, hero, look, wid) {
   const bare = !!look.weapon, p = bare ? 'hw2' : sc.pro && sc.textures?.exists(`hl_${wid}_idle`) ? 'hl' : 'hw';
   const k = a => `${p}_${wid}_${a}`;
   if (!hero.anims?.create || !Object.keys(HELD_SHEETS).every(a => sc.textures?.exists(k(a)))) return false;
+  releaseOnDestroy(hero);
   const anim = (key, a, rate, repeat = -1, frames = [0, 1, 2, 3]) => hero.anims.create({ key, frames: frames.map(frame => ({ key: k(a), frame })), frameRate: rate, repeat });
   if (p === 'hl') {
     // 전설 주인공은 걷기 8장·숨쉬기 4장·베기 8장. 한 걸음 주기(0.5초)와 베기 길이(4장/26fps)는 그대로 두고 장수만 늘려 부드럽게
@@ -75,13 +78,24 @@ export function holdHero(sc, hero, look, wid) {
 }
 // 주인공에게만 만든 애니메이션은 장면 전체 멈춤(pauseAll: 타격 순간 멈춤)을 듣지 않는다(Phaser Animation은 관리자가 on을 가질 때만 구독).
 // 공용 애니메이션처럼 같이 멈추게 붙인다. 안 붙이면 멈춤 동안 베기가 흘러 끝나는 틱이 달라지고 시뮬과 어긋났다
+// 주인공 전용 애니메이션은 만들 때 관리자의 멈춤을 듣기 시작하고, 주인공이 사라져도 끊지 않는다(Phaser가 안 끊는다): 화면을 다시 그릴 때마다 쌓였다
+function releaseOnDestroy(hero) {
+  if (hero._relAnims || !hero.scene?.anims) return;
+  hero._relAnims = true;
+  const m = hero.scene.anims, pre = hero.preDestroy;
+  hero.preDestroy = function () {
+    hero.anims?.anims?.values().forEach(a => { m.off('pauseall', a.pause, a); m.off('resumeall', a.resume, a); });
+    pre.call(this);
+  };
+}
 function followPause(sc, hero) {
   const m = sc.anims, list = [...hero.anims.anims.values()];
   if (!m?.on) return;
   const pause = () => list.forEach(a => a.pause()), resume = () => list.forEach(a => a.resume());
   m.on('pauseall', pause); m.on('resumeall', resume);
   if (m.paused) pause();
-  sc.events.once('shutdown', () => { m.off('pauseall', pause); m.off('resumeall', resume); });
+  const off = () => { m.off('pauseall', pause); m.off('resumeall', resume); };
+  sc.events.once('shutdown', off); hero.once('destroy', off);
 }
 // 쥔 그림의 프레임 번호를 원래 시트 번호로 바꾼다(머리 꾸미기 자리 표가 원래 시트 기준): 숨쉬기 0·1→2·3, 베기 1~4→0~3
 // 8장판(전설 주인공·smooth.js·몸 꾸미기 걷기)은 애니메이션 안 위치를 원래 4장(숨쉬기 2장)에 나눠 맞춘다

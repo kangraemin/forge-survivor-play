@@ -7,12 +7,13 @@ export const progressOf = d => ({
   cleared: num(d?.cleared),
   playMs: num(d?.stats?.playMs),
   ledger: d?.ledger && typeof d.ledger === 'object' && !Array.isArray(d.ledger) ? Object.keys(d.ledger).length : 0,
+  forge: num(d?.tier) * 100 + num(d?.enh),   // 로비 대장간 강화는 깬 수·플레이 시간을 안 늘린다: 나머지가 같으면 더 강화한 쪽이 앞선 저장이다
 });
 
 // 1: a가 크다 / -1: b가 크다 / 0: 같다
-// 세 값이 모두 같거나 큰 쪽이 이긴다. 엇갈리면(한쪽은 더 깼고 한쪽은 더 샀다) cleared -> playMs -> ledger 순서로 본다
+// 값이 모두 같거나 큰 쪽이 이긴다. 엇갈리면(한쪽은 더 깼고 한쪽은 더 샀다) cleared -> playMs -> ledger -> forge 순서로 본다
 export function compareProgress(a, b) {
-  const ks = ['cleared', 'playMs', 'ledger'];
+  const ks = ['cleared', 'playMs', 'ledger', 'forge'];
   let up = false, down = false;
   for (const k of ks) { if (a[k] > b[k]) up = true; else if (a[k] < b[k]) down = true; }
   if (up && !down) return 1;
@@ -20,6 +21,13 @@ export function compareProgress(a, b) {
   if (!up && !down) return 0;
   for (const k of ks) if (a[k] !== b[k]) return a[k] > b[k] ? 1 : -1;
   return 0;
+}
+
+// 진 기기에만 있던 재화·강화를 이긴 저장으로 옮긴다(더 큰 값만 남긴다, 더해서 불리지 않는다). 다른 기기에서 오프라인으로 번 것이 사라지지 않게
+export function mergeWallet(winner, loser) {
+  if (!winner || !loser) return;
+  for (const k of ['gold', 'stone', 'gem']) winner[k] = Math.max(num(winner[k]), num(loser[k]));
+  if (num(loser.tier) * 100 + num(loser.enh) > num(winner.tier) * 100 + num(winner.enh)) { winner.tier = num(loser.tier); winner.enh = num(loser.enh); }
 }
 
 // FS1 내보내기 코드를 풀지 않고 모양·체크섬만 보고 진행도를 읽는다(서버용). 못 읽으면 null

@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "Bilah Silang!",
  "boss.patSigil": "Segel!",
  "boss.patCrownfall": "Tatapan Mahkota!",
- "overlay.lateTitle": "Gelar baru: {name}"
+ "overlay.lateTitle": "Gelar baru: {name}",
+ "stale.msg": "Game dibuka di jendela lain.\nJendela ini dihentikan agar progresmu tetap aman.",
+ "stale.reload": "Muat ulang"
 }

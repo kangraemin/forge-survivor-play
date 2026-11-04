@@ -2283,5 +2283,7 @@
  "boss.patKingsword": "Крестовые клинки!",
  "boss.patSigil": "Печать!",
  "boss.patCrownfall": "Взор короны!",
- "overlay.lateTitle": "Новый титул: {name}"
+ "overlay.lateTitle": "Новый титул: {name}",
+ "stale.msg": "Игра открыта в другом окне.\nЭто окно остановлено, чтобы сохранить ваш прогресс.",
+ "stale.reload": "Перезагрузить"
 }

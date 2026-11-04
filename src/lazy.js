@@ -67,6 +67,15 @@ export function ensureLobby(scene, data) {
   return queue(scene, k => lob(k) || eq(k) || (data?.modeSel && /^ma_/.test(k)));
 }
 
+// 꾸미기 화면용: 뒤 로더가 아직 못 받은 꾸미기 그림을 지금 받는다(받을 게 있으면 true, 끝나면 done). 안 기다리면 몸 꾸미기 미리보기가 빈 애니메이션을 틀다 멈춘다
+let rebuild = () => {};
+export function loadCosmetics(scene, done) {
+  if (!queue(scene, k => /^cos_/.test(k))) return false;
+  scene.load.once('complete', () => { try { rebuild(scene); } catch { /* 무시 */ } done(); });
+  scene.load.start();
+  return true;
+}
+
 // 같은 그림을 화면 로더와 뒤 로더가 거의 동시에 받아도 두 번째 등록은 조용히 버린다(Phaser는 '키가 이미 있다'를 오류로 찍는다)
 export function quietDupes(game) {
   const tm = game.textures, ck = tm.checkKey;
@@ -109,6 +118,7 @@ export function startBg(game, buildAnims, sv) {
 
 // Battle·Lobby에 preload와 애니메이션 재정렬을 붙인다(그 파일들은 고치지 않는다)
 export function installLazy(Battle, Lobby, buildAnims) {
+  rebuild = buildAnims;
   Battle.prototype.preload = function () { ensureBattle(this); };
   const bc = Battle.prototype.create;
   Battle.prototype.create = function (...a) { buildAnims(this); return bc.apply(this, a); };
