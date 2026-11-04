@@ -1865,7 +1865,7 @@
  "lobby.f6d312": "4 Challenges open",
  "lobby.8e8973": "Defend·Capture·Breakthrough·Hunt — Tap to enter",
  "lobby.b0904d": "Today's Skin Deal",
- "modeData.9376bf": "Damage taken ≤ {round}% of my HP",
+ "modeData.9376bf": "Take at most {round}% of my HP",
  "modes.1acafe": "Cart Raid!",
  "modes.9bf4d2": "Relic Raid!",
  "modes.153423": "A mob horde is after the cart",

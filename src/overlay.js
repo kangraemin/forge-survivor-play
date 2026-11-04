@@ -124,7 +124,12 @@ export class Overlay {
   freeze() {
     if (this.frozen) return;
     const s = this.s, tm = s.time;
-    const ev = [...(tm._active || []), ...(tm._pendingInsertion || [])].filter(e => !e.paused && !e.hasDispatched);   // Phaser 3.80에는 getAllEvents가 없다
+    // Phaser 3.80에는 getAllEvents가 없다
+    // 2차 버그 수정(9-2): 지금 콜백이 도는 반복 타이머도 멈춘다. Phaser 는 콜백 동안 hasDispatched 를 켜 두었다가 반복이 남으면 끈다.
+    //  예전엔 hasDispatched 인 것을 모두 뺐더니, 독 장판·중간보스 장판·블랙홀 콜백 안에서 쓰러져 부활 창이 열리면 그 타이머가 창 뒤에서 계속 돌았다.
+    //  이제 빼는 것은 다 끝난 1회짜리(반복이 안 남고 이미 불렸거나 지울 차례)만이다
+    const gone = new Set(tm._pendingRemoval || []);
+    const ev = [...(tm._active || []), ...(tm._pendingInsertion || [])].filter(e => !e.paused && !gone.has(e) && !(e.hasDispatched && !(e.repeatCount > 0)));
     const tw = s.tweens.getTweens().filter(t => !t.paused && !t.isDestroyed());
     ev.forEach(e => { e.paused = true; }); tw.forEach(t => t.pause());
     this.frozen = { ev, tw };
@@ -764,7 +769,7 @@ export class Overlay {
     // 보스를 처음 잡으면 그 보스 펫이 합류한다. 펫이 없으면 알아서 데려간다(펫 탭을 안 열어도 보이게)
     const newPet = first && !hard && PETS.find(p => p.unlock === sv.cleared);
     if (newPet && !sv.pet) sv.pet = newPet.id;
-    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = D.sweepAdd(sv.sweep, sweep); sv.refOre = (sv.refOre | 0) + ore; sv.gem += gem; sv.charm = (sv.charm || 0) + charm;
+    sv.gold += gold; sv.stone += stone; sv.guard += guard; sv.sweep = D.sweepGrant(sv.sweep, sweep); sv.refOre = (sv.refOre | 0) + ore; sv.gem += gem; sv.charm = (sv.charm || 0) + charm;
     // 도감: 이번 판 처치·획득으로 새로 찬 칸
     const dexNew = dexRefresh(sv);
     save();

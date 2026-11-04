@@ -795,7 +795,7 @@ export class Lobby extends Phaser.Scene {
     // 새 장 첫 판에 처음 들어가면 도입 보상(금화 꾸러미 + 소탕권). 한 번만
     const intro = !endless && !dungeon && !hard && s === 0 && D.introOf(c);
     if (intro && !(sv.intro ||= {})[c]) {
-      sv.intro[c] = 1; sv.gold += intro.gold; sv.sweep = D.sweepAdd(sv.sweep, intro.sweep); save();
+      sv.intro[c] = 1; sv.gold += intro.gold; sv.sweep = D.sweepGrant(sv.sweep, intro.sweep); save();
       toast(this, t('lobby.7cee49', { fmt: fmt(intro.gold), sweep: intro.sweep }), '#ffd75e');
       track('chapter_intro', { c, gold: intro.gold });
     }

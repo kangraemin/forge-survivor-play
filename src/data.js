@@ -358,8 +358,11 @@ export const BOSS_TIRED = { ms: 75000, midMs: 84000, mul: 1.5 };   // 55차: 중
 export const FAIL_GOLD_RATE = 0.5;                         // 실패해도 버틴 시간 비율 × 클리어 금화의 50%를 준다
 // 은화는 판이 끝나면 사라진다(아껴 두지 말고 상점에서 바로 쓰게)
 export const SWEEP_DAILY = 5, SWEEP_MAX = 12;
-// 무료로 쌓이는 소탕권(하루 충전·첫 클리어·장 도입)은 상한까지만 채운다. 이미 상한을 넘겨 가진 것(보석 상점·월정액·꾸러미로 산 것)은 깎지 않는다
+// 무료로 쌓이는 하루 충전 소탕권은 상한까지만 채운다. 이미 상한을 넘겨 가진 것(보석 상점·월정액·꾸러미로 산 것)은 깎지 않는다
 export const sweepAdd = (have, n) => Math.max(have, Math.min(SWEEP_MAX, have + n));
+// 2차 버그 수정(9-1): 약속한 한 번짜리 보상(보통·어려움 첫 클리어, 15장 완주, 16~20장 첫 클리어 표, 새 장 도입)은 결과 창·알림에 보인 수만큼 다 넣는다.
+// 예전엔 sweepAdd 로 넣어 상한 12에 막혔다(소탕권 10장일 때 20장 첫 클리어 '소탕권 5'를 보고 2장만 받음). 상한은 하루 충전에만 쓴다
+export const sweepGrant = (have, n) => have + Math.max(0, n | 0);
 
 // ── 훈련(영구 능력치). v는 레벨당 효과 ──
 export const TRAINING = [
