@@ -17,7 +17,8 @@ const COL = [0xff5a5a, 0x5ac8ff, 0xffd75e, 0xc890ff];   // 점령 거점 색(번
 const CSS = ['#ff7a7a', '#7ad4ff', '#ffe27a', '#d6aaff'];
 
 export class ModeRun {
-  constructor(s, id, n) {
+  constructor(s, id, n, trial) {
+    this.trial = !!trial;
     this.s = s; this.id = id; this.n = n;
     this.cfg = modeStage(id, n); this.def = MODE_DEFS[id];
     this.t = 0; this.el = 0; this.acc = 0; this.formT = 0; this.eliteDone = false; this.ended = false; this.leg = 0;
@@ -592,16 +593,18 @@ export class ModeRun {
   result(win, ui) {
     const s = this.s, sv = s.sv, r = s.run, c = this.cfg, key = `${this.id}:${this.n}`;
     s.over = true; s.physics.pause();
-    const first = win && !modeDone(sv, this.id, this.n);
+    const first = !this.trial && win && !modeDone(sv, this.id, this.n);
     const mask = this.starsNow(win), stars = starCount(mask), sec = this.el / 1000, hurt = this.hurtFrac();
-    const old = starMask(sv, this.id, this.n), fresh = win ? mask & ~old : 0;   // 이번에 처음 딴 별
+    const old = starMask(sv, this.id, this.n), fresh = win && !this.trial ? mask & ~old : 0;   // 이번에 처음 딴 별
     let rw = win ? (first ? modeReward(c.c, true) : repeatReward(c.c, stars)) : { gold: Math.round(D.clearGold(c.c, 1) * 0.3 * this.prog()), stone: 0, gem: 0 };
     // 54차: 도전 증표 — 승급 재료. 첫 클리어 1개, 다시 깨면 하루 3번까지 1개(이긴 판만)
-    const mk = win ? markGain(sv, this.id, this.n) : 0, mkFull = win && !mk && !first && markLeftToday(sv) <= 0;
+    const mk = win && !this.trial ? markGain(sv, this.id, this.n) : 0, mkFull = win && !this.trial && !mk && !first && markLeftToday(sv) <= 0;
     let bonus = 0;
     for (const b of [2, 4]) if (fresh & b) { const f = starFirstReward(c.c); rw.gold += f.gold; rw.stone += f.stone; rw.gem += f.gem; bonus++; }
     rw.stone += r.stones;
-    if (win) {
+    const trialGot = this.trial && win && (sv.trialN | 0) < D.TRIAL.daily;
+    if (trialGot) { sv.trialN = (sv.trialN | 0) + 1; sv.guard++; }
+    if (win && !this.trial) {
       const md = sv.modes; (md.clear ||= {})[key] = 1; (md.stars ||= {})[key] = old | mask;
       const bs = (md.best ||= {})[key] || {}, sc = Math.round(sec), hp = Math.round(hurt * 100);
       md.best[key] = { t: bs.t ? Math.min(bs.t, sc) : sc, hurt: bs.hurt != null ? Math.min(bs.hurt, hp) : hp };
@@ -613,7 +616,7 @@ export class ModeRun {
     dexRefresh(sv);
     save();
     stopBgm(); sfx(win ? 'win' : 'fail');
-    s.log('battle_end', { win, mode: this.id, n: this.n, first, stars, newStars: starCount(fresh), time: Math.round(sec), hurt: Math.round(hurt * 100), kills: r.kills, gold: rw.gold, stone: rw.stone, gem: rw.gem, mark: mk, power: D.powerOf(sv) });
+    s.log('battle_end', { win, trial: this.trial, mode: this.id, n: this.n, first, stars, newStars: starCount(fresh), time: Math.round(sec), hurt: Math.round(hurt * 100), kills: r.kills, gold: rw.gold, stone: rw.stone, gem: rw.gem, mark: mk, power: D.powerOf(sv) });
     const cnt = modeCount(sv, this.id);
     s.registry.set('lastResult', { win, mode: this.id, n: this.n, stars, gold: rw.gold, stone: rw.stone, gem: rw.gem, mark: mk, kills: r.kills, lv: r.lv, progress: win ? 1 : this.prog(), t: s.bt });
     if (ui.c) { ui.c.destroy(); ui.c = null; ui.open = null; }
@@ -622,7 +625,7 @@ export class ModeRun {
     cc.add(panel(s, 20, 96, W - 40, 356, { fill: 0x1a1426, line: win ? 0xffd75e : 0x7a3a4a }));
     cc.add(s.add.text(W / 2, 124, win ? t('modes.947667') : t('modes.f81efa'), font(18, win ? '#ffd75e' : '#ff7070')).setOrigin(0.5));
     cc.add(s.add.text(W / 2, 148, `${this.def.name} ${this.n + 1}  ${s.ch.name}`, font9(10, '#a1b2b6')).setOrigin(0.5));
-    cc.add(s.add.text(W / 2, 166, win ? (first ? t('modes.4abc46', { FIRST_CLEAR_MUL: D.FIRST_CLEAR_MUL }) : t('modes.dd9ec7')) : (this.why || t('modes.89941f')), font9(11, win ? '#ffd75e' : '#ff9090')).setOrigin(0.5));
+    cc.add(s.add.text(W / 2, 166, this.trial ? (trialGot ? t('trial.win') : win ? t('trial.done') : t('trial.lose')) : win ? (first ? t('modes.4abc46', { FIRST_CLEAR_MUL: D.FIRST_CLEAR_MUL }) : t('modes.dd9ec7')) : (this.why || t('modes.89941f')), font9(11, win ? '#ffd75e' : '#ff9090')).setOrigin(0.5));
     // 가운데: 별 3개와 조건
     const tx = starTexts(c);
     for (let i = 0; i < 3; i++) {
@@ -642,6 +645,7 @@ export class ModeRun {
     const rows = [[12, t('contentTab.a3755a'), rw.gold], [13, t('contentTab.5bf71e'), rw.stone]];
     if (rw.gem) rows.push([-1, t('lobby.1fed91'), rw.gem]);
     if (mk) rows.push([-2, t('modes.c57bf4'), mk]);
+    if (trialGot) rows.push([11, t('trial.guard'), 1]);
     rows.forEach(([ic, name, n], i) => {
       const x = i % 2 ? 146 : 38, y = 330 + Math.floor(i / 2) * 22;
       cc.add(ic === -2 ? markIcon(s, x + 8, y, 14) : ic < 0 ? gemIcon(s, x + 8, y, 12) : icon(s, x + 8, y, ic, 16));
@@ -649,9 +653,15 @@ export class ModeRun {
       cc.add(s.add.text(x + 88, y, '+' + fmt(n), font(12)).setOrigin(1, 0.5));
     });
     if (mkFull) cc.add(s.add.text(W / 2, cnt >= MODE_N ? 399 : 388, t('modes.ec29b8'), font9(9, '#7fe6ee')).setOrigin(0.5));
-    cc.add(s.add.text(W / 2, 372, t('modes.0b6006', { name: this.def.name, cnt, MODE_N }), font9(10, '#a1b2b6')).setOrigin(0.5));
-    if (win && cnt >= MODE_N) cc.add(s.add.text(W / 2, 388, t('modes.124143', { title: this.def.title }), font(11, '#ffb050')).setOrigin(0.5));
+    if (!this.trial) cc.add(s.add.text(W / 2, 372, t('modes.0b6006', { name: this.def.name, cnt, MODE_N }), font9(10, '#a1b2b6')).setOrigin(0.5));
+    if (!this.trial && win && cnt >= MODE_N) cc.add(s.add.text(W / 2, 388, t('modes.124143', { title: this.def.title }), font(11, '#ffb050')).setOrigin(0.5));
     // 버튼: 주황은 하나. 이기면 다음 판(열려 있고 만들어져 있을 때), 졌으면 다시
+    if (this.trial) {   // 시련은 대장간에서 왔으니 대장간으로 돌아간다. 다시 하기는 남은 횟수가 있을 때만
+      const more = (sv.trialN | 0) < D.TRIAL.daily;
+      cc.add(button(s, more ? 68 : W / 2, 418, more ? 92 : 190, more ? 30 : 36, t('lobby.348786'), () => s.scene.start('Lobby', { tab: 'forge' }), { color: more ? 0x3a3846 : 0x2f6b3a, size: 11 }));
+      if (more) cc.add(button(s, 188, 418, 120, 36, t('overlay.e671aa'), () => s.scene.start('Battle', { mode: { id: this.id, n: this.n, trial: true }, bot: s.bot }), { color: 0x2f6b3a, size: 13 }));
+      return;
+    }
     const nextOk = win && modeStage(this.id, this.n + 1) && modeOpen(sv, this.n + 1);
     const go = (n) => s.scene.start('Battle', { mode: { id: this.id, n }, bot: s.bot });
     cc.add(button(s, 68, 418, 92, 30, t('modes.7add28'), () => s.scene.start('Lobby', { tab: 'battle', modeSel: this.id, modeN: this.n }), { color: 0x3a3846, size: 11 }));

@@ -47,12 +47,12 @@ export function roleTick(pet, dt) {
   if (role === 'pickup') {
     if (pet.rt < 1500 / f) return;
     pet.rt = 0;
-    const r = 150 * f;
+    const r = 420 * f;   // 영웅 기본 끌림(약 150)과 겹치면 차이가 없었다(11/5 측정 +2.8%p, 0과 구별 안 됨)
     const its = s.items.getChildren().filter(i => !i.pull && D2(i, s.hero) < r);
     const gms = s.gems.getChildren().filter(g => !g.pull && D2(g, s.hero) < r);
     if (!its.length && !gms.length) return;
-    its.slice(0, 4).forEach(i => { i.pull = true; });
-    gms.slice(0, 8).forEach(g => { g.pull = true; });
+    its.slice(0, 6).forEach(i => { i.pull = true; });
+    gms.slice(0, 16).forEach(g => { g.pull = true; g.petB = true; });
     roleAnim(pet, 'pickup');
   } else if (role === 'weaken') {
     if (pet.rt < 4000 / f) return;

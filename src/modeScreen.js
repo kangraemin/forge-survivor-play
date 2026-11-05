@@ -123,11 +123,11 @@ export const ModeScreen = {
     b.add(go);
   },
 
-  startModeBattle(id, n) {
+  startModeBattle(id, n, trial) {
     if (this.busy) return; this.busy = true;
     track('mode_start_click', { mode: id, n: n + 1, power: D.powerOf(this.sv) });
     sfx('bossIn');
     this.cameras.main.fadeOut(250);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Battle', { mode: { id, n } }));
+    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Battle', { mode: { id, n, trial } }));
   },
 };

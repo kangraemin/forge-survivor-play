@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  Bölüm {v} ilerleme {done}/{per}",
  "overlay.451078": "Sıradaki hedef {v}-{v2} · Önerilen {fmt} / Sen {fmt2}",
  "overlay.bf1d48": "Ansiklopedi {n}/{all}{v}",
- "petRoles.e1c9e7": "1,5 sn'de bir 150 menzildeki 4 eşya ve 8 mücevheri çeker",
+ "petRoles.e1c9e7": "1,5 sn'de bir 420 menzildeki 6 eşya ve 16 mücevheri çeker. Çekilen mücevherler +%30 TP verir",
  "petRoles.0efcb2": "4 sn'de bir yakındaki 2 düşmanın 4 sn boyunca %20 fazla hasar almasını sağlar",
  "petRoles.fb23df": "6 sn'de bir en güçlü düşmanı işaretler, 5 sn boyunca %40 fazla hasar alır",
  "petRoles.77fe00": "{name} Rolü",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "Tacın Bakışı!",
  "overlay.lateTitle": "Yeni unvan: {name}",
  "stale.msg": "Oyun başka bir pencerede açıldı.\nİlerlemen güvende kalsın diye bu pencere durduruldu.",
- "stale.reload": "Yeniden yükle"
+ "stale.reload": "Yeniden yükle",
+ "trial.btn": "Sınav {n}/{max}",
+ "trial.title": "Demirci Sınavı",
+ "trial.desc": "3 dakikalık av.\nKazan, 1 Koruma al.\nBugün {n} hak kaldı.",
+ "trial.go": "Başla",
+ "trial.win": "1 Koruma aldın!",
+ "trial.done": "Bugünlük sınav bitti",
+ "trial.lose": "Kaybetmek hak harcamaz",
+ "trial.guard": "Koruma"
 }

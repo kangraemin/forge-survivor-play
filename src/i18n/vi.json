@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  Chương {v}: {done}/{per}",
  "overlay.451078": "Mục tiêu {v}-{v2} · Đề xuất {fmt} / Bạn {fmt2}",
  "overlay.bf1d48": "Bách khoa {n}/{all}{v}",
- "petRoles.e1c9e7": "Mỗi 1,5s hút 4 vật phẩm và 8 Ngọc trong bán kính 150",
+ "petRoles.e1c9e7": "Mỗi 1,5 giây hút 6 vật phẩm và 16 đá quý trong bán kính 420. Đá quý hút được cho +30% EXP",
  "petRoles.0efcb2": "Mỗi 4s làm 2 địch gần nhất chịu thêm 20% sát thương trong 4s",
  "petRoles.fb23df": "Mỗi 6s đánh dấu địch mạnh nhất, chịu thêm 40% sát thương trong 5s",
  "petRoles.77fe00": "Vai trò {name}",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "Ánh nhìn vương miện!",
  "overlay.lateTitle": "Danh hiệu mới: {name}",
  "stale.msg": "Trò chơi đã được mở ở cửa sổ khác.\nCửa sổ này đã dừng để giữ an toàn cho tiến trình của bạn.",
- "stale.reload": "Tải lại"
+ "stale.reload": "Tải lại",
+ "trial.btn": "Thử thách {n}/{max}",
+ "trial.title": "Thử thách lò rèn",
+ "trial.desc": "Săn trong 3 phút.\nThắng nhận 1 Vé bảo hộ.\nHôm nay còn {n} lượt.",
+ "trial.go": "Bắt đầu",
+ "trial.win": "Nhận 1 Vé bảo hộ!",
+ "trial.done": "Hôm nay đã hết lượt",
+ "trial.lose": "Thua không mất lượt",
+ "trial.guard": "Vé bảo hộ"
 }

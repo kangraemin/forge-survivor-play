@@ -306,6 +306,7 @@ export const PITY_FROM = 15, PITY_STEP = 3;
 export const LOW_PITY_STEP = 10;
 export const pityOn = enh => enh < DESTROY_FROM || enh >= PITY_FROM;
 export const pityRate = sv => sv.enh < DESTROY_FROM ? (sv.pity || 0) * LOW_PITY_STEP : sv.enh >= PITY_FROM ? (sv.pity || 0) * PITY_STEP : 0;
+export const TRIAL = { daily: 2, id: 'hunt', n: 14 };   // 대장간 시련: 이기면 방지권 1장, 하루 2번. 15장 사냥 판을 쓴다(진 판은 횟수를 안 쓴다)
 export const DESTROY_FROM = 10;                            // +10에서 +11을 노릴 때부터 실패하면 파괴
 // 부서지면 두 단계 떨어진다(+0이나 +5까지 떨어지면 성공 +10%에 실패 -32%라 아무도 위험을 지지 않았다)
 export const SHATTER_DROP = 2;

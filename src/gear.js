@@ -165,19 +165,19 @@ export const SP_RESET_GEM = 50;
 // 보스를 처음 잡으면 그 보스를 작게 만든 펫이 따라온다. 장(맵)마다 잘 듣는 펫이 달라 처음 받은 펫도 뒷 장에서 다시 쓴다
 // good: 그 장에서 효과 ×1.8 + 주인공 받는 피해 -20%, weak: 그 장에서 효과 ×0.6 (장 번호는 0부터)
 export const PETS = [
-  { id: 'general', name: t('battle.20631e'), desc: t('gear.e0457f'), unlock: 2, hint: t('gear.a32b6f'), color: 0xe8e2c8, good: [0, 2], tank: true },
-  { id: 'kingslime', name: t('data.052600'), desc: t('gear.e49319'), unlock: 3, hint: t('gear.dc40e0'), color: 0x6fe36a, good: [1], weak: [2] },
+  { id: 'general', name: t('battle.20631e'), desc: t('gear.e0457f'), unlock: 2, hint: t('gear.a32b6f'), color: 0xe8e2c8, good: [0, 2, 19], tank: true },
+  { id: 'kingslime', name: t('data.052600'), desc: t('gear.e49319'), unlock: 3, hint: t('gear.dc40e0'), color: 0x6fe36a, good: [1, 17], weak: [2] },
   { id: 'lich', name: t('data.8938a1'), desc: t('gear.fd27a3'), unlock: 6, hint: t('gear.94c524'), color: 0xb07aff, good: [4], weak: [1] },
   { id: 'lavagolem', name: t('data.7464f1'), desc: t('gear.690878'), unlock: 9, hint: t('gear.4adfa8'), color: 0xff7a2a, good: [3], weak: [2], tank: true },
-  { id: 'wyrm', name: t('data.05e151'), desc: t('gear.028ba6'), unlock: 12, hint: t('gear.14ff77'), color: 0x9ae8ff, good: [4] },   // 4-3에서 얻으면 남은 곳이 5장뿐이라 5장에 잘 듣게
+  { id: 'wyrm', name: t('data.05e151'), desc: t('gear.028ba6'), unlock: 12, hint: t('gear.14ff77'), color: 0x9ae8ff, good: [4, 15] },   // 4-3에서 얻으면 남은 곳이 5장뿐이라 5장에 잘 듣게
   { id: 'demonlord', name: t('data.93df8f'), desc: t('gear.6acfc2'), unlock: 15, hint: t('gear.a17071'), color: 0xff3a50, good: [0, 1], weak: [4] },
   // 6장~: 보스 이름 = 펫 id. 지형 기믹을 다루는 펫이 하나씩 있다(good은 그 기믹이 심한 장)
-  { id: 'tidewyrm', name: t('data.2758f7'), desc: t('gear.b6f98b'), unlock: 18, hint: t('gear.d23c11'), color: 0x5ae0d0, good: [5, 9], weak: [3] },
-  { id: 'swampqueen', name: t('data.782796'), desc: t('gear.313f6a'), unlock: 21, hint: t('gear.709650'), color: 0xb060e0, good: [6, 10], weak: [4] },
-  { id: 'crystcolossus', name: t('data.c93590'), desc: t('gear.0da21a'), unlock: 24, hint: t('gear.2d95ee'), color: 0xb080ff, good: [7, 13], weak: [5], tank: true },
-  { id: 'stormcaptain', name: t('data.0e877d'), desc: t('gear.a5abb7'), unlock: 27, hint: t('gear.d497d9'), color: 0xd8e8ff, good: [8, 12], weak: [9] },
-  { id: 'voidlord', name: t('data.15bd71'), desc: t('gear.34c282'), unlock: 30, hint: t('gear.841922'), color: 0x7a6aff, good: [9, 14], weak: [7] },
-  { id: 'sandcolossus', name: t('data.134571'), desc: t('gear.03abd7'), unlock: 33, hint: t('gear.7ef7ca'), color: 0xe0c080, good: [10, 4], weak: [5], tank: true },
+  { id: 'tidewyrm', name: t('data.2758f7'), desc: t('gear.b6f98b'), unlock: 18, hint: t('gear.d23c11'), color: 0x5ae0d0, good: [5, 9, 16], weak: [3] },
+  { id: 'swampqueen', name: t('data.782796'), desc: t('gear.313f6a'), unlock: 21, hint: t('gear.709650'), color: 0xb060e0, good: [6, 10, 19], weak: [4] },
+  { id: 'crystcolossus', name: t('data.c93590'), desc: t('gear.0da21a'), unlock: 24, hint: t('gear.2d95ee'), color: 0xb080ff, good: [7, 13, 15], weak: [5], tank: true },
+  { id: 'stormcaptain', name: t('data.0e877d'), desc: t('gear.a5abb7'), unlock: 27, hint: t('gear.d497d9'), color: 0xd8e8ff, good: [8, 12, 16], weak: [9] },
+  { id: 'voidlord', name: t('data.15bd71'), desc: t('gear.34c282'), unlock: 30, hint: t('gear.841922'), color: 0x7a6aff, good: [9, 14, 18], weak: [7] },
+  { id: 'sandcolossus', name: t('data.134571'), desc: t('gear.03abd7'), unlock: 33, hint: t('gear.7ef7ca'), color: 0xe0c080, good: [10, 4, 17], weak: [5], tank: true },
   { id: 'steamgeneral', name: t('data.37ac3b'), desc: t('gear.3d4f2a'), unlock: 36, hint: t('gear.a423d7'), color: 0xe08a50, good: [11, 14], weak: [8] },
   { id: 'thunderdragon', name: t('data.da6742'), desc: t('gear.3eeed8'), unlock: 39, hint: t('gear.086c44'), color: 0x9a8aff, good: [12, 14], weak: [10] },
   { id: 'mirrorlord', name: t('data.91fb7c'), desc: t('gear.1a6d5d'), unlock: 42, hint: t('gear.749dde'), color: 0x90ffe8, good: [13, 7], weak: [11] },
@@ -187,6 +187,7 @@ export const PETS = [
 export const PET_OLD = { fire: 'general', slime: 'lich', bat: 'lavagolem' };
 export const PET_GOOD = 1.8, PET_WEAK = 0.6, PET_GOOD_DEF = 0.2;   // 받는 피해 감소는 막아 주는 펫(tank)만
 // 이 장에 잘 듣는 펫: 가진 것 먼저, 최대 두 마리
+// 16~20장(인덱스 15~19)도 맵마다 잘 맞는 펫이 있다. 효과가 약하게 나온 펫·초반 펫이 후반에도 쓸모 있게 나눴다(2026-11-06)
 export const recPets = (sv, c) => PETS.filter(p => p.good?.includes(c) && sv.cleared >= p.unlock).slice(0, 2);   // 잠긴 펫은 '???'로 떠 뜻을 몰랐다
 export const petFit = (p, c) => p.good?.includes(c) ? PET_GOOD : p.weak?.includes(c) ? PET_WEAK : 1;
 export const PET_MAX = 20;

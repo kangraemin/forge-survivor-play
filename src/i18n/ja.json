@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2} {v}章進行 {done}/{per}",
  "overlay.451078": "次の目標 {v}-{v2}・推奨 {fmt} / 自分 {fmt2}",
  "overlay.bf1d48": "図鑑 {n}/{all}{v}",
- "petRoles.e1c9e7": "1.5秒ごとに半径150内のアイテム4個・ジェム8個を引き寄せる",
+ "petRoles.e1c9e7": "1.5秒ごとに半径420内のアイテム6個・ジェム16個を引き寄せる。引き寄せたジェムは経験値+30%",
  "petRoles.0efcb2": "4秒ごとに近くの敵2体が4秒間受けるダメージ+20%",
  "petRoles.fb23df": "6秒ごとに最強の敵1体に5秒間印をつけ、受けるダメージ+40%",
  "petRoles.77fe00": "{name}の役割",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "王冠の視線!",
  "overlay.lateTitle": "新しい称号「{name}」",
  "stale.msg": "別のウィンドウでゲームが開かれました。\n進行を守るため、このウィンドウは停止しました。",
- "stale.reload": "再読み込み"
+ "stale.reload": "再読み込み",
+ "trial.btn": "試練 {n}/{max}",
+ "trial.title": "鍛冶場の試練",
+ "trial.desc": "3分間の狩りです。\n勝つと防止券を1枚もらえます。\n今日はあと{n}回。",
+ "trial.go": "開始",
+ "trial.win": "防止券を1枚もらいました!",
+ "trial.done": "今日の試練は終わりです",
+ "trial.lose": "負けても回数は減りません",
+ "trial.guard": "防止券"
 }

@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  Kapitel {v}: {done}/{per}",
  "overlay.451078": "Nächstes Ziel {v}-{v2} · Empf. {fmt} / Du {fmt2}",
  "overlay.bf1d48": "Kodex {n}/{all}{v}",
- "petRoles.e1c9e7": "Alle 1,5 s: zieht 4 Items und 8 Edelsteine im Radius 150 heran",
+ "petRoles.e1c9e7": "Alle 1,5 s: zieht 6 Items und 16 Edelsteine im Radius 420 heran. Diese Edelsteine geben +30 % EP",
  "petRoles.0efcb2": "Alle 4 s: 2 nahe Gegner erleiden 4 s lang 20% mehr Schaden",
  "petRoles.fb23df": "Alle 6 s: markiert den stärksten Gegner, 5 s lang 40% mehr Schaden",
  "petRoles.77fe00": "Rolle: {name}",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "Blick der Krone!",
  "overlay.lateTitle": "Neuer Titel: {name}",
  "stale.msg": "Das Spiel wurde in einem anderen Fenster geöffnet.\nDieses Fenster wurde angehalten, damit dein Fortschritt sicher bleibt.",
- "stale.reload": "Neu laden"
+ "stale.reload": "Neu laden",
+ "trial.btn": "Probe {n}/{max}",
+ "trial.title": "Schmiedeprobe",
+ "trial.desc": "3 Minuten Jagd.\nSieg: 1 Schutz.\nHeute noch {n}.",
+ "trial.go": "Start",
+ "trial.win": "1 Schutz erhalten!",
+ "trial.done": "Heute keine Proben mehr",
+ "trial.lose": "Niederlagen kosten keinen Versuch",
+ "trial.guard": "Schutz"
 }

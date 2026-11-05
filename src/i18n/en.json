@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  Ch.{v} Progress {done}/{per}",
  "overlay.451078": "Next Goal {v}-{v2} · Rec. {fmt} / You {fmt2}",
  "overlay.bf1d48": "Codex {n}/{all}{v}",
- "petRoles.e1c9e7": "Every 1.5s, pulls 4 items and 8 gems within 150 range",
+ "petRoles.e1c9e7": "Every 1.5s pulls 6 items and 16 gems within 420. Pulled gems give +30% XP",
  "petRoles.0efcb2": "Every 4s, makes 2 nearby enemies take 20% more damage for 4s",
  "petRoles.fb23df": "Every 6s, marks the strongest enemy to take 40% more damage for 5s",
  "petRoles.77fe00": "{name} Role",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "Crown's Gaze!",
  "overlay.lateTitle": "New title: {name}",
  "stale.msg": "The game was opened in another window.\nThis window has stopped so your progress stays safe.",
- "stale.reload": "Reload"
+ "stale.reload": "Reload",
+ "trial.btn": "Trial {n}/{max}",
+ "trial.title": "Forge Trial",
+ "trial.desc": "A 3-minute hunt.\nWin to get 1 Guard.\n{n} left today.",
+ "trial.go": "Start",
+ "trial.win": "You got 1 Guard!",
+ "trial.done": "No trials left today",
+ "trial.lose": "Losses don't use up a try",
+ "trial.guard": "Guard"
 }

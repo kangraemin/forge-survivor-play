@@ -17,7 +17,7 @@ import { track, logUser, trackOnce } from './log.js';
 import { GearTab } from './gearTab.js';
 import { inTossShell } from './safeArea.js';
 import { ContentTab } from './contentTab.js';
-import { modeSeen } from './modeData.js';
+import { modeSeen, modeOpen } from './modeData.js';
 import { ModeScreen } from './modeScreen.js';
 import { dexRefresh, titleName } from './codex.js';
 import { itemName, PETS, gearStats, grantEgg, makeItem, addItems, RARITY, spFree, WTYPES, hasW, wtypeOf, recPets, HERO_SKINS, CASH_W, CASH_W_GEM, CASH_W_DMG } from './gear.js';
@@ -985,6 +985,13 @@ export class Lobby extends Phaser.Scene {
         chk.setSize(200, 18).setInteractive({ useHandCursor: true });
         chk.on('pointerup', () => { if (this.busy) return; if (!sv.guard) { sfx('deny'); track('guard_toggle_fail'); return; } sfx('click'); this.guardOff = !this.guardOff; track('guard_toggle', { on: !this.guardOff, guard: sv.guard }); this.show('forge'); });
         b.add(chk);
+        // 대장간 시련: 방지권이 모자란 구간에 매일 할 판을 준다(audit-economy K5)
+        if (modeOpen(sv, D.TRIAL.n)) {
+          const left = Math.max(0, D.TRIAL.daily - (sv.trialN | 0));
+          const tb = button(this, W - 62, 372, 88, 24, tt('trial.btn', { n: left, max: D.TRIAL.daily }), () => this.trialWin(), { size: 11, color: 0x3a3846, textColor: left ? '#ffd75e' : '#7a8488' });
+          tb.setEnabled?.(left > 0);
+          b.add(tb);
+        }
       }
       // 행운 부적: 가지고 있을 때만 보인다(기본으로 켜짐)
       if (sv.charm > 0 && D.ENH_RATE[enh] < 100) {
@@ -1190,6 +1197,16 @@ export class Lobby extends Phaser.Scene {
       const q = this.enhQ; this.enhQ = false;
       if (q && outcome !== 'shatter' && this.sv.enh < D.DESTROY_FROM) this.enhance();
     });
+  }
+
+  trialWin() {
+    const sv = this.sv, left = Math.max(0, D.TRIAL.daily - (sv.trialN | 0)), c = this.modal();
+    track('trial_open', { left, enh: sv.enh, tier: sv.tier, guard: sv.guard });
+    c.add(panel(this, 24, 160, W - 48, 170, { fill: 0x1a1426, line: 0xffd75e }));
+    c.add(this.add.text(W / 2, 184, t('trial.title'), font(14, '#ffd75e')).setOrigin(0.5));
+    c.add(this.add.text(W / 2, 234, t('trial.desc', { n: left }), { ...font9(11, '#f2e4bc'), align: 'center', wordWrap: { width: W - 76 } }).setOrigin(0.5));
+    c.add(button(this, W / 2 - 54, 296, 92, 30, t('lobby.0ad48e'), () => c.close(), { size: 11, color: 0x3a3846 }));
+    c.add(button(this, W / 2 + 54, 296, 100, 30, t('trial.go'), () => { c.close(); this.startModeBattle(D.TRIAL.id, D.TRIAL.n, true); }, { size: 13, color: 0x2f6b3a }));
   }
 
   // 부서진 직후: 방지권이 있었다면 지켰다는 걸 보여 주고 바로 살 수 있게

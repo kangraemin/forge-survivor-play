@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  {v}장 진행 {done}/{per}",
  "overlay.451078": "다음 목표 {v}-{v2} · 권장 {fmt} / 내 {fmt2}",
  "overlay.bf1d48": "도감 {n}/{all}{v}",
- "petRoles.e1c9e7": "1.5초마다 반경 150 안의 아이템 4개·보석 8개를 끌어온다",
+ "petRoles.e1c9e7": "1.5초마다 반경 420의 아이템 6개·보석 16개를 끌어온다. 끌어온 보석은 경험치 +30%",
  "petRoles.0efcb2": "4초마다 가까운 적 2마리를 4초 동안 20% 더 아프게 맞게 한다",
  "petRoles.fb23df": "6초마다 가장 센 적 하나를 5초 동안 찍어 40% 더 아프게 맞게 한다",
  "petRoles.77fe00": "{name} 역할",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "왕관의 시선!",
  "overlay.lateTitle": "새 칭호 「{name}」",
  "stale.msg": "다른 창에서 게임을 열었어요.\n진행이 섞이지 않게 이 창은 멈췄어요.",
- "stale.reload": "다시 불러오기"
+ "stale.reload": "다시 불러오기",
+ "trial.btn": "시련 {n}/{max}",
+ "trial.title": "대장간 시련",
+ "trial.desc": "3분 사냥 판이에요.\n이기면 방지권 1장을 받아요.\n오늘 {n}번 남았어요.",
+ "trial.go": "시작",
+ "trial.win": "방지권 1장을 받았어요!",
+ "trial.done": "오늘 시련은 다 했어요",
+ "trial.lose": "진 판은 횟수를 쓰지 않아요",
+ "trial.guard": "방지권"
 }

@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2} 第{v}章进度 {done}/{per}",
  "overlay.451078": "下个目标 {v}-{v2}·推荐 {fmt}/当前 {fmt2}",
  "overlay.bf1d48": "图鉴 {n}/{all}{v}",
- "petRoles.e1c9e7": "每1.5秒吸取半径150内4个道具、8颗宝石",
+ "petRoles.e1c9e7": "每1.5秒吸取半径420内6个道具、16颗宝石。吸取的宝石经验+30%",
  "petRoles.0efcb2": "每4秒使附近2个敌人在4秒内多受20%伤害",
  "petRoles.fb23df": "每6秒标记最强敌人,5秒内多受40%伤害",
  "petRoles.77fe00": "{name}定位",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "王冠凝视!",
  "overlay.lateTitle": "新称号「{name}」",
  "stale.msg": "游戏已在另一个窗口打开。\n为保护你的进度,此窗口已停止。",
- "stale.reload": "重新加载"
+ "stale.reload": "重新加载",
+ "trial.btn": "试炼 {n}/{max}",
+ "trial.title": "铁匠铺试炼",
+ "trial.desc": "3分钟狩猎关卡。\n获胜可得1张防破坏券。\n今天还剩{n}次。",
+ "trial.go": "开始",
+ "trial.win": "获得1张防破坏券!",
+ "trial.done": "今天的试炼已完成",
+ "trial.lose": "失败不消耗次数",
+ "trial.guard": "防破坏券"
 }

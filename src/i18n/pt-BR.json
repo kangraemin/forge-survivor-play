@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  Cap. {v} {done}/{per}",
  "overlay.451078": "Meta {v}-{v2} · rec. {fmt} / meu {fmt2}",
  "overlay.bf1d48": "Códice {n}/{all}{v}",
- "petRoles.e1c9e7": "A cada 1,5s atrai 4 itens e 8 gemas em raio 150",
+ "petRoles.e1c9e7": "A cada 1,5s atrai 6 itens e 16 gemas em raio 420. Essas gemas dão +30% de EXP",
  "petRoles.0efcb2": "A cada 4s, 2 inimigos próximos sofrem +20% de dano por 4s",
  "petRoles.fb23df": "A cada 6s, marca o inimigo mais forte: +40% de dano por 5s",
  "petRoles.77fe00": "Função: {name}",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "Olhar da Coroa!",
  "overlay.lateTitle": "Novo título: {name}",
  "stale.msg": "O jogo foi aberto em outra janela.\nEsta janela foi pausada para proteger seu progresso.",
- "stale.reload": "Recarregar"
+ "stale.reload": "Recarregar",
+ "trial.btn": "Prova {n}/{max}",
+ "trial.title": "Prova da Forja",
+ "trial.desc": "Caçada de 3 minutos.\nVença e ganhe 1 Bilhete.\nRestam {n} hoje.",
+ "trial.go": "Iniciar",
+ "trial.win": "Você ganhou 1 Bilhete!",
+ "trial.done": "Sem provas por hoje",
+ "trial.lose": "Derrota não gasta tentativa",
+ "trial.guard": "Bilhete"
 }

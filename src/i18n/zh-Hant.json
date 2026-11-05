@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2} 第{v}章進度 {done}/{per}",
  "overlay.451078": "下個目標 {v}-{v2}·建議 {fmt}/我 {fmt2}",
  "overlay.bf1d48": "圖鑑 {n}/{all}{v}",
- "petRoles.e1c9e7": "每1.5秒吸取範圍150內4個道具、8顆寶石",
+ "petRoles.e1c9e7": "每1.5秒吸取半徑420內6個道具、16顆寶石。吸取的寶石經驗+30%",
  "petRoles.0efcb2": "每4秒讓附近2隻敵人在4秒內多受20%傷害",
  "petRoles.fb23df": "每6秒標記最強敵人5秒,使其多受40%傷害",
  "petRoles.77fe00": "{name}定位",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "王冠凝視!",
  "overlay.lateTitle": "新稱號「{name}」",
  "stale.msg": "遊戲已在另一個視窗開啟。\n為保護你的進度,此視窗已停止。",
- "stale.reload": "重新載入"
+ "stale.reload": "重新載入",
+ "trial.btn": "試煉 {n}/{max}",
+ "trial.title": "鐵匠鋪試煉",
+ "trial.desc": "3分鐘狩獵關卡。\n獲勝可得1張防破壞券。\n今天還剩{n}次。",
+ "trial.go": "開始",
+ "trial.win": "獲得1張防破壞券!",
+ "trial.done": "今天的試煉已完成",
+ "trial.lose": "失敗不消耗次數",
+ "trial.guard": "防破壞券"
 }

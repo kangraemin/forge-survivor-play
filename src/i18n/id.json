@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  Bab {v}: {done}/{per}",
  "overlay.451078": "Target {v}-{v2} · Saran {fmt} / Kamu {fmt2}",
  "overlay.bf1d48": "Kodeks {n}/{all}{v}",
- "petRoles.e1c9e7": "Tiap 1,5 dtk tarik 4 item dan 8 permata dalam radius 150",
+ "petRoles.e1c9e7": "Tiap 1,5 dtk menarik 6 item dan 16 permata dalam radius 420. Permata itu memberi EXP +30%",
  "petRoles.0efcb2": "Tiap 4 dtk, 2 musuh terdekat terima damage +20% selama 4 dtk",
  "petRoles.fb23df": "Tiap 6 dtk, tandai musuh terkuat: damage +40% selama 5 dtk",
  "petRoles.77fe00": "Peran {name}",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "Tatapan Mahkota!",
  "overlay.lateTitle": "Gelar baru: {name}",
  "stale.msg": "Game dibuka di jendela lain.\nJendela ini dihentikan agar progresmu tetap aman.",
- "stale.reload": "Muat ulang"
+ "stale.reload": "Muat ulang",
+ "trial.btn": "Ujian {n}/{max}",
+ "trial.title": "Ujian Tempa",
+ "trial.desc": "Berburu 3 menit.\nMenang dapat 1 Tiket.\nSisa {n} hari ini.",
+ "trial.go": "Mulai",
+ "trial.win": "Dapat 1 Tiket!",
+ "trial.done": "Ujian hari ini habis",
+ "trial.lose": "Kalah tidak memakai jatah",
+ "trial.guard": "Tiket"
 }

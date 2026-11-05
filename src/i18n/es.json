@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  Cap. {v}: {done}/{per}",
  "overlay.451078": "Meta {v}-{v2} · Rec. {fmt} / Tú {fmt2}",
  "overlay.bf1d48": "Códice {n}/{all}{v}",
- "petRoles.e1c9e7": "Cada 1.5 s atrae 4 objetos y 8 gemas en radio 150",
+ "petRoles.e1c9e7": "Cada 1,5 s atrae 6 objetos y 16 gemas en radio 420. Esas gemas dan +30 % de EXP",
  "petRoles.0efcb2": "Cada 4 s, 2 enemigos cercanos reciben 20% más daño por 4 s",
  "petRoles.fb23df": "Cada 6 s marca al enemigo más fuerte: 40% más daño por 5 s",
  "petRoles.77fe00": "Rol de {name}",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "¡Mirada de la Corona!",
  "overlay.lateTitle": "Nuevo título: {name}",
  "stale.msg": "El juego se abrió en otra ventana.\nEsta ventana se ha detenido para proteger tu progreso.",
- "stale.reload": "Recargar"
+ "stale.reload": "Recargar",
+ "trial.btn": "Prueba {n}/{max}",
+ "trial.title": "Prueba de la forja",
+ "trial.desc": "Caza de 3 minutos.\nGana y recibe 1 Protección.\nQuedan {n} hoy.",
+ "trial.go": "Empezar",
+ "trial.win": "¡Recibiste 1 Protección!",
+ "trial.done": "No quedan pruebas hoy",
+ "trial.lose": "Perder no gasta intentos",
+ "trial.guard": "Protección"
 }

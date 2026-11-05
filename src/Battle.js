@@ -45,7 +45,7 @@ export class Battle extends Phaser.Scene {
 
   init(data) {
     this.pro = data.prologue ? PRO.proState(data) : null;   // 프롤로그 판: 장은 15장(최강 상태로 시작), 저장은 메모리 모래판에서만
-    this.mode = data.mode ? new ModeRun(this, data.mode.id, data.mode.n) : null;   // 모드 판: 장 번호는 모드 설정에서, 난이도는 그 장 2판(x-2) 기준
+    this.mode = data.mode ? new ModeRun(this, data.mode.id, data.mode.n, data.mode.trial) : null;   // 모드 판: 장 번호는 모드 설정에서, 난이도는 그 장 2판(x-2) 기준
     this.c = this.mode ? this.mode.cfg.c : this.pro ? 14 : data.chapter; this.s = this.mode ? 1 : this.pro ? 0 : data.stage;
     this.ch = D.CHAPTERS[this.c];
     this.endless = !!data.endless;
@@ -285,8 +285,8 @@ export class Battle extends Phaser.Scene {
     bakeFloor();
     // 약한 폰은 메모리가 모자라면 그래픽을 통째로 잃었다 되찾는다. 그림판에 구워 둔 바닥만 비어 버리니 다시 굽고 어둠 덮개도 다시 그리게 한다
     const onRestore = () => this.game.events.once('prestep', () => { if (!this.sys.isActive() && !this.sys.isPaused()) return; rt.clear(); bakeFloor(); this.darkKey && (this.darkKey.length = 0); });
-    this.game.renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, onRestore);
-    this.events.once('shutdown', () => this.game.renderer.off(Phaser.Renderer.Events.RESTORE_WEBGL, onRestore));
+    this.game.renderer.on(Phaser.Renderer?.Events?.RESTORE_WEBGL, onRestore);
+    this.events.once('shutdown', () => this.game.renderer.off(Phaser.Renderer?.Events?.RESTORE_WEBGL, onRestore));
     // 못 가는 바깥은 어둡게 덮어 끝이라는 걸 보인다
     this.add.graphics().setDepth(-9).fillStyle(0x000000, 0.5).fillRect(-M, -M, WORLD + 2 * M, M).fillRect(-M, WORLD, WORLD + 2 * M, M).fillRect(-M, 0, M, WORLD).fillRect(WORLD, 0, M, WORLD);
     // 전용 바닥 그림이 없는 챕터는 1챕터 바닥에 색을 입힌다
@@ -1706,7 +1706,7 @@ export class Battle extends Phaser.Scene {
       // 조금 먼 보석도 플레이어 이동 속도(84)보다 빨리 끌려온다: 몹에 둘러싸여 보석까지 못 가면 레벨이 멈췄다
       else if (d2 < pick3) this.physics.moveToObject(g, h, 160);
       else if (g.body.speed) g.setVelocity(0);
-      if (d2 < 196) { this.gainXp(g.v); g.destroy(); }   // 한 프레임에 15px까지 움직여 10이면 지나쳤다 돌아왔다
+      if (d2 < 196) { this.gainXp(g.petB ? g.v * 1.3 : g.v); g.destroy(); }   // 한 프레임에 15px까지 움직여 10이면 지나쳤다 돌아왔다
     }
     const il = this.items.getChildren();
     for (let i = il.length - 1; i >= 0; i--) {

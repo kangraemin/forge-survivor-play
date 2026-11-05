@@ -47,7 +47,7 @@ export const fresh = () => ({ schemaVersion: SCHEMA,
   lateT: {},               // 16~20장 보스 첫 클리어로 얻은 칭호(장 번호 0부터 -> 1). 없는 옛 저장은 빈 칸이라 변환 불필요(소급 지급 없음)
   // 한정 판매: 오늘의 특가 { day, id, off, got }, 성장 꾸러미 { c, at, shown }
   deal: null, grow: null,
-  mark: 0, markN: 0, markGift: 0,   // 도전 증표 수, 오늘 다시 깨서 받은 수(하루 3번까지), 업데이트로 받은 선물 수(로비가 한 번 알리고 0으로)
+  trialN: 0, mark: 0, markN: 0, markGift: 0,   // 도전 증표 수, 오늘 다시 깨서 받은 수(하루 3번까지), 업데이트로 받은 선물 수(로비가 한 번 알리고 0으로)
   modes: { clear: {}, stars: {}, best: {}, mark: {} },    // 모드(지키기·점령·돌파·사냥) 깬 판: 'guard:1' 같은 키 -> 1 · stars: 키 -> 별 비트 마스크(1 깨기·2 시간 안에·4 피해 적게) · best: 키 -> { t 가장 빠른 초, hurt 가장 적은 피해 % }
   // 공유 보상(share.js): 자랑하기 받은 날·받은 적 있나, 내 초대 코드, 나를 초대한 코드(첫 실행에만 저장), 그 코드를 서버에 알렸나,
   // 초대로 받은 보석 수(친구 수), 확정 중인 보상 {key,n}, 서버가 알려 준 초대한 친구 수·받을 수
@@ -117,7 +117,7 @@ const STEPS = [
   },
   // 7 -> 8: 도전 증표(54차). 이미 깬 도전 단계마다 증표를 소급해 주고(modes.mark로 '받음' 표시), 깬 장에 비해 못 올린 승급 몫이 있으면 그만큼은 채워 준다(업데이트로 갑자기 막히지 않게)
   mem => {
-    mem.mark = Math.max(0, mem.mark | 0); mem.markN = Math.max(0, mem.markN | 0); mem.markGift = Math.max(0, mem.markGift | 0);
+    mem.mark = Math.max(0, mem.mark | 0); mem.markN = Math.max(0, mem.markN | 0); mem.trialN = Math.max(0, mem.trialN | 0); mem.markGift = Math.max(0, mem.markGift | 0);
     mem.modes = { ...mem.modes };
     const m = mem.modes;
     if (!m.clear || typeof m.clear !== 'object' || Array.isArray(m.clear)) m.clear = {};

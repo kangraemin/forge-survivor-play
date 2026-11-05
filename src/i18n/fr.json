@@ -1875,7 +1875,7 @@
  "overlay.2bf75f": "{repeat}{repeat2}  Chap. {v} {done}/{per}",
  "overlay.451078": "Objectif {v}-{v2} · Reco {fmt} / Moi {fmt2}",
  "overlay.bf1d48": "Codex {n}/{all}{v}",
- "petRoles.e1c9e7": "Toutes les 1,5 s, attire 4 objets et 8 gemmes dans un rayon de 150",
+ "petRoles.e1c9e7": "Toutes les 1,5 s, attire 6 objets et 16 gemmes dans un rayon de 420. Ces gemmes donnent +30 % d'EXP",
  "petRoles.0efcb2": "Toutes les 4 s, 2 ennemis proches subissent +20% de dégâts pendant 4 s",
  "petRoles.fb23df": "Toutes les 6 s, marque l'ennemi le plus fort : +40% de dégâts pendant 5 s",
  "petRoles.77fe00": "Rôle : {name}",
@@ -2285,5 +2285,13 @@
  "boss.patCrownfall": "Regard de la Couronne !",
  "overlay.lateTitle": "Nouveau titre : {name}",
  "stale.msg": "Le jeu a été ouvert dans une autre fenêtre.\nCette fenêtre est en pause pour protéger ta progression.",
- "stale.reload": "Recharger"
+ "stale.reload": "Recharger",
+ "trial.btn": "Épreuve {n}/{max}",
+ "trial.title": "Épreuve de la forge",
+ "trial.desc": "Chasse de 3 minutes.\nGagnez 1 protection.\nReste {n} aujourd'hui.",
+ "trial.go": "Lancer",
+ "trial.win": "1 protection obtenue !",
+ "trial.done": "Plus d'épreuve aujourd'hui",
+ "trial.lose": "Une défaite ne compte pas",
+ "trial.guard": "Protection"
 }
