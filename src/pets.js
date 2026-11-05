@@ -53,18 +53,24 @@ export class Pet {
   general() {
     const s = this.s;
     if (s.petShield || this.t < 8500 / this.fit) return;
-    this.t = 0; s.petShield = true;
-    if (!this.shieldFx) this.shieldFx = s.add.ellipse(0, 0, 34, 40).setStrokeStyle(2, 0xe8e2c8, 0.8).setDepth(29);
+    this.t = 0; this.raiseShield();
+  }
+
+  raiseShield() {
+    const s = this.s, c = this.def.color;
+    s.petShield = true;
+    if (!this.shieldFx) this.shieldFx = s.add.ellipse(0, 0, 34, 40).setStrokeStyle(2, c, 0.8).setDepth(29);
     this.shieldFx.setVisible(true);
-    this.pop(0xe8e2c8);
+    this.pop(c);
     sfx('buy');
   }
 
   // 방패가 맞았을 때(Battle.hurt에서 부른다)
   block() {
-    const s = this.s; s.petShield = false; this.t = 0;
+    const s = this.s; s.petShield = false;
+    if (this.def.id === 'general') this.t = 0; else this.rt = 0;   // 방패가 깨진 때부터 다시 잰다
     this.shieldFx?.setVisible(false);
-    const t = s.add.text(s.hero.x, s.hero.y - 28, tt('pets.957f6d'), font(10, '#e8e2c8')).setOrigin(0.5).setDepth(40);
+    const t = s.add.text(s.hero.x, s.hero.y - 28, tt('pets.957f6d'), font(10, '#' + this.def.color.toString(16).padStart(6, '0'))).setOrigin(0.5).setDepth(40);
     s.tweens.add({ targets: t, y: t.y - 14, alpha: 0, duration: 600, onComplete: () => t.destroy() });
     sfx('deny');
   }
@@ -122,16 +128,16 @@ export class Pet {
 
   // 서리 용: 바라보는 쪽으로 입김. 맞은 적은 잠깐 얼어붙는다(보스는 느려지기만)
   wyrm() {
-    if (this.t < 2800 / this.fit) return;
+    if (this.t < 2000 / this.fit) return;   // 11/6 측정 +1%p로 효과가 없어 범위·빈도·얼리는 시간을 늘렸다
     const s = this.s, cx = s.hero.x + s.face * 50, cy = s.hero.y;
-    const ms = this.near(60, 12, { x: cx, y: cy });
+    const ms = this.near(85, 14, { x: cx, y: cy });
     if (!ms.length) return;
     this.t = 0;
     const puff = s.add.image(cx, cy, 'ring').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9ae8ff).setScale(0.4).setDepth(30);
-    s.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 420, onComplete: () => puff.destroy() });
+    s.tweens.add({ targets: puff, scale: 2.5, alpha: 0, duration: 420, onComplete: () => puff.destroy() });
     ms.forEach(m => {
       if (m.isBoss) m.slow = 1500;
-      else { const fz = 1200 * Math.min(1, this.fit); m.freeze = fz; m.setTint(0x9ae8ff); s.time.delayedCall(fz, () => m.active && !m.dead && m.setTint(m.baseTint)); }
+      else { const fz = 1800 * Math.min(1, this.fit); m.freeze = fz; m.setTint(0x9ae8ff); s.time.delayedCall(fz, () => m.active && !m.dead && m.setTint(m.baseTint)); }
       s.hitMob(m, this.pow * 0.5, { kb: 0, tag: 'pet', src: 'pet' });
     });
     sfx('shoot', 140);
@@ -156,13 +162,13 @@ export class Pet {
     this.t = 0;
     const s = this.s;
     if (!this.fog) {
-      this.fog = s.add.ellipse(0, 0, 110, 46, 0xa050d0, 0.3).setStrokeStyle(2, 0xd890ff, 0.8).setDepth(7);
+      this.fog = s.add.ellipse(0, 0, 180, 76, 0xa050d0, 0.3).setStrokeStyle(2, 0xd890ff, 0.8).setDepth(7);
       s.tweens.add({ targets: this.fog, alpha: 0.55, duration: 700, yoyo: true, repeat: -1 });
     }
     this.fog.setPosition(s.hero.x, s.hero.y + 8);
     s.mobs.getChildren().slice().forEach(m => {
-      if (m.dead || !m.active || Math.abs(m.x - s.hero.x) > 55 || Math.abs(m.y - s.hero.y - 8) > 24) return;
-      m.slow = Math.max(m.slow || 0, 900);
+      if (m.dead || !m.active || Math.abs(m.x - s.hero.x) > 90 || Math.abs(m.y - s.hero.y - 8) > 38) return;   // 11/6 측정 +0%p로 효과가 없어 안개를 넓혔다
+      m.slow = Math.max(m.slow || 0, 1200);
       s.hitMob(m, this.pow * 0.26, { kb: 0, tag: 'pet', src: 'pet' });
     });
   }

@@ -54,6 +54,9 @@ export function roleTick(pet, dt) {
     its.slice(0, 6).forEach(i => { i.pull = true; });
     gms.slice(0, 16).forEach(g => { g.pull = true; g.petB = true; });
     roleAnim(pet, 'pickup');
+  } else if (role === 'guard') {   // 해골 장군은 자기 방패가 있다. 나머지는 11/6까지 설명만 '막아 준다'이고 실제로 막은 적이 없었다
+    if (pet.def.id === 'general' || s.petShield || pet.rt < 14000 / f) return;
+    pet.rt = 0; pet.raiseShield();
   } else if (role === 'weaken') {
     if (pet.rt < 4000 / f) return;
     const ms = pet.near(160, f > 1 ? 3 : 2).filter(m => !(m.curse > s.bt));

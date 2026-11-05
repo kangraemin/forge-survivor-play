@@ -1206,7 +1206,7 @@ export class Lobby extends Phaser.Scene {
     c.add(this.add.text(W / 2, 184, t('trial.title'), font(14, '#ffd75e')).setOrigin(0.5));
     c.add(this.add.text(W / 2, 234, t('trial.desc', { n: left }), { ...font9(11, '#f2e4bc'), align: 'center', wordWrap: { width: W - 76 } }).setOrigin(0.5));
     c.add(button(this, W / 2 - 54, 296, 92, 30, t('lobby.0ad48e'), () => c.close(), { size: 11, color: 0x3a3846 }));
-    c.add(button(this, W / 2 + 54, 296, 100, 30, t('trial.go'), () => { c.close(); this.startModeBattle(D.TRIAL.id, D.TRIAL.n, true); }, { size: 13, color: 0x2f6b3a }));
+    c.add(button(this, W / 2 + 54, 296, 100, 30, t('trial.go'), () => { c.close(); this.startModeBattle(D.TRIAL.id, D.trialStage(sv), true); }, { size: 13, color: 0x2f6b3a }));
   }
 
   // 부서진 직후: 방지권이 있었다면 지켰다는 걸 보여 주고 바로 살 수 있게

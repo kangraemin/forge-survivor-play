@@ -393,6 +393,8 @@ export const easeHp = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
 export const easeDmg = (c, s) => c > 0 && s === 0 ? 0.9 : 1;
 // 64차: 1-3(1장 보스) 권장 28은 실제 통과선(전투력 약 17, 강화 +4~5)보다 높아 '권장 28 / 내 14'로 겁만 줬다. 통과선 기준으로 19(보스 초록은 1.2배)
 export const CH1_BOSS_REC = 19;
+// 대장간 시련 판: 내 전투력이 권장의 2배 이상인 가장 높은 장의 사냥 판(11/6 측정: 15장은 40~60만에서 10승 25패, 60만 위 41승 1패. 막힌 사람이 못 깨면 소용없다)
+export const trialStage = sv => { const pw = powerOf(sv); for (let n = TRIAL.n; n > 0; n--) if (recPower(n, 1) * 2 <= pw) return n; return 1; };
 export const recPower = (c, s) => c === 0 && s === 2 ? CH1_BOSS_REC : Math.round(REC_BASE(c) * stageMul(s) * easeHp(c, s) * (isBossS(s) && c > 0 ? 1.25 : 1) * GEAR_HP(c) * spReq(c * STAGES_PER_CHAPTER + s));
 // 2장부터 장비·스탯으로 늘어나는 힘만큼 몹 체력과 권장 전투력을 올린다(1장은 장비 없이도 깨지게 그대로). 스탯(1점 +2%, 5점 보너스)까지 넣고 sim 완주 중앙 5.4h로 맞춘 값
 // 6장부터는 장비·스탯으로 늘어나는 힘이 더 가파르다고 보고 장당 0.82씩(5장까지는 0.36)
