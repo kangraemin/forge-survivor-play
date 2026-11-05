@@ -117,7 +117,7 @@ const STEPS = [
   },
   // 7 -> 8: 도전 증표(54차). 이미 깬 도전 단계마다 증표를 소급해 주고(modes.mark로 '받음' 표시), 깬 장에 비해 못 올린 승급 몫이 있으면 그만큼은 채워 준다(업데이트로 갑자기 막히지 않게)
   mem => {
-    mem.mark = Math.max(0, mem.mark | 0); mem.markN = Math.max(0, mem.markN | 0); mem.trialN = Math.max(0, mem.trialN | 0); mem.markGift = Math.max(0, mem.markGift | 0);
+    mem.mark = Math.max(0, mem.mark | 0); mem.markN = Math.max(0, mem.markN | 0); mem.markGift = Math.max(0, mem.markGift | 0);
     mem.modes = { ...mem.modes };
     const m = mem.modes;
     if (!m.clear || typeof m.clear !== 'object' || Array.isArray(m.clear)) m.clear = {};
