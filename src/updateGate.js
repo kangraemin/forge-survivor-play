@@ -5,7 +5,12 @@ import { checkVersion, syncData, markAsked } from './updater.js';
 import { t } from './i18n.js';
 
 // 스토어 앱(Capacitor)은 window.open이 스토어로 안 가므로 forgePlatform.openStore가 연다(주소가 비어도 앱 스토어 페이지로)
-const openStore = url => { try { const fp = window.forgePlatform; if (fp?.openStore) return fp.openStore(url); if (url) window.open(url, '_blank'); } catch { /* 열 수 없는 환경 */ } };
+// 스토어 주소가 없는 웹은 새로고침이 업데이트다: 주소에 새 쿼리를 붙여 index.html 캐시를 건너뛰고, 모듈은 캐시 우회로 미리 다시 받는다
+export const reloadFresh = async () => {
+  try { await Promise.all(['index.html', 'src/main.js', 'version.json'].map(p => fetch(p + '?r=' + Date.now(), { cache: 'reload' }).catch(() => null))); } catch { /* 새로고침만 한다 */ }
+  const u = new URL(location.href); u.searchParams.set('v', String(Date.now())); location.replace(u.toString());
+};
+const openStore = url => { try { const fp = window.forgePlatform; if (fp?.openStore) return fp.openStore(url); if (url) window.open(url, '_blank'); else reloadFresh(); } catch { /* 열 수 없는 환경 */ } };
 function dialog(scene, title, lines, buttons) {
   const c = scene.add.container(0, 0).setDepth(100);
   c.add(scene.add.rectangle(0, 0, W, H, 0x000000, 0.7).setOrigin(0).setInteractive());
@@ -24,7 +29,10 @@ export async function updateGate(scene, started) {
   status.setText('');
   if (!r) return true;   // 네트워크 실패: 그냥 진행(열린 장 수는 마지막으로 받은 값을 쓴다)
   if (r.info?.contentChapters !== undefined) setOpenN(r.info.contentChapters);   // 16장부터는 이 값을 올리면 열린다(기본 15)
-  if (r.action === 'force') {
+  if (r.action === 'reload') {   // 옛 캐시로 뜬 웹: 이 세션에서 한 번만 새로 받는다(그래도 낮으면 그냥 진행)
+    let done = null; try { done = sessionStorage.getItem('forge-reloaded'); } catch { /* 저장소 없음 */ }
+    if (!done) { try { sessionStorage.setItem('forge-reloaded', '1'); } catch { /* 없음 */ } reloadFresh(); return false; }
+  } else if (r.action === 'force') {
     dialog(scene, t('updateGate.fcef0c'), [t('updateGate.bab9f6'), t('updateGate.08411c'), r.notes].filter(Boolean), [{ label: t('updateGate.4f72dd'), color: 0x2f6b3a, fn: () => openStore(r.store) }]);
     return false;
   }

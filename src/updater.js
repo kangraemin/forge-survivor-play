@@ -7,7 +7,15 @@ const FETCH_MS = 3500, MAX_BYTES = 2e6;
 const DATA_KEY = 'forge-data-cache', ASK_KEY = 'forge-update-asked';
 
 const ls = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } } };
-export const channel = () => (window.__AIT_SDK ? 'toss' : window.forgeNativeSave || window.Capacitor ? (/iPhone|iPad/.test(navigator.userAgent) ? 'ios' : 'android') : 'web');
+// 네이티브 플랫폼은 Capacitor가 알려 주는 값을 먼저 쓴다(아이패드 OS는 UA가 맥으로 나와 UA 검사만으로는 안드로이드로 오판한다)
+export const channel = () => {
+  if (window.__AIT_SDK) return 'toss';
+  if (window.forgeNativeSave || window.Capacitor?.isNativePlatform?.()) {
+    const p = window.Capacitor?.getPlatform?.();
+    return p === 'ios' || p === 'android' ? p : /iPhone|iPad/.test(navigator.userAgent) ? 'ios' : 'android';
+  }
+  return 'web';
+};
 
 async function getJson(path, ms = FETCH_MS) {
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
@@ -19,12 +27,20 @@ async function getJson(path, ms = FETCH_MS) {
   } catch { return null; } finally { clearTimeout(t); }
 }
 
-// 버전 정보 판정(순수 함수): { action: 'force'|'optional'|'none', store, notes }
+// 버전 번호 칸은 숫자 하나 또는 채널별 객체({ default: 1, android: 3, ios: 2 })를 받는다. 채널 값이 없으면 default, 그것도 없으면 검사하지 않는다
+const pick = (v, ch) => { const x = v && typeof v === 'object' ? (ch in v ? v[ch] : v.default) : v; return Number.isFinite(x) ? x : null; };
+
+// 버전 정보 판정(순수 함수): { action: 'force'|'optional'|'reload'|'none', store, notes }
+//  - 스토어 주소가 비어 있을 때: 웹은 새로고침(캐시 우회)이 업데이트다. 토스는 출시하면 번들이 통째로 바뀌어 막을 이유가 없으니(앱인토스 '미니앱 버전 관리하기') 통과시킨다
+//  - 웹에서 올라온 번들이 version.json의 build보다 낮으면(옛 캐시) action 'reload': 한 번 새로 받는다
 export function judge(info, { build = BUILD, ch = 'web', today = '', asked = '' } = {}) {
   if (!info || typeof info !== 'object') return { action: 'none' };
   const store = info.store?.[ch] || '', notes = String(info.notes || '');
-  if (Number.isFinite(info.minBuild) && build < info.minBuild) return { action: 'force', store, notes };
-  if (Number.isFinite(info.recommendedBuild) && build < info.recommendedBuild && asked !== today) return { action: 'optional', store, notes };
+  const min = pick(info.minBuild, ch), rec = pick(info.recommendedBuild, ch), latest = pick(info.build, ch);
+  const noStore = !store && ch !== 'ios' && ch !== 'android';   // 네이티브는 forgePlatform.openStore가 앱 설정으로 주소를 만든다
+  if (min !== null && build < min) return ch === 'toss' && noStore ? { action: 'none', store, notes } : { action: 'force', store, notes };
+  if (ch === 'web' && latest !== null && build < latest) return { action: 'reload', store, notes };
+  if (rec !== null && build < rec && asked !== today && !(ch === 'toss' && noStore)) return { action: 'optional', store, notes };
   return { action: 'none', store, notes };
 }
 
