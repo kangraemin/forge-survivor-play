@@ -104,18 +104,29 @@ export const TOSS_FLOOR_MUL = 1000;
 export const tossScore = (floors, tier, enh) => Math.min(floors | 0, MAX_TOWER) * TOSS_FLOOR_MUL + rankScore(tier | 0, enh | 0);
 const LB_KEY = 'forge-toss-lb-v1';
 let lbBusy = false;
+// 실패 사유별로 하루 한 번만 남기고, 한 번 실패한 사유는 이 실행(세션)에서 다시 제출하지 않는다(같은 기기에서 반복 제출·로그 폭주 방지)
+const lbFailedNow = new Set();
+const LBF_KEY = 'forge-toss-lbfail-v1';
+function lbFailLog(score, why) {
+  const day = new Date().toISOString().slice(0, 10), key = String(why).slice(0, 40);
+  let m = {}; try { m = JSON.parse(ls.get(LBF_KEY) || '{}'); } catch {}
+  if (m[key] === day) return;
+  m[key] = day; try { ls.set(LBF_KEY, JSON.stringify(m)); } catch {}
+  track('toss_lb_fail', { score, why: key });
+}
 export async function tossSubmitRecord(sv) {
   const lb = tossBoard();
-  if (!lb || lbBusy) return;
+  if (!lb || lbBusy || lbFailedNow.size) return;
   const score = tossScore(sv.endBest | 0, sv.tier, sv.enh);
   if (score < 1) return;
   let sent = 0; try { sent = +ls.get(LB_KEY) || 0; } catch {}
   if (score <= sent) return;   // 낮아졌거나(승급 직후 강화 0 등) 같으면 다시 내지 않는다
   lbBusy = true;
   try {
-    if (await lb.submit(score)) ls.set(LB_KEY, String(score));
-    else track('toss_lb_fail', { score });   // 정책 없음·버전 미달·네트워크: 게임엔 영향 없이 로그만
-  } catch (e) { track('toss_lb_fail', { score, err: String(e?.message || e).slice(0, 60) }); }
+    const r = await lb.submit(score);
+    if (r === true) ls.set(LB_KEY, String(score));
+    else { const why = typeof r === 'string' ? r : 'false'; lbFailedNow.add(why); lbFailLog(score, why); }   // 정책 없음·미출시·버전 미달: 게임엔 영향 없이 로그만
+  } catch (e) { const why = 'err:' + String(e?.message || e).slice(0, 40); lbFailedNow.add(why); lbFailLog(score, why); }
   finally { lbBusy = false; }
 }
 // 예전 이름(무한의 탑 층만 내던 때): 같은 일을 한다

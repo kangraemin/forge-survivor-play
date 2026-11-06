@@ -2,7 +2,7 @@
 import { W, TIERS, ENDLESS, STAGES_PER_CHAPTER, openTotal } from './data.js';
 import { font, font9, panel, button } from './ui.js';
 import { loadTop, rankEnabled, rankDecode, myWeek, tossBoard } from './rank.js';
-import { track } from './log.js';
+import { track, trackScreen } from './log.js';
 import { t } from './i18n.js';
 
 const PER = 10;
@@ -17,6 +17,7 @@ export const rankVisible = () => rankEnabled();
 
 const fixed = o => { o.isBtnLabel = true; return o; };   // 글자 맞춤(textfit)이 뒤에 깔린 로비 글자와 부딪힌다고 줄이지 않게
 export async function openRank(scene) {
+  trackScreen('rank');
   if (!rankEnabled()) return;
   const c = scene.modal();
   c.add(panel(scene, 12, 44, W - 24, 426, { fill: 0x1a1426, line: 0x8a6ac8, alpha: 1 }));   // 63차: 불투명(뒤 탑 화면 글자가 비쳐 겹쳤다)

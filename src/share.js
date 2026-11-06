@@ -11,7 +11,7 @@
 //  Promotion.openContactsInvite 는 deprecated 라 쓰지 않는다
 import { SHARE_GEM, SHARE_GEM_FIRST, SHARE_URL, W } from './data.js';
 import { load, save } from './save.js';
-import { track } from './log.js';
+import { track, trackScreen } from './log.js';
 import { font, font9, panel, button, toast, gemIcon } from './ui.js';
 import { sfx } from './sfx.js';
 import { inviteCodeOf, CODE_RE } from './inviteCode.js';
@@ -139,6 +139,7 @@ export async function lobbyShareTick(scene, force = false) {
 
 // ── 친구 초대 창(설정에서 연다) ──
 export function openInvite(scene) {
+  trackScreen('invite');
   const sv = load(), c = scene.modal();
   c.add(panel(scene, 16, 70, W - 32, 330, { fill: 0x1a1426, line: 0xffd75e }));
   c.add(scene.add.text(W / 2, 90, t('settingsPanel.bf6a10'), font(14, '#ffd75e')).setOrigin(0.5));

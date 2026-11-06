@@ -244,7 +244,7 @@ export async function recoverPurchases() {
   // 프롤로그 모래판(가짜 풀템 저장)이 열려 있으면 지급이 진짜 저장에 남지 않는데 주문은 '완료'로 닫혔다 → 모래판이 끝난 뒤 다시 한다
   const later = () => { setTimeout(recoverPurchases, 3000); return 0; };
   if (inSandbox()) return later();
-  let n = 0;
+  let n = 0, step = 'pending';
   try {
     const list = await P.pending();   // 스토어 앱은 여기서 몇 초 걸린다: 그 사이 모래판이 열릴 수 있어 저장은 받은 뒤에 읽는다
     const sv = load();
@@ -262,10 +262,13 @@ export async function recoverPurchases() {
         track('iap_recover', { item: item.id, order: o.orderId });
         n++;
       }
+      step = 'save';
       if (!save()) { track('iap_save_fail', { item: item.id }); continue; }   // 저장을 못 썼으면 주문을 닫지 않는다: 다음 실행에 다시 준다
+      step = 'complete';
       await P.complete(o.orderId);
+      step = 'pending';
     }
-  } catch (e) { track('iap_recover_fail', { msg: String(e?.message || e).slice(0, 80) }); }
+  } catch (e) { track('iap_recover_fail', { step, msg: String(e?.message || e).slice(0, 80) }); }
   return n;
 }
 if (window.forgePlatform?.pending && !isTest()) setTimeout(recoverPurchases, 4000);

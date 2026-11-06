@@ -13,7 +13,7 @@ import { load, save, mission, checkDay } from './save.js';
 import { sfx, setSound, setMusic, setMusicLevel, setVib, unlock, playBgm, preloadBattleBgm } from './sfx.js';
 import { font, font9, panel, button, icon, fmt, COLOR, toast, gemIcon, markIcon, fixedContainer, skinFx, hiCam, viewPt, skillIcon, weaponIcon, setBackdrop } from './ui.js';
 import { iapTag, showAd, buy, grant, giveText, adsLeft, adsDaily, priceLabel, firstX2, todayDeal, growOffer, growLeft, soldOut, leftText, msToMidnight, kstDay } from './shop.js';
-import { track, logUser, trackOnce } from './log.js';
+import { track, logUser, trackOnce, trackScreen } from './log.js';
 import { GearTab } from './gearTab.js';
 import { inTossShell } from './safeArea.js';
 import { ContentTab } from './contentTab.js';
@@ -454,7 +454,7 @@ export class Lobby extends Phaser.Scene {
 
   show(id) {
     const fromOther = id === 'forge' && this.lastTab && this.lastTab !== 'forge';
-    if (id !== this.lastTab) { track('tab_view', { tab: id, page: id === 'shop' ? this.shopPage : undefined }); this.lastTab = id; }
+    if (id !== this.lastTab) { track('tab_view', { tab: id, page: id === 'shop' ? this.shopPage : undefined }); trackScreen('tab_' + id); this.lastTab = id; }
     if (id === 'train') { this.gearPage = 'train'; id = 'gear'; }
     if (id !== 'forge') this.clearBrag();
     this.tab = id; this.ticks = [];

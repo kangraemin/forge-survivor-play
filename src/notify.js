@@ -12,7 +12,7 @@ import * as D from './data.js';
 import { W } from './data.js';
 import { font, font9, panel, button, toast } from './ui.js';
 import { load } from './save.js';
-import { track } from './log.js';
+import { track, trackScreen } from './log.js';
 import { t } from './i18n.js';
 import { isTest } from './testMode.js';
 
@@ -86,6 +86,7 @@ export async function notifyDisable() {
 
 // 설명 창: '짧은 제목' 아래 '- 문장'
 export function openNotifyAsk(scene) {
+  trackScreen('notify_ask');
   if (!plat() || scene.busy) return;
   const c = scene.modal();
   c.add(panel(scene, 20, 120, W - 40, 224, { fill: 0x1a1426, line: 0xffd75e }));

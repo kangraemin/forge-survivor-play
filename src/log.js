@@ -2,6 +2,7 @@
 // track('이벤트', { 값 }) 한 줄로 어디서든 부른다. 문자는 ep., 숫자는 epn.으로 간다
 // 토스로 옮기면 window.forgePlatform.log가 같은 이벤트를 받는다
 import { isTest } from './testMode.js';
+import { channel } from './updater.js';
 export const GA_ID = 'G-F1FFKK1T17';
 const KEY = 'forge-log-v1';
 
@@ -30,7 +31,7 @@ let ctx = {};
 export const logCtx = o => { ctx = o ? { ...ctx, ...o } : {}; };
 // 유저 속성: 이후 모든 이벤트에 붙어 진행도·결제 여부로 사람을 나눠 볼 수 있다
 let user = {};
-export const logUser = o => { user = { ...user, ...o }; try { window.forgePlatform?.userProps?.(o); } catch {} };
+export const logUser = o => { const a = { ...o, app_platform: appPlatform() }; user = { ...user, ...a }; try { window.forgePlatform?.userProps?.(a); upSent = true; } catch {} };
 
 // GA4 dl(페이지 주소): 쿼리는 모두 빼고 유입 경로(utm_*·gclid)만 남긴다. 첫 이벤트에서 본 값을 sessionStorage에 두어 같은 세션의 다음 이벤트에도 붙인다
 const KEEP = /^(utm_[a-z0-9_]+|gclid)$/i, SS = 'forge-utm-v1';
@@ -46,8 +47,12 @@ export function dlOf(href, store = true) {
   return u.origin + u.pathname + (q ? '?' + q : '');
 }
 
+// 플랫폼 구분: toss|web|android|ios (포털판 itch/crazygames는 web, 포털 이름은 ep.platform 그대로). GA 맞춤 측정기준 app_platform(이벤트·사용자)을 등록해야 보고서에 나온다
+export const appPlatform = () => { try { return channel(); } catch { return 'web'; } };
+let upSent = false;
 export function track(name, params = {}) {
-  const p = { ...ctx, ...params };
+  const p = { ...ctx, ...params, app_platform: appPlatform() };
+  if (!upSent && window.forgePlatform?.userProps) { upSent = true; try { window.forgePlatform.userProps({ app_platform: p.app_platform }); } catch {} }
   recent.push([Date.now(), name, p]); if (recent.length > 200) recent.shift();
   if (isTest()) return;   // 테스트 모드: GA·Firebase·토스 로그로 아무것도 보내지 않는다
   try { window.forgePlatform?.log?.(name, p); } catch {}
@@ -58,7 +63,7 @@ export function track(name, params = {}) {
   if (first) { if (st.newSession) { q.set('_ss', '1'); q.set('_nsi', '1'); } if (firstVisit) q.set('_fv', '1'); first = false; }
   else q.set('_et', String(Math.min(t - lastT, 60000)));
   lastT = t;
-  for (const [k, v] of Object.entries(user)) {
+  for (const [k, v] of Object.entries({ ...user, app_platform: p.app_platform })) {
     if (v === undefined || v === null) continue;
     q.set((typeof v === 'string' ? 'up.' : 'upn.') + k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v).slice(0, 36));
   }
@@ -77,6 +82,17 @@ export function track(name, params = {}) {
   const url = 'https://www.google-analytics.com/g/collect?' + q;
   try { if (!navigator.sendBeacon?.(url)) fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true }).catch(() => {}); } catch {}
 }
+
+// 같은 이벤트(이름+값이 같은 것)를 ms 안에 또 부르면 버린다: 버튼 연타·열렸다 닫히길 반복하는 화면의 폭주 방지
+const lastAt = {};
+export function trackThrottled(name, params = {}, ms = 3000) {
+  const k = name + JSON.stringify(params), t = Date.now();
+  if (lastAt[k] && t - lastAt[k] < ms) return false;
+  lastAt[k] = t; track(name, params); return true;
+}
+// 화면 열기(screen_view 성격): screen 파라미터에 화면 이름. 3초 안에 같은 화면을 또 열면 한 번만
+export const trackScreen = screen => trackThrottled('screen_open', { screen }, 3000);
+window.forgeTrack = track;   // 스토어 앱 플랫폼 코드(store/src/forge-platform.js)가 광고·결제 단계를 남길 때 쓴다
 
 // 깔때기(이탈 분석)용 이벤트: 한 기기에서 딱 한 번만 보낸다. 이름만으로 단계를 셀 수 있어 맞춤 측정기준이 필요 없다
 // 단계 순서: app_open{first} → (prologue_done) → funnel_first_battle → funnel_clear_1_1 → funnel_first_enhance → funnel_enter_1_3 → funnel_clear_1_3 → funnel_enter_ch2 → funnel_return_d1 → funnel_return_d7
@@ -105,5 +121,6 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => track('app_close', { alive_sec: Math.round((Date.now() - t0) / 1000) }));
 let errN = 0;
-window.addEventListener('error', e => { if (errN++ < 5) track('js_error', { msg: String(e.message).slice(0, 90), src: `${(e.filename || '').split('/').pop()}:${e.lineno}` }); });
-window.addEventListener('unhandledrejection', e => { if (errN++ < 5) track('js_error', { msg: String(e.reason?.message || e.reason).slice(0, 90), src: 'promise' }); });
+const firstLine = e => String(e?.stack || '').split('\n').slice(0, 2).join(' | ').replace(/https?:\/\/[^\s)]*\//g, '').slice(0, 100);
+window.addEventListener('error', e => { if (errN++ < 5) track('js_error', { msg: String(e.message).slice(0, 90), src: `${(e.filename || '').split('/').pop()}:${e.lineno}:${e.colno || 0}`, stack: firstLine(e.error) }); });
+window.addEventListener('unhandledrejection', e => { if (errN++ < 5) track('js_error', { msg: String(e.reason?.message || e.reason).slice(0, 90), src: 'promise', stack: firstLine(e.reason) }); });

@@ -6,7 +6,7 @@ import { importCode, brief, restorePurchases } from './saveCore.js';
 import { cloudEnabled, cloudMeta, restorePlatformPurchases } from './cloudSave.js';
 import { openCloud } from './cloudPanel.js';
 import { BUILD, channel } from './updater.js';
-import { track } from './log.js';
+import { track, trackScreen } from './log.js';
 import { openInvite } from './share.js';
 import { LANGS, LANG_NAME, lang, setLang, t, tt } from './i18n.js';
 import { shareHidden, cashHidden, trialInfo, openFull } from './platform/flags.js';   // 포털판 분기
@@ -82,6 +82,7 @@ function openAdvanced(scene) {
   c.add(scene.add.text(46, 274, note, { ...font9(10, '#a1b2b6'), wordWrap: { width: W - 92 } }).setLineSpacing(3));
 }
 export function openSettings(scene) {
+  trackScreen('settings');
   const sv = load(), c = scene.modal(), st = loadStatus();
   const cloud = cloudEnabled();
   // 11/1: 버튼이 다닥다닥 붙어 있었다 — 칸마다 GAP(버튼 BH + 틈 10)씩 띄우고, 길어진 창은 scrollBody로 민다

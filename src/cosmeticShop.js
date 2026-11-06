@@ -4,7 +4,7 @@ import { font, font9, panel, button, toast } from './ui.js';
 import { buy, priceLabel, webForeign } from './shop.js';
 import { cashHidden } from './platform/flags.js';   // 포털판: 결제 버튼 숨김
 import { save } from './save.js';
-import { track } from './log.js';
+import { track, trackScreen } from './log.js';
 import * as D from './data.js';
 import { t } from './i18n.js';
 
@@ -14,6 +14,7 @@ function icon(scene, parent, it, x, y, size = 28) {
   ob.setScale(size / Math.max(ob.width, ob.height)); parent.add(ob); return ob;
 }
 export function cosmeticPage(s) {
+  trackScreen('cosmetic_shop');
   const sv = s.sv, b = s.body, state = wardrobe(sv);
   const tab = COS_TABS.some(([k]) => k === s.skinTab) ? s.skinTab : (s.skinTab = available({ winter: true }) ? 'winter' : 'character');
   const all = tab === 'winter' ? winterItems() : COSMETICS.filter(it => it.kind === tab); s.cosSelected ||= {};

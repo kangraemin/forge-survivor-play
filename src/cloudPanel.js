@@ -6,7 +6,7 @@ import { importCode, brief } from './saveCore.js';
 import { cloudMeta, transferCreate, transferRedeem } from './cloudSave.js';
 import { syncNow, applyCode, reloadGame } from './cloudSync.js';
 import { textDialog } from './settingsPanel.js';
-import { track } from './log.js';
+import { track, trackScreen } from './log.js';
 import { t, tt } from './i18n.js';
 
 const pad = n => String(n).padStart(2, '0');
@@ -19,6 +19,7 @@ export function savedText(t = cloudMeta().savedAt) {
 const ERR = { offline: t('cloudPanel.277c5c'), expired: t('cloudPanel.3eb837'), bad_tcode: t('cloudPanel.56212f'), rate_limited: t('cloudPanel.525a83'), off: t('cloudPanel.3af6b2'), no_save: t('cloudPanel.326c82') };
 
 export function openCloud(scene) {
+  trackScreen('cloud');
   const c = scene.modal();
   c.add(panel(scene, 16, 110, W - 32, 250, { fill: 0x1a1426, line: 0xffd75e }));
   c.add(scene.add.text(W / 2, 128, t('cloudPanel.0ae56b'), font(14, '#ffd75e')).setOrigin(0.5));

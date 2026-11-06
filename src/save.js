@@ -1,6 +1,6 @@
 // 진행 저장(localStorage). 접근이 막힌 브라우저에서도 게임은 돌아가게 메모리로 대체한다
 import { SWEEP_DAILY, sweepAdd, GEM_FREE, PASS_DAILY } from './data.js';
-import { track } from './log.js';
+import { track, trackThrottled } from './log.js';
 import { readSave, writeSave, fresh, KEY, exportCode, importCode, restorePurchases, syncLedger } from './saveCore.js';
 import { dexRefresh } from './codex.js';
 import { cloudQueue } from './cloudSave.js';
@@ -83,6 +83,7 @@ export function save() {
   if (!mem) return false;
   syncLedger(store(), mem);   // 산 것을 저장과 분리된 칸에도 적는다
   const ok = writeSave(store(), mem);
+  if (!ok) trackThrottled('save_fail', { day: Math.floor(Date.now() / 86400000) }, 60000);   // 저장 칸이 꽉 찼거나 막힘
   if (ok) cloudQueue(mem);   // 서버 저장: 5분에 한 번·앱을 떠날 때 올린다(cloudSave.js)
   return ok;   // 직렬화 검증 -> 직전 저장을 백업 2칸에 -> 쓰기
 }

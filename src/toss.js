@@ -46,6 +46,7 @@ export const AD_LOAD_TIMEOUT_MS = 25000;   // AdMob은 로드에 5~20초(최대 
 
 const sdk = () => window.__AIT_SDK || null;
 const noop = () => {};
+const lg = (name, p) => { try { window.forgeTrack?.(name, p); } catch {} };   // log.js의 track(광고·결제 단계 기록)
 
 // ── 보상형 광고: load → loaded → show → userEarnedReward → dismissed → (다음 load) ──
 const loaded = {}, loading = {};
@@ -56,23 +57,24 @@ function loadAd(g) {
   if (loading[g]) return loading[g];
   const p = new Promise(res => {
     let un = noop, fin = false;
-    const end = ok => { if (fin) return; fin = true; clearTimeout(t); try { un(); } catch {} res(ok); };
-    const t = setTimeout(() => end(false), AD_LOAD_TIMEOUT_MS);
+    const t0 = Date.now();
+    const end = (ok, why) => { if (fin) return; fin = true; clearTimeout(t); try { un(); } catch {} lg('ad_stage', { stage: ok ? 'load_ok' : 'load_fail', why, ms: Date.now() - t0 }); res(ok); };
+    const t = setTimeout(() => end(false, 'timeout'), AD_LOAD_TIMEOUT_MS);
     try {
       un = sdk().loadFullScreenAd({
         options: { adGroupId: g },
         onEvent: e => { if (e?.type === 'loaded') { loaded[g] = true; end(true); } },
-        onError: () => end(false),
+        onError: e => end(false, 'err:' + String(e?.message || e?.code || e).slice(0, 40)),
       }) || noop;
       if (fin) un();
-    } catch { end(false); }
+    } catch (e) { end(false, 'throw:' + String(e?.message || e).slice(0, 40)); }
   }).finally(() => { delete loading[g]; });
   return loading[g] = p;
 }
 
 async function showAd(kind) {
   const g = groupOf(kind);
-  if (!await loadAd(g)) return false;
+  if (!await loadAd(g)) { lg('ad_stage', { stage: 'skip_no_ad', kind }); return false; }
   loaded[g] = false;   // 한 번 보인 광고는 다시 못 보인다
   return new Promise(res => {
     let un = noop, earned = false, fin = false, fb;
@@ -82,15 +84,16 @@ async function showAd(kind) {
         options: { adGroupId: g },
         onEvent: e => {
           if (e?.type === 'userEarnedReward') {
-            earned = true;
+            earned = true; lg('ad_stage', { stage: 'reward', kind });
             // 안드로이드 토스앱 5.255.0은 dismissed가 오지 않는다(공식 FAQ) → 보상 뒤 8초가 지나면 마무리
             fb = setTimeout(end, 8000);
-          } else if (e?.type === 'dismissed' || e?.type === 'failedToShow') end();
+          } else if (e?.type === 'dismissed' || e?.type === 'failedToShow') { lg('ad_stage', { stage: e.type === 'dismissed' ? 'dismiss' : 'show_fail', kind, earned }); end(); }
+          else if (e?.type === 'show' || e?.type === 'impression') lg('ad_stage', { stage: 'show', kind });
         },
-        onError: () => end(),
+        onError: e => { lg('ad_stage', { stage: 'show_error', kind, why: String(e?.message || e?.code || e).slice(0, 40) }); end(); },
       }) || noop;
       if (fin) un();
-    } catch { end(); }
+    } catch (e) { lg('ad_stage', { stage: 'show_error', kind, why: 'throw:' + String(e?.message || e).slice(0, 40) }); end(); }
   });
 }
 
@@ -102,16 +105,16 @@ function buy(id, grant) {
     const end = ok => { if (fin) return; fin = true; try { un(); } catch {} res(ok); };
     try {
       un = sdk().IAP.createOneTimePurchaseOrder({
-        options: { sku: tossSku(id), processProductGrant: async ({ orderId }) => { try { return !!(await grant?.(orderId)); } catch { return false; } } },
+        options: { sku: tossSku(id), processProductGrant: async ({ orderId }) => { try { return !!(await grant?.(orderId)); } catch (e) { lg('iap_error', { item: id, why: 'grant:' + String(e?.message || e).slice(0, 50) }); return false; } } },
         onEvent: e => { if (e?.type === 'success') end(true); },
-        onError: () => end(false),
+        onError: e => { lg('iap_error', { item: id, why: String(e?.code || e?.message || e).slice(0, 60) }); end(false); },
       }) || noop;
       if (fin) un();
-    } catch { end(false); }
+    } catch (e) { lg('iap_error', { item: id, why: 'throw:' + String(e?.message || e).slice(0, 50) }); end(false); }
   });
 }
 // 앱을 켤 때: 결제는 됐는데 지급이 끝나지 못한 주문
-const pending = async () => ((await sdk().IAP.getPendingOrders())?.orders || []).map(o => ({ ...o, sku: gameIdOfSku(o.sku) }));
+const pending = async () => ((await sdk().IAP.getPendingOrders?.())?.orders || []).map(o => ({ ...o, sku: gameIdOfSku(o.sku) }));
 const complete = orderId => sdk().IAP.completeProductGrant({ params: { orderId } });
 // 이미 결제가 끝난 주문(구매 복원). IAP.getCompletedOrRefundedOrders: 한 페이지 50개, hasNext/nextKey로 이어 받는다. 환불된 주문은 건너뛴다
 // 토스앱이 오래되어 undefined를 주면 빈 목록(공식: 최소 지원 버전 미만이면 undefined)
@@ -134,8 +137,13 @@ const restore = async () => {
 //  isMinVersionSupported({android, ios}) 로 버전을 먼저 확인. 콘솔에서 리더보드 정책(점수 단위·정렬)을 먼저 설정해야 한다(없으면 'LeaderBoard not found')
 const LB_MIN = { android: '5.221.0', ios: '5.221.0' };
 const lbOk = s => { try { return !!s.submitGameCenterLeaderBoardScore && !!s.openGameCenterLeaderboard && !!s.isMinVersionSupported && s.isMinVersionSupported(LB_MIN) === true; } catch { return false; } };
+// 성공이면 true, 실패면 사유 문자열('code:<statusCode>' · 'unsupported'(5.221.0 미만이면 undefined) · 'err:<메시지>')을 돌려준다
 const lbSubmit = async score => {
-  try { const r = await sdk().submitGameCenterLeaderBoardScore({ score: String(score | 0) }); return r?.statusCode === 'SUCCESS'; } catch { return false; }
+  try {
+    const r = await sdk().submitGameCenterLeaderBoardScore({ score: String(score | 0) });
+    if (r?.statusCode === 'SUCCESS') return true;
+    return r ? 'code:' + String(r.statusCode || 'none').slice(0, 40) : 'unsupported';
+  } catch (e) { return 'err:' + String(e?.message || e).slice(0, 60); }
 };
 const lbOpen = async () => { try { await sdk().openGameCenterLeaderboard(); return true; } catch { return false; } };
 
