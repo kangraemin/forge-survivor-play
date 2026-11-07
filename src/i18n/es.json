@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "Presumir Gemas+{shareGem}",
  "overlay.c5cca3": "Presumir",
  "overlay.31a9cd": "¡Superé {floors} pisos de la Torre Infinita!",
+ "overlay.dunShare": "¡Mazmorra diaria: {kills} derrotados hoy!",
  "overlay.4eed44": "¡{name} vencido! ",
  "overlay.e8ddd9": "{v}{v2}-{v3} ¡Listo!",
  "overlay.449754": "{v}{v2}{msg} Mi arma: {tierName} +{enh} · Sobrevive con suerte",

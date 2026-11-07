@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "Paylaş Mücevher+{shareGem}",
  "overlay.c5cca3": "Paylaş",
  "overlay.31a9cd": "Sonsuz Kule {floors}. katı geçtim!",
+ "overlay.dunShare": "Günün zindanı: bugün {kills} düşman!",
  "overlay.4eed44": "{name} yenildi! ",
  "overlay.e8ddd9": "{v}{v2}-{v3} Tamam",
  "overlay.449754": "{v}{v2}{msg} Kılıcım: {tierName} +{enh} · Şansla Hayatta Kal",

@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "Brag Gem+{shareGem}",
  "overlay.c5cca3": "Brag",
  "overlay.31a9cd": "Endless Tower Floor {floors} cleared!",
+ "overlay.dunShare": "Daily Dungeon: {kills} kills today!",
  "overlay.4eed44": "{name} defeated! ",
  "overlay.e8ddd9": "{v}{v2}-{v3} Clear",
  "overlay.449754": "{v}{v2}{msg} My weapon: {tierName} +{enh} · Survive by Luck",

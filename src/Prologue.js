@@ -213,7 +213,8 @@ export class Prologue extends Phaser.Scene {
     if (this.typing) { this.typing.remove(); this.typing = null; this.body.setText(this.full); this.finishLine(); return; }
     this.autoT?.remove(); this.nextLine();
   }
-  finishLine() { this.more.setAlpha(1); this.autoT?.remove(); this.autoT = this.time.delayedCall(4600, () => (this.phase === 'cut' || this.phase === 'intro') && this.nextLine()); }
+  // 11/7 레딧 '첫 30초 안에 재미': 탭 안 하는 사람도 빨리 싸움에 들어가게, 시작 대사 3줄(짧다)은 2.6초 뒤 넘긴다. 이후 장면 대사는 4.6초 그대로
+  finishLine() { this.more.setAlpha(1); this.autoT?.remove(); this.autoT = this.time.delayedCall(this.phase === 'intro' ? 2600 : 4600, () => (this.phase === 'cut' || this.phase === 'intro') && this.nextLine()); }
   nextLine() {
     this.autoT?.remove(); this.more.setAlpha(0);
     this.dlgIdx++;

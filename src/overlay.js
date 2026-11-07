@@ -871,7 +871,8 @@ export class Overlay {
     // 자랑하기: 이겼거나 탑 기록을 넘으면 공유(친구가 들어올 길이 없었다). 하루 한 번 보석
     // 48차: 첫 3판은 보상과 '다음 판'만 보여 준다. 광고 2배·자랑하기·장착 안내는 4판째부터
     const early = sv.stats.runs <= 3 && !dun && !s.endless;
-    const brag = !shareHidden() && !early && !s.bot && !dun && (win || (s.endless && floors > best));
+    // 11/7 레딧 '매일 습관 + 결과 공유': 일일 던전 결과도 자랑할 수 있게(하루 한 번 보석은 기존 자랑하기와 같은 칸이라 늘지 않는다)
+    const brag = !shareHidden() && !early && !s.bot && (dun ? r.kills > 0 : (win || (s.endless && floors > best)));
     // 45차: 광고 2배·자랑하기는 한 줄 보조 버튼(둘 다 있으면 반반, 하나면 가운데). 주 버튼은 아래 '다음 판' 하나
     const adOn = !early && !s.bot && !r.gaveUp && adsLeft(sv, 'double') > 0 && gold + stone > 0;   // 일시정지에서 포기한 판은 2배 광고를 내밀지 않는다(쓰러진 판은 그대로)
     const sw = adOn && brag ? 112 : 170, sx = adOn && brag ? 58 : 0;
@@ -879,9 +880,9 @@ export class Overlay {
       const gift = sv.shareDay !== sv.day, shareGem = sv.shared ? D.SHARE_GEM : D.SHARE_GEM_FIRST;
       // 광고 버튼 아래 한 줄. 강조색은 주 버튼 하나만 쓴다(주황·파랑·초록이 한 창에 다 있었다)
       const sb = button(s, W / 2 + sx, 306, sw, 24, gift ? t('overlay.68c5f2', { shareGem }) : t('overlay.c5cca3'), async () => {
-        const msg = s.endless ? t('overlay.31a9cd', { floors }) : t('overlay.e8ddd9', { v: s.isBoss ? t('overlay.4eed44', { name: D.BOSSES[s.ch.boss].name }) : '', v2: s.c + 1, v3: s.s + 1 });
+        const msg = dun ? t('overlay.dunShare', { kills: r.kills }) : s.endless ? t('overlay.31a9cd', { floors }) : t('overlay.e8ddd9', { v: s.isBoss ? t('overlay.4eed44', { name: D.BOSSES[s.ch.boss].name }) : '', v2: s.c + 1, v3: s.s + 1 });
         const text = t('overlay.449754', { v: sv.title ? `[${titleName(sv.title)}] ` : '', v2: hard ? t('lobby.52de23') : '', msg, tierName: D.tierName(sv.tier, s.wtype), enh: sv.enh });
-        const r = await shareBrag(s, text, s.endless ? 'endless' : s.isBoss ? 'boss' : 'clear');   // 공유 로직은 share.js
+        const r = await shareBrag(s, text, dun ? 'dungeon' : s.endless ? 'endless' : s.isBoss ? 'boss' : 'clear');   // 공유 로직은 share.js
         if (r.gem && sb.scene) sb.label.setText(t('overlay.ab7e90'));
       }, { size: 10, color: 0x3a3846 });
       c.add(sb);

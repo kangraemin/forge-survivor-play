@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "자랑하기 보석+{shareGem}",
  "overlay.c5cca3": "자랑하기",
  "overlay.31a9cd": "무한의 탑 {floors}층 돌파!",
+ "overlay.dunShare": "오늘의 던전 {kills}마리 처치!",
  "overlay.4eed44": "{name} 격파! ",
  "overlay.e8ddd9": "{v}{v2}-{v3} 클리어",
  "overlay.449754": "{v}{v2}{msg} 내 무기는 {tierName} +{enh} · 운빨로 살아남기",

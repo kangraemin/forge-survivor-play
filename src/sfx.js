@@ -1,4 +1,8 @@
 // 효과음: 파일 없이 WebAudio로 합성한다. 같은 소리가 한 프레임에 몰리면 묶어서 한 번만 낸다
+// 11/7: 다른 앱 음악을 끊지 않는다. 폰에서 음악을 듣던 사람이 게임을 켜면 음악이 멈춰 바로 지운다는 불만이 많았다(레딧 모바일 게임 불만 정리).
+//  Audio Session API(https://developer.mozilla.org/en-US/docs/Web/API/AudioSession/type): 'ambient' = 다른 오디오와 섞인다. 기본값 'auto'는 미디어 재생으로 잡혀 다른 앱 재생을 멈출 수 있다.
+//  지원하는 브라우저(사파리·아이폰 웹뷰)에서만 켜지고, 없으면 아무것도 안 한다. 오디오를 만들기 전에 정해야 해서 모듈을 읽을 때 바로 정한다
+try { if (globalThis.navigator?.audioSession) navigator.audioSession.type = 'ambient'; } catch { /* 미지원 */ }
 let ctx = null, master = null, on = true, musicOn = true, vibOn = true, held = false;
 let bgm = null;
 const last = {};

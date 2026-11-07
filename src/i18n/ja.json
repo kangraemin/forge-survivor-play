@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "自慢 ジェム+{shareGem}",
  "overlay.c5cca3": "自慢する",
  "overlay.31a9cd": "無限の塔 {floors}階突破!",
+ "overlay.dunShare": "今日のダンジョン {kills}体討伐!",
  "overlay.4eed44": "{name}撃破! ",
  "overlay.e8ddd9": "{v}{v2}-{v3} クリア",
  "overlay.449754": "{v}{v2}{msg} 私の武器は{tierName} +{enh} · 運だけで生き残れ",

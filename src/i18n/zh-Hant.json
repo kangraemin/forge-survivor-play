@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "炫耀 寶石+{shareGem}",
  "overlay.c5cca3": "炫耀",
  "overlay.31a9cd": "無盡之塔突破{floors}層!",
+ "overlay.dunShare": "今日地下城擊敗{kills}隻!",
  "overlay.4eed44": "擊敗{name}!",
  "overlay.e8ddd9": "{v}{v2}-{v3} 通關",
  "overlay.449754": "{v}{v2}{msg} 我的武器 {tierName} +{enh} · 靠運氣活下去",

@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "Похвастаться +{shareGem} самоцв.",
  "overlay.c5cca3": "Похвастаться",
  "overlay.31a9cd": "Бесконечная башня: {floors} эт. пройдено!",
+ "overlay.dunShare": "Подземелье дня: {kills} врагов сегодня!",
  "overlay.4eed44": "{name} повержен! ",
  "overlay.e8ddd9": "{v}{v2}-{v3} пройден",
  "overlay.449754": "{v}{v2}{msg} Мой меч: {tierName} +{enh} · Выжить на удаче",

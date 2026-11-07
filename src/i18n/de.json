@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "Angeben Edelstein+{shareGem}",
  "overlay.c5cca3": "Angeben",
  "overlay.31a9cd": "Endloser Turm: Etage {floors} geschafft!",
+ "overlay.dunShare": "Tagesdungeon: heute {kills} besiegt!",
  "overlay.4eed44": "{name} besiegt! ",
  "overlay.e8ddd9": "{v}{v2}-{v3} geschafft",
  "overlay.449754": "{v}{v2}{msg} Meine Waffe: {tierName} +{enh} · Mit Glück überleben",

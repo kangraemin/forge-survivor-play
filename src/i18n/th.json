@@ -1237,6 +1237,7 @@
  "overlay.68c5f2": "อวดเลย อัญมณี+{shareGem}",
  "overlay.c5cca3": "อวดเลย",
  "overlay.31a9cd": "ผ่านหอคอยไร้สิ้นสุด {floors} ชั้น!",
+ "overlay.dunShare": "ดันเจียนวันนี้ ล้ม {kills} ตัว!",
  "overlay.4eed44": "ปราบ {name} แล้ว! ",
  "overlay.e8ddd9": "ผ่าน {v}{v2}-{v3}",
  "overlay.449754": "{v}{v2}{msg} อาวุธฉัน {tierName} +{enh} · รอดด้วยดวง",
